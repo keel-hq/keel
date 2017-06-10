@@ -1,0 +1,11 @@
+package: github.com/rusenask/keel
+import:
+- package: k8s.io/client-go
+  version: v3.0.0-beta.0
+  subpackages:
+  - kubernetes
+  - pkg/api/v1
+  - pkg/apis/extensions/v1beta1
+  - rest
+- package: k8s.io/apimachinery
+  version: 75b8dd260ef0469d96d578705a87cffd0e09dab8
