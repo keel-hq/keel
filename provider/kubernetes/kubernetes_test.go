@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/version"
 
 	"testing"
 )
@@ -51,7 +52,18 @@ func TestGetImpacted(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to get deployments: %s", err)
 	}
+	found := false
+	for _, c := range deps[0].Spec.Template.Spec.Containers {
+		ver, err := version.GetVersionFromImageName(c.Image)
+		if err != nil {
+			continue
+		}
+		if ver.String() == repo.Tag {
+			found = true
+		}
+	}
 	// fmt.Println(len(deps.Items))
-	fmt.Println(deps)
+	fmt.Println(len(deps))
+	fmt.Println(found)
 
 }
