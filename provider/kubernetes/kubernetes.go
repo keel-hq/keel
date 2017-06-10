@@ -140,9 +140,25 @@ func (p *Provider) processEvent(event *types.Event) error {
 		return err
 	}
 
-	log.WithFields(log.Fields{
-		"impacted": len(impacted),
-	}).Info("processing event, got impacted deployments")
+	err = p.updateDeployments(impacted)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Provider) updateDeployments(deployments []*v1beta1.Deployment) error {
+	for _, deployment := range deployments {
+		_, err := p.client.Extensions().Deployments(deployment.Namespace).Update(deployment)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":      err,
+				"namespace":  deployment.Namespace,
+				"deployment": deployment.Name,
+			}).Error("provider.kubernetes: got error while update deployment")
+		}
+	}
 
 	return nil
 }
