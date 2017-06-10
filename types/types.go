@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -8,6 +9,7 @@ const KeelDefaultPort = 9300
 const KeelPolicyLabel = "keel.io/policy"
 
 type Repository struct {
+	Host string `json:"host,omitempty"`
 	Name string `json:"name,omitempty"`
 	Tag  string `json:"tag,omitempty"`
 }
@@ -26,13 +28,33 @@ type Version struct {
 	Metadata   string
 }
 
+func (v Version) String() string {
+	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+}
+
 // PolicyType - policy type
 type PolicyType int
 
+// ParsePolicy - parse policy type
+func ParsePolicy(policy string) PolicyType {
+	switch policy {
+	case "all":
+		return PolicyTypeAll
+	case "major":
+		return PolicyTypeMajor
+	case "minor":
+		return PolicyTypeMinor
+	case "patch":
+		return PolicyTypePatch
+	default:
+		return PolicyTypeUnknown
+	}
+}
+
 func (t PolicyType) String() string {
 	switch t {
-	case PolicyTypeNone:
-		return "none"
+	case PolicyTypeUnknown:
+		return "unknown"
 	case PolicyTypeAll:
 		return "all"
 	case PolicyTypeMajor:
@@ -48,7 +70,7 @@ func (t PolicyType) String() string {
 
 // available policies
 const (
-	PolicyTypeNone = iota
+	PolicyTypeUnknown = iota
 	PolicyTypeAll
 	PolicyTypeMajor
 	PolicyTypeMinor
