@@ -66,13 +66,8 @@ func NewProvider(opts *Opts) (*Provider, error) {
 			}).Error("provider.kubernetes: failed to get cmd kubernetes config")
 			return nil, err
 		}
-
 	} else {
-		cfg.Host = opts.Master
-		cfg.KeyFile = opts.KeyFile
-		cfg.CAFile = opts.CAFile
-		cfg.CertFile = opts.CertFile
-		log.Info("provider.kubernetes: using out-of-cluster configuration")
+		return nil, fmt.Errorf("kubernetes config is missing")
 	}
 
 	client, err := kubernetes.NewForConfig(cfg)
@@ -119,12 +114,12 @@ func (p *Provider) startInternal() error {
 			log.WithFields(log.Fields{
 				"repository": event.Repository.Name,
 			}).Info("provider.kubernetes: processing event")
-			err := p.processEvent(event)
+			_, err := p.processEvent(event)
 			if err != nil {
 				log.WithFields(log.Fields{
-					"error":  err,
-					"event":  event.Repository,
-					"pusher": event.Pusher,
+					"error": err,
+					"image": event.Repository.Name,
+					"tag":   event.Repository.Tag,
 				}).Error("provider.kubernetes: failed to process event")
 			}
 		case <-p.stop:
@@ -134,21 +129,26 @@ func (p *Provider) startInternal() error {
 	}
 }
 
-func (p *Provider) processEvent(event *types.Event) error {
+func (p *Provider) processEvent(event *types.Event) (updated []*v1beta1.Deployment, err error) {
 	impacted, err := p.impactedDeployments(&event.Repository)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = p.updateDeployments(impacted)
-	if err != nil {
-		return err
+	if len(impacted) == 0 {
+		log.WithFields(log.Fields{
+			"image": event.Repository.Name,
+			"tag":   event.Repository.Tag,
+		}).Info("provider.kubernetes: no impacted deployments found for this event")
+		return
 	}
 
-	return nil
+	updated, err = p.updateDeployments(impacted)
+
+	return
 }
 
-func (p *Provider) updateDeployments(deployments []*v1beta1.Deployment) error {
+func (p *Provider) updateDeployments(deployments []*v1beta1.Deployment) (updated []*v1beta1.Deployment, err error) {
 	for _, deployment := range deployments {
 		_, err := p.client.Extensions().Deployments(deployment.Namespace).Update(deployment)
 		if err != nil {
@@ -157,10 +157,18 @@ func (p *Provider) updateDeployments(deployments []*v1beta1.Deployment) error {
 				"namespace":  deployment.Namespace,
 				"deployment": deployment.Name,
 			}).Error("provider.kubernetes: got error while update deployment")
+			continue
 		}
+		updated = append(updated, deployment)
 	}
 
-	return nil
+	return
+}
+
+// getDeployment - helper function to get specific deployment
+func (p *Provider) getDeployment(namespace, name string) (*v1beta1.Deployment, error) {
+	dep := p.client.Extensions().Deployments(namespace)
+	return dep.Get(name, meta_v1.GetOptions{})
 }
 
 // gets impacted deployments by changed repository
