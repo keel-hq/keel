@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: List
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    labels:
+      name: keel
+      version: 0.0.1
+    name: keel
+  spec:
+    ports:
+    - name: ui
+      port: 9300
+      protocol: TCP
+      targetPort: 9300
+    selector:
+      app: keel
+    sessionAffinity: None
+    type: LoadBalancer

@@ -1,0 +1,31 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata: 
+  name: keel
+  namespace: default
+  labels: 
+      name: "keel"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: keel
+      labels:
+        app: keel      
+    spec:
+      containers:                    
+        - image: karolisr/keel:0.0.1
+          imagePullPolicy: Always            
+          name: keel
+          command: ["/bin/keel"]
+          ports:
+            - containerPort: 9300       
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9300
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+          securityContext:
+            privileged: true      
