@@ -3,8 +3,6 @@ package kubernetes
 import (
 	"fmt"
 	"regexp"
-	"strconv"
-	"strings"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -14,7 +12,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/rusenask/keel/types"
-	// "github.com/rusenask/keel/util/version"
+	"github.com/rusenask/keel/util/version"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -151,6 +149,11 @@ func (p *Provider) processEvent(event *types.Event) error {
 
 // gets impacted deployments by changed repository
 func (p *Provider) impactedDeployments(repo *types.Repository) ([]*v1beta1.Deployment, error) {
+	newVersion, err := version.GetVersion(repo.Tag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse version from repository tag, error: %s", err)
+	}
+
 	deploymentLists, err := p.deployments()
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -164,71 +167,61 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]*v1beta1.Deplo
 	for _, deploymentList := range deploymentLists {
 		for _, deployment := range deploymentList.Items {
 			labels := deployment.GetLabels()
-			policy, ok := labels[types.KeelPolicyLabel]
+			policyStr, ok := labels[types.KeelPolicyLabel]
 			// if no policy is set - skipping this deployment
 			if !ok {
 				continue
 			}
 
-			for _, c := range deployment.Spec.Template.Spec.Containers {
+			policy := types.ParsePolicy(policyStr)
+
+			for idx, c := range deployment.Spec.Template.Spec.Containers {
 				// Remove version if any
 				containerImageName := versionreg.ReplaceAllString(c.Image, "")
 				if containerImageName != repo.Name {
 					continue
 				}
 
-				// ver, err := version.GetVersion(c.Image)
+				currentVersion, err := version.GetVersionFromImageName(c.Image)
 
-				// if err != nil {
-				// 	log.WithFields(log.Fields{
-				// 		"error":       err,
-				// 		"image_name":  c.Image,
-				// 		"keel_policy": policy,
-				// 	}).Error("provider.kubernetes: failed to get image version, is it tagged as semver?")
-				// 	continue
-				// }
+				if err != nil {
+					log.WithFields(log.Fields{
+						"error":       err,
+						"image_name":  c.Image,
+						"keel_policy": policy,
+					}).Error("provider.kubernetes: failed to get image version, is it tagged as semver?")
+					continue
+				}
 
-				major, minor, patch := getVersion(c.Image)
+				shouldUpdate, err := version.ShouldUpdate(currentVersion, newVersion, policy)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"error":           err,
+						"new_version":     newVersion.String(),
+						"current_version": currentVersion.String(),
+						"keel_policy":     policy,
+					}).Error("provider.kubernetes: got error while checking whether deployment should be updated")
+					continue
+				}
 
-				log.WithFields(log.Fields{
-					"parsed_image": containerImageName,
-					// "parsed_version":   fmt.Sprintf("%d.%d.%d", ver.Major, ver.Minor, ver.Patch),
-					"parsed_version":   fmt.Sprintf("%d.%d.%d", major, minor, patch),
-					"raw_image_name":   c.Image,
-					"target_image":     repo.Name,
-					"target_image_tag": repo.Tag,
-					// "deployment":   deployment.String(),
-					"policy": policy,
-				}).Info("checking container")
+				if shouldUpdate {
+					// updating image
+					c.Image = fmt.Sprintf("%s:%s", containerImageName, newVersion.String())
+					deployment.Spec.Template.Spec.Containers[idx] = c
+					impacted = append(impacted, &deployment)
+					log.WithFields(log.Fields{
+						"parsed_image":     containerImageName,
+						"raw_image_name":   c.Image,
+						"target_image":     repo.Name,
+						"target_image_tag": repo.Tag,
+						"policy":           policy,
+					}).Info("provider.kubernetes: impacted deployment container found")
+				}
 			}
-
 		}
 	}
 
 	return impacted, nil
-}
-
-// decompose version string in major, minor, patch list.
-func getVersion(a string) (int, int, int) {
-	v := strings.Split(a, ".")
-	log.Info(a)
-	log.Info(len(v))
-	switch len(v) {
-	case 0:
-		v = append(v, "0")
-		fallthrough
-	case 1:
-		v = append(v, "0")
-		fallthrough
-	case 2:
-		v = append(v, "0")
-	}
-	version := []int{}
-	for _, i := range v {
-		s, _ := strconv.Atoi(i)
-		version = append(version, s)
-	}
-	return version[0], version[1], version[2]
 }
 
 func (p *Provider) namespaces() (*v1.NamespaceList, error) {
