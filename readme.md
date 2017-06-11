@@ -53,7 +53,24 @@ spec:
             privileged: true      
 ```
 
+Available policy options:
+
+* all - update whenever there is a version bump
+* major - update major versions
+* minor - update only minor versions (ignores major)
+* patch - update only patch versions (ignores minor and major versions)
+
 ## Deployment
+
+### Step 1: GCE Kubernetes + GCR pubsub configuration
+
+Since access to pubsub is required in GCE Kubernetes - your cluster node pools need to have permissions. If you are creating new cluster - just enable pubsub from the start. If you have existing cluster - currently the only way is create new node-pool through the gcloud CLI (more info in the [docs](https://cloud.google.com/sdk/gcloud/reference/container/node-pools/create?hl=en_US&_ga=1.2114551.650086469.1487625651):
+
+```
+gcloud container node-pools create new-pool --cluster CLUSTER_NAME --scopes https://www.googleapis.com/auth/pubsub
+```    
+
+### Step 2: Kubernetes
 
 Since keel will be updating deployments, let's create a new [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) in `kube-system` namespace:
 
@@ -69,17 +86,3 @@ kubectl create -f hack/deployment.yml
 
 Once Keel is deployed in your Kubernetes cluster - it occasionally scans your current deployments and looks for ones that have label _keel.observer/policy_. It then checks whether appropriate subscriptions and topics are set for GCR registries, if not - auto-creates them.
 
-Available policy options:
-
-* all - update whenever there is a version bump
-* major - update major versions
-* minor - update only minor versions (ignores major)
-* patch - update only patch versions (ignores minor and major versions)
-
-### GCE Kubernetes + GCR pubsub configuration
-
-Since access to pubsub is required in GCE Kubernetes - your cluster node pools need to have permissions. If you are creating new cluster - just enable pubsub from the start. If you have existing cluster - currently the only way is create new node-pool through the gcloud CLI (more info in the [docs](https://cloud.google.com/sdk/gcloud/reference/container/node-pools/create?hl=en_US&_ga=1.2114551.650086469.1487625651):
-
-```
-gcloud container node-pools create new-pool --cluster CLUSTER_NAME --scopes https://www.googleapis.com/auth/pubsub
-```    
