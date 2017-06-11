@@ -17,17 +17,13 @@ spec:
         app: keel      
     spec:
       containers:                    
-        - image: karolisr/keel:0.0.8
+        - image: karolisr/keel:0.1.1
           imagePullPolicy: Always
           env:                         
             - name: PUBSUB
               value: "1"
             - name: PROJECT_ID
-              value: "my-project"
-            - name: SUBSCRIPTION_ID
-              value: "gcr-sub"
-            - name: TOPIC
-              value: "gcr.io%2Frepo-name"
+              value: "my-project-id"
           name: keel
           command: ["/bin/keel"]
           ports:

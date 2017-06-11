@@ -108,7 +108,6 @@ func (s *Subscriber) Subscribe(ctx context.Context, topic, subscription string) 
 
 	sub := s.client.Subscription(subscription)
 	log.Info("trigger.pubsub: subscribing for events...")
-	// err := sub.Receive(ctx, s.callback)
 	err = sub.Receive(ctx, s.callback)
 	if err != nil {
 		log.WithFields(log.Fields{

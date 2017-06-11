@@ -6,7 +6,7 @@ import (
 )
 
 const KeelDefaultPort = 9300
-const KeelPolicyLabel = "keel.io/policy"
+const KeelPolicyLabel = "keel.observer/policy"
 
 type Repository struct {
 	Host string `json:"host,omitempty"`
