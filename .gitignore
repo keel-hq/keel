@@ -1,1 +1,3 @@
 .kubeconfig
+deployment.yml
+.test_env.sh
