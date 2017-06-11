@@ -2,8 +2,10 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata: 
+  annotations:
+    kubernetes.io/service-account.name: keel
   name: keel
-  namespace: default
+  namespace: kube-system
   labels: 
       name: "keel"
 spec:
@@ -15,8 +17,17 @@ spec:
         app: keel      
     spec:
       containers:                    
-        - image: karolisr/keel:0.0.1
-          imagePullPolicy: Always            
+        - image: karolisr/keel:0.0.8
+          imagePullPolicy: Always
+          env:                         
+            - name: PUBSUB
+              value: "1"
+            - name: PROJECT_ID
+              value: "my-project"
+            - name: SUBSCRIPTION_ID
+              value: "gcr-sub"
+            - name: TOPIC
+              value: "gcr.io%2Frepo-name"
           name: keel
           command: ["/bin/keel"]
           ports:
@@ -28,4 +39,4 @@ spec:
             initialDelaySeconds: 30
             timeoutSeconds: 10
           securityContext:
-            privileged: true      
+            privileged: true
