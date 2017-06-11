@@ -28,10 +28,14 @@ type DefaultManager struct {
 	// projectID is required to correctly set GCR subscriptions
 	projectID string
 
+	// scanTick - scan interval in seconds, defaults to 60 seconds
+	scanTick int
+
 	// root context
 	ctx context.Context
 }
 
+// NewDefaultManager - creates new pubsub manager to create subscription for deployments
 func NewDefaultManager(projectID string, implementer kubernetes.Implementer, subClient *Subscriber) *DefaultManager {
 	return &DefaultManager{
 		implementer: implementer,
@@ -39,13 +43,24 @@ func NewDefaultManager(projectID string, implementer kubernetes.Implementer, sub
 		projectID:   projectID,
 		subscribers: make(map[string]context.Context),
 		mu:          &sync.Mutex{},
+		scanTick:    60,
 	}
 }
 
+// Start - start scanning deployment for changes
 func (s *DefaultManager) Start(ctx context.Context) error {
 	// setting root context
 	s.ctx = ctx
-	for _ = range time.Tick(10 * time.Second) {
+
+	// initial scan
+	err := s.scan(ctx)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("trigger.pubsub.manager: scan failed")
+	}
+
+	for _ = range time.Tick(time.Duration(s.scanTick) * time.Second) {
 		select {
 		case <-ctx.Done():
 			return nil
