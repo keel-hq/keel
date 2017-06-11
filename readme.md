@@ -1,6 +1,6 @@
-# Keel
+# Keel - automated Kubernetes deployments for the rest of us
 
-Lightweight Kubernetes controller for automating image updates for deployments. Keel uses [semantic versioning](http://semver.org/) to determine whether deployment needs an update or not. Currently keel has several types of triggers:
+Lightweight (11MB image size, uses 12MB RAM when running) [Kubernetes](https://kubernetes.io/) controller for automating image updates for deployments. Keel uses [semantic versioning](http://semver.org/) to determine whether deployment needs an update or not. Currently keel has several types of triggers:
 
 * Google's pubsub integration with [Google Container Registry](https://cloud.google.com/container-registry/)
 * Webhooks
@@ -8,6 +8,21 @@ Lightweight Kubernetes controller for automating image updates for deployments. 
 Upcomming integrations:
 
 * DockerHub webhooks
+
+## Why?
+
+I have built Keel since I have a relatively small Golang project which doesn't use a lot of memory and introducing an antique, heavy weight CI solution with lots dependencies seemed like a terrible idea. 
+
+You should consider using Keel:
+* If you are not Netflix, Google, Amazon, {insert big company here} - you might not want to run something like Spinnaker that has heavy dependencies such as "JDK8, Redis, Cassandra, Packer". You probably need something lightweight, stateless, that you don't have to think about.
+* If you are not a bank that uses RedHat's OpenShift which embedded Jenkins that probably already does what Keel is doing.
+* You want automated Kubernetes deployment updates.
+
+Here is a list of Keel dependencies:
+
+1.
+
+Yes, none.
 
 ## Getting started
 
