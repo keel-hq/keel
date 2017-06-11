@@ -4,12 +4,8 @@ import (
 	"fmt"
 	"regexp"
 
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/version"
@@ -23,66 +19,23 @@ var versionreg = regexp.MustCompile(`:[^:]*$`)
 
 // Provider - kubernetes provider for auto update
 type Provider struct {
-	cfg    *rest.Config
-	client *kubernetes.Clientset
+	// cfg    *rest.Config
+	// client *kubernetes.Clientset
+
+	implementer Implementer
 
 	events chan *types.Event
 	stop   chan struct{}
 }
 
-type Opts struct {
-	// if set - kube config options will be ignored
-	InCluster bool
-
-	ConfigPath string
-
-	// Master host
-	Master   string
-	KeyFile  string
-	CAFile   string
-	CertFile string
-}
-
 // NewProvider - create new kubernetes based provider
-func NewProvider(opts *Opts) (*Provider, error) {
-	cfg := &rest.Config{}
-
-	if opts.InCluster {
-		var err error
-		cfg, err = rest.InClusterConfig()
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Error("provider.kubernetes: failed to get kubernetes config")
-			return nil, err
-		}
-		log.Info("provider.kubernetes: using in-cluster configuration")
-	} else if opts.ConfigPath != "" {
-		var err error
-		cfg, err = clientcmd.BuildConfigFromFlags("", opts.ConfigPath)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Error("provider.kubernetes: failed to get cmd kubernetes config")
-			return nil, err
-		}
-	} else {
-		return nil, fmt.Errorf("kubernetes config is missing")
-	}
-
-	client, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("provider.kubernetes: failed to create kubernetes client")
-		return nil, err
-	}
-
+func NewProvider(implementer Implementer) (*Provider, error) {
 	return &Provider{
-		cfg:    cfg,
-		client: client,
-		events: make(chan *types.Event, 100),
-		stop:   make(chan struct{}),
+		// cfg:    cfg,
+		// client: client,
+		implementer: implementer,
+		events:      make(chan *types.Event, 100),
+		stop:        make(chan struct{}),
 	}, nil
 }
 
@@ -150,7 +103,8 @@ func (p *Provider) processEvent(event *types.Event) (updated []*v1beta1.Deployme
 
 func (p *Provider) updateDeployments(deployments []*v1beta1.Deployment) (updated []*v1beta1.Deployment, err error) {
 	for _, deployment := range deployments {
-		_, err := p.client.Extensions().Deployments(deployment.Namespace).Update(deployment)
+		// _, err := p.client.Extensions().Deployments(deployment.Namespace).Update(deployment)
+		err := p.implementer.Update(deployment)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
@@ -167,8 +121,9 @@ func (p *Provider) updateDeployments(deployments []*v1beta1.Deployment) (updated
 
 // getDeployment - helper function to get specific deployment
 func (p *Provider) getDeployment(namespace, name string) (*v1beta1.Deployment, error) {
-	dep := p.client.Extensions().Deployments(namespace)
-	return dep.Get(name, meta_v1.GetOptions{})
+	// dep := p.client.Extensions().Deployments(namespace)
+	// return dep.Get(name, meta_v1.GetOptions{})
+	return p.implementer.Deployment(namespace, name)
 }
 
 // gets impacted deployments by changed repository
@@ -285,8 +240,9 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]*v1beta1.Deplo
 }
 
 func (p *Provider) namespaces() (*v1.NamespaceList, error) {
-	namespaces := p.client.Namespaces()
-	return namespaces.List(meta_v1.ListOptions{})
+	// namespaces := p.client.Namespaces()
+	// return namespaces.List(meta_v1.ListOptions{})
+	return p.implementer.Namespaces()
 }
 
 // deployments - gets all deployments
@@ -300,8 +256,9 @@ func (p *Provider) deployments() ([]*v1beta1.DeploymentList, error) {
 	}
 
 	for _, n := range n.Items {
-		dep := p.client.Extensions().Deployments(n.GetName())
-		l, err := dep.List(meta_v1.ListOptions{})
+		// dep := p.client.Extensions().Deployments(n.GetName())
+		// l, err := dep.List(meta_v1.ListOptions{})
+		l, err := p.implementer.Deployments(n.GetName())
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":     err,
