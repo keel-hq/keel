@@ -44,7 +44,7 @@ func (s *TriggerServer) Start() error {
 
 	s.registerRoutes(s.router)
 
-	n := negroni.Classic()
+	n := negroni.New(negroni.NewRecovery())
 	n.UseHandler(s.router)
 
 	s.server = &http.Server{
