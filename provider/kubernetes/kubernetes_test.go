@@ -4,6 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
+
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/version"
 
@@ -13,8 +18,42 @@ import (
 var currentVersion = "0.0.2"
 var newVersion = "0.0.3"
 
+type fakeImplementer struct {
+	namespaces *v1.NamespaceList
+	deployment *v1beta1.Deployment
+}
+
+func (i *fakeImplementer) Namespaces() (*v1.NamespaceList, error) {
+	return i.namespaces, nil
+}
+
+func (i *fakeImplementer) Deployment(namespace, name string) (*v1beta1.Deployment, error) {
+	return i.deployment, nil
+}
+
+func (i *fakeImplementer) Deployments(namespace string) (*v1beta1.DeploymentList, error) {
+	return nil, nil
+}
+
+func (i *fakeImplementer) Update(deployment *v1beta1.Deployment) error {
+	return nil
+}
+
 func TestGetNamespaces(t *testing.T) {
-	provider, err := NewProvider(&Opts{ConfigPath: ".kubeconfig"})
+	fi := &fakeImplementer{
+		namespaces: &v1.NamespaceList{
+			Items: []v1.Namespace{
+				v1.Namespace{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{Name: "xxxx"},
+					v1.NamespaceSpec{},
+					v1.NamespaceStatus{},
+				},
+			},
+		},
+	}
+
+	provider, err := NewProvider(fi)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -24,7 +63,9 @@ func TestGetNamespaces(t *testing.T) {
 		t.Errorf("failed to get namespaces: %s", err)
 	}
 
-	fmt.Println(namespaces.Items)
+	if namespaces.Items[0].Name != "xxxx" {
+		t.Errorf("expected xxxx but got %s", namespaces.Items[0].Name)
+	}
 }
 
 func TestGetImageName(t *testing.T) {
@@ -33,7 +74,7 @@ func TestGetImageName(t *testing.T) {
 }
 
 func TestGetDeployments(t *testing.T) {
-	provider, err := NewProvider(&Opts{ConfigPath: ".kubeconfig"})
+	provider, err := NewProvider(&fakeImplementer{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -47,7 +88,7 @@ func TestGetDeployments(t *testing.T) {
 }
 
 func TestGetImpacted(t *testing.T) {
-	provider, err := NewProvider(&Opts{ConfigPath: ".kubeconfig"})
+	provider, err := NewProvider(&fakeImplementer{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -77,7 +118,7 @@ func TestGetImpacted(t *testing.T) {
 
 }
 func TestProcessEvent(t *testing.T) {
-	provider, err := NewProvider(&Opts{ConfigPath: ".kubeconfig"})
+	provider, err := NewProvider(&fakeImplementer{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
