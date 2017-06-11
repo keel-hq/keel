@@ -18,10 +18,8 @@ import (
 
 // gcloud pubsub related config
 const (
-	EnvTriggerPubSub  = "PUBSUB" // set to 1 or something to enable pub/sub trigger
-	EnvProjectID      = "PROJECT_ID"
-	EnvSubscriptionID = "SUBSCRIPTION_ID"
-	EnvTopic          = "TOPIC"
+	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
+	EnvProjectID     = "PROJECT_ID"
 )
 
 // kubernetes config, if empty - will default to InCluster
@@ -29,7 +27,14 @@ const (
 	EnvKubernetesConfig = "KUBERNETES_CONFIG"
 )
 
+// EnvDebug - set to 1 or anything else to enable debug logging
+const EnvDebug = "DEBUG"
+
 func main() {
+
+	if os.Getenv(EnvDebug) != "" {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	// getting k8s provider
 	k8sCfg := &kubernetes.Opts{}
@@ -38,7 +43,15 @@ func main() {
 	} else {
 		k8sCfg.InCluster = true
 	}
-	k8sProvider, err := kubernetes.NewProvider(k8sCfg)
+	implementer, err := kubernetes.NewKubernetesImplementer(k8sCfg)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":  err,
+			"config": k8sCfg,
+		}).Fatal("main: failed to create kubernetes implementer")
+	}
+
+	k8sProvider, err := kubernetes.NewProvider(implementer)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -62,22 +75,10 @@ func main() {
 			log.Fatalf("main: project ID env variable not set")
 			return
 		}
-		subscriptionID := os.Getenv(EnvSubscriptionID)
-		if subscriptionID == "" {
-			log.Fatalf("main: subscription ID env variable not set")
-			return
-		}
-		topic := os.Getenv(EnvTopic)
-		if topic == "" {
-			log.Fatalf("main: top env variable not set")
-			return
-		}
 
 		ps, err := pubsub.NewSubscriber(&pubsub.Opts{
-			Project:      projectID,
-			Subscription: subscriptionID,
-			Topic:        topic,
-			Providers:    providers,
+			ProjectID: projectID,
+			Providers: providers,
 		})
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -87,12 +88,9 @@ func main() {
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		go ps.Subscribe(ctx)
-		log.WithFields(log.Fields{
-			"project":      projectID,
-			"subscription": subscriptionID,
-			"topic":        topic,
-		}).Info("main: gcloud pubsub trigger for gcr enabled")
+
+		subManager := pubsub.NewDefaultManager(projectID, implementer, ps)
+		go subManager.Start(ctx)
 	}
 
 	signalChan := make(chan os.Signal, 1)

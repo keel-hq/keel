@@ -64,7 +64,7 @@ func (s *Subscriber) ensureTopic(ctx context.Context, id string) error {
 	if exists {
 		log.WithFields(log.Fields{
 			"topic": id,
-		}).Info("trigger.pubsub: topic exists")
+		}).Debug("trigger.pubsub: topic exists")
 		return nil
 	}
 
@@ -82,7 +82,7 @@ func (s *Subscriber) ensureSubscription(ctx context.Context, subscriptionID, top
 		log.WithFields(log.Fields{
 			"subscription": subscriptionID,
 			"topic":        topicID,
-		}).Info("trigger.pubsub: subscription exists")
+		}).Debug("trigger.pubsub: subscription exists")
 		return nil
 	}
 
@@ -152,7 +152,7 @@ func (s *Subscriber) callback(ctx context.Context, msg *pubsub.Message) {
 		"action":  decoded.Action,
 		"tag":     decoded.Tag,
 		"version": parsedVersion.String(),
-	}).Info("trigger.pubsub: got message")
+	}).Debug("trigger.pubsub: got message")
 	event := types.Event{
 		Repository: types.Repository{Name: imageName, Tag: parsedVersion.String()},
 		CreatedAt:  time.Now(),

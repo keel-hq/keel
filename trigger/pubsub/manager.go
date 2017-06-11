@@ -135,7 +135,7 @@ func (s *DefaultManager) checkDeployment(deployment *v1beta1.Deployment) error {
 		registry := extractContainerRegistryURI(c.Image)
 
 		if !isGoogleContainerRegistry(registry) {
-			log.Infof("registry %s is not a GCR, skipping", registry)
+			log.Debug("registry %s is not a GCR, skipping", registry)
 			continue
 		}
 
@@ -167,7 +167,7 @@ func (s *DefaultManager) checkDeployment(deployment *v1beta1.Deployment) error {
 				"gcr_uri":    gcrURI,
 				"deployment": deployment.Name,
 				"image_name": c.Image,
-			}).Info("trigger.pubsub.manager: existing subscription for deployment's image found")
+			}).Debug("trigger.pubsub.manager: existing subscription for deployment's image found")
 		}
 
 	}
