@@ -40,6 +40,21 @@ func GetVersionFromImageName(name string) (*types.Version, error) {
 	return nil, ErrVersionTagMissing
 }
 
+// GetImageNameAndVersion - get name and version
+func GetImageNameAndVersion(name string) (string, *types.Version, error) {
+	parts := strings.Split(name, ":")
+	if len(parts) > 0 {
+		v, err := GetVersion(parts[1])
+		if err != nil {
+			return "", nil, err
+		}
+
+		return parts[0], v, nil
+	}
+
+	return "", nil, ErrVersionTagMissing
+}
+
 // ShouldUpdate - checks whether update is needed
 func ShouldUpdate(current *types.Version, new *types.Version, policy types.PolicyType) (bool, error) {
 	currentVersion, err := semver.NewVersion(current.String())

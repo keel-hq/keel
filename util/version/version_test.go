@@ -28,6 +28,12 @@ func TestGetVersionFromImageName(t *testing.T) {
 			args:    args{name: "karolis/webhook-demo:latest"},
 			wantErr: true,
 		},
+		{
+			name:    "image webhookrelay",
+			args:    args{name: "gcr.io/webhookrelay/webhookrelay:0.1.14"},
+			want:    &types.Version{Major: 0, Minor: 1, Patch: 14},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
