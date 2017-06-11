@@ -16,7 +16,6 @@ type Repository struct {
 
 type Event struct {
 	Repository Repository `json:"repository,omitempty"`
-	Pusher     string     `json:"pusher,omitempty"`
 	CreatedAt  time.Time  `json:"createdAt,omitempty"`
 }
 

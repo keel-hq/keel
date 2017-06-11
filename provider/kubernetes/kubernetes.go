@@ -196,18 +196,34 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]*v1beta1.Deplo
 			if !ok {
 				continue
 			}
-
 			policy := types.ParsePolicy(policyStr)
+
+			log.WithFields(log.Fields{
+				"labels":    labels,
+				"name":      deployment.Name,
+				"namespace": deployment.Namespace,
+				"policy":    policy,
+			}).Info("provider.kubernetes: keel policy found, checking deployment...")
 
 			for idx, c := range deployment.Spec.Template.Spec.Containers {
 				// Remove version if any
 				containerImageName := versionreg.ReplaceAllString(c.Image, "")
+
+				log.WithFields(log.Fields{
+					"name":              deployment.Name,
+					"namespace":         deployment.Namespace,
+					"parsed_image_name": containerImageName,
+					"target_image_name": repo.Name,
+					"target_tag":        repo.Tag,
+					"policy":            policy,
+					"image":             c.Image,
+				}).Info("provider.kubernetes: checking image")
+
 				if containerImageName != repo.Name {
 					continue
 				}
 
 				currentVersion, err := version.GetVersionFromImageName(c.Image)
-
 				if err != nil {
 					log.WithFields(log.Fields{
 						"error":       err,
@@ -216,6 +232,15 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]*v1beta1.Deplo
 					}).Error("provider.kubernetes: failed to get image version, is it tagged as semver?")
 					continue
 				}
+
+				log.WithFields(log.Fields{
+					"labels":          labels,
+					"name":            deployment.Name,
+					"namespace":       deployment.Namespace,
+					"image":           c.Image,
+					"current_version": currentVersion.String(),
+					"policy":          policy,
+				}).Info("provider.kubernetes: current image version")
 
 				shouldUpdate, err := version.ShouldUpdate(currentVersion, newVersion, policy)
 				if err != nil {
@@ -227,6 +252,17 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]*v1beta1.Deplo
 					}).Error("provider.kubernetes: got error while checking whether deployment should be updated")
 					continue
 				}
+
+				log.WithFields(log.Fields{
+					"labels":          labels,
+					"name":            deployment.Name,
+					"namespace":       deployment.Namespace,
+					"image":           c.Image,
+					"current_version": currentVersion.String(),
+					"new_version":     newVersion.String(),
+					"policy":          policy,
+					"should_update":   shouldUpdate,
+				}).Info("provider.kubernetes: checked version, deciding whether to update")
 
 				if shouldUpdate {
 					// updating image
