@@ -58,10 +58,6 @@ func (s *Subscriber) Subscribe(ctx context.Context) error {
 	log.Info("trigger.pubsub: subscribing for events...")
 	// err := sub.Receive(ctx, s.callback)
 	err := sub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
-		log.WithFields(log.Fields{
-			"payload":     msg.Data,
-			"attributeds": msg.Attributes,
-		}).Info("trigger.pubsub: received message")
 		defer msg.Ack()
 		var decoded Message
 		err := json.Unmarshal(msg.Data, &decoded)
@@ -76,7 +72,7 @@ func (s *Subscriber) Subscribe(ctx context.Context) error {
 			return
 		}
 
-		parsedVersion, err := version.GetVersionFromImageName(decoded.Tag)
+		imageName, parsedVersion, err := version.GetImageNameAndVersion(decoded.Tag)
 		if err != nil {
 			return
 		}
@@ -88,7 +84,7 @@ func (s *Subscriber) Subscribe(ctx context.Context) error {
 			"version": parsedVersion.String(),
 		}).Info("trigger.pubsub: got message")
 		event := types.Event{
-			Repository: types.Repository{Name: decoded.Tag, Tag: parsedVersion.String()},
+			Repository: types.Repository{Name: imageName, Tag: parsedVersion.String()},
 			CreatedAt:  time.Now(),
 		}
 		for _, p := range s.providers {
