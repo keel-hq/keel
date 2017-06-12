@@ -19,8 +19,9 @@ var currentVersion = "0.0.2"
 var newVersion = "0.0.3"
 
 type fakeImplementer struct {
-	namespaces *v1.NamespaceList
-	deployment *v1beta1.Deployment
+	namespaces     *v1.NamespaceList
+	deployment     *v1beta1.Deployment
+	deploymentList *v1beta1.DeploymentList
 }
 
 func (i *fakeImplementer) Namespaces() (*v1.NamespaceList, error) {
@@ -32,7 +33,7 @@ func (i *fakeImplementer) Deployment(namespace, name string) (*v1beta1.Deploymen
 }
 
 func (i *fakeImplementer) Deployments(namespace string) (*v1beta1.DeploymentList, error) {
-	return nil, nil
+	return i.deploymentList, nil
 }
 
 func (i *fakeImplementer) Update(deployment *v1beta1.Deployment) error {
@@ -70,11 +71,49 @@ func TestGetNamespaces(t *testing.T) {
 
 func TestGetImageName(t *testing.T) {
 	name := versionreg.ReplaceAllString("gcr.io/v2-namespace/hello-world:1.1", "")
-	fmt.Println(name)
+	if name != "gcr.io/v2-namespace/hello-world" {
+		t.Errorf("expected 'gcr.io/v2-namespace/hello-world' but got '%s'", name)
+	}
 }
 
 func TestGetDeployments(t *testing.T) {
-	provider, err := NewProvider(&fakeImplementer{})
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	fp.deploymentList = &v1beta1.DeploymentList{
+		Items: []v1beta1.Deployment{
+			v1beta1.Deployment{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{
+					Name:      "dep-1",
+					Namespace: "xxxx",
+					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+				},
+				v1beta1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								v1.Container{
+									Image: "gcr.io/v2-namespace/hello-world:1.1",
+								},
+							},
+						},
+					},
+				},
+				v1beta1.DeploymentStatus{},
+			},
+		},
+	}
+
+	provider, err := NewProvider(fp)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -83,8 +122,13 @@ func TestGetDeployments(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to get deployments: %s", err)
 	}
-	// fmt.Println(len(deps.Items))
-	fmt.Println(deps)
+	if len(deps) != 1 {
+		t.Errorf("expected to find 1 deployment, got: %d", len(deps))
+	}
+
+	if deps[0].Items[0].GetName() != "dep-1" {
+		t.Errorf("expected name %s, got %s", "dep-1", deps[0].Items[0].GetName())
+	}
 }
 
 func TestGetImpacted(t *testing.T) {
