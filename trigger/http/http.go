@@ -35,12 +35,12 @@ func NewTriggerServer(opts *Opts) *TriggerServer {
 	return &TriggerServer{
 		port:      opts.Port,
 		providers: opts.Providers,
+		router:    mux.NewRouter(),
 	}
 }
 
 // Start - start server
 func (s *TriggerServer) Start() error {
-	s.router = mux.NewRouter()
 
 	s.registerRoutes(s.router)
 
@@ -67,8 +67,10 @@ func (s *TriggerServer) Stop() {
 }
 
 func (s *TriggerServer) registerRoutes(mux *mux.Router) {
+	// health endpoint for k8s to be happy
 	mux.HandleFunc("/healthz", s.healthHandler).Methods("GET", "OPTIONS")
-	mux.HandleFunc("/native", s.nativeHandler).Methods("POST", "OPTIONS")
+	// native webhooks handler
+	mux.HandleFunc("/v1/native", s.nativeHandler).Methods("POST", "OPTIONS")
 }
 
 func (s *TriggerServer) healthHandler(resp http.ResponseWriter, req *http.Request) {
