@@ -9,8 +9,8 @@ import (
 
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/provider/kubernetes"
+	"github.com/rusenask/keel/trigger/http"
 	"github.com/rusenask/keel/trigger/pubsub"
-	"github.com/rusenask/keel/trigger/webhook"
 	"github.com/rusenask/keel/types"
 
 	log "github.com/Sirupsen/logrus"
@@ -113,8 +113,8 @@ func setupProviders(k8sImplementer kubernetes.Implementer) (providers map[string
 // should go through all providers (or not if there is a reason) and submit events)
 func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, providers map[string]provider.Provider) (teardown func()) {
 
-	// setting up generic webhook server
-	whs := webhook.NewTriggerServer(&webhook.Opts{
+	// setting up generic http webhook server
+	whs := http.NewTriggerServer(&http.Opts{
 		Port:      types.KeelDefaultPort,
 		Providers: providers,
 	})
