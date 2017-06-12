@@ -51,47 +51,13 @@ func main() {
 		}).Fatal("main: failed to create kubernetes implementer")
 	}
 
-	k8sProvider, err := kubernetes.NewProvider(implementer)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Fatal("main: failed to create kubernetes provider")
-	}
-	go k8sProvider.Start()
+	// setting up providers
+	providers, teardownProviders := setupProviders(implementer)
 
-	providers := make(map[string]provider.Provider)
-	providers[k8sProvider.GetName()] = k8sProvider
-
-	whs := webhook.NewTriggerServer(&webhook.Opts{
-		Port:      types.KeelDefaultPort,
-		Providers: providers,
-	})
-
-	go whs.Start()
-
-	if os.Getenv(EnvTriggerPubSub) != "" {
-		projectID := os.Getenv(EnvProjectID)
-		if projectID == "" {
-			log.Fatalf("main: project ID env variable not set")
-			return
-		}
-
-		ps, err := pubsub.NewSubscriber(&pubsub.Opts{
-			ProjectID: projectID,
-			Providers: providers,
-		})
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Fatal("main: failed to create gcloud pubsub subscriber")
-			return
-		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		subManager := pubsub.NewDefaultManager(projectID, implementer, ps)
-		go subManager.Start(ctx)
-	}
+	// setting up triggers
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	teardownTriggers := setupTriggers(ctx, implementer, providers)
 
 	signalChan := make(chan os.Signal, 1)
 	cleanupDone := make(chan bool)
@@ -111,12 +77,76 @@ func main() {
 				}
 			}()
 
-			k8sProvider.Stop()
-			// whs.Stop()
+			teardownProviders()
+			teardownTriggers()
+
 			cleanupDone <- true
 		}
 	}()
 
 	<-cleanupDone
 
+}
+
+// setupProviders - setting up available providers. New providers should be initialised here and added to
+// provider map
+func setupProviders(k8sImplementer kubernetes.Implementer) (providers map[string]provider.Provider, teardown func()) {
+	k8sProvider, err := kubernetes.NewProvider(k8sImplementer)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("main.setupProviders: failed to create kubernetes provider")
+	}
+	go k8sProvider.Start()
+
+	providers = make(map[string]provider.Provider)
+	providers[k8sProvider.GetName()] = k8sProvider
+
+	teardown = func() {
+		k8sProvider.Stop()
+	}
+
+	return providers, teardown
+}
+
+// setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
+// should go through all providers (or not if there is a reason) and submit events)
+func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, providers map[string]provider.Provider) (teardown func()) {
+
+	// setting up generic webhook server
+	whs := webhook.NewTriggerServer(&webhook.Opts{
+		Port:      types.KeelDefaultPort,
+		Providers: providers,
+	})
+
+	go whs.Start()
+
+	// checking whether pubsub (GCR) trigger is enabled
+	if os.Getenv(EnvTriggerPubSub) != "" {
+		projectID := os.Getenv(EnvProjectID)
+		if projectID == "" {
+			log.Fatalf("main.setupTriggers: project ID env variable not set")
+			return
+		}
+
+		ps, err := pubsub.NewSubscriber(&pubsub.Opts{
+			ProjectID: projectID,
+			Providers: providers,
+		})
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Fatal("main.setupTriggers: failed to create gcloud pubsub subscriber")
+			return
+		}
+
+		subManager := pubsub.NewDefaultManager(projectID, k8sImplementer, ps)
+		go subManager.Start(ctx)
+	}
+
+	teardown = func() {
+		whs.Stop()
+	}
+
+	return teardown
 }
