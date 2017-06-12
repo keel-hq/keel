@@ -13,6 +13,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// ProviderName - provider name
 const ProviderName = "kubernetes"
 
 var versionreg = regexp.MustCompile(`:[^:]*$`)
@@ -91,15 +92,12 @@ func (p *Provider) processEvent(event *types.Event) (updated []*v1beta1.Deployme
 		return
 	}
 
-	updated, err = p.updateDeployments(impacted)
-
-	return
+	return p.updateDeployments(impacted)
 }
 
-func (p *Provider) updateDeployments(deployments []*v1beta1.Deployment) (updated []*v1beta1.Deployment, err error) {
+func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated []*v1beta1.Deployment, err error) {
 	for _, deployment := range deployments {
-		// _, err := p.client.Extensions().Deployments(deployment.Namespace).Update(deployment)
-		err := p.implementer.Update(deployment)
+		err := p.implementer.Update(&deployment)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
@@ -108,7 +106,11 @@ func (p *Provider) updateDeployments(deployments []*v1beta1.Deployment) (updated
 			}).Error("provider.kubernetes: got error while update deployment")
 			continue
 		}
-		updated = append(updated, deployment)
+		log.WithFields(log.Fields{
+			"name":      deployment.Name,
+			"namespace": deployment.Namespace,
+		}).Info("provider.kubernetes: deployment updated")
+		updated = append(updated, &deployment)
 	}
 
 	return
@@ -122,7 +124,7 @@ func (p *Provider) getDeployment(namespace, name string) (*v1beta1.Deployment, e
 }
 
 // gets impacted deployments by changed repository
-func (p *Provider) impactedDeployments(repo *types.Repository) ([]*v1beta1.Deployment, error) {
+func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deployment, error) {
 	newVersion, err := version.GetVersion(repo.Tag)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse version from repository tag, error: %s", err)
@@ -136,7 +138,7 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]*v1beta1.Deplo
 		return nil, err
 	}
 
-	impacted := []*v1beta1.Deployment{}
+	impacted := []v1beta1.Deployment{}
 
 	for _, deploymentList := range deploymentLists {
 		for _, deployment := range deploymentList.Items {
@@ -218,7 +220,7 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]*v1beta1.Deplo
 					// updating image
 					c.Image = fmt.Sprintf("%s:%s", containerImageName, newVersion.String())
 					deployment.Spec.Template.Spec.Containers[idx] = c
-					impacted = append(impacted, &deployment)
+					impacted = append(impacted, deployment)
 					log.WithFields(log.Fields{
 						"parsed_image":     containerImageName,
 						"raw_image_name":   c.Image,
