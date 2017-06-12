@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -20,6 +21,19 @@ func (s *TriggerServer) nativeHandler(resp http.ResponseWriter, req *http.Reques
 		resp.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	if event.Repository.Name == "" {
+		resp.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(resp, "repository name cannot be empty")
+		return
+	}
+
+	if event.Repository.Tag == "" {
+		resp.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(resp, "repository tag cannot be empty")
+		return
+	}
+
 	event.CreatedAt = time.Now()
 
 	for _, p := range s.providers {
