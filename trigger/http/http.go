@@ -1,8 +1,7 @@
-package webhook
+package http
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -11,11 +10,11 @@ import (
 	"github.com/urfave/negroni"
 
 	"github.com/rusenask/keel/provider"
-	"github.com/rusenask/keel/types"
 
 	log "github.com/Sirupsen/logrus"
 )
 
+// Opts - http server options
 type Opts struct {
 	Port int
 
@@ -23,7 +22,7 @@ type Opts struct {
 	Providers map[string]provider.Provider
 }
 
-// TriggerServer - webhook trigger
+// TriggerServer - webhook trigger & healthcheck server
 type TriggerServer struct {
 	providers map[string]provider.Provider
 	port      int
@@ -31,14 +30,15 @@ type TriggerServer struct {
 	router    *mux.Router
 }
 
+// NewTriggerServer - create new HTTP trigger based server
 func NewTriggerServer(opts *Opts) *TriggerServer {
-
 	return &TriggerServer{
 		port:      opts.Port,
 		providers: opts.Providers,
 	}
 }
 
+// Start - start server
 func (s *TriggerServer) Start() error {
 	s.router = mux.NewRouter()
 
@@ -73,30 +73,4 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 
 func (s *TriggerServer) healthHandler(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusOK)
-}
-
-// nativeHandler - used to trigger event directly
-func (s *TriggerServer) nativeHandler(resp http.ResponseWriter, req *http.Request) {
-	event := types.Event{}
-	if err := json.NewDecoder(req.Body).Decode(&event); err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("failed to decode request")
-		resp.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	event.CreatedAt = time.Now()
-
-	for _, p := range s.providers {
-		err := p.Submit(event)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":    err,
-				"provider": p.GetName(),
-			}).Error("trigger.webhook: got error while submitting event to provider")
-		}
-	}
-
-	resp.WriteHeader(http.StatusOK)
-	return
 }
