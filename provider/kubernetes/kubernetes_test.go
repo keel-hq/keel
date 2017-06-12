@@ -298,3 +298,100 @@ func TestProcessEvent(t *testing.T) {
 		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Spec.Template.Spec.Containers[0].Image)
 	}
 }
+
+// Test to check how many deployments are "impacted" if we have sidecar container
+func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	fp.deploymentList = &v1beta1.DeploymentList{
+		Items: []v1beta1.Deployment{
+			v1beta1.Deployment{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{
+					Name:      "dep-1",
+					Namespace: "xxxx",
+					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+				},
+				v1beta1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								v1.Container{
+									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+								},
+								v1.Container{
+									Image: "gcr.io/v2-namespace/greetings-world:1.1.1",
+								},
+							},
+						},
+					},
+				},
+				v1beta1.DeploymentStatus{},
+			},
+			v1beta1.Deployment{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{
+					Name:      "dep-2",
+					Namespace: "xxxx",
+					Labels:    map[string]string{"whatever": "all"},
+				},
+				v1beta1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								v1.Container{
+									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+								},
+							},
+						},
+					},
+				},
+				v1beta1.DeploymentStatus{},
+			},
+		},
+	}
+
+	provider, err := NewProvider(fp)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	// creating "new version" event
+	repo := &types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "1.1.2",
+	}
+
+	deps, err := provider.impactedDeployments(repo)
+	if err != nil {
+		t.Errorf("failed to get deployments: %s", err)
+	}
+
+	if len(deps) != 1 {
+		t.Errorf("expected to find 1 deployment but found %s", len(deps))
+	}
+
+	found := false
+	for _, c := range deps[0].Spec.Template.Spec.Containers {
+
+		containerImageName := versionreg.ReplaceAllString(c.Image, "")
+
+		if containerImageName == repo.Name {
+			found = true
+		}
+	}
+
+	if !found {
+		t.Errorf("couldn't find expected deployment in impacted deployment list")
+	}
+
+}
