@@ -19,9 +19,6 @@ var versionreg = regexp.MustCompile(`:[^:]*$`)
 
 // Provider - kubernetes provider for auto update
 type Provider struct {
-	// cfg    *rest.Config
-	// client *kubernetes.Clientset
-
 	implementer Implementer
 
 	events chan *types.Event
@@ -31,8 +28,6 @@ type Provider struct {
 // NewProvider - create new kubernetes based provider
 func NewProvider(implementer Implementer) (*Provider, error) {
 	return &Provider{
-		// cfg:    cfg,
-		// client: client,
 		implementer: implementer,
 		events:      make(chan *types.Event, 100),
 		stop:        make(chan struct{}),
@@ -240,14 +235,11 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]*v1beta1.Deplo
 }
 
 func (p *Provider) namespaces() (*v1.NamespaceList, error) {
-	// namespaces := p.client.Namespaces()
-	// return namespaces.List(meta_v1.ListOptions{})
 	return p.implementer.Namespaces()
 }
 
 // deployments - gets all deployments
 func (p *Provider) deployments() ([]*v1beta1.DeploymentList, error) {
-	// namespaces := p.client.Namespaces()
 	deployments := []*v1beta1.DeploymentList{}
 
 	n, err := p.namespaces()
@@ -256,8 +248,6 @@ func (p *Provider) deployments() ([]*v1beta1.DeploymentList, error) {
 	}
 
 	for _, n := range n.Items {
-		// dep := p.client.Extensions().Deployments(n.GetName())
-		// l, err := dep.List(meta_v1.ListOptions{})
 		l, err := p.implementer.Deployments(n.GetName())
 		if err != nil {
 			log.WithFields(log.Fields{
