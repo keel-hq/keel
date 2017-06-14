@@ -398,9 +398,6 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 
 func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 
-	// FIXME: enable once sorted
-	t.Skip()
-
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
