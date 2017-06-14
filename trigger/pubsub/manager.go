@@ -18,7 +18,7 @@ import (
 type DefaultManager struct {
 	implementer kubernetes.Implementer
 
-	client *Subscriber
+	client Subscriber
 	// existing subscribers
 	mu *sync.Mutex
 	// a map of GCR URIs and subscribers to those URIs
@@ -35,8 +35,12 @@ type DefaultManager struct {
 	ctx context.Context
 }
 
+type Subscriber interface {
+	Subscribe(ctx context.Context, topic, subscription string) error
+}
+
 // NewDefaultManager - creates new pubsub manager to create subscription for deployments
-func NewDefaultManager(projectID string, implementer kubernetes.Implementer, subClient *Subscriber) *DefaultManager {
+func NewDefaultManager(projectID string, implementer kubernetes.Implementer, subClient Subscriber) *DefaultManager {
 	return &DefaultManager{
 		implementer: implementer,
 		client:      subClient,
@@ -65,7 +69,7 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		default:
-			log.Info("performing scan")
+			log.Debug("performing scan")
 			err := s.scan(ctx)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -114,10 +118,31 @@ func (s *DefaultManager) subscribed(gcrURI string) bool {
 	return ok
 }
 
-func (s *DefaultManager) addSubscription(ctx context.Context, gcrURI string) {
+func (s *DefaultManager) ensureSubscription(gcrURI string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.subscribers[gcrURI] = ctx
+
+	_, ok := s.subscribers[gcrURI]
+	if !ok {
+		ctx, cancel := context.WithCancel(s.ctx)
+		s.subscribers[gcrURI] = ctx
+		subName := containerRegistrySubName(s.projectID, gcrURI)
+		go func() {
+			defer cancel()
+			err := s.client.Subscribe(s.ctx, gcrURI, subName)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":             err,
+					"gcr_uri":           gcrURI,
+					"subscription_name": subName,
+				}).Error("trigger.pubsub.manager: failed to create subscription")
+			}
+
+			// cleanup
+			s.removeSubscription(gcrURI)
+
+		}()
+	}
 }
 
 func (s *DefaultManager) removeSubscription(gcrURI string) {
@@ -141,34 +166,7 @@ func (s *DefaultManager) checkDeployment(deployment *v1beta1.Deployment) error {
 
 		// uri
 		gcrURI := containerRegistryURI(s.projectID, registry)
-
-		// existing sub
-		ok := s.subscribed(gcrURI)
-		if !ok {
-			// create sub in a separate goroutine since client.Subscribe is a blocking call
-			go func() {
-				ctx, cancel := context.WithCancel(s.ctx)
-				defer cancel()
-				s.addSubscription(ctx, gcrURI)
-				defer s.removeSubscription(gcrURI)
-				subName := containerRegistrySubName(s.projectID, gcrURI)
-				err := s.client.Subscribe(s.ctx, gcrURI, subName)
-				if err != nil {
-					log.WithFields(log.Fields{
-						"error":             err,
-						"gcr_uri":           gcrURI,
-						"subscription_name": subName,
-					}).Error("trigger.pubsub.manager: failed to create subscription")
-				}
-			}()
-		} else {
-			log.WithFields(log.Fields{
-				"registry":   registry,
-				"gcr_uri":    gcrURI,
-				"deployment": deployment.Name,
-				"image_name": c.Image,
-			}).Debug("trigger.pubsub.manager: existing subscription for deployment's image found")
-		}
+		s.ensureSubscription(gcrURI)
 
 	}
 
