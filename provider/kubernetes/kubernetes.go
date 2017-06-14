@@ -118,8 +118,6 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 
 // getDeployment - helper function to get specific deployment
 func (p *Provider) getDeployment(namespace, name string) (*v1beta1.Deployment, error) {
-	// dep := p.client.Extensions().Deployments(namespace)
-	// return dep.Get(name, meta_v1.GetOptions{})
 	return p.implementer.Deployment(namespace, name)
 }
 
@@ -156,6 +154,8 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 				"namespace": deployment.Namespace,
 				"policy":    policy,
 			}).Info("provider.kubernetes: keel policy found, checking deployment...")
+
+			shouldUpdateDeployment := false
 
 			for idx, c := range deployment.Spec.Template.Spec.Containers {
 				// Remove version if any
@@ -194,7 +194,7 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 					"policy":          policy,
 				}).Info("provider.kubernetes: current image version")
 
-				shouldUpdate, err := version.ShouldUpdate(currentVersion, newVersion, policy)
+				shouldUpdateContainer, err := version.ShouldUpdate(currentVersion, newVersion, policy)
 				if err != nil {
 					log.WithFields(log.Fields{
 						"error":           err,
@@ -213,14 +213,16 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 					"current_version": currentVersion.String(),
 					"new_version":     newVersion.String(),
 					"policy":          policy,
-					"should_update":   shouldUpdate,
+					"should_update":   shouldUpdateContainer,
 				}).Info("provider.kubernetes: checked version, deciding whether to update")
 
-				if shouldUpdate {
+				if shouldUpdateContainer {
 					// updating image
 					c.Image = fmt.Sprintf("%s:%s", containerImageName, newVersion.String())
 					deployment.Spec.Template.Spec.Containers[idx] = c
-					impacted = append(impacted, deployment)
+					// marking this deployment for update
+					shouldUpdateDeployment = true
+
 					log.WithFields(log.Fields{
 						"parsed_image":     containerImageName,
 						"raw_image_name":   c.Image,
@@ -229,6 +231,10 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 						"policy":           policy,
 					}).Info("provider.kubernetes: impacted deployment container found")
 				}
+			}
+
+			if shouldUpdateDeployment {
+				impacted = append(impacted, deployment)
 			}
 		}
 	}

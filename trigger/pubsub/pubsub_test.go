@@ -35,7 +35,7 @@ func fakeDoneFunc(id string, done bool) {
 func TestCallback(t *testing.T) {
 
 	fp := &fakeProvider{}
-	sub := &Subscriber{disableAck: true, providers: map[string]provider.Provider{
+	sub := &PubsubSubscriber{disableAck: true, providers: map[string]provider.Provider{
 		fp.GetName(): fp,
 	}}
 
