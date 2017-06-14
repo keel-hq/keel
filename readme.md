@@ -1,6 +1,6 @@
 # Keel - automated Kubernetes deployments for the rest of us
 
-Lightweight (11MB image size, uses 12MB RAM when running) [Kubernetes](https://kubernetes.io/) controller for automating image updates for deployments. Keel uses [semantic versioning](http://semver.org/) to determine whether deployment needs an update or not. Currently keel has several types of triggers:
+Lightweight (uses ~10MB RAM when running) [Kubernetes](https://kubernetes.io/) controller for automating deployment updates when new image is available. Keel uses [semantic versioning](http://semver.org/) to determine whether deployment needs an update or not. Currently keel has several types of triggers:
 
 * Google's pubsub integration with [Google Container Registry](https://cloud.google.com/container-registry/)
 * Webhooks
@@ -9,20 +9,22 @@ Upcomming integrations:
 
 * DockerHub webhooks
 
+
+## Keel overview
+
+* Stateless, runs as a single container in kube-system namespace
+* Automatically detects images that you have in your Kubernetes environment and configures relevant [Google Cloud pubsub](https://cloud.google.com/pubsub/) topic, subscriptions.
+* Updates deployment if you have set Keel policy and newer image is available.
+
 ## Why?
 
 I have built Keel since I have a relatively small Golang project which doesn't use a lot of memory and introducing an antique, heavy weight CI solution with lots dependencies seemed like a terrible idea. 
 
-You should consider using Keel:
-* If you are not Netflix, Google, Amazon, {insert big company here} - you might not want to run something like Spinnaker that has heavy dependencies such as "JDK8, Redis, Cassandra, Packer". You probably need something lightweight, stateless, that you don't have to think about.
-* If you are not a bank that uses RedHat's OpenShift which embedded Jenkins that probably already does what Keel is doing.
-* You want automated Kubernetes deployment updates.
+You should consider using Keel if:
+* You don't want your "Continous Delivery" tool to consume more resources than your actual deployment does.
+* You are __not__ Netflix, Google, Amazon, {insert big company here} that already has something like Spinnaker that has too many dependencies such as "JDK8, Redis, Cassandra, Packer".
+* You want simple, automated Kubernetes deployment updates.
 
-Here is a list of Keel dependencies:
-
-1.
-
-Yes, none.
 
 ## Getting started
 
@@ -70,10 +72,10 @@ spec:
 
 Available policy options:
 
-* all - update whenever there is a version bump
-* major - update major versions
-* minor - update only minor versions (ignores major)
-* patch - update only patch versions (ignores minor and major versions)
+* __all__ - update whenever there is a version bump
+* __major__ - update major versions
+* __minor__ - update only minor versions (ignores major)
+* __patch__ - update only patch versions (ignores minor and major versions)
 
 ## Deployment
 
@@ -87,13 +89,12 @@ gcloud container node-pools create new-pool --cluster CLUSTER_NAME --scopes http
 
 ### Step 2: Kubernetes
 
-Since keel will be updating deployments, let's create a new [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) in `kube-system` namespace:
+Keel will be updating deployments, let's create a new [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) in `kube-system` namespace:
 
 ```
 kubectl create serviceaccount keel --namespace=kube-system
 ```
-
-Now, edit [deployment file](https://github.com/rusenask/keel/blob/master/hack/deployment.sample.yml) that is supplied with the repo (basically point to the newest keel release and set your PROJECT_ID to the actual project ID that you have):
+Now, edit [deployment file](https://github.com/rusenask/keel/blob/master/hack/deployment.sample.yml) that is supplied with the repository (basically point to the [newest Keel release](https://hub.docker.com/r/karolisr/keel/tags/) and set your PROJECT_ID to the actual project ID that you have):
 
 ```
 kubectl create -f hack/deployment.yml
