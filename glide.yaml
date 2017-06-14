@@ -1,5 +1,47 @@
 package: github.com/rusenask/keel
 import:
+- package: cloud.google.com/go
+  version: b4e9a381a01e953e880e6d2cf7fd02d412977cae
+  subpackages:
+  - pubsub
+  - iam
+  - internal
+- package: google.golang.org/api
+  version: 324744a33f1f37e63dd1695cfb3ec9a3e4a1cb05
+  subpackages:
+  - iterator
+  - option
+  - support  
+  - transport
+- package: google.golang.org/grpc
+  version: a94a7ac054dc76e5ab6cf170a9d82faba8aaf33f
+  subpackages:
+  - status  
+- package: github.com/Sirupsen/logrus  
+  subpackages:
+  - formatters
+  - formatters/logstash
+- package: github.com/coreos/go-semver
+  subpackages:
+  - semver
+- package: github.com/gorilla/mux
+- package: github.com/urfave/negroni
+- package: golang.org/x/net
+  subpackages:
+  - context
+  - oauth2
+- package: github.com/gogo/protobuf
+  version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
+  subpackages:
+  - sortkeys
+  - protoc-gen-gogo/descriptor
+  - gogoproto
+  - plugin/testgen
+  - protoc-gen-gogo/generator  
+- package: k8s.io/apimachinery
+  version: 75b8dd260ef0469d96d578705a87cffd0e09dab8
+  subpackages:
+  - pkg/apis/meta/v1
 - package: k8s.io/client-go
   version: v3.0.0-beta.0
   subpackages:
@@ -7,5 +49,4 @@ import:
   - pkg/api/v1
   - pkg/apis/extensions/v1beta1
   - rest
-- package: k8s.io/apimachinery
-  version: 75b8dd260ef0469d96d578705a87cffd0e09dab8
+  - tools/clientcmd
