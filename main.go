@@ -129,7 +129,7 @@ func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, p
 			return
 		}
 
-		ps, err := pubsub.NewSubscriber(&pubsub.Opts{
+		ps, err := pubsub.NewPubsubSubscriber(&pubsub.Opts{
 			ProjectID: projectID,
 			Providers: providers,
 		})

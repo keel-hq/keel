@@ -101,4 +101,3 @@ kubectl create -f hack/deployment.yml
 ```
 
 Once Keel is deployed in your Kubernetes cluster - it occasionally scans your current deployments and looks for ones that have label _keel.observer/policy_. It then checks whether appropriate subscriptions and topics are set for GCR registries, if not - auto-creates them.
-
