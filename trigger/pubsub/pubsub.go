@@ -107,7 +107,10 @@ func (s *Subscriber) Subscribe(ctx context.Context, topic, subscription string) 
 	}
 
 	sub := s.client.Subscription(subscription)
-	log.Info("trigger.pubsub: subscribing for events...")
+	log.WithFields(log.Fields{
+		"topic":        topic,
+		"subscription": subscription,
+	}).Info("trigger.pubsub: subscribing for events...")
 	err = sub.Receive(ctx, s.callback)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -129,6 +132,11 @@ func (s *Subscriber) callback(ctx context.Context, msg *pubsub.Message) {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("trigger.pubsub: failed to decode message")
+		return
+	}
+
+	// we only care about "INSERT" (push) events
+	if decoded.Action != "INSERT" {
 		return
 	}
 
