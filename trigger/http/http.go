@@ -10,6 +10,7 @@ import (
 	"github.com/urfave/negroni"
 
 	"github.com/rusenask/keel/provider"
+	"github.com/rusenask/keel/types"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -70,9 +71,27 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	// health endpoint for k8s to be happy
 	mux.HandleFunc("/healthz", s.healthHandler).Methods("GET", "OPTIONS")
 	// native webhooks handler
-	mux.HandleFunc("/v1/native", s.nativeHandler).Methods("POST", "OPTIONS")
+	mux.HandleFunc("/v1/webhooks/native", s.nativeHandler).Methods("POST", "OPTIONS")
+
+	// dockerhub webhooks handler
+	mux.HandleFunc("/v1/webhooks/dockerhub", s.dockerHubHandler).Methods("POST", "OPTIONS")
 }
 
 func (s *TriggerServer) healthHandler(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusOK)
+}
+
+func (s *TriggerServer) trigger(event types.Event) error {
+	for _, p := range s.providers {
+		err := p.Submit(event)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":    err,
+				"provider": p.GetName(),
+				"trigger":  event.TriggerName,
+			}).Error("trigger.trigger: got error while submitting event to provider")
+		}
+	}
+
+	return nil
 }

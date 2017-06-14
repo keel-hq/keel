@@ -35,16 +35,8 @@ func (s *TriggerServer) nativeHandler(resp http.ResponseWriter, req *http.Reques
 	}
 
 	event.CreatedAt = time.Now()
-
-	for _, p := range s.providers {
-		err := p.Submit(event)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":    err,
-				"provider": p.GetName(),
-			}).Error("trigger.webhook: got error while submitting event to provider")
-		}
-	}
+	event.TriggerName = "native"
+	s.trigger(event)
 
 	resp.WriteHeader(http.StatusOK)
 	return
