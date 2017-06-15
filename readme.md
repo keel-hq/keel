@@ -3,6 +3,7 @@
 Lightweight (uses ~10MB RAM when running) [Kubernetes](https://kubernetes.io/) controller for automating deployment updates when new image is available. Keel uses [semantic versioning](http://semver.org/) to determine whether deployment needs an update or not. Currently keel has several types of triggers:
 
 * Google's pubsub integration with [Google Container Registry](https://cloud.google.com/container-registry/)
+* [DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/)
 * Webhooks
 
 Upcomming integrations:
