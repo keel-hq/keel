@@ -17,6 +17,8 @@ type Repository struct {
 type Event struct {
 	Repository Repository `json:"repository,omitempty"`
 	CreatedAt  time.Time  `json:"createdAt,omitempty"`
+	// optional field to identify trigger
+	TriggerName string `json:"triggerName,omitempty"`
 }
 
 type Version struct {

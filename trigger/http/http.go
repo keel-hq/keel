@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -10,6 +11,8 @@ import (
 	"github.com/urfave/negroni"
 
 	"github.com/rusenask/keel/provider"
+	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/version"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -69,10 +72,44 @@ func (s *TriggerServer) Stop() {
 func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	// health endpoint for k8s to be happy
 	mux.HandleFunc("/healthz", s.healthHandler).Methods("GET", "OPTIONS")
+	// version handler
+	mux.HandleFunc("/version", s.versionHandler).Methods("GET", "OPTIONS")
 	// native webhooks handler
-	mux.HandleFunc("/v1/native", s.nativeHandler).Methods("POST", "OPTIONS")
+	mux.HandleFunc("/v1/webhooks/native", s.nativeHandler).Methods("POST", "OPTIONS")
+
+	// dockerhub webhooks handler
+	mux.HandleFunc("/v1/webhooks/dockerhub", s.dockerHubHandler).Methods("POST", "OPTIONS")
 }
 
 func (s *TriggerServer) healthHandler(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusOK)
+}
+
+func (s *TriggerServer) versionHandler(resp http.ResponseWriter, req *http.Request) {
+	v := version.GetKeelVersion()
+
+	encoded, err := json.Marshal(v)
+	if err != nil {
+		log.WithError(err).Error("trigger.http: failed to marshal version")
+		resp.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
+	resp.Write(encoded)
+}
+
+func (s *TriggerServer) trigger(event types.Event) error {
+	for _, p := range s.providers {
+		err := p.Submit(event)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":    err,
+				"provider": p.GetName(),
+				"trigger":  event.TriggerName,
+			}).Error("trigger.trigger: got error while submitting event to provider")
+		}
+	}
+
+	return nil
 }

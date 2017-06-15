@@ -3,12 +3,8 @@
 Lightweight (uses ~10MB RAM when running) [Kubernetes](https://kubernetes.io/) controller for automating deployment updates when new image is available. Keel uses [semantic versioning](http://semver.org/) to determine whether deployment needs an update or not. Currently keel has several types of triggers:
 
 * Google's pubsub integration with [Google Container Registry](https://cloud.google.com/container-registry/)
+* [DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/)
 * Webhooks
-
-Upcomming integrations:
-
-* DockerHub webhooks
-
 
 ## Keel overview
 
@@ -77,15 +73,33 @@ Available policy options:
 * __minor__ - update only minor versions (ignores major)
 * __patch__ - update only patch versions (ignores minor and major versions)
 
-## Deployment
+## Deployment and triggers
 
-### Step 1: GCE Kubernetes + GCR pubsub configuration
+### Step 1: Choosing triggers
+
+
+#### GCE Kubernetes + GCR pubsub configuration (recommended option for deployments in Google Container Engine)
 
 Since access to pubsub is required in GCE Kubernetes - your cluster node pools need to have permissions. If you are creating new cluster - just enable pubsub from the start. If you have existing cluster - currently the only way is create new node-pool through the gcloud CLI (more info in the [docs](https://cloud.google.com/sdk/gcloud/reference/container/node-pools/create?hl=en_US&_ga=1.2114551.650086469.1487625651):
 
 ```
 gcloud container node-pools create new-pool --cluster CLUSTER_NAME --scopes https://www.googleapis.com/auth/pubsub
-```    
+``` 
+
+Make sure that in the Keel's deployment.yml you have set environment variables __PUBSUB=1__ and __PROJECT_ID=your-project-id__. 
+
+#### Webhook integration
+
+Keel supports two types of webhooks:
+
+* [DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/) - go to your repository on 
+  https://hub.docker.com/r/your-namespace/your-repository/~/settings/webhooks/ and point webhooks
+  to `http://your-keel-address.com/v1/webhooks/dockerhub`. 
+* Native webhooks (simplified version) - shoot webhooks at `http://your-keel-address.com/v1/webhooks/native` with a payload that has __name__ and __tag__ fields: `{"name": "gcr.io/v2-namespace/hello-world", "tag": "1.1.1"}`
+
+If you don't want to expose your Keel service - I would recommend using [https://webhookrelay.com/](https://webhookrelay.com/) which can deliver webhooks to your internal Keel service through a sidecar container.
+
+
 
 ### Step 2: Kubernetes
 

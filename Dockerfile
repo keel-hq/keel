@@ -1,8 +1,7 @@
-FROM golang:1.8.1-alpine
+FROM golang:1.8.3
 COPY . /go/src/github.com/rusenask/keel
 WORKDIR /go/src/github.com/rusenask/keel
-RUN apk add --no-cache git && go get
-RUN CGO_ENABLED=0 GOOS=linux go build -a -tags netgo  -ldflags  -'w' -o keel .
+RUN go get && make build
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
