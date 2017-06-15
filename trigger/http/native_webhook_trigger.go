@@ -13,8 +13,8 @@ import (
 
 // nativeHandler - used to trigger event directly
 func (s *TriggerServer) nativeHandler(resp http.ResponseWriter, req *http.Request) {
-	event := types.Event{}
-	if err := json.NewDecoder(req.Body).Decode(&event); err != nil {
+	repo := types.Repository{}
+	if err := json.NewDecoder(req.Body).Decode(&repo); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to decode request")
@@ -22,18 +22,21 @@ func (s *TriggerServer) nativeHandler(resp http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	if event.Repository.Name == "" {
+	event := types.Event{}
+
+	if repo.Name == "" {
 		resp.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(resp, "repository name cannot be empty")
 		return
 	}
 
-	if event.Repository.Tag == "" {
+	if repo.Tag == "" {
 		resp.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(resp, "repository tag cannot be empty")
 		return
 	}
 
+	event.Repository = repo
 	event.CreatedAt = time.Now()
 	event.TriggerName = "native"
 	s.trigger(event)

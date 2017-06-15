@@ -33,7 +33,7 @@ func TestNativeWebhookHandler(t *testing.T) {
 	srv := NewTriggerServer(&Opts{Providers: providers})
 	srv.registerRoutes(srv.router)
 
-	req, err := http.NewRequest("POST", "/v1/webhooks/native", bytes.NewBuffer([]byte(`{"repository": {"name": "gcr.io/v2-namespace/hello-world", "tag": "1.1.1"}}`)))
+	req, err := http.NewRequest("POST", "/v1/webhooks/native", bytes.NewBuffer([]byte(`{"name": "gcr.io/v2-namespace/hello-world", "tag": "1.1.1"}`)))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -61,7 +61,7 @@ func TestNativeWebhookHandlerNoRepoName(t *testing.T) {
 	srv := NewTriggerServer(&Opts{Providers: providers})
 	srv.registerRoutes(srv.router)
 
-	req, err := http.NewRequest("POST", "/v1/webhooks/native", bytes.NewBuffer([]byte(`{"repository": { "tag": "1.1.1"}}`)))
+	req, err := http.NewRequest("POST", "/v1/webhooks/native", bytes.NewBuffer([]byte(`{ "tag": "1.1.1"}`)))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
