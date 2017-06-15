@@ -12,6 +12,7 @@ import (
 	"github.com/rusenask/keel/trigger/http"
 	"github.com/rusenask/keel/trigger/pubsub"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/version"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -31,6 +32,16 @@ const (
 const EnvDebug = "DEBUG"
 
 func main() {
+
+	ver := version.GetKeelVersion()
+	log.WithFields(log.Fields{
+		"os":         ver.OS,
+		"build_date": ver.BuildDate,
+		"revision":   ver.Revision,
+		"version":    ver.Version,
+		"go_version": ver.GoVersion,
+		"arch":       ver.Arch,
+	}).Info("Keel starting..")
 
 	if os.Getenv(EnvDebug) != "" {
 		log.SetLevel(log.DebugLevel)
