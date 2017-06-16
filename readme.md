@@ -1,6 +1,6 @@
 # Keel - automated Kubernetes deployments for the rest of us
 
-Lightweight (uses ~10MB RAM when running) [Kubernetes](https://kubernetes.io/) controller for automating deployment updates when new image is available. Keel uses [semantic versioning](http://semver.org/) to determine whether deployment needs an update or not. Currently keel has several types of triggers:
+Lightweight (uses ~10MB RAM when running) [Kubernetes](https://kubernetes.io/) service for automating deployment updates when new images are available. Keel uses [semantic versioning](http://semver.org/) to determine whether deployment needs an update or not. Currently Keel has several types of triggers:
 
 * Google's pubsub integration with [Google Container Registry](https://cloud.google.com/container-registry/)
 * [DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/)
@@ -9,8 +9,10 @@ Lightweight (uses ~10MB RAM when running) [Kubernetes](https://kubernetes.io/) c
 ## Keel overview
 
 * Stateless, runs as a single container in kube-system namespace
-* Automatically detects images that you have in your Kubernetes environment and configures relevant [Google Cloud pubsub](https://cloud.google.com/pubsub/) topic, subscriptions.
+* Automatically detects images that you have in your Kubernetes environment and configures relevant [Google Cloud pubsub](https://cloud.google.com/pubsub/) topics, subscriptions.
 * Updates deployment if you have set Keel policy and newer image is available.
+
+<img src="https://github.com/rusenask/keel/raw/master/static/keel.png">
 
 ## Why?
 
@@ -19,8 +21,7 @@ I have built Keel since I have a relatively small Golang project which doesn't u
 You should consider using Keel if:
 * You don't want your "Continous Delivery" tool to consume more resources than your actual deployment does.
 * You are __not__ Netflix, Google, Amazon, {insert big company here} that already has something like Spinnaker that has too many dependencies such as "JDK8, Redis, Cassandra, Packer".
-* You want simple, automated Kubernetes deployment updates.
-
+* You want simple, automated Kubernetes deployment updates on code/image push.
 
 ## Getting started
 
@@ -77,10 +78,9 @@ Available policy options:
 
 ### Step 1: Choosing triggers
 
-
 #### GCE Kubernetes + GCR pubsub configuration (recommended option for deployments in Google Container Engine)
 
-Since access to pubsub is required in GCE Kubernetes - your cluster node pools need to have permissions. If you are creating new cluster - just enable pubsub from the start. If you have existing cluster - currently the only way is create new node-pool through the gcloud CLI (more info in the [docs](https://cloud.google.com/sdk/gcloud/reference/container/node-pools/create?hl=en_US&_ga=1.2114551.650086469.1487625651):
+Since Keel requires access for the pubsub in GCE Kubernetes to work - your cluster node pools need to have permissions. If you are creating a new cluster - just enable pubsub from the start. If you have an existing cluster - currently the only way is to create a new node-pool through the gcloud CLI (more info in the [docs](https://cloud.google.com/sdk/gcloud/reference/container/node-pools/create?hl=en_US&_ga=1.2114551.650086469.1487625651):
 
 ```
 gcloud container node-pools create new-pool --cluster CLUSTER_NAME --scopes https://www.googleapis.com/auth/pubsub
@@ -93,7 +93,7 @@ Make sure that in the Keel's deployment.yml you have set environment variables _
 Keel supports two types of webhooks:
 
 * [DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/) - go to your repository on 
-  https://hub.docker.com/r/your-namespace/your-repository/~/settings/webhooks/ and point webhooks
+  `https://hub.docker.com/r/your-namespace/your-repository/~/settings/webhooks/` and point webhooks
   to `http://your-keel-address.com/v1/webhooks/dockerhub`. 
 * Native webhooks (simplified version) - shoot webhooks at `http://your-keel-address.com/v1/webhooks/native` with a payload that has __name__ and __tag__ fields: `{"name": "gcr.io/v2-namespace/hello-world", "tag": "1.1.1"}`
 
@@ -103,7 +103,7 @@ If you don't want to expose your Keel service - I would recommend using [https:/
 
 ### Step 2: Kubernetes
 
-Keel will be updating deployments, let's create a new [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) in `kube-system` namespace:
+Keel will be updating deployments, so let's create a new [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) in `kube-system` namespace:
 
 ```
 kubectl create serviceaccount keel --namespace=kube-system
@@ -115,3 +115,5 @@ kubectl create -f hack/deployment.yml
 ```
 
 Once Keel is deployed in your Kubernetes cluster - it occasionally scans your current deployments and looks for ones that have label _keel.observer/policy_. It then checks whether appropriate subscriptions and topics are set for GCR registries, if not - auto-creates them.
+
+If you have any quetions or notice a problem - raise an issue.
