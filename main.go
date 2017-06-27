@@ -5,7 +5,9 @@ import (
 	"os/signal"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
+
+	netContext "golang.org/x/net/context"
 
 	"github.com/rusenask/keel/bot"
 	"github.com/rusenask/keel/provider"
@@ -23,6 +25,7 @@ const (
 	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
 	EnvProjectID     = "PROJECT_ID"
 	EnvSlackToken    = "SLACK_TOKEN"
+	EnvSlackBotName  = "SLACK_BOT_NAME"
 )
 
 // kubernetes config, if empty - will default to InCluster
@@ -68,9 +71,16 @@ func main() {
 	providers, teardownProviders := setupProviders(implementer)
 
 	// setting up triggers
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := netContext.WithCancel(context.Background())
 	defer cancel()
 	teardownTriggers := setupTriggers(ctx, implementer, providers)
+
+	teardownBot, err := setupBot(implementer)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("main: failed to setup slack bot")
+	}
 
 	signalChan := make(chan os.Signal, 1)
 	cleanupDone := make(chan bool)
@@ -92,6 +102,7 @@ func main() {
 
 			teardownProviders()
 			teardownTriggers()
+			teardownBot()
 
 			cleanupDone <- true
 		}
@@ -122,8 +133,35 @@ func setupProviders(k8sImplementer kubernetes.Implementer) (providers map[string
 	return providers, teardown
 }
 
-func setupBot(k8sImplementer kubernetes.Implementer) (*bot.Bot, error) {
+func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error) {
 
+	if os.Getenv(EnvSlackToken) != "" {
+		botName := "keel"
+
+		if os.Getenv(EnvSlackBotName) != "" {
+			botName = os.Getenv(EnvSlackBotName)
+		}
+
+		token := os.Getenv(EnvSlackToken)
+		slackBot := bot.New(botName, token, k8sImplementer)
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		err := slackBot.Start(ctx)
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+
+		teardown := func() {
+			// cancelling context
+			cancel()
+		}
+
+		return teardown, nil
+	}
+
+	return func() {}, nil
 }
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
