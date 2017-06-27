@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/rusenask/keel/bot"
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/provider/kubernetes"
 	"github.com/rusenask/keel/trigger/http"
@@ -21,6 +22,7 @@ import (
 const (
 	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
 	EnvProjectID     = "PROJECT_ID"
+	EnvSlackToken    = "SLACK_TOKEN"
 )
 
 // kubernetes config, if empty - will default to InCluster
@@ -118,6 +120,10 @@ func setupProviders(k8sImplementer kubernetes.Implementer) (providers map[string
 	}
 
 	return providers, teardown
+}
+
+func setupBot(k8sImplementer kubernetes.Implementer) (*bot.Bot, error) {
+
 }
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
