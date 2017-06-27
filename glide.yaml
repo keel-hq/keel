@@ -11,13 +11,13 @@ import:
   subpackages:
   - iterator
   - option
-  - support  
+  - support
   - transport
 - package: google.golang.org/grpc
   version: a94a7ac054dc76e5ab6cf170a9d82faba8aaf33f
   subpackages:
-  - status  
-- package: github.com/Sirupsen/logrus  
+  - status
+- package: github.com/Sirupsen/logrus
   subpackages:
   - formatters
   - formatters/logstash
@@ -37,7 +37,7 @@ import:
   - protoc-gen-gogo/descriptor
   - gogoproto
   - plugin/testgen
-  - protoc-gen-gogo/generator  
+  - protoc-gen-gogo/generator
 - package: k8s.io/apimachinery
   version: 75b8dd260ef0469d96d578705a87cffd0e09dab8
   subpackages:
@@ -50,3 +50,5 @@ import:
   - pkg/apis/extensions/v1beta1
   - rest
   - tools/clientcmd
+- package: github.com/nlopes/slack
+  version: ^0.1.0
