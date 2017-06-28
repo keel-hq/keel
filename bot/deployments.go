@@ -74,10 +74,23 @@ func (b *Bot) deploymentsResponse(filter Filter) string {
 func convertToInternal(deployments []v1beta1.Deployment) []formatter.Deployment {
 	formatted := []formatter.Deployment{}
 	for _, d := range deployments {
+
 		formatted = append(formatted, formatter.Deployment{
-			Namespace: d.Namespace,
-			Name:      d.Name,
+			Namespace:         d.Namespace,
+			Name:              d.Name,
+			Replicas:          d.Status.Replicas,
+			AvailableReplicas: d.Status.AvailableReplicas,
+			Images:            getImages(&d),
 		})
 	}
 	return formatted
+}
+
+func getImages(deployment *v1beta1.Deployment) []string {
+	var images []string
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+		images = append(images, c.Image)
+	}
+
+	return images
 }

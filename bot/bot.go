@@ -19,8 +19,18 @@ var (
 			`Here's a list of supported commands`,
 			`- "get deployments" -> get a list of keel watched deployments`,
 			`- "get deployments all" -> get a list of all deployments`,
+			`- "describe deployment <deployment>" -> get details for specified deployment`,
 		},
 	}
+
+	// static bot commands can be used straight away
+	staticBotCommands = map[string]bool{
+		"get deployments":     true,
+		"get deployments all": true,
+	}
+
+	// dynamic bot command prefixes have to be matched
+	dynamicBotCommandPrefixes = []string{"describe deployment"}
 )
 
 type Bot struct {
@@ -159,14 +169,49 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if b.isCommand(event, eventText) {
+		b.handleCommand(event, eventText)
+		return
+	}
+
 	log.WithFields(log.Fields{
 		"name":      b.name,
 		"bot_id":    b.id,
-		"text":      eventText,
+		"command":   eventText,
 		"untrimmed": strings.Trim(strings.ToLower(event.Text), " \n\r"),
-	}).Info("text")
+	}).Info("handleMessage: bot couldn't recognise command")
 
-	b.slackRTM.SendMessage(b.slackRTM.NewOutgoingMessage("Hello world", event.Channel))
+	// b.slackRTM.SendMessage(b.slackRTM.NewOutgoingMessage("bot couldn't recognise command :(", event.Channel))
+	// responseLines := botEventTextToResponse["help"]
+	// response := strings.Join(responseLines, "\n")
+	// b.respond(event, response)
+}
+
+func (b *Bot) isCommand(event *slack.MessageEvent, eventText string) bool {
+	if staticBotCommands[eventText] {
+		return true
+	}
+
+	for _, prefix := range dynamicBotCommandPrefixes {
+		if strings.HasPrefix(eventText, prefix) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (b *Bot) handleCommand(event *slack.MessageEvent, eventText string) {
+	log.Infof("handling command %s", eventText)
+	switch eventText {
+	case "get deployments":
+		log.Info("getting deployments")
+		response := b.deploymentsResponse(Filter{})
+		b.respond(event, response)
+		return
+	}
+
+	log.Info("command not found")
 }
 
 func (b *Bot) respond(event *slack.MessageEvent, response string) {
