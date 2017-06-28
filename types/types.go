@@ -64,6 +64,8 @@ func (t PolicyType) String() string {
 		return "minor"
 	case PolicyTypePatch:
 		return "patch"
+	case PolicyTypeForce:
+		return "force"
 	default:
 		return ""
 	}
@@ -76,4 +78,5 @@ const (
 	PolicyTypeMajor
 	PolicyTypeMinor
 	PolicyTypePatch
+	PolicyTypeForce // update always when a new image is available
 )

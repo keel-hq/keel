@@ -57,6 +57,10 @@ func GetImageNameAndVersion(name string) (string, *types.Version, error) {
 
 // ShouldUpdate - checks whether update is needed
 func ShouldUpdate(current *types.Version, new *types.Version, policy types.PolicyType) (bool, error) {
+	if policy == types.PolicyTypeForce {
+		return true, nil
+	}
+
 	currentVersion, err := semver.NewVersion(current.String())
 	if err != nil {
 		return false, fmt.Errorf("failed to parse current version: %s", err)
