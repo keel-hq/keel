@@ -22,12 +22,12 @@ type Opts struct {
 	Port int
 
 	// available providers
-	Providers map[string]provider.Provider
+	Providers provider.Providers
 }
 
 // TriggerServer - webhook trigger & healthcheck server
 type TriggerServer struct {
-	providers map[string]provider.Provider
+	providers provider.Providers
 	port      int
 	server    *http.Server
 	router    *mux.Router
@@ -100,16 +100,17 @@ func (s *TriggerServer) versionHandler(resp http.ResponseWriter, req *http.Reque
 }
 
 func (s *TriggerServer) trigger(event types.Event) error {
-	for _, p := range s.providers {
-		err := p.Submit(event)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":    err,
-				"provider": p.GetName(),
-				"trigger":  event.TriggerName,
-			}).Error("trigger.trigger: got error while submitting event to provider")
-		}
-	}
+	s.providers.Submit(event)
+	// for _, p := range s.providers {
+	// 	err := p.Submit(event)
+	// 	if err != nil {
+	// 		log.WithFields(log.Fields{
+	// 			"error":    err,
+	// 			"provider": p.GetName(),
+	// 			"trigger":  event.TriggerName,
+	// 		}).Error("trigger.trigger: got error while submitting event to provider")
+	// 	}
+	// }
 
 	return nil
 }

@@ -27,9 +27,9 @@ func (p *fakeProvider) GetName() string {
 func TestNativeWebhookHandler(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := map[string]provider.Provider{
-		fp.GetName(): fp,
-	}
+
+	providers := provider.New([]provider.Provider{fp})
+
 	srv := NewTriggerServer(&Opts{Providers: providers})
 	srv.registerRoutes(srv.router)
 
@@ -55,9 +55,7 @@ func TestNativeWebhookHandler(t *testing.T) {
 func TestNativeWebhookHandlerNoRepoName(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := map[string]provider.Provider{
-		fp.GetName(): fp,
-	}
+	providers := provider.New([]provider.Provider{fp})
 	srv := NewTriggerServer(&Opts{Providers: providers})
 	srv.registerRoutes(srv.router)
 

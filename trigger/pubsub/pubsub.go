@@ -20,7 +20,7 @@ import (
 
 // PubsubSubscriber is Google Cloud pubsub based subscriber
 type PubsubSubscriber struct {
-	providers map[string]provider.Provider
+	providers provider.Providers
 
 	project    string
 	disableAck bool
@@ -37,7 +37,7 @@ type pubsubImplementer interface {
 // Opts - subscriber options
 type Opts struct {
 	ProjectID string
-	Providers map[string]provider.Provider
+	Providers provider.Providers
 }
 
 // WithKeepAliveDialer - required so connections aren't dropped
@@ -180,15 +180,6 @@ func (s *PubsubSubscriber) callback(ctx context.Context, msg *pubsub.Message) {
 		Repository: types.Repository{Name: imageName, Tag: parsedVersion.String()},
 		CreatedAt:  time.Now(),
 	}
-	for _, p := range s.providers {
-		err = p.Submit(event)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":    err,
-				"provider": p.GetName(),
-				"version":  parsedVersion.String(),
-				"image":    decoded.Tag,
-			}).Error("trigger.pubsub: got error while submitting event")
-		}
-	}
+
+	s.providers.Submit(event)
 }
