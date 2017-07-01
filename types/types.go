@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 )
@@ -40,10 +41,25 @@ type Version struct {
 	Patch      int64
 	PreRelease string
 	Metadata   string
+
+	Prefix string // v prefix
 }
 
 func (v Version) String() string {
-	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+	var buf bytes.Buffer
+	if v.Prefix != "" {
+		fmt.Fprintf(&buf, v.Prefix)
+	}
+
+	fmt.Fprintf(&buf, "%d.%d.%d", v.Major, v.Minor, v.Patch)
+	if v.PreRelease != "" {
+		fmt.Fprintf(&buf, "-%s", v.PreRelease)
+	}
+	if v.Metadata != "" {
+		fmt.Fprintf(&buf, "+%s", v.Metadata)
+	}
+
+	return buf.String()
 }
 
 // TriggerType - trigger types
