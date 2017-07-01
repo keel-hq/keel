@@ -6,7 +6,20 @@ import (
 )
 
 const KeelDefaultPort = 9300
-const KeelPolicyLabel = "keel.observer/policy"
+
+// KeelPolicyLabel - keel update policies (version checking)
+const KeelPolicyLabel = "keel.sh/policy"
+
+// KeelTriggerLabel - trigger label is used to specify custom trigger types
+// for example keel.sh/trigger=poll would signal poll trigger to start watching for repository
+// changes
+const KeelTriggerLabel = "keel.sh/trigger"
+
+// KeelPollSchedule - optional variable to setup custom schedule for polling, defaults to @every 10m
+const KeelPollSchedule = "keel.sh/pollSchedule"
+
+// KeelPollDefaultSchedule - defaul polling schedule
+const KeelPollDefaultSchedule = "@every 1m"
 
 type Repository struct {
 	Host string `json:"host,omitempty"`
@@ -33,6 +46,34 @@ func (v Version) String() string {
 	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
 }
 
+// TriggerType - trigger types
+type TriggerType int
+
+// Available trigger types
+const (
+	TriggerTypeDefault TriggerType = iota // default policy is to wait for external triggers
+	TriggerTypePoll                       // poll policy sets up watchers for the affected repositories
+)
+
+func (t TriggerType) String() string {
+	switch t {
+	case TriggerTypeDefault:
+		return "default"
+	case TriggerTypePoll:
+		return "poll"
+	default:
+		return "unknown"
+	}
+}
+
+func ParseTrigger(trigger string) TriggerType {
+	switch trigger {
+	case "poll":
+		return TriggerTypePoll
+	}
+	return TriggerTypeDefault
+}
+
 // PolicyType - policy type
 type PolicyType int
 
@@ -47,15 +88,17 @@ func ParsePolicy(policy string) PolicyType {
 		return PolicyTypeMinor
 	case "patch":
 		return PolicyTypePatch
+	case "force":
+		return PolicyTypeForce
 	default:
-		return PolicyTypeUnknown
+		return PolicyTypeNone
 	}
 }
 
 func (t PolicyType) String() string {
 	switch t {
-	case PolicyTypeUnknown:
-		return "unknown"
+	case PolicyTypeNone:
+		return "none"
 	case PolicyTypeAll:
 		return "all"
 	case PolicyTypeMajor:
@@ -73,7 +116,7 @@ func (t PolicyType) String() string {
 
 // available policies
 const (
-	PolicyTypeUnknown = iota
+	PolicyTypeNone = iota
 	PolicyTypeAll
 	PolicyTypeMajor
 	PolicyTypeMinor
