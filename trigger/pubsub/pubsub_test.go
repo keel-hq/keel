@@ -35,9 +35,8 @@ func fakeDoneFunc(id string, done bool) {
 func TestCallback(t *testing.T) {
 
 	fp := &fakeProvider{}
-	sub := &PubsubSubscriber{disableAck: true, providers: map[string]provider.Provider{
-		fp.GetName(): fp,
-	}}
+	providers := provider.New([]provider.Provider{fp})
+	sub := &PubsubSubscriber{disableAck: true, providers: providers}
 
 	dataMsg := &Message{Action: "INSERT", Tag: "gcr.io/v2-namespace/hello-world:1.1.1"}
 	data, _ := json.Marshal(dataMsg)
