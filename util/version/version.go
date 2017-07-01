@@ -1,32 +1,37 @@
 package version
 
 import (
-	// "strconv"
 	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/rusenask/keel/types"
-	// "github.com/Masterminds/semver"
-	"github.com/coreos/go-semver/semver"
-	// log "github.com/Sirupsen/logrus"
 )
 
+// ErrVersionTagMissing - tag missing error
 var ErrVersionTagMissing = errors.New("version tag is missing")
 
 // GetVersion - parse version
 func GetVersion(version string) (*types.Version, error) {
+
 	v, err := semver.NewVersion(version)
 	if err != nil {
 		return nil, err
 	}
+	// TODO: probably make it customazible
+	prefix := ""
+	if strings.HasPrefix(version, "v") {
+		prefix = "v"
+	}
 
 	return &types.Version{
-		Major:      v.Major,
-		Minor:      v.Minor,
-		Patch:      v.Patch,
-		PreRelease: string(v.PreRelease),
-		Metadata:   v.Metadata,
+		Major:      v.Major(),
+		Minor:      v.Minor(),
+		Patch:      v.Patch(),
+		PreRelease: string(v.Prerelease()),
+		Metadata:   v.Metadata(),
+		Prefix:     prefix,
 	}, nil
 }
 
@@ -71,7 +76,7 @@ func ShouldUpdate(current *types.Version, new *types.Version, policy types.Polic
 	}
 
 	// new version is not higher than current - do nothing
-	if !currentVersion.LessThan(*newVersion) {
+	if !currentVersion.LessThan(newVersion) {
 		return false, nil
 	}
 
@@ -79,11 +84,11 @@ func ShouldUpdate(current *types.Version, new *types.Version, policy types.Polic
 	case types.PolicyTypeAll:
 		return true, nil
 	case types.PolicyTypeMajor:
-		return newVersion.Major > currentVersion.Major, nil
+		return newVersion.Major() > currentVersion.Major(), nil
 	case types.PolicyTypeMinor:
-		return newVersion.Major == currentVersion.Major && newVersion.Minor > currentVersion.Minor, nil
+		return newVersion.Major() == currentVersion.Major() && newVersion.Minor() > currentVersion.Minor(), nil
 	case types.PolicyTypePatch:
-		return newVersion.Major == currentVersion.Major && newVersion.Minor == currentVersion.Minor && newVersion.Patch > currentVersion.Patch, nil
+		return newVersion.Major() == currentVersion.Major() && newVersion.Minor() == currentVersion.Minor() && newVersion.Patch() > currentVersion.Patch(), nil
 	}
 	return false, nil
 }
