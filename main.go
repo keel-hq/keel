@@ -101,7 +101,7 @@ func main() {
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
 // provider map
-func setupProviders(k8sImplementer kubernetes.Implementer) (providers map[string]provider.Provider, teardown func()) {
+func setupProviders(k8sImplementer kubernetes.Implementer) (providers provider.Providers, teardown func()) {
 	k8sProvider, err := kubernetes.NewProvider(k8sImplementer)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -110,8 +110,7 @@ func setupProviders(k8sImplementer kubernetes.Implementer) (providers map[string
 	}
 	go k8sProvider.Start()
 
-	providers = make(map[string]provider.Provider)
-	providers[k8sProvider.GetName()] = k8sProvider
+	providers = provider.New([]provider.Provider{k8sProvider})
 
 	teardown = func() {
 		k8sProvider.Stop()
@@ -122,7 +121,7 @@ func setupProviders(k8sImplementer kubernetes.Implementer) (providers map[string
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
 // should go through all providers (or not if there is a reason) and submit events)
-func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, providers map[string]provider.Provider) (teardown func()) {
+func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, providers provider.Providers) (teardown func()) {
 
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{

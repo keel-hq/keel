@@ -24,6 +24,12 @@ func TestGetVersionFromImageName(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "semver with v prefix",
+			args:    args{name: "gcr.io/stemnapp/alpine-api:v0.0.824"},
+			want:    &types.Version{Major: 0, Minor: 0, Patch: 824, Prefix: "v"},
+			wantErr: false,
+		},
+		{
 			name:    "image latest",
 			args:    args{name: "karolis/webhook-demo:latest"},
 			wantErr: true,
