@@ -8,6 +8,7 @@ import (
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/policies"
 	"github.com/rusenask/keel/util/version"
 
 	log "github.com/Sirupsen/logrus"
@@ -141,12 +142,11 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 	for _, deploymentList := range deploymentLists {
 		for _, deployment := range deploymentList.Items {
 			labels := deployment.GetLabels()
-			policyStr, ok := labels[types.KeelPolicyLabel]
-			// if no policy is set - skipping this deployment
-			if !ok {
+
+			policy := policies.GetPolicy(labels)
+			if policy == types.PolicyTypeNone {
 				continue
 			}
-			policy := types.ParsePolicy(policyStr)
 
 			log.WithFields(log.Fields{
 				"labels":    labels,
