@@ -3,9 +3,6 @@ package registry
 import (
 	"errors"
 
-	// "github.com/docker/distribution/digest"
-	// "github.com/docker/distribution/manifest"
-	// "github.com/docker/libtrust"
 	"github.com/rusenask/docker-registry-client/registry"
 )
 

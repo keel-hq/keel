@@ -21,7 +21,7 @@ func TestDigest(t *testing.T) {
 		t.Errorf("error while getting digest: %s", err)
 	}
 
-	if digest != "sha256:b976145cfe8c6ed1c9670ff3309b6029e68896adee621f047e2818fafb6ee199" {
+	if digest != "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb" {
 		t.Errorf("unexpected digest: %s", digest)
 	}
 }
