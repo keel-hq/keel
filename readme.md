@@ -40,7 +40,7 @@ metadata:
   namespace: default
   labels: 
       name: "wd"
-      keel.observer/policy: all
+      keel.sh/policy: all
 spec:
   replicas: 1
   template:
@@ -99,6 +99,11 @@ Keel supports two types of webhooks:
 
 If you don't want to expose your Keel service - I would recommend using [https://webhookrelay.com/](https://webhookrelay.com/) which can deliver webhooks to your internal Keel service through a sidecar container.
 
+#### Polling
+
+Since only the owners of docker registries can control webhooks - it's sometimes convenient to use
+polling. Be aware that registries can be rate limited so it's a good practice to set up reasonable polling intervals.
+
 
 
 ### Step 2: Kubernetes
@@ -114,6 +119,7 @@ Now, edit [deployment file](https://github.com/rusenask/keel/blob/master/hack/de
 kubectl create -f hack/deployment.yml
 ```
 
-Once Keel is deployed in your Kubernetes cluster - it occasionally scans your current deployments and looks for ones that have label _keel.observer/policy_. It then checks whether appropriate subscriptions and topics are set for GCR registries, if not - auto-creates them.
+Once Keel is deployed in your Kubernetes cluster - it occasionally scans your current deployments and looks for ones that have label _keel.sh/policy_. It then checks whether appropriate subscriptions and topics are set for GCR registries, if not - auto-creates them.
 
 If you have any quetions or notice a problem - raise an issue.
+
