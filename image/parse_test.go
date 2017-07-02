@@ -12,6 +12,10 @@ func TestShortParseWithTag(t *testing.T) {
 		t.Errorf("error while parsing tag: %s", err)
 	}
 
+	if reference.Remote() != DefaultHostname+"/foo/bar:1.1" {
+		t.Errorf("unexpected remote: %s", reference.Remote())
+	}
+
 	if reference.Tag() != "1.1" {
 		t.Errorf("unexpected tag: %s", reference.Tag())
 	}
