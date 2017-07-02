@@ -38,7 +38,7 @@ func GetVersion(version string) (*types.Version, error) {
 // GetVersionFromImageName - get version from image name
 func GetVersionFromImageName(name string) (*types.Version, error) {
 	parts := strings.Split(name, ":")
-	if len(parts) > 0 {
+	if len(parts) > 1 {
 		return GetVersion(parts[1])
 	}
 
