@@ -3,7 +3,7 @@ package poll
 import (
 	"testing"
 
-	"github.com/rusenask/keel/image"
+	"github.com/rusenask/keel/util/image"
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/registry"
 	"github.com/rusenask/keel/types"
