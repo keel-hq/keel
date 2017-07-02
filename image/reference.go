@@ -26,6 +26,7 @@ type Repository struct {
 	Repository string // Repository returns the image's repository. (ie: registry/name)
 	Registry   string // Registry returns the image's registry. (ie: host[:port])
 	ShortName  string // ShortName returns the image's name (ie: debian)
+	Remote     string // Remote returns the image's remote identifier. (ie: registry/name[:tag])
 	Tag        string // Tag returns the image's tag (or digest).
 }
 

@@ -7,7 +7,8 @@ import (
 
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
-	"github.com/rusenask/keel/image"
+	"github.com/rusenask/cron"
+	// "github.com/rusenask/keel/image"
 	"github.com/rusenask/keel/provider/kubernetes"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/policies"
@@ -19,8 +20,8 @@ import (
 // deployments that have market
 type DefaultManager struct {
 	implementer kubernetes.Implementer
-
-	watchList map[string]WatchedRepository
+	// repository watcher
+	watcher Watcher
 
 	mu *sync.Mutex
 
@@ -32,18 +33,13 @@ type DefaultManager struct {
 }
 
 // New - new default poller
-func New(implementer kubernetes.Implementer) *DefaultManager {
+func New(implementer kubernetes.Implementer, watcher Watcher) *DefaultManager {
 	return &DefaultManager{
-		mu:        &sync.Mutex{},
-		watchList: make(map[string]WatchedRepository),
-		scanTick:  55,
+		implementer: implementer,
+		watcher:     watcher,
+		mu:          &sync.Mutex{},
+		scanTick:    55,
 	}
-}
-
-type WatchedRepository struct {
-	Repository types.Repository // current version
-
-	WatchedSince time.Time
 }
 
 // Start - start scanning deployment for changes
@@ -114,14 +110,39 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 
 // checkDeployment - checks whether we are already watching for this deployment
 func (s *DefaultManager) checkDeployment(deployment *v1beta1.Deployment) error {
-	for _, c := range deployment.Spec.Template.Spec.Containers {
-		log.Info(c.Image)
+	labels := deployment.GetLabels()
 
-		imageReference, err := image.Parse(c.Image)
-		if err != nil {
-			return err
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+
+		schedule, ok := labels[types.KeelPollScheduleLabel]
+		if ok {
+			_, err := cron.Parse(schedule)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":      err,
+					"schedule":   schedule,
+					"image":      c.Image,
+					"deployment": deployment.Name,
+					"namespace":  deployment.Namespace,
+				}).Error("trigger.poll.manager: failed to parse poll schedule")
+				return err
+			}
+		} else {
+			schedule = types.KeelPollDefaultSchedule
 		}
 
+		err := s.watcher.Watch(c.Image, schedule, "", "")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":      err,
+				"schedule":   schedule,
+				"image":      c.Image,
+				"deployment": deployment.Name,
+				"namespace":  deployment.Namespace,
+			}).Error("trigger.poll.manager: failed to start watching repository")
+			return err
+		}
+		// continue
 	}
 
 	return nil
