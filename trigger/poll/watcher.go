@@ -145,8 +145,10 @@ func (w *RepositoryWatcher) Watch(imageName, schedule, registryUsername, registr
 
 func (w *RepositoryWatcher) addJob(ref *image.Reference, registryUsername, registryPassword, schedule string) error {
 	// getting initial digest
+	reg := ref.Scheme() + "://" + ref.Registry()
+
 	digest, err := w.registryClient.Digest(registry.Opts{
-		Registry: ref.Registry(),
+		Registry: reg,
 		Name:     ref.ShortName(),
 		Tag:      ref.Tag(),
 	})
@@ -175,6 +177,7 @@ func (w *RepositoryWatcher) addJob(ref *image.Reference, registryUsername, regis
 	log.WithFields(log.Fields{
 		"job_name": key,
 		"image":    ref.Remote(),
+		"digest":   digest,
 		"schedule": schedule,
 	}).Info("trigger.poll.RepositoryWatcher: new job added")
 	return w.cron.AddJob(key, schedule, job)
@@ -200,8 +203,9 @@ func NewWatchTagJob(providers provider.Providers, registryClient registry.Client
 
 // Run - main function to check schedule
 func (j *WatchTagJob) Run() {
+	reg := j.details.imageRef.Scheme() + "://" + j.details.imageRef.Registry()
 	currentDigest, err := j.registryClient.Digest(registry.Opts{
-		Registry: j.details.imageRef.Registry(),
+		Registry: reg,
 		Name:     j.details.imageRef.ShortName(),
 		Tag:      j.details.imageRef.Tag(),
 	})
@@ -213,6 +217,12 @@ func (j *WatchTagJob) Run() {
 		}).Error("trigger.poll.WatchTagJob: failed to check digest")
 		return
 	}
+
+	log.WithFields(log.Fields{
+		"current_digest": j.details.digest,
+		"new_digest":     currentDigest,
+		"image_name":     j.details.imageRef.Remote(),
+	}).Info("trigger.poll.WatchTagJob: checking digest")
 
 	// checking whether image digest has changed
 	if j.details.digest != currentDigest {
@@ -227,6 +237,7 @@ func (j *WatchTagJob) Run() {
 			},
 			TriggerName: types.TriggerTypePoll.String(),
 		}
+		log.Info("trigger.poll.WatchTagJob: digest change detected, submiting event to providers")
 
 		j.providers.Submit(event)
 

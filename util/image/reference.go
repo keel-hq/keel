@@ -13,13 +13,13 @@ const (
 	// DefaultTag defines the default tag used when performing images related actions and no tag or digest is specified
 	DefaultTag = "latest"
 	// DefaultHostname is the default built-in hostname
-	DefaultHostname = "docker.io"
+	DefaultHostname = "index.docker.io"
 
 	// DefaultScheme is default scheme for registries
 	DefaultScheme = "https"
 
-	// LegacyDefaultHostname is automatically converted to DefaultHostname
-	LegacyDefaultHostname = "index.docker.io"
+	// // LegacyDefaultHostname is automatically converted to DefaultHostname
+	// LegacyDefaultHostname = "index.docker.io"
 	// DefaultRepoPrefix is the prefix used for default repositories in default host
 	DefaultRepoPrefix = "library/"
 )
@@ -180,9 +180,9 @@ func splitHostname(name string) (hostname, remoteName string) {
 	} else {
 		hostname, remoteName = name[:i], name[i+1:]
 	}
-	if hostname == LegacyDefaultHostname {
-		hostname = DefaultHostname
-	}
+	// if hostname == LegacyDefaultHostname {
+	// 	hostname = DefaultHostname
+	// }
 	if hostname == DefaultHostname && !strings.ContainsRune(remoteName, '/') {
 		remoteName = DefaultRepoPrefix + remoteName
 	}
