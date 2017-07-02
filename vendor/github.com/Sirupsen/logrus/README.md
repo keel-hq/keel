@@ -1,16 +1,19 @@
 # Logrus <img src="http://i.imgur.com/hTeVwmJ.png" width="40" height="40" alt=":walrus:" class="emoji" title=":walrus:"/>&nbsp;[![Build Status](https://travis-ci.org/sirupsen/logrus.svg?branch=master)](https://travis-ci.org/sirupsen/logrus)&nbsp;[![GoDoc](https://godoc.org/github.com/sirupsen/logrus?status.svg)](https://godoc.org/github.com/sirupsen/logrus)
 
 Logrus is a structured logger for Go (golang), completely API compatible with
-the standard library logger. [Godoc][godoc].
+the standard library logger. [Godoc][godoc]. **Please note the Logrus API is not
+yet stable (pre 1.0). Logrus itself is completely stable and has been used in
+many large deployments. The core API is unlikely to change much but please
+version control your Logrus to make sure you aren't fetching latest `master` on
+every build.**
 
-**Seeing weird case-sensitive problems?** It's in the past been possible to
-import Logrus as both upper- and lower-case. Due to the Go package environment,
-this caused issues in the community and we needed a standard. Some environments
-experienced problems with the upper-case variant, so the lower-case was decided.
+**Seeing weird case-sensitive problems?** Unfortunately, the author failed to
+realize the consequences of renaming to lower-case. Due to the Go package
+environment, this caused issues. Regretfully, there's no turning back now.
 Everything using `logrus` will need to use the lower-case:
 `github.com/sirupsen/logrus`. Any package that isn't, should be changed.
 
-**I am terribly sorry for this inconvenience.** Logrus strives hard for backwards
+I am terribly sorry for this inconvenience. Logrus strives hard for backwards
 compatibility, and the author failed to realize the cascading consequences of
 such a name-change. To fix Glide, see [these
 comments](https://github.com/sirupsen/logrus/issues/553#issuecomment-306591437).
