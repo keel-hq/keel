@@ -7,6 +7,7 @@ import (
 
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
+	"github.com/rusenask/keel/image"
 	"github.com/rusenask/keel/provider/kubernetes"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/policies"
@@ -104,7 +105,7 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 					"error":      err,
 					"deployment": deployment.Name,
 					"namespace":  deployment.Namespace,
-				}).Error("trigger.pubsub.manager: failed to check deployment subscription status")
+				}).Error("trigger.poll.manager: failed to check deployment poll status")
 			}
 		}
 	}
@@ -113,7 +114,17 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 
 // checkDeployment - checks whether we are already watching for this deployment
 func (s *DefaultManager) checkDeployment(deployment *v1beta1.Deployment) error {
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+		log.Info(c.Image)
 
+		imageReference, err := image.Parse(c.Image)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
 }
 
 func (s *DefaultManager) deployments() ([]*v1beta1.DeploymentList, error) {
