@@ -49,6 +49,7 @@ func TestParseRepo(t *testing.T) {
 			want: &Repository{
 				Name:       "foo/bar:1.1",
 				Repository: "docker.io/foo/bar",
+				Remote:     "docker.io/foo/bar:1.1",
 				Registry:   DefaultHostname,
 				ShortName:  "foo/bar",
 				Tag:        "1.1",
@@ -61,6 +62,7 @@ func TestParseRepo(t *testing.T) {
 			want: &Repository{
 				Name:       "foo/bar:1.1",
 				Repository: "localhost.localdomain/foo/bar",
+				Remote:     "localhost.localdomain/foo/bar:1.1",
 				Registry:   "localhost.localdomain",
 				ShortName:  "foo/bar",
 				Tag:        "1.1",

@@ -104,6 +104,7 @@ func ParseRepo(remote string) (*Repository, error) {
 		Name:       ref.Name(),
 		Repository: ref.Repository(),
 		Registry:   ref.Registry(),
+		Remote:     ref.Remote(),
 		ShortName:  ref.ShortName(),
 		Tag:        ref.Tag(),
 	}, nil
