@@ -16,16 +16,17 @@ const KeelPolicyLabel = "keel.sh/policy"
 // changes
 const KeelTriggerLabel = "keel.sh/trigger"
 
-// KeelPollSchedule - optional variable to setup custom schedule for polling, defaults to @every 10m
-const KeelPollSchedule = "keel.sh/pollSchedule"
+// KeelPollScheduleLabel - optional variable to setup custom schedule for polling, defaults to @every 10m
+const KeelPollScheduleLabel = "keel.sh/pollSchedule"
 
 // KeelPollDefaultSchedule - defaul polling schedule
 const KeelPollDefaultSchedule = "@every 1m"
 
 type Repository struct {
-	Host string `json:"host,omitempty"`
-	Name string `json:"name,omitempty"`
-	Tag  string `json:"tag,omitempty"`
+	Host   string `json:"host"`
+	Name   string `json:"name"`
+	Tag    string `json:"tag"`
+	Digest string `json:"digest"` // optional digest field
 }
 
 type Event struct {
