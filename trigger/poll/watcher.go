@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/rusenask/cron"
-	"github.com/rusenask/keel/image"
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/registry"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/image"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -34,7 +34,7 @@ type RepositoryWatcher struct {
 
 	// internal map of internal watches
 	// map[registry/name]=image.Reference
-	watched map[string]watchDetails
+	watched map[string]*watchDetails
 
 	cron *cron.Cron
 }
@@ -46,7 +46,7 @@ func NewRepositoryWatcher(providers provider.Providers, registryClient registry.
 	return &RepositoryWatcher{
 		providers:      providers,
 		registryClient: registryClient,
-		watched:        make(map[string]watchDetails),
+		watched:        make(map[string]*watchDetails),
 		cron:           c,
 	}
 }
@@ -82,6 +82,7 @@ func (w *RepositoryWatcher) Unwatch(imageName string) error {
 	_, ok := w.watched[key]
 	if ok {
 		w.cron.DeleteJob(key)
+		delete(w.watched, key)
 	}
 
 	return nil
@@ -165,6 +166,10 @@ func (w *RepositoryWatcher) addJob(ref *image.Reference, registryUsername, regis
 		registryPassword: registryPassword,
 		schedule:         schedule,
 	}
+
+	// adding job to internal map
+	w.watched[key] = details
+
 	// adding new job
 	job := NewWatchTagJob(w.providers, w.registryClient, details)
 	log.WithFields(log.Fields{
@@ -176,13 +181,15 @@ func (w *RepositoryWatcher) addJob(ref *image.Reference, registryUsername, regis
 
 }
 
-// Watch specific tag job
+// WatchTagJob - Watch specific tag job
 type WatchTagJob struct {
 	providers      provider.Providers
 	registryClient registry.Client
 	details        *watchDetails
 }
 
+// NewWatchTagJob - new watch tag job monitors specific tag by checking digest based on specified
+// cron style schedule
 func NewWatchTagJob(providers provider.Providers, registryClient registry.Client, details *watchDetails) *WatchTagJob {
 	return &WatchTagJob{
 		providers:      providers,
@@ -191,6 +198,7 @@ func NewWatchTagJob(providers provider.Providers, registryClient registry.Client
 	}
 }
 
+// Run - main function to check schedule
 func (j *WatchTagJob) Run() {
 	currentDigest, err := j.registryClient.Digest(registry.Opts{
 		Registry: j.details.imageRef.Registry(),
