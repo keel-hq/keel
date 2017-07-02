@@ -6,8 +6,9 @@ import (
 
 // Reference is an opaque object that include identifier such as a name, tag, repository, registry, etc...
 type Reference struct {
-	named Named
-	tag   string
+	named  Named
+	tag    string
+	scheme string // registry scheme, i.e. http, https
 }
 
 // Name returns the image's name. (ie: debian[:8.2])
@@ -33,6 +34,11 @@ func (r Reference) Registry() string {
 	return r.named.Hostname()
 }
 
+// Scheme returns registry's scheme. (ie: https)
+func (r Reference) Scheme() string {
+	return r.scheme
+}
+
 // Repository returns the image's repository. (ie: registry/name)
 func (r Reference) Repository() string {
 	return r.named.FullName()
@@ -43,23 +49,30 @@ func (r Reference) Remote() string {
 	return r.named.FullName() + r.tag
 }
 
-func clean(url string) string {
+func clean(url string) (cleaned string, scheme string) {
 
 	s := url
 
 	if strings.HasPrefix(url, "http://") {
+		scheme = "http"
 		s = strings.Replace(url, "http://", "", 1)
 	} else if strings.HasPrefix(url, "https://") {
+		scheme = "https"
 		s = strings.Replace(url, "https://", "", 1)
 	}
 
-	return s
+	if scheme == "" {
+		scheme = DefaultScheme
+	}
+
+	return s, scheme
 }
 
 // Parse returns a Reference from analyzing the given remote identifier.
 func Parse(remote string) (*Reference, error) {
 
-	n, err := ParseNamed(clean(remote))
+	cleaned, scheme := clean(remote)
+	n, err := ParseNamed(cleaned)
 
 	if err != nil {
 		return nil, err
@@ -75,14 +88,16 @@ func Parse(remote string) (*Reference, error) {
 		t = ":" + x.Tag()
 	}
 
-	return &Reference{named: n, tag: t}, nil
+	return &Reference{named: n, tag: t, scheme: scheme}, nil
 }
 
 // ParseRepo - parses remote
 // pretty much the same as Parse but better for testing
 func ParseRepo(remote string) (*Repository, error) {
 
-	n, err := ParseNamed(clean(remote))
+	cleaned, scheme := clean(remote)
+
+	n, err := ParseNamed(cleaned)
 
 	if err != nil {
 		return nil, err
@@ -98,7 +113,7 @@ func ParseRepo(remote string) (*Repository, error) {
 		t = ":" + x.Tag()
 	}
 
-	ref := &Reference{named: n, tag: t}
+	ref := &Reference{named: n, tag: t, scheme: scheme}
 
 	return &Repository{
 		Name:       ref.Name(),
@@ -107,5 +122,6 @@ func ParseRepo(remote string) (*Repository, error) {
 		Remote:     ref.Remote(),
 		ShortName:  ref.ShortName(),
 		Tag:        ref.Tag(),
+		Scheme:     ref.scheme,
 	}, nil
 }

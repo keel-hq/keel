@@ -14,6 +14,10 @@ const (
 	DefaultTag = "latest"
 	// DefaultHostname is the default built-in hostname
 	DefaultHostname = "docker.io"
+
+	// DefaultScheme is default scheme for registries
+	DefaultScheme = "https"
+
 	// LegacyDefaultHostname is automatically converted to DefaultHostname
 	LegacyDefaultHostname = "index.docker.io"
 	// DefaultRepoPrefix is the prefix used for default repositories in default host
@@ -25,6 +29,7 @@ type Repository struct {
 	Name       string // Name returns the image's name. (ie: debian[:8.2])
 	Repository string // Repository returns the image's repository. (ie: registry/name)
 	Registry   string // Registry returns the image's registry. (ie: host[:port])
+	Scheme     string // Registry scheme. (ie: http)
 	ShortName  string // ShortName returns the image's name (ie: debian)
 	Remote     string // Remote returns the image's remote identifier. (ie: registry/name[:tag])
 	Tag        string // Tag returns the image's tag (or digest).
@@ -181,6 +186,7 @@ func splitHostname(name string) (hostname, remoteName string) {
 	if hostname == DefaultHostname && !strings.ContainsRune(remoteName, '/') {
 		remoteName = DefaultRepoPrefix + remoteName
 	}
+
 	return
 }
 
