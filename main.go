@@ -9,7 +9,9 @@ import (
 
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/provider/kubernetes"
+	"github.com/rusenask/keel/registry"
 	"github.com/rusenask/keel/trigger/http"
+	"github.com/rusenask/keel/trigger/poll"
 	"github.com/rusenask/keel/trigger/pubsub"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/version"
@@ -20,6 +22,7 @@ import (
 // gcloud pubsub related config
 const (
 	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
+	EnvTriggerPoll   = "POLL"   // set to 1 or something to enable poll trigger
 	EnvProjectID     = "PROJECT_ID"
 )
 
@@ -152,6 +155,16 @@ func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, p
 
 		subManager := pubsub.NewDefaultManager(projectID, k8sImplementer, ps)
 		go subManager.Start(ctx)
+	}
+
+	if os.Getenv(EnvTriggerPoll) != "" {
+
+		registryClient := registry.New()
+		watcher := poll.NewRepositoryWatcher(providers, registryClient)
+		pollManager := poll.NewPollManager(k8sImplementer, watcher)
+
+		// start poll manager, will finish with ctx
+		go pollManager.Start(ctx)
 	}
 
 	teardown = func() {
