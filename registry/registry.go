@@ -11,12 +11,15 @@ var (
 	ErrTagNotSupplied = errors.New("tag not supplied")
 )
 
+// Repository - holds repository related info
 type Repository struct {
 	Name string
-	Tags []string
+	Tags []string // available tags
 }
 
 type Client interface {
+	Get(opts Opts) (*Repository, error)
+	Digest(opts Opts) (digest string, err error)
 }
 
 func New() *DefaultClient {

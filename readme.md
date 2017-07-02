@@ -104,7 +104,12 @@ If you don't want to expose your Keel service - I would recommend using [https:/
 Since only the owners of docker registries can control webhooks - it's sometimes convenient to use
 polling. Be aware that registries can be rate limited so it's a good practice to set up reasonable polling intervals.
 
-
+```
+keel.sh/trigger=poll
+keel.sh/pollSchedule=@every 1m
+keel.sh/registryUsername=username_secret_ref
+keel.sh/registryPassword=password_secret_ref
+```
 
 ### Step 2: Kubernetes
 
