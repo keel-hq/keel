@@ -107,9 +107,11 @@ polling. Be aware that registries can be rate limited so it's a good practice to
 ```
 keel.sh/trigger=poll
 keel.sh/pollSchedule=@every 1m
-keel.sh/registryUsername=username_secret_ref
-keel.sh/registryPassword=password_secret_ref
 ```
+
+Authenticated Registries 
+
+__comming soon__
 
 ### Step 2: Kubernetes
 
