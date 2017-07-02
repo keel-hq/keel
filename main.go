@@ -164,6 +164,7 @@ func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, p
 		pollManager := poll.NewPollManager(k8sImplementer, watcher)
 
 		// start poll manager, will finish with ctx
+		go watcher.Start(ctx)
 		go pollManager.Start(ctx)
 	}
 
