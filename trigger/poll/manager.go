@@ -32,8 +32,8 @@ type DefaultManager struct {
 	ctx context.Context
 }
 
-// New - new default poller
-func New(implementer kubernetes.Implementer, watcher Watcher) *DefaultManager {
+// NewPollManager - new default poller
+func NewPollManager(implementer kubernetes.Implementer, watcher Watcher) *DefaultManager {
 	return &DefaultManager{
 		implementer: implementer,
 		watcher:     watcher,
