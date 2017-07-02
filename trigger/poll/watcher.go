@@ -1,22 +1,90 @@
 package poll
 
 import (
+	"context"
+
 	"github.com/rusenask/cron"
 	"github.com/rusenask/keel/image"
 	"github.com/rusenask/keel/provider"
+	"github.com/rusenask/keel/registry"
 	"github.com/rusenask/keel/types"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type Watcher interface {
-	Watch(image string) error
+	Watch(imageName, registryUsername, registryPassword, schedule string) error
 	Unwatch(image string) error
-	List() ([]types.Repository, error)
 }
 
+type watchDetails struct {
+	imageRef         *image.Reference
+	registryUsername string // "" for anonymous
+	registryPassword string // "" for anonymous
+	digest           string // image digest
+	schedule         string
+}
+
+// RepositoryWatcher - repository watcher cron
 type RepositoryWatcher struct {
 	providers provider.Providers
 
+	// registry client
+	registryClient registry.Client
+
+	// internal map of internal watches
+	// map[registry/name]=image.Reference
+	watched map[string]watchDetails
+
 	cron *cron.Cron
+}
+
+// NewRepositoryWatcher - create new repository watcher
+func NewRepositoryWatcher(providers provider.Providers, registryClient registry.Client) *RepositoryWatcher {
+	c := cron.New()
+
+	return &RepositoryWatcher{
+		providers:      providers,
+		registryClient: registryClient,
+		watched:        make(map[string]watchDetails),
+		cron:           c,
+	}
+}
+
+func (w *RepositoryWatcher) Start(ctx context.Context) {
+	// starting cron job
+	w.cron.Start()
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				w.cron.Stop()
+			}
+		}
+	}()
+}
+
+func getImageIdentifier(ref *image.Reference) string {
+	return ref.Registry() + "/" + ref.ShortName()
+}
+
+// Unwatch - stop watching for changes
+func (w *RepositoryWatcher) Unwatch(imageName string) error {
+	imageRef, err := image.Parse(imageName)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":      err,
+			"image_name": imageName,
+		}).Error("trigger.poll.RepositoryWatcher.Unwatch: failed to parse image")
+		return err
+	}
+	key := getImageIdentifier(imageRef)
+	_, ok := w.watched[key]
+	if ok {
+		w.cron.DeleteJob(key)
+	}
+
+	return nil
 }
 
 // Watch - starts watching repository for changes, if it's already watching - ignores,
