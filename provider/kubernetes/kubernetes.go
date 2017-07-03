@@ -18,6 +18,9 @@ const ProviderName = "kubernetes"
 
 var versionreg = regexp.MustCompile(`:[^:]*$`)
 
+// annotation used to specify which image to force pull
+const forceUpdateImageAnnotation = "keel.sh/updateImage"
+
 // Provider - kubernetes provider for auto update
 type Provider struct {
 	implementer Implementer
