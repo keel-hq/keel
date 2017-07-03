@@ -12,8 +12,12 @@ import (
 )
 
 func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updated v1beta1.Deployment, shouldUpdateDeployment bool, err error) {
-	labels := deployment.GetLabels()
+	eventRepoRef, err := image.Parse(repo.Name)
+	if err != nil {
+		return
+	}
 
+	labels := deployment.GetLabels()
 	log.WithFields(log.Fields{
 		"labels":    labels,
 		"name":      deployment.Name,
@@ -27,7 +31,7 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		// Remove version if any
 		// containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
-		ref, err := image.Parse(c.Image)
+		conatinerImageRef, err := image.Parse(c.Image)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
@@ -39,26 +43,26 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		log.WithFields(log.Fields{
 			"name":              deployment.Name,
 			"namespace":         deployment.Namespace,
-			"parsed_image_name": ref.Remote(),
+			"parsed_image_name": conatinerImageRef.Remote(),
 			"target_image_name": repo.Name,
 			"target_tag":        repo.Tag,
 			"policy":            policy,
 			"image":             c.Image,
 		}).Info("provider.kubernetes: checking image")
 
-		if ref.Repository() != repo.Name {
+		if conatinerImageRef.Repository() != eventRepoRef.Repository() {
 			log.WithFields(log.Fields{
-				"parsed_image_name": ref.Remote(),
+				"parsed_image_name": conatinerImageRef.Remote(),
 				"target_image_name": repo.Name,
 			}).Info("provider.kubernetes: images do not match, ignoring")
 			continue
 		}
 
 		// updating image
-		if ref.Registry() == image.DefaultRegistryHostname {
-			c.Image = fmt.Sprintf("%s:%s", ref.ShortName(), repo.Tag)
+		if conatinerImageRef.Registry() == image.DefaultRegistryHostname {
+			c.Image = fmt.Sprintf("%s:%s", conatinerImageRef.ShortName(), repo.Tag)
 		} else {
-			c.Image = fmt.Sprintf("%s:%s", ref.Repository(), repo.Tag)
+			c.Image = fmt.Sprintf("%s:%s", conatinerImageRef.Repository(), repo.Tag)
 		}
 
 		deployment.Spec.Template.Spec.Containers[idx] = c
@@ -68,12 +72,12 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		// updating digest if available
 		if repo.Digest != "" {
 			annotations := deployment.GetAnnotations()
-			annotations[types.KeelDigestAnnotation+"/"+ref.Remote()] = repo.Digest
+			annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
 			deployment.SetAnnotations(annotations)
 		}
 
 		log.WithFields(log.Fields{
-			"parsed_image":     ref.Remote(),
+			"parsed_image":     conatinerImageRef.Remote(),
 			"raw_image_name":   c.Image,
 			"target_image":     repo.Name,
 			"target_image_tag": repo.Tag,

@@ -15,6 +15,11 @@ import (
 )
 
 func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updated v1beta1.Deployment, shouldUpdateDeployment bool, err error) {
+	eventRepoRef, err := image.Parse(repo.Name)
+	if err != nil {
+		return
+	}
+
 	labels := deployment.GetLabels()
 
 	log.WithFields(log.Fields{
@@ -30,7 +35,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		// Remove version if any
 		// containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
-		ref, err := image.Parse(c.Image)
+		conatinerImageRef, err := image.Parse(c.Image)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
@@ -42,16 +47,16 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		log.WithFields(log.Fields{
 			"name":              deployment.Name,
 			"namespace":         deployment.Namespace,
-			"parsed_image_name": ref.Remote(),
+			"parsed_image_name": conatinerImageRef.Remote(),
 			"target_image_name": repo.Name,
 			"target_tag":        repo.Tag,
 			"policy":            policy,
 			"image":             c.Image,
 		}).Info("provider.kubernetes: checking image")
 
-		if ref.Repository() != repo.Name {
+		if conatinerImageRef.Repository() != eventRepoRef.Repository() {
 			log.WithFields(log.Fields{
-				"parsed_image_name": ref.Remote(),
+				"parsed_image_name": conatinerImageRef.Remote(),
 				"target_image_name": repo.Name,
 			}).Info("provider.kubernetes: images do not match, ignoring")
 			continue
@@ -59,7 +64,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 
 		// if policy is force, don't bother with version checking
 		if policy == types.PolicyTypeForce {
-			c = updateContainer(c, ref, newVersion.String())
+			c = updateContainer(c, conatinerImageRef, newVersion.String())
 
 			deployment.Spec.Template.Spec.Containers[idx] = c
 
@@ -68,12 +73,12 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			// updating digest if available
 			if repo.Digest != "" {
 				annotations := deployment.GetAnnotations()
-				annotations[types.KeelDigestAnnotation+"/"+ref.Remote()] = repo.Digest
+				annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
 				deployment.SetAnnotations(annotations)
 			}
 
 			log.WithFields(log.Fields{
-				"parsed_image":     ref.Remote(),
+				"parsed_image":     conatinerImageRef.Remote(),
 				"raw_image_name":   c.Image,
 				"target_image":     repo.Name,
 				"target_image_tag": repo.Tag,
@@ -126,19 +131,19 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		}).Info("provider.kubernetes: checked version, deciding whether to update")
 
 		if shouldUpdateContainer {
-			c = updateContainer(c, ref, newVersion.String())
+			c = updateContainer(c, conatinerImageRef, newVersion.String())
 			deployment.Spec.Template.Spec.Containers[idx] = c
 			// marking this deployment for update
 			shouldUpdateDeployment = true
 			// updating digest if available
 			if repo.Digest != "" {
 				annotations := deployment.GetAnnotations()
-				annotations[types.KeelDigestAnnotation+"/"+ref.Remote()] = repo.Digest
+				annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
 				deployment.SetAnnotations(annotations)
 			}
 
 			log.WithFields(log.Fields{
-				"parsed_image":     ref.Remote(),
+				"parsed_image":     conatinerImageRef.Remote(),
 				"raw_image_name":   c.Image,
 				"target_image":     repo.Name,
 				"target_image_tag": repo.Tag,
