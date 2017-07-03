@@ -1,16 +1,13 @@
 package kubernetes
 
 import (
-	"fmt"
 	"regexp"
 
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
 	"github.com/rusenask/keel/types"
-	// "github.com/rusenask/keel/util/hash"
-	// "github.com/rusenask/keel/util/image"
-	// "github.com/rusenask/keel/util/policies"
+	"github.com/rusenask/keel/util/policies"
 	"github.com/rusenask/keel/util/version"
 
 	log "github.com/Sirupsen/logrus"
@@ -128,10 +125,6 @@ func (p *Provider) getDeployment(namespace, name string) (*v1beta1.Deployment, e
 
 // gets impacted deployments by changed repository
 func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deployment, error) {
-	newVersion, err := version.GetVersion(repo.Tag)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse version from repository tag, error: %s", err)
-	}
 
 	deploymentLists, err := p.deployments()
 	if err != nil {
@@ -145,129 +138,54 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 
 	for _, deploymentList := range deploymentLists {
 		for _, deployment := range deploymentList.Items {
-			// labels := deployment.GetLabels()
 
-			// policy := policies.GetPolicy(labels)
-			// if policy == types.PolicyTypeNone {
-			// 	continue
-			// }
+			labels := deployment.GetLabels()
 
-			// log.WithFields(log.Fields{
-			// 	"labels":    labels,
-			// 	"name":      deployment.Name,
-			// 	"namespace": deployment.Namespace,
-			// 	"policy":    policy,
-			// }).Info("provider.kubernetes: keel policy found, checking deployment...")
+			policy := policies.GetPolicy(labels)
+			if policy == types.PolicyTypeNone {
+				// skip
+				continue
+			}
 
-			// shouldUpdateDeployment := false
+			newVersion, err := version.GetVersion(repo.Tag)
+			if err != nil {
+				// failed to get new version tag
+				if policy == types.PolicyTypeForce {
+					updated, shouldUpdateDeployment, err := p.checkUnversionedDeployment(policy, repo, deployment)
+					if err != nil {
+						log.WithFields(log.Fields{
+							"error":      err,
+							"deployment": deployment.Name,
+							"namespace":  deployment.Namespace,
+						}).Error("provider.kubernetes: got error while checking unversioned deployment")
+						continue
+					}
 
-			// for idx, c := range deployment.Spec.Template.Spec.Containers {
-			// 	// Remove version if any
-			// 	// containerImageName := versionreg.ReplaceAllString(c.Image, "")
+					if shouldUpdateDeployment {
+						impacted = append(impacted, updated)
+					}
 
-			// 	ref, err := image.Parse(c.Image)
-			// 	if err != nil {
-			// 		log.WithFields(log.Fields{
-			// 			"error":      err,
-			// 			"image_name": c.Image,
-			// 		}).Error("provider.kubernetes: failed to parse image name")
-			// 		continue
-			// 	}
+					// success, unversioned deployment marked for update
+					continue
+				}
 
-			// 	log.WithFields(log.Fields{
-			// 		"name":              deployment.Name,
-			// 		"namespace":         deployment.Namespace,
-			// 		"parsed_image_name": ref.Remote(),
-			// 		"target_image_name": repo.Name,
-			// 		"target_tag":        repo.Tag,
-			// 		"policy":            policy,
-			// 		"image":             c.Image,
-			// 	}).Info("provider.kubernetes: checking image")
+				log.WithFields(log.Fields{
+					"error":          err,
+					"repository_tag": repo.Tag,
+					"deployment":     deployment.Name,
+					"namespace":      deployment.Namespace,
+					"policy":         policy,
+				}).Warn("provider.kubernetes: got error while parsing repository tag")
+				continue
+			}
 
-			// 	if ref.Remote() != repo.Name {
-			// 		log.WithFields(log.Fields{
-			// 			"parsed_image_name": ref.Remote(),
-			// 			"target_image_name": repo.Name,
-			// 		}).Info("provider.kubernetes: images do not match, ignoring")
-			// 		continue
-			// 	}
-
-			// 	currentVersion, err := version.GetVersionFromImageName(c.Image)
-			// 	if err != nil {
-			// 		log.WithFields(log.Fields{
-			// 			"error":       err,
-			// 			"image_name":  c.Image,
-			// 			"keel_policy": policy,
-			// 		}).Error("provider.kubernetes: failed to get image version, is it tagged as semver?")
-			// 		continue
-			// 	}
-
-			// 	log.WithFields(log.Fields{
-			// 		"labels":          labels,
-			// 		"name":            deployment.Name,
-			// 		"namespace":       deployment.Namespace,
-			// 		"image":           c.Image,
-			// 		"current_version": currentVersion.String(),
-			// 		"policy":          policy,
-			// 	}).Info("provider.kubernetes: current image version")
-
-			// 	shouldUpdateContainer, err := version.ShouldUpdate(currentVersion, newVersion, policy)
-			// 	if err != nil {
-			// 		log.WithFields(log.Fields{
-			// 			"error":           err,
-			// 			"new_version":     newVersion.String(),
-			// 			"current_version": currentVersion.String(),
-			// 			"keel_policy":     policy,
-			// 		}).Error("provider.kubernetes: got error while checking whether deployment should be updated")
-			// 		continue
-			// 	}
-
-			// 	log.WithFields(log.Fields{
-			// 		"labels":          labels,
-			// 		"name":            deployment.Name,
-			// 		"namespace":       deployment.Namespace,
-			// 		"image":           c.Image,
-			// 		"current_version": currentVersion.String(),
-			// 		"new_version":     newVersion.String(),
-			// 		"policy":          policy,
-			// 		"should_update":   shouldUpdateContainer,
-			// 	}).Info("provider.kubernetes: checked version, deciding whether to update")
-
-			// 	if shouldUpdateContainer {
-			// 		// updating image
-			// 		if ref.Registry() == image.DefaultRegistryHostname {
-			// 			c.Image = fmt.Sprintf("%s:%s", ref.ShortName(), newVersion.String())
-			// 		} else {
-			// 			c.Image = fmt.Sprintf("%s:%s", ref.Remote(), newVersion.String())
-			// 		}
-
-			// 		deployment.Spec.Template.Spec.Containers[idx] = c
-			// 		// marking this deployment for update
-			// 		shouldUpdateDeployment = true
-
-			// 		// updating digest if available
-			// 		if repo.Digest != "" {
-
-			// 			labels[types.KeelDigestLabel] = hash.GetShort(repo.Digest)
-			// 		}
-
-			// 		log.WithFields(log.Fields{
-			// 			"parsed_image":     ref.Remote(),
-			// 			"raw_image_name":   c.Image,
-			// 			"target_image":     repo.Name,
-			// 			"target_image_tag": repo.Tag,
-			// 			"policy":           policy,
-			// 		}).Info("provider.kubernetes: impacted deployment container found")
-			// 	}
-			// }
-
-			updated, shouldUpdateDeployment, err := p.checkDeployment(newVersion, repo, &deployment)
+			updated, shouldUpdateDeployment, err := p.checkVersionedDeployment(newVersion, policy, repo, deployment)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error":      err,
 					"deployment": deployment.Name,
 					"namespace":  deployment.Namespace,
-				}).Error("provider.kubernetes: got error while checking deployment")
+				}).Error("provider.kubernetes: got error while checking versioned deployment")
 				continue
 			}
 

@@ -202,7 +202,7 @@ func TestGetImpacted(t *testing.T) {
 	}
 
 	if len(deps) != 1 {
-		t.Errorf("expected to find 1 deployment but found %s", len(deps))
+		t.Errorf("expected to find 1 deployment but found %d", len(deps))
 	}
 
 	found := false
