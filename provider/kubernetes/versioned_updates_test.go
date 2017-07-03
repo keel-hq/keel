@@ -146,6 +146,62 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,
 		},
+		{
+			name: "force update untagged container",
+			args: args{
+				newVersion: unsafeGetVersion("1.1.2"),
+				policy:     types.PolicyTypeForce,
+				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
+				deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-world:latest",
+									},
+									v1.Container{
+										Image: "yo-world:1.1.1",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+			},
+			wantUpdated: v1beta1.Deployment{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{
+					Name:      "dep-1",
+					Namespace: "xxxx",
+					Labels:    map[string]string{types.KeelPolicyLabel: "force"},
+				},
+				v1beta1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								v1.Container{
+									Image: "gcr.io/v2-namespace/hello-world:1.1.2",
+								},
+								v1.Container{
+									Image: "yo-world:1.1.1",
+								},
+							},
+						},
+					},
+				},
+				v1beta1.DeploymentStatus{},
+			},
+			wantShouldUpdateDeployment: true,
+			wantErr:                    false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
