@@ -12,8 +12,8 @@ import (
 const (
 	// DefaultTag defines the default tag used when performing images related actions and no tag or digest is specified
 	DefaultTag = "latest"
-	// DefaultHostname is the default built-in hostname
-	DefaultHostname = "index.docker.io"
+	// DefaultRegistryHostname is the default built-in hostname
+	DefaultRegistryHostname = "index.docker.io"
 
 	// DefaultScheme is default scheme for registries
 	DefaultScheme = "https"
@@ -176,14 +176,14 @@ func IsNameOnly(ref Named) bool {
 func splitHostname(name string) (hostname, remoteName string) {
 	i := strings.IndexRune(name, '/')
 	if i == -1 || (!strings.ContainsAny(name[:i], ".:") && name[:i] != "localhost") {
-		hostname, remoteName = DefaultHostname, name
+		hostname, remoteName = DefaultRegistryHostname, name
 	} else {
 		hostname, remoteName = name[:i], name[i+1:]
 	}
 	// if hostname == LegacyDefaultHostname {
 	// 	hostname = DefaultHostname
 	// }
-	if hostname == DefaultHostname && !strings.ContainsRune(remoteName, '/') {
+	if hostname == DefaultRegistryHostname && !strings.ContainsRune(remoteName, '/') {
 		remoteName = DefaultRepoPrefix + remoteName
 	}
 
@@ -197,7 +197,7 @@ func normalize(name string) (string, error) {
 	if strings.ToLower(remoteName) != remoteName {
 		return "", errors.New("invalid reference format: repository name must be lowercase")
 	}
-	if host == DefaultHostname {
+	if host == DefaultRegistryHostname {
 		if strings.HasPrefix(remoteName, DefaultRepoPrefix) {
 			return strings.TrimPrefix(remoteName, DefaultRepoPrefix), nil
 		}

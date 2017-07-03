@@ -116,7 +116,6 @@ func (p *Provider) checkDeployment(newVersion *types.Version, repo *types.Reposi
 			// updating digest if available
 			if repo.Digest != "" {
 
-				// labels[types.KeelDigestLabel] = hash.GetShort(repo.Digest)
 			}
 
 			log.WithFields(log.Fields{

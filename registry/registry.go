@@ -4,6 +4,8 @@ import (
 	"errors"
 
 	"github.com/rusenask/docker-registry-client/registry"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 // errors
@@ -57,6 +59,12 @@ func (c *DefaultClient) Digest(opts Opts) (digest string, err error) {
 	if opts.Tag == "" {
 		return "", ErrTagNotSupplied
 	}
+
+	log.WithFields(log.Fields{
+		"registry":   opts.Registry,
+		"repository": opts.Name,
+		"tag":        opts.Tag,
+	}).Info("registry client: getting digest")
 
 	hub, err := registry.New(opts.Registry, opts.Username, opts.Password)
 	if err != nil {

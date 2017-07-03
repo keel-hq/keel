@@ -12,7 +12,7 @@ func TestShortParseWithTag(t *testing.T) {
 		t.Errorf("error while parsing tag: %s", err)
 	}
 
-	if reference.Remote() != DefaultHostname+"/foo/bar:1.1" {
+	if reference.Remote() != DefaultRegistryHostname+"/foo/bar:1.1" {
 		t.Errorf("unexpected remote: %s", reference.Remote())
 	}
 
@@ -20,7 +20,7 @@ func TestShortParseWithTag(t *testing.T) {
 		t.Errorf("unexpected tag: %s", reference.Tag())
 	}
 
-	if reference.Registry() != DefaultHostname {
+	if reference.Registry() != DefaultRegistryHostname {
 		t.Errorf("unexpected registry: %s", reference.Registry())
 	}
 
@@ -31,6 +31,7 @@ func TestShortParseWithTag(t *testing.T) {
 	if reference.Name() != "foo/bar:1.1" {
 		t.Errorf("unexpected name: %s", reference.Name())
 	}
+
 }
 
 func TestParseRepo(t *testing.T) {
@@ -48,9 +49,9 @@ func TestParseRepo(t *testing.T) {
 			args: args{remote: "foo/bar:1.1"},
 			want: &Repository{
 				Name:       "foo/bar:1.1",
-				Repository: "docker.io/foo/bar",
-				Remote:     "docker.io/foo/bar:1.1",
-				Registry:   DefaultHostname,
+				Repository: "index.docker.io/foo/bar",
+				Remote:     "index.docker.io/foo/bar:1.1",
+				Registry:   DefaultRegistryHostname,
 				ShortName:  "foo/bar",
 				Tag:        "1.1",
 				Scheme:     "https",
