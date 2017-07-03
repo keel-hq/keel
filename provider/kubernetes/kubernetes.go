@@ -186,13 +186,20 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 					}).Error("provider.kubernetes: failed to get image version, is it tagged as semver?")
 					continue
 				}
-
+				curver := currentVersion.String()
+				if currentVersion.Latest {
+					curver = "latest"
+				}
+				newver := newVersion.String()
+				if newVersion.Latest {
+					newver = "latest"
+				}
 				log.WithFields(log.Fields{
 					"labels":          labels,
 					"name":            deployment.Name,
 					"namespace":       deployment.Namespace,
 					"image":           c.Image,
-					"current_version": currentVersion.String(),
+					"current_version": curver,
 					"policy":          policy,
 				}).Info("provider.kubernetes: current image version")
 
@@ -200,8 +207,8 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 				if err != nil {
 					log.WithFields(log.Fields{
 						"error":           err,
-						"new_version":     newVersion.String(),
-						"current_version": currentVersion.String(),
+						"new_version":     newver,
+						"current_version": curver,
 						"keel_policy":     policy,
 					}).Error("provider.kubernetes: got error while checking whether deployment should be updated")
 					continue
@@ -212,15 +219,15 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 					"name":            deployment.Name,
 					"namespace":       deployment.Namespace,
 					"image":           c.Image,
-					"current_version": currentVersion.String(),
-					"new_version":     newVersion.String(),
+					"current_version": curver,
+					"new_version":     newver,
 					"policy":          policy,
 					"should_update":   shouldUpdateContainer,
 				}).Info("provider.kubernetes: checked version, deciding whether to update")
 
 				if shouldUpdateContainer {
 					// updating image
-					c.Image = fmt.Sprintf("%s:%s", containerImageName, newVersion.String())
+					c.Image = fmt.Sprintf("%s:%s", containerImageName, newver)
 					deployment.Spec.Template.Spec.Containers[idx] = c
 					// marking this deployment for update
 					shouldUpdateDeployment = true
