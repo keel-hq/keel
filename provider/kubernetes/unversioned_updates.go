@@ -74,7 +74,7 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		// updating digest if available
 		if repo.Digest != "" {
 
-			annotations[types.KeelDigestAnnotation+"/"+containerImageRef.Remote()] = repo.Digest
+			// annotations[types.KeelDigestAnnotation+"/"+containerImageRef.Remote()] = repo.Digest
 		}
 
 		// adding image for updates

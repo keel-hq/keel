@@ -74,7 +74,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			annotations := deployment.GetAnnotations()
 
 			if repo.Digest != "" {
-				annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
+				// annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
 			}
 			annotations = addImageToPull(annotations, c.Image)
 
@@ -142,7 +142,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			annotations := deployment.GetAnnotations()
 			// updating digest if available
 			if repo.Digest != "" {
-				annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
+				// annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
 			}
 			deployment.SetAnnotations(annotations)
 
