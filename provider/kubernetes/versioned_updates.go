@@ -68,7 +68,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			// updating digest if available
 			if repo.Digest != "" {
 				annotations := deployment.GetAnnotations()
-				annotations[types.KeelDigestLabel+"/"+ref.Remote()] = repo.Digest
+				annotations[types.KeelDigestAnnotation+"/"+ref.Remote()] = repo.Digest
 				deployment.SetAnnotations(annotations)
 			}
 
@@ -133,7 +133,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			// updating digest if available
 			if repo.Digest != "" {
 				annotations := deployment.GetAnnotations()
-				annotations[types.KeelDigestLabel+"/"+ref.Remote()] = repo.Digest
+				annotations[types.KeelDigestAnnotation+"/"+ref.Remote()] = repo.Digest
 				deployment.SetAnnotations(annotations)
 			}
 

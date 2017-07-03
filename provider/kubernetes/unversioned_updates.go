@@ -68,7 +68,7 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		// updating digest if available
 		if repo.Digest != "" {
 			annotations := deployment.GetAnnotations()
-			annotations[types.KeelDigestLabel+"/"+ref.Remote()] = repo.Digest
+			annotations[types.KeelDigestAnnotation+"/"+ref.Remote()] = repo.Digest
 			deployment.SetAnnotations(annotations)
 		}
 

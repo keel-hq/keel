@@ -22,8 +22,8 @@ const KeelPollScheduleLabel = "keel.sh/pollSchedule"
 // KeelPollDefaultSchedule - defaul polling schedule
 const KeelPollDefaultSchedule = "@every 1m"
 
-// KeelDigestLabel - digest annotation
-const KeelDigestLabel = "keel.sh/digest"
+// KeelDigestAnnotation - digest annotation
+const KeelDigestAnnotation = "keel.sh/digest"
 
 type Repository struct {
 	Host   string `json:"host"`
