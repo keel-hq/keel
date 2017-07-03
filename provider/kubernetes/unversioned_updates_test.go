@@ -30,7 +30,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 		wantErr                    bool
 	}{
 		{
-			name: "force update",
+			name: "force update untagged to latest",
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "latest"},
@@ -76,6 +76,55 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 				v1beta1.DeploymentStatus{},
 			},
 			wantShouldUpdateDeployment: true,
+			wantErr:                    false,
+		},
+		{
+			name: "different image name ",
+			args: args{
+				policy: types.PolicyTypeForce,
+				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "latest"},
+				deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/goodbye-world:earliest",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+			},
+			wantUpdated: v1beta1.Deployment{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{
+					Name:      "dep-1",
+					Namespace: "xxxx",
+					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+				},
+				v1beta1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								v1.Container{
+									Image: "gcr.io/v2-namespace/goodbye-world:earliest",
+								},
+							},
+						},
+					},
+				},
+				v1beta1.DeploymentStatus{},
+			},
+			wantShouldUpdateDeployment: false,
 			wantErr:                    false,
 		},
 	}
