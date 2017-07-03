@@ -25,6 +25,11 @@ const KeelPollDefaultSchedule = "@every 1m"
 // KeelDigestAnnotation - digest annotation
 const KeelDigestAnnotation = "keel.sh/digest"
 
+// KeelUpdateStrategyAnnotation - update strategy annotation is used to
+// to inform provider how to handle update, ie: keel.sh/updateStrategy=pullImage
+// will
+const KeelUpdateStrategyAnnotation = "keel.sh/updateStrategy"
+
 type Repository struct {
 	Host   string `json:"host"`
 	Name   string `json:"name"`

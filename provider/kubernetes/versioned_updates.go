@@ -71,12 +71,14 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			// marking this deployment for update
 			shouldUpdateDeployment = true
 			// updating digest if available
-			if repo.Digest != "" {
-				annotations := deployment.GetAnnotations()
-				annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
-				deployment.SetAnnotations(annotations)
-			}
+			annotations := deployment.GetAnnotations()
 
+			if repo.Digest != "" {
+				annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
+			}
+			annotations = addImageToPull(annotations, c.Image)
+
+			deployment.SetAnnotations(annotations)
 			log.WithFields(log.Fields{
 				"parsed_image":     conatinerImageRef.Remote(),
 				"raw_image_name":   c.Image,
@@ -135,12 +137,14 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			deployment.Spec.Template.Spec.Containers[idx] = c
 			// marking this deployment for update
 			shouldUpdateDeployment = true
+
+			// updating annotations
+			annotations := deployment.GetAnnotations()
 			// updating digest if available
 			if repo.Digest != "" {
-				annotations := deployment.GetAnnotations()
 				annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
-				deployment.SetAnnotations(annotations)
 			}
+			deployment.SetAnnotations(annotations)
 
 			log.WithFields(log.Fields{
 				"parsed_image":     conatinerImageRef.Remote(),

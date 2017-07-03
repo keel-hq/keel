@@ -37,9 +37,10 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 				deployment: v1beta1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
-						Name:      "dep-1",
-						Namespace: "xxxx",
-						Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
@@ -58,9 +59,10 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			wantUpdated: v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Annotations: map[string]string{forceUpdateImageAnnotation: "gcr.io/v2-namespace/hello-world:latest"},
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -86,9 +88,10 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 				deployment: v1beta1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
-						Name:      "dep-1",
-						Namespace: "xxxx",
-						Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
@@ -107,9 +110,10 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			wantUpdated: v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Annotations: map[string]string{},
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -135,9 +139,10 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 				deployment: v1beta1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
-						Name:      "dep-1",
-						Namespace: "xxxx",
-						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
@@ -156,9 +161,10 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			wantUpdated: v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "force"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Annotations: map[string]string{forceUpdateImageAnnotation: "karolisr/keel:0.2.0"},
+					Labels:      map[string]string{types.KeelPolicyLabel: "force"},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{

@@ -49,9 +49,10 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 				deployment: v1beta1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
-						Name:      "dep-1",
-						Namespace: "xxxx",
-						Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
@@ -70,9 +71,10 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 			wantUpdated: v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Annotations: map[string]string{},
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -99,9 +101,10 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 				deployment: v1beta1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
-						Name:      "dep-1",
-						Namespace: "xxxx",
-						Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
@@ -120,9 +123,10 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 			wantUpdated: v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Annotations: map[string]string{},
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -149,9 +153,10 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 				deployment: v1beta1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
-						Name:      "dep-1",
-						Namespace: "xxxx",
-						Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
@@ -173,9 +178,10 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 			wantUpdated: v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Annotations: map[string]string{},
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -205,9 +211,10 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 				deployment: v1beta1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
-						Name:      "dep-1",
-						Namespace: "xxxx",
-						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
@@ -229,9 +236,10 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 			wantUpdated: v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "force"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Annotations: map[string]string{forceUpdateImageAnnotation: "gcr.io/v2-namespace/hello-world:1.1.2"},
+					Labels:      map[string]string{types.KeelPolicyLabel: "force"},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
