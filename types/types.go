@@ -28,7 +28,7 @@ type Version struct {
 	Patch      int64
 	PreRelease string
 	Metadata   string
-
+	Latest   bool
 	Prefix string // v prefix
 }
 
@@ -63,6 +63,10 @@ func ParsePolicy(policy string) PolicyType {
 		return PolicyTypeMinor
 	case "patch":
 		return PolicyTypePatch
+	case "force":
+		return PolicyTypeForce
+	case "onlatest":
+		return PolicyTypeLatest
 	default:
 		return PolicyTypeUnknown
 	}
@@ -82,6 +86,8 @@ func (t PolicyType) String() string {
 		return "patch"
 	case PolicyTypeForce:
 		return "force"
+	case PolicyTypeLatest:
+		return "onlatest"
 	default:
 		return ""
 	}
@@ -95,4 +101,5 @@ const (
 	PolicyTypeMinor
 	PolicyTypePatch
 	PolicyTypeForce // update always when a new image is available
+	PolicyTypeLatest // update always if previous and new image are tagged latest
 )

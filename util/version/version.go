@@ -15,22 +15,28 @@ var ErrVersionTagMissing = errors.New("version tag is missing")
 // GetVersion - parse version
 func GetVersion(version string) (*types.Version, error) {
 
+	var latest bool
+	prefix := "" // TODO: probably make it customazible
+	if version == "latest" {
+		//don't update tags to a specific version if some are labeled as latest
+		//i.e. deployment with tag "latest" -> gets tag "0.0.1" or other version
+		version = "999.999.999" 
+		latest = true
+	}
+	if strings.HasPrefix(version, "v") {
+		prefix = "v"
+	}
 	v, err := semver.NewVersion(version)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: probably make it customazible
-	prefix := ""
-	if strings.HasPrefix(version, "v") {
-		prefix = "v"
-	}
-
 	return &types.Version{
 		Major:      v.Major(),
 		Minor:      v.Minor(),
 		Patch:      v.Patch(),
 		PreRelease: string(v.Prerelease()),
 		Metadata:   v.Metadata(),
+		Latest:   	latest,
 		Prefix:     prefix,
 	}, nil
 }
@@ -64,6 +70,12 @@ func GetImageNameAndVersion(name string) (string, *types.Version, error) {
 func ShouldUpdate(current *types.Version, new *types.Version, policy types.PolicyType) (bool, error) {
 	if policy == types.PolicyTypeForce {
 		return true, nil
+	}
+
+	if policy == types.PolicyTypeLatest {
+		if current.Latest {
+			return true, nil
+		}
 	}
 
 	currentVersion, err := semver.NewVersion(current.String())
