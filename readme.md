@@ -7,6 +7,8 @@ Lightweight (uses ~10MB RAM when running) [Kubernetes](https://kubernetes.io/) s
 * [Webhooks](https://github.com/rusenask/keel#webhook)
 * [Polling](https://github.com/rusenask/keel#polling) (watch specific tag and update on SHA digest change)
 
+Keel is available on [dockerhub](https://hub.docker.com/r/karolisr/keel/). Please use the latest tag available.
+
 ## Keel overview
 
 * Stateless, runs as a single container in kube-system namespace
@@ -102,6 +104,11 @@ Keel supports two types of webhooks:
 If you don't want to expose your Keel service - I would recommend using [https://webhookrelay.com/](https://webhookrelay.com/) which can deliver webhooks to your internal Keel service through a sidecar container.
 
 #### Polling
+
+Polling is currently not enabled by default. To enable polling support for your deployments - set environment variable
+__POLL=1__. 
+
+This will be enabled by default in future releases.
 
 Since only the owners of docker registries can control webhooks - it's sometimes convenient to use
 polling. Be aware that registries can be rate limited so it's a good practice to set up reasonable polling intervals.
