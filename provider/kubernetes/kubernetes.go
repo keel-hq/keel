@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
@@ -23,6 +24,9 @@ var versionreg = regexp.MustCompile(`:[^:]*$`)
 
 // annotation used to specify which image to force pull
 const forceUpdateImageAnnotation = "keel.sh/update-image"
+
+// forceUpdateResetTag - tag used to reset container to force pull image
+const forceUpdateResetTag = "0.0.0"
 
 // Provider - kubernetes provider for auto update
 type Provider struct {
@@ -119,6 +123,10 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 
 		// need to get the new version in order to update
 		if reset {
+			// FIXME: giving some time for k8s to start updating as it
+			// throws an error if you try to modify deployment that's currently being updated
+			time.Sleep(2 * time.Second)
+
 			current, err := p.getDeployment(deployment.Namespace, deployment.Name)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -176,7 +184,7 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 // updates
 func applyChanges(current v1beta1.Deployment, delta map[string]string) (v1beta1.Deployment, error) {
 	for idx, c := range current.Spec.Template.Spec.Containers {
-		if strings.HasSuffix(c.Image, ":0.0.0") {
+		if strings.HasSuffix(c.Image, forceUpdateResetTag) {
 			desiredImage, err := getDesiredImage(delta, c.Image)
 			if err != nil {
 				return v1beta1.Deployment{}, err
@@ -195,7 +203,16 @@ func getDesiredImage(delta map[string]string, currentImage string) (string, erro
 	}
 	for repository, tag := range delta {
 		if repository == currentRef.Repository() {
-			return repository + ":" + tag, nil
+			ref, err := image.Parse(repository)
+			if err != nil {
+				return "", err
+			}
+
+			// updating image
+			if ref.Registry() == image.DefaultRegistryHostname {
+				return fmt.Sprintf("%s:%s", ref.ShortName(), tag), nil
+			}
+			return fmt.Sprintf("%s:%s", ref.Repository(), tag), nil
 		}
 	}
 	return "", fmt.Errorf("image %s not found in deltas", currentImage)
@@ -212,9 +229,11 @@ func checkForReset(deployment v1beta1.Deployment, implementer Implementer) (bool
 			if err != nil {
 				return false, nil, err
 			}
+
+			c = updateContainer(c, ref, forceUpdateResetTag)
+
 			// ensuring pull policy
 			c.ImagePullPolicy = v1.PullAlways
-			c.Image = ref.Repository() + ":0.0.0"
 			log.WithFields(log.Fields{
 				"image":      c.Image,
 				"namespace":  deployment.Namespace,
