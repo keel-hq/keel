@@ -7,6 +7,12 @@ import (
 func addImageToPull(annotations map[string]string, image string) map[string]string {
 	existing, ok := annotations[forceUpdateImageAnnotation]
 	if ok {
+		// check if it's already there
+		if shouldPullImage(annotations, image) {
+			// skipping
+			return annotations
+		}
+
 		annotations[forceUpdateImageAnnotation] = existing + "," + image
 		return annotations
 	}
