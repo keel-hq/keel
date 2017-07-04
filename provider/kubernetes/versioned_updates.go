@@ -63,7 +63,8 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		}
 
 		// if policy is force, don't bother with version checking
-		if policy == types.PolicyTypeForce {
+		// same with `latest` images, update them to versioned ones
+		if policy == types.PolicyTypeForce || conatinerImageRef.Tag() == "latest" {
 			c = updateContainer(c, conatinerImageRef, newVersion.String())
 
 			deployment.Spec.Template.Spec.Containers[idx] = c
@@ -94,9 +95,10 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		currentVersion, err := version.GetVersionFromImageName(c.Image)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"error":       err,
-				"image_name":  c.Image,
-				"keel_policy": policy,
+				"error":               err,
+				"container_image":     c.Image,
+				"container_image_tag": conatinerImageRef.Tag(),
+				"keel_policy":         policy,
 			}).Error("provider.kubernetes: failed to get image version, is it tagged as semver?")
 			continue
 		}

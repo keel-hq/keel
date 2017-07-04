@@ -110,11 +110,11 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 
 // checkDeployment - checks whether we are already watching for this deployment
 func (s *DefaultManager) checkDeployment(deployment *v1beta1.Deployment) error {
-	labels := deployment.GetLabels()
+	annotations := deployment.GetAnnotations()
 
 	for _, c := range deployment.Spec.Template.Spec.Containers {
 
-		schedule, ok := labels[types.KeelPollScheduleLabel]
+		schedule, ok := annotations[types.KeelPollScheduleAnnotation]
 		if ok {
 			_, err := cron.Parse(schedule)
 			if err != nil {

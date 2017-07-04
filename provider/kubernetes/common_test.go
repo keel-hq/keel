@@ -25,6 +25,11 @@ func Test_addImageToPull(t *testing.T) {
 			args: args{annotations: map[string]string{forceUpdateImageAnnotation: "foo"}, image: "bar"},
 			want: map[string]string{forceUpdateImageAnnotation: "foo,bar"},
 		},
+		{
+			name: "not empty with same image",
+			args: args{annotations: map[string]string{forceUpdateImageAnnotation: "foo"}, image: "foo"},
+			want: map[string]string{forceUpdateImageAnnotation: "foo"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

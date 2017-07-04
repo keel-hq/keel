@@ -3,10 +3,10 @@ package poll
 import (
 	"testing"
 
-	"github.com/rusenask/keel/util/image"
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/registry"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/image"
 )
 
 // ======== fake registry client for testing =======
@@ -62,7 +62,7 @@ func TestWatchTagJob(t *testing.T) {
 
 	submitted := fp.submitted[0]
 
-	if submitted.Repository.Name != "docker.io/foo/bar:1.1" {
+	if submitted.Repository.Name != "index.docker.io/foo/bar:1.1" {
 		t.Errorf("unexpected event repository name: %s", submitted.Repository.Name)
 	}
 
@@ -105,7 +105,7 @@ func TestWatchTagJobLatest(t *testing.T) {
 
 	submitted := fp.submitted[0]
 
-	if submitted.Repository.Name != "docker.io/foo/bar:latest" {
+	if submitted.Repository.Name != "index.docker.io/foo/bar:latest" {
 		t.Errorf("unexpected event repository name: %s", submitted.Repository.Name)
 	}
 

@@ -16,8 +16,8 @@ const KeelPolicyLabel = "keel.sh/policy"
 // changes
 const KeelTriggerLabel = "keel.sh/trigger"
 
-// KeelPollScheduleLabel - optional variable to setup custom schedule for polling, defaults to @every 10m
-const KeelPollScheduleLabel = "keel.sh/pollSchedule"
+// KeelPollScheduleAnnotation - optional variable to setup custom schedule for polling, defaults to @every 10m
+const KeelPollScheduleAnnotation = "keel.sh/pollSchedule"
 
 // KeelPollDefaultSchedule - defaul polling schedule
 const KeelPollDefaultSchedule = "@every 1m"
