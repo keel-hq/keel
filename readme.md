@@ -4,7 +4,8 @@ Lightweight (uses ~10MB RAM when running) [Kubernetes](https://kubernetes.io/) s
 
 * Google's pubsub integration with [Google Container Registry](https://cloud.google.com/container-registry/)
 * [DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/)
-* Webhooks
+* [Webhooks](https://github.com/rusenask/keel#webhook)
+* [Polling](https://github.com/rusenask/keel#polling) (watch specific tag and update on SHA digest change)
 
 ## Keel overview
 
@@ -40,7 +41,7 @@ metadata:
   namespace: default
   labels: 
       name: "wd"
-      keel.sh/policy: all
+      keel.sh/sh: all
 spec:
   replicas: 1
   template:
@@ -73,6 +74,7 @@ Available policy options:
 * __major__ - update major versions
 * __minor__ - update only minor versions (ignores major)
 * __patch__ - update only patch versions (ignores minor and major versions)
+* __force__ - force update even if tag is not semver, ie: `latest`
 
 ## Deployment and triggers
 
@@ -88,7 +90,7 @@ gcloud container node-pools create new-pool --cluster CLUSTER_NAME --scopes http
 
 Make sure that in the Keel's deployment.yml you have set environment variables __PUBSUB=1__ and __PROJECT_ID=your-project-id__. 
 
-#### Webhook integration
+#### Webhooks
 
 Keel supports two types of webhooks:
 
@@ -104,10 +106,56 @@ If you don't want to expose your Keel service - I would recommend using [https:/
 Since only the owners of docker registries can control webhooks - it's sometimes convenient to use
 polling. Be aware that registries can be rate limited so it's a good practice to set up reasonable polling intervals.
 
+Add label:
 ```
 keel.sh/trigger=poll
+```
+
+To specify custom polling schedule, use annotations:
+```
 keel.sh/pollSchedule=@every 1m
 ```
+
+Example deployment file for polling:
+
+```
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata: 
+  name: wd
+  namespace: default
+  labels: 
+      name: "wd"
+      keel.sh/policy: force
+      keel.sh/trigger: poll      
+  annotations:
+      keel.sh/pollSchedule: "@every 10m"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: wd
+      labels:
+        app: wd        
+
+    spec:
+      containers:                    
+        - image: karolisr/webhook-demo
+          imagePullPolicy: Always            
+          name: wd
+          command: ["/bin/webhook-demo"]
+          ports:
+            - containerPort: 8090       
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+          securityContext:
+            privileged: true      
+```            
 
 Authenticated Registries 
 
