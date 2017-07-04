@@ -22,7 +22,7 @@ const ProviderName = "kubernetes"
 var versionreg = regexp.MustCompile(`:[^:]*$`)
 
 // annotation used to specify which image to force pull
-const forceUpdateImageAnnotation = "keel.sh/updateImage"
+const forceUpdateImageAnnotation = "keel.sh/update-image"
 
 // Provider - kubernetes provider for auto update
 type Provider struct {
@@ -259,6 +259,11 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 				// skip
 				continue
 			}
+
+			// annotation cleanup
+			annotations := deployment.GetAnnotations()
+			delete(annotations, forceUpdateImageAnnotation)
+			deployment.SetAnnotations(annotations)
 
 			newVersion, err := version.GetVersion(repo.Tag)
 			if err != nil {
