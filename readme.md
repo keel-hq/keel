@@ -9,6 +9,8 @@ Lightweight (uses ~10MB RAM when running) [Kubernetes](https://kubernetes.io/) s
 
 Keel is available on [dockerhub](https://hub.docker.com/r/karolisr/keel/). Please use the latest tag available.
 
+Project [roadmap available here](https://github.com/rusenask/keel/wiki/Roadmap).
+
 ## Keel overview
 
 * Stateless, runs as a single container in kube-system namespace
