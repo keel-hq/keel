@@ -10,6 +10,7 @@ import (
 
 	"github.com/rusenask/keel/provider/kubernetes"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/policies"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -35,6 +36,8 @@ type DefaultManager struct {
 	ctx context.Context
 }
 
+// Subscriber - subscribe is responsible to listen for repository events and
+// inform providers
 type Subscriber interface {
 	Subscribe(ctx context.Context, topic, subscription string) error
 }
@@ -91,9 +94,10 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 	for _, deploymentList := range deploymentLists {
 		for _, deployment := range deploymentList.Items {
 			labels := deployment.GetLabels()
-			_, ok := labels[types.KeelPolicyLabel]
-			// if no keel policy is set - skipping this deployment
-			if !ok {
+
+			// ignoring unlabelled deployments
+			policy := policies.GetPolicy(labels)
+			if policy == types.PolicyTypeNone {
 				continue
 			}
 

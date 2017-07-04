@@ -1,14 +1,12 @@
 package kubernetes
 
 import (
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	"testing"
 
 	"github.com/rusenask/keel/types"
-
-	"testing"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
 type fakeImplementer struct {
@@ -202,7 +200,7 @@ func TestGetImpacted(t *testing.T) {
 	}
 
 	if len(deps) != 1 {
-		t.Errorf("expected to find 1 deployment but found %s", len(deps))
+		t.Errorf("expected to find 1 deployment but found %d", len(deps))
 	}
 
 	found := false
@@ -510,16 +508,17 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 			v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					Annotations: map[string]string{},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
 						Spec: v1.PodSpec{
 							Containers: []v1.Container{
 								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world",
+									Image: "gcr.io/v2-namespace/foo-world",
 								},
 							},
 						},
@@ -530,9 +529,10 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 			v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-2",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "dep-2",
+					Namespace:   "xxxx",
+					Annotations: map[string]string{},
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -568,6 +568,102 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 
 	if len(deps) != 1 {
 		t.Errorf("expected to find 1 deployment but found %s", len(deps))
+	}
+
+	found := false
+	for _, c := range deps[0].Spec.Template.Spec.Containers {
+
+		containerImageName := versionreg.ReplaceAllString(c.Image, "")
+
+		if containerImageName == repo.Name {
+			found = true
+		}
+	}
+
+	if !found {
+		t.Errorf("couldn't find expected deployment in impacted deployment list")
+	}
+
+}
+
+// test to check whether we get impacted deployment when it's untagged (we should)
+func TestGetImpactedUntaggedOneImage(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	fp.deploymentList = &v1beta1.DeploymentList{
+		Items: []v1beta1.Deployment{
+			v1beta1.Deployment{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					Annotations: map[string]string{},
+				},
+				v1beta1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								v1.Container{
+									Image: "gcr.io/v2-namespace/hello-world",
+								},
+							},
+						},
+					},
+				},
+				v1beta1.DeploymentStatus{},
+			},
+			v1beta1.Deployment{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{
+					Name:        "dep-2",
+					Namespace:   "xxxx",
+					Annotations: map[string]string{},
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+				},
+				v1beta1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								v1.Container{
+									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+								},
+							},
+						},
+					},
+				},
+				v1beta1.DeploymentStatus{},
+			},
+		},
+	}
+
+	provider, err := NewProvider(fp)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	// creating "new version" event
+	repo := &types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "1.1.2",
+	}
+
+	deps, err := provider.impactedDeployments(repo)
+	if err != nil {
+		t.Errorf("failed to get deployments: %s", err)
+	}
+
+	if len(deps) != 2 {
+		t.Errorf("expected to find 2 deployment but found %s", len(deps))
 	}
 
 	found := false

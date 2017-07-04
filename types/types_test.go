@@ -36,7 +36,12 @@ func TestParsePolicy(t *testing.T) {
 		{
 			name: "random",
 			args: args{policy: "rand"},
-			want: PolicyTypeUnknown,
+			want: PolicyTypeNone,
+		},
+		{
+			name: "force",
+			args: args{policy: "force"},
+			want: PolicyTypeForce,
 		},
 	}
 	for _, tt := range tests {
