@@ -45,7 +45,7 @@ metadata:
   namespace: default
   labels: 
       name: "wd"
-      keel.sh/sh: all
+      keel.sh/policy: all
 spec:
   replicas: 1
   template:
