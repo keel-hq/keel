@@ -17,9 +17,11 @@ spec:
         app: keel      
     spec:
       containers:                    
-        - image: karolisr/keel:0.2.1
+        - image: karolisr/keel:0.3.0
           imagePullPolicy: Always
-          env:                         
+          env:          
+            - name: POLL
+              value: "1"               
             - name: PUBSUB
               value: "1"
             - name: PROJECT_ID
@@ -33,6 +35,4 @@ spec:
               path: /healthz
               port: 9300
             initialDelaySeconds: 30
-            timeoutSeconds: 10
-          securityContext:
-            privileged: true
+            timeoutSeconds: 10          

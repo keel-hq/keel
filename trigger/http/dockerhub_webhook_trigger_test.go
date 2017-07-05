@@ -41,9 +41,7 @@ var fakeRequest = `{
 func TestDockerhubWebhookHandler(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := map[string]provider.Provider{
-		fp.GetName(): fp,
-	}
+	providers := provider.New([]provider.Provider{fp})
 	srv := NewTriggerServer(&Opts{Providers: providers})
 	srv.registerRoutes(srv.router)
 

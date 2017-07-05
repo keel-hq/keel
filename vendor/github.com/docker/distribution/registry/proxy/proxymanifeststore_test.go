@@ -12,6 +12,7 @@ import (
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/client/auth"
+	"github.com/docker/distribution/registry/client/auth/challenge"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/cache/memory"
@@ -60,12 +61,6 @@ func (sm statsManifest) Put(ctx context.Context, manifest distribution.Manifest,
 	return sm.manifests.Put(ctx, manifest)
 }
 
-/*func (sm statsManifest) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
-	sm.stats["enumerate"]++
-	return sm.manifests.Enumerate(ctx, manifests, last)
-}
-*/
-
 type mockChallenger struct {
 	sync.Mutex
 	count int
@@ -75,7 +70,6 @@ type mockChallenger struct {
 func (m *mockChallenger) tryEstablishChallenges(context.Context) error {
 	m.Lock()
 	defer m.Unlock()
-
 	m.count++
 	return nil
 }
@@ -84,7 +78,7 @@ func (m *mockChallenger) credentialStore() auth.CredentialStore {
 	return nil
 }
 
-func (m *mockChallenger) challengeManager() auth.ChallengeManager {
+func (m *mockChallenger) challengeManager() challenge.Manager {
 	return nil
 }
 
@@ -93,9 +87,15 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	if err != nil {
 		t.Fatalf("unable to parse reference: %s", err)
 	}
+	k, err := libtrust.GenerateECP256PrivateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
-	truthRegistry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()))
+	truthRegistry, err := storage.NewRegistry(ctx, inmemory.New(),
+		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()),
+		storage.Schema1SigningKey(k))
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -112,12 +112,12 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		stats:     make(map[string]int),
 	}
 
-	manifestDigest, err := populateRepo(t, ctx, truthRepo, name, tag)
+	manifestDigest, err := populateRepo(ctx, t, truthRepo, name, tag)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 
-	localRegistry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableRedirect, storage.DisableDigestResumption)
+	localRegistry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableRedirect, storage.DisableDigestResumption, storage.Schema1SigningKey(k))
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -149,7 +149,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	}
 }
 
-func populateRepo(t *testing.T, ctx context.Context, repository distribution.Repository, name, tag string) (digest.Digest, error) {
+func populateRepo(ctx context.Context, t *testing.T, repository distribution.Repository, name, tag string) (digest.Digest, error) {
 	m := schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,

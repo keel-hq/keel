@@ -12,7 +12,9 @@ import (
 	"github.com/rusenask/keel/bot"
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/provider/kubernetes"
+	"github.com/rusenask/keel/registry"
 	"github.com/rusenask/keel/trigger/http"
+	"github.com/rusenask/keel/trigger/poll"
 	"github.com/rusenask/keel/trigger/pubsub"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/version"
@@ -23,6 +25,7 @@ import (
 // gcloud pubsub related config
 const (
 	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
+	EnvTriggerPoll   = "POLL"   // set to 1 or something to enable poll trigger
 	EnvProjectID     = "PROJECT_ID"
 	EnvSlackToken    = "SLACK_TOKEN"
 	EnvSlackBotName  = "SLACK_BOT_NAME"
@@ -114,7 +117,7 @@ func main() {
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
 // provider map
-func setupProviders(k8sImplementer kubernetes.Implementer) (providers map[string]provider.Provider, teardown func()) {
+func setupProviders(k8sImplementer kubernetes.Implementer) (providers provider.Providers, teardown func()) {
 	k8sProvider, err := kubernetes.NewProvider(k8sImplementer)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -123,8 +126,7 @@ func setupProviders(k8sImplementer kubernetes.Implementer) (providers map[string
 	}
 	go k8sProvider.Start()
 
-	providers = make(map[string]provider.Provider)
-	providers[k8sProvider.GetName()] = k8sProvider
+	providers = provider.New([]provider.Provider{k8sProvider})
 
 	teardown = func() {
 		k8sProvider.Stop()
@@ -166,7 +168,7 @@ func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
 // should go through all providers (or not if there is a reason) and submit events)
-func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, providers map[string]provider.Provider) (teardown func()) {
+func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, providers provider.Providers) (teardown func()) {
 
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{
@@ -197,6 +199,17 @@ func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, p
 
 		subManager := pubsub.NewDefaultManager(projectID, k8sImplementer, ps)
 		go subManager.Start(ctx)
+	}
+
+	if os.Getenv(EnvTriggerPoll) != "" {
+
+		registryClient := registry.New()
+		watcher := poll.NewRepositoryWatcher(providers, registryClient)
+		pollManager := poll.NewPollManager(k8sImplementer, watcher)
+
+		// start poll manager, will finish with ctx
+		go watcher.Start(ctx)
+		go pollManager.Start(ctx)
 	}
 
 	teardown = func() {
