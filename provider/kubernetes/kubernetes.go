@@ -9,6 +9,7 @@ import (
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
+	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/image"
 	"github.com/rusenask/keel/util/policies"
@@ -32,16 +33,19 @@ const forceUpdateResetTag = "0.0.0"
 type Provider struct {
 	implementer Implementer
 
+	sender notification.Sender
+
 	events chan *types.Event
 	stop   chan struct{}
 }
 
 // NewProvider - create new kubernetes based provider
-func NewProvider(implementer Implementer) (*Provider, error) {
+func NewProvider(implementer Implementer, sender notification.Sender) (*Provider, error) {
 	return &Provider{
 		implementer: implementer,
 		events:      make(chan *types.Event, 100),
 		stop:        make(chan struct{}),
+		sender:      sender,
 	}, nil
 }
 
@@ -168,8 +172,24 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 				"namespace":  deployment.Namespace,
 				"deployment": deployment.Name,
 			}).Error("provider.kubernetes: got error while update deployment")
+
+			p.sender.Send(types.EventNotification{
+				Name:      "update deployment",
+				Message:   fmt.Sprintf("deployment %s/%s update failed, error: %s", deployment.Namespace, deployment.Name, err),
+				CreatedAt: time.Now(),
+				Type:      types.NotificationUpdateError,
+			})
+
 			continue
 		}
+
+		p.sender.Send(types.EventNotification{
+			Name:      "update deployment",
+			Message:   fmt.Sprintf("successfully updated deployment %s/%s", deployment.Namespace, deployment.Name),
+			CreatedAt: time.Now(),
+			Type:      types.NotificationUpdateSuccess,
+		})
+
 		log.WithFields(log.Fields{
 			"name":      deployment.Name,
 			"namespace": deployment.Namespace,
