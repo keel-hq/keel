@@ -143,3 +143,38 @@ const (
 	PolicyTypePatch
 	PolicyTypeForce // update always when a new image is available
 )
+
+// EventNotification notification used for sending
+type EventNotification struct {
+	Name      string       `json:"name,omitempty"`
+	Message   string       `json:"message,omitempty"`
+	CreatedAt time.Time    `json:"createdAt,omitempty"`
+	Type      Notification `json:"type,omitempty"`
+}
+
+// Notification - notification types used by notifier
+type Notification int
+
+// available notification types for hooks
+const (
+	PreProviderSubmitNotification Notification = iota
+	PostProviderSubmitNotification
+
+	NotificationUpdateSuccess
+	NotificationUpdateError
+)
+
+func (n Notification) String() string {
+	switch n {
+	case PreProviderSubmitNotification:
+		return "pre provider submit"
+	case PostProviderSubmitNotification:
+		return "post provider submit"
+	case NotificationUpdateSuccess:
+		return "update successful"
+	case NotificationUpdateError:
+		return "update error"
+	default:
+		return "unknown"
+	}
+}
