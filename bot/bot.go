@@ -123,8 +123,8 @@ func (b *Bot) startInternal() error {
 			case *slack.PresenceChangeEvent:
 				fmt.Printf("Presence Change: %v\n", ev)
 
-			case *slack.LatencyReport:
-				fmt.Printf("Current latency: %v\n", ev.Value)
+			// case *slack.LatencyReport:
+			// 	fmt.Printf("Current latency: %v\n", ev.Value)
 
 			case *slack.RTMError:
 				fmt.Printf("Error: %s\n", ev.Error())
