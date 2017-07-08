@@ -175,9 +175,10 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 
 			p.sender.Send(types.EventNotification{
 				Name:      "update deployment",
-				Message:   fmt.Sprintf("deployment %s/%s update failed, error: %s", deployment.Namespace, deployment.Name, err),
+				Message:   fmt.Sprintf("Deployment %s/%s update failed, error: %s", deployment.Namespace, deployment.Name, err),
 				CreatedAt: time.Now(),
-				Type:      types.NotificationUpdateError,
+				Type:      types.NotificationDeploymentUpdate,
+				Level:     types.LevelError,
 			})
 
 			continue
@@ -185,9 +186,10 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 
 		p.sender.Send(types.EventNotification{
 			Name:      "update deployment",
-			Message:   fmt.Sprintf("successfully updated deployment %s/%s", deployment.Namespace, deployment.Name),
+			Message:   fmt.Sprintf("Successfully updated deployment %s/%s (%s)", deployment.Namespace, deployment.Name, strings.Join(getImages(&deployment), ", ")),
 			CreatedAt: time.Now(),
-			Type:      types.NotificationUpdateSuccess,
+			Type:      types.NotificationDeploymentUpdate,
+			Level:     types.LevelSuccess,
 		})
 
 		log.WithFields(log.Fields{
@@ -198,6 +200,15 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 	}
 
 	return
+}
+
+func getImages(deployment *v1beta1.Deployment) []string {
+	var images []string
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+		images = append(images, c.Image)
+	}
+
+	return images
 }
 
 // applies required changes for deployment, looks for images with tag 0.0.0 and
