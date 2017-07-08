@@ -1,7 +1,9 @@
 package slack
 
 import (
+	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,8 +61,25 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 func (s *sender) Send(event types.EventNotification) error {
 	params := slack.NewPostMessageParameters()
 	params.Username = s.botName
+
+	params.Attachments = []slack.Attachment{
+		slack.Attachment{
+			Fallback: event.Message,
+			Color:    event.Level.Color(),
+			Fields: []slack.AttachmentField{
+				slack.AttachmentField{
+					Title: event.Type.String(),
+					Value: event.Message,
+					Short: false,
+				},
+			},
+			Footer: "keel.sh",
+			Ts:     json.Number(strconv.Itoa(int(event.CreatedAt.Unix()))),
+		},
+	}
+
 	for _, channel := range s.channels {
-		_, _, err := s.slackClient.PostMessage(channel, event.Message, params)
+		_, _, err := s.slackClient.PostMessage(channel, "", params)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":   err,
