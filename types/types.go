@@ -150,6 +150,7 @@ type EventNotification struct {
 	Message   string       `json:"message,omitempty"`
 	CreatedAt time.Time    `json:"createdAt,omitempty"`
 	Type      Notification `json:"type,omitempty"`
+	Level     Level        `json:"level,omitempty"`
 }
 
 // Notification - notification types used by notifier
@@ -160,8 +161,7 @@ const (
 	PreProviderSubmitNotification Notification = iota
 	PostProviderSubmitNotification
 
-	NotificationUpdateSuccess
-	NotificationUpdateError
+	NotificationDeploymentUpdate
 )
 
 func (n Notification) String() string {
@@ -170,11 +170,36 @@ func (n Notification) String() string {
 		return "pre provider submit"
 	case PostProviderSubmitNotification:
 		return "post provider submit"
-	case NotificationUpdateSuccess:
-		return "update successful"
-	case NotificationUpdateError:
-		return "update error"
+	case NotificationDeploymentUpdate:
+		return "deployment update"
 	default:
 		return "unknown"
+	}
+}
+
+type Level int
+
+const (
+	LevelInfo Level = iota
+	LevelSuccess
+	LevelWarn
+	LevelError
+	LevelFatal
+)
+
+func (l Level) Color() string {
+	switch l {
+	case LevelError:
+		return "#F44336"
+	case LevelInfo:
+		return "#2196F3"
+	case LevelSuccess:
+		return "#00C853"
+	case LevelFatal:
+		return "#B71C1C"
+	case LevelWarn:
+		return "#FF9800"
+	default:
+		return "#9E9E9E"
 	}
 }
