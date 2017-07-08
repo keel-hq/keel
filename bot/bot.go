@@ -17,9 +17,9 @@ var (
 	botEventTextToResponse = map[string][]string{
 		"help": {
 			`Here's a list of supported commands`,
-			`- "get deployments" -> get a list of keel watched deployments`,
-			`- "get deployments all" -> get a list of all deployments`,
-			`- "describe deployment <deployment>" -> get details for specified deployment`,
+			`- "get deployments" -> get a list of all deployments`,
+			// `- "get deployments all" -> get a list of all deployments`,
+			// `- "describe deployment <deployment>" -> get details for specified deployment`,
 		},
 	}
 
@@ -136,7 +136,7 @@ func (b *Bot) startInternal() error {
 			case *slack.MessageEvent:
 				b.handleMessage(ev)
 			case *slack.PresenceChangeEvent:
-				fmt.Printf("Presence Change: %v\n", ev)
+				// fmt.Printf("Presence Change: %v\n", ev)
 
 			// case *slack.LatencyReport:
 			// 	fmt.Printf("Current latency: %v\n", ev.Value)
@@ -194,7 +194,7 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 		"bot_id":    b.id,
 		"command":   eventText,
 		"untrimmed": strings.Trim(strings.ToLower(event.Text), " \n\r"),
-	}).Info("handleMessage: bot couldn't recognise command")
+	}).Debug("handleMessage: bot couldn't recognise command")
 }
 
 func (b *Bot) isCommand(event *slack.MessageEvent, eventText string) bool {

@@ -53,7 +53,7 @@ func (b *Bot) deploymentsResponse(filter Filter) string {
 	if err != nil {
 		return fmt.Sprintf("got error while fetching deployments: %s", err)
 	}
-	log.Infof("%d deployments fetched, formatting", len(deps))
+	log.Debugf("%d deployments fetched, formatting", len(deps))
 	buf := &bytes.Buffer{}
 
 	DeploymentCtx := formatter.Context{
@@ -65,8 +65,6 @@ func (b *Bot) deploymentsResponse(filter Filter) string {
 	if err != nil {
 		return fmt.Sprintf(" got error while formatting deployments: %s", err)
 	}
-
-	log.Infof("formated. returning buffer: %s", buf.String())
 
 	return buf.String()
 }
