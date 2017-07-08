@@ -3,7 +3,9 @@ package kubernetes
 import (
 	"testing"
 
+	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/types"
+
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
@@ -35,6 +37,19 @@ func (i *fakeImplementer) Update(deployment *v1beta1.Deployment) error {
 	return nil
 }
 
+type fakeSender struct {
+	sentEvent types.EventNotification
+}
+
+func (s *fakeSender) Configure(cfg *notification.Config) (bool, error) {
+	return true, nil
+}
+
+func (s *fakeSender) Send(event types.EventNotification) error {
+	s.sentEvent = event
+	return nil
+}
+
 func TestGetNamespaces(t *testing.T) {
 	fi := &fakeImplementer{
 		namespaces: &v1.NamespaceList{
@@ -49,7 +64,7 @@ func TestGetNamespaces(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fi)
+	provider, err := NewProvider(fi, &fakeSender{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -108,7 +123,7 @@ func TestGetDeployments(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp)
+	provider, err := NewProvider(fp, &fakeSender{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -183,7 +198,7 @@ func TestGetImpacted(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp)
+	provider, err := NewProvider(fp, &fakeSender{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -276,7 +291,7 @@ func TestProcessEvent(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp)
+	provider, err := NewProvider(fp, &fakeSender{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -358,7 +373,7 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp)
+	provider, err := NewProvider(fp, &fakeSender{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -455,7 +470,7 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp)
+	provider, err := NewProvider(fp, &fakeSender{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -550,7 +565,7 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp)
+	provider, err := NewProvider(fp, &fakeSender{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -646,7 +661,7 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp)
+	provider, err := NewProvider(fp, &fakeSender{})
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}

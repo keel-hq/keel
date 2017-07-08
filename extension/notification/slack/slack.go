@@ -52,7 +52,8 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	s.slackClient = slack.New(token)
 
 	log.WithFields(log.Fields{
-		"name": "slack",
+		"name":     "slack",
+		"channels": s.channels,
 	}).Info("extension.notification.slack: sender configured")
 
 	return true, nil
