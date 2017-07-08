@@ -39,6 +39,9 @@ type Bot struct {
 
 	users map[string]string
 
+	// channels to join
+	channels []string
+
 	msgPrefix string
 
 	slackClient *slack.Client
@@ -49,13 +52,14 @@ type Bot struct {
 	ctx context.Context
 }
 
-func New(name, token string, k8sImplementer kubernetes.Implementer) *Bot {
+func New(name, token string, channels []string, k8sImplementer kubernetes.Implementer) *Bot {
 	client := slack.New(token)
 
 	return &Bot{
 		slackClient:    client,
 		k8sImplementer: k8sImplementer,
 		name:           name,
+		channels:       channels,
 	}
 }
 
@@ -100,6 +104,17 @@ func (b *Bot) Start(ctx context.Context) error {
 
 func (b *Bot) startInternal() error {
 	b.slackRTM = b.slackClient.NewRTM()
+
+	for _, channel := range b.channels {
+		_, err := b.slackRTM.JoinChannel(channel)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":   err,
+				"channel": channel,
+			}).Error("bot.startInternal: failed to join channel")
+		}
+	}
+
 	go b.slackRTM.ManageConnection()
 
 	for {
@@ -165,7 +180,7 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 	// Responses that are just a canned string response
 	if responseLines, ok := botEventTextToResponse[eventText]; ok {
 		response := strings.Join(responseLines, "\n")
-		b.respond(event, response)
+		b.respond(event, formatAsSnippet(response))
 		return
 	}
 
@@ -180,11 +195,6 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 		"command":   eventText,
 		"untrimmed": strings.Trim(strings.ToLower(event.Text), " \n\r"),
 	}).Info("handleMessage: bot couldn't recognise command")
-
-	// b.slackRTM.SendMessage(b.slackRTM.NewOutgoingMessage("bot couldn't recognise command :(", event.Channel))
-	// responseLines := botEventTextToResponse["help"]
-	// response := strings.Join(responseLines, "\n")
-	// b.respond(event, response)
 }
 
 func (b *Bot) isCommand(event *slack.MessageEvent, eventText string) bool {
@@ -207,7 +217,7 @@ func (b *Bot) handleCommand(event *slack.MessageEvent, eventText string) {
 	case "get deployments":
 		log.Info("getting deployments")
 		response := b.deploymentsResponse(Filter{})
-		b.respond(event, response)
+		b.respond(event, formatAsSnippet(response))
 		return
 	}
 
@@ -240,4 +250,8 @@ func (b *Bot) trimBot(msg string) string {
 	msg = strings.Trim(msg, " :\n")
 
 	return msg
+}
+
+func formatAsSnippet(response string) string {
+	return "```" + response + "```"
 }
