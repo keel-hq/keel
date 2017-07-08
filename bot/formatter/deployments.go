@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	log "github.com/Sirupsen/logrus"
 )
 
 // Deployment - internal deployment, used to better represent keel related info
@@ -50,10 +48,6 @@ func NewDeploymentsFormat(source string, quiet bool) Format {
 func DeploymentWrite(ctx Context, Deployments []Deployment) error {
 	render := func(format func(subContext subContext) error) error {
 		for _, deployment := range Deployments {
-			log.WithFields(log.Fields{
-				"name":      deployment.Name,
-				"namespace": deployment.Namespace,
-			}).Info("formatting deployment")
 			if err := format(&DeploymentContext{v: deployment}); err != nil {
 				return err
 			}

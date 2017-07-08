@@ -39,9 +39,6 @@ type Bot struct {
 
 	users map[string]string
 
-	// channels to join
-	channels []string
-
 	msgPrefix string
 
 	slackClient *slack.Client
@@ -52,14 +49,13 @@ type Bot struct {
 	ctx context.Context
 }
 
-func New(name, token string, channels []string, k8sImplementer kubernetes.Implementer) *Bot {
+func New(name, token string, k8sImplementer kubernetes.Implementer) *Bot {
 	client := slack.New(token)
 
 	return &Bot{
 		slackClient:    client,
 		k8sImplementer: k8sImplementer,
 		name:           name,
-		channels:       channels,
 	}
 }
 
@@ -70,11 +66,6 @@ func (b *Bot) Start(ctx context.Context) error {
 	b.ctx = ctx
 
 	users, err := b.slackClient.GetUsers()
-
-	if err != nil {
-		panic(err)
-	}
-
 	if err != nil {
 		return err
 	}
@@ -104,16 +95,6 @@ func (b *Bot) Start(ctx context.Context) error {
 
 func (b *Bot) startInternal() error {
 	b.slackRTM = b.slackClient.NewRTM()
-
-	for _, channel := range b.channels {
-		_, err := b.slackRTM.JoinChannel(channel)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":   err,
-				"channel": channel,
-			}).Error("bot.startInternal: failed to join channel")
-		}
-	}
 
 	go b.slackRTM.ManageConnection()
 
@@ -212,7 +193,6 @@ func (b *Bot) isCommand(event *slack.MessageEvent, eventText string) bool {
 }
 
 func (b *Bot) handleCommand(event *slack.MessageEvent, eventText string) {
-	log.Infof("handling command %s", eventText)
 	switch eventText {
 	case "get deployments":
 		log.Info("getting deployments")

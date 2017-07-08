@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"os/signal"
-	"strings"
 	"time"
 
 	"context"
@@ -162,17 +161,8 @@ func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error
 			botName = os.Getenv(constants.EnvSlackBotName)
 		}
 
-		joinChannels := []string{}
-
-		if os.Getenv(constants.EnvSlackChannels) != "" {
-			channels := os.Getenv(constants.EnvSlackChannels)
-			joinChannels = strings.Split(channels, ",")
-		} else {
-			joinChannels = []string{"general"}
-		}
-
 		token := os.Getenv(constants.EnvSlackToken)
-		slackBot := bot.New(botName, token, joinChannels, k8sImplementer)
+		slackBot := bot.New(botName, token, k8sImplementer)
 
 		ctx, cancel := context.WithCancel(context.Background())
 
