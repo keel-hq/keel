@@ -26,6 +26,12 @@ spec:
               value: "1"
             - name: PROJECT_ID
               value: "my-project-id"
+            # - name: WEBHOOK_ENDPOINT
+            #   value: https://my.webhookrelay.com/v1/webhooks/2fc52b16-75f7-41f2-8e2d-81afbbcae709  
+            # - name: SLACK_TOKEN
+            #   value: your-token-here
+            # - name: SLACK_CHANNELS
+            #   value: general            
           name: keel
           command: ["/bin/keel"]
           ports:

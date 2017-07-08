@@ -5,8 +5,13 @@ import (
 	"os/signal"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
+	netContext "golang.org/x/net/context"
+
+	"github.com/rusenask/keel/bot"
+	"github.com/rusenask/keel/constants"
+	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/provider/kubernetes"
 	"github.com/rusenask/keel/registry"
@@ -15,6 +20,10 @@ import (
 	"github.com/rusenask/keel/trigger/pubsub"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/version"
+
+	// extensions
+	_ "github.com/rusenask/keel/extension/notification/slack"
+	_ "github.com/rusenask/keel/extension/notification/webhook"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -50,6 +59,22 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	// setting up triggers
+	ctx, cancel := netContext.WithCancel(context.Background())
+	defer cancel()
+
+	notifCfg := &notification.Config{
+		Attempts: 10,
+	}
+	sender := notification.New(ctx)
+
+	_, err := sender.Configure(notifCfg)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("main: failed to configure notification sender manager")
+	}
+
 	// getting k8s provider
 	k8sCfg := &kubernetes.Opts{}
 	if os.Getenv(EnvKubernetesConfig) != "" {
@@ -66,12 +91,16 @@ func main() {
 	}
 
 	// setting up providers
-	providers, teardownProviders := setupProviders(implementer)
+	providers, teardownProviders := setupProviders(implementer, sender)
 
-	// setting up triggers
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	teardownTriggers := setupTriggers(ctx, implementer, providers)
+
+	teardownBot, err := setupBot(implementer)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("main: failed to setup slack bot")
+	}
 
 	signalChan := make(chan os.Signal, 1)
 	cleanupDone := make(chan bool)
@@ -93,6 +122,7 @@ func main() {
 
 			teardownProviders()
 			teardownTriggers()
+			teardownBot()
 
 			cleanupDone <- true
 		}
@@ -104,8 +134,8 @@ func main() {
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
 // provider map
-func setupProviders(k8sImplementer kubernetes.Implementer) (providers provider.Providers, teardown func()) {
-	k8sProvider, err := kubernetes.NewProvider(k8sImplementer)
+func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.Sender) (providers provider.Providers, teardown func()) {
+	k8sProvider, err := kubernetes.NewProvider(k8sImplementer, sender)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -120,6 +150,37 @@ func setupProviders(k8sImplementer kubernetes.Implementer) (providers provider.P
 	}
 
 	return providers, teardown
+}
+
+func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error) {
+
+	if os.Getenv(constants.EnvSlackToken) != "" {
+		botName := "keel"
+
+		if os.Getenv(constants.EnvSlackBotName) != "" {
+			botName = os.Getenv(constants.EnvSlackBotName)
+		}
+
+		token := os.Getenv(constants.EnvSlackToken)
+		slackBot := bot.New(botName, token, k8sImplementer)
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		err := slackBot.Start(ctx)
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+
+		teardown := func() {
+			// cancelling context
+			cancel()
+		}
+
+		return teardown, nil
+	}
+
+	return func() {}, nil
 }
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
