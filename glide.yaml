@@ -47,6 +47,8 @@ import:
   - pkg/apis/extensions/v1beta1
   - rest
   - tools/clientcmd
+- package: github.com/nlopes/slack
+  version: ^0.1.0
 - package: github.com/docker/distribution
   version: ^2.6.1
   subpackages:
