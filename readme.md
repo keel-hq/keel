@@ -1,216 +1,43 @@
 # Keel - automated Kubernetes deployments for the rest of us
 
-Lightweight (uses ~10MB RAM when running) [Kubernetes](https://kubernetes.io/) service for automating deployment updates when new images are available. Keel uses [semantic versioning](http://semver.org/) to determine whether deployment needs an update or not. Currently Keel has several types of triggers:
+* Website [https://keel.sh](https://keel.sh)
+* Slack - [kubernetes.slack.com](kubernetes.slack.com) look for @karolis
 
-* Google's pubsub integration with [Google Container Registry](https://cloud.google.com/container-registry/)
-* [DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/)
-* [Webhooks](https://github.com/rusenask/keel#webhook)
-* [Polling](https://github.com/rusenask/keel#polling) (watch specific tag and update on SHA digest change)
+Keel is a tool for automating [Kubernetes](https://kubernetes.io/) deployment updates. Keel is stateless, robust and lightweight.
 
-Keel is available on [dockerhub](https://hub.docker.com/r/karolisr/keel/). Please use the latest tag available.
+Keel provides several key features:
 
-Project [roadmap available here](https://github.com/rusenask/keel/wiki/Roadmap).
+* __Semver policies__ - specify update policy for each deployment individually.
 
-## Keel overview
+* __Automatic [Google Container Registry](https://cloud.google.com/container-registry/) configuration__ - Keel automatically sets up topic and subscriptions for your deployment images by periodically scanning your environment.
 
-* Stateless, runs as a single container in kube-system namespace
-* Automatically detects images that you have in your Kubernetes environment and configures relevant [Google Cloud pubsub](https://cloud.google.com/pubsub/) topics, subscriptions.
-* Updates deployment if you have set Keel policy and newer image is available.
+* __[DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/) support__ - Keel accepts dockerhub style webhooks on `/v1/webhooks/dockerhub` endpoint. Impacted deployments will be identified and updated.
+
+*  __[Polling](https://keel.sh/install/#polling-trigger)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for changed SHA digest.
 
 <img src="https://github.com/rusenask/keel/raw/master/static/keel.png">
 
-## Why?
+### Quick Start
 
-I have built Keel since I have a relatively small Golang project which doesn't use a lot of memory and introducing an antique, heavy weight CI solution with lots dependencies seemed like a terrible idea. 
+A step-by-step guide to install Keel on your Kubernetes cluster is viewable on the Keel website:
 
-You should consider using Keel if:
-* You don't want your "Continous Delivery" tool to consume more resources than your actual deployment does.
-* You are __not__ Netflix, Google, Amazon, {insert big company here} that already has something like Spinnaker that has too many dependencies such as "JDK8, Redis, Cassandra, Packer".
-* You want simple, automated Kubernetes deployment updates on code/image push.
+[https://keel.sh/install](https://keel.sh/install)
 
-## Getting started
+### Documentation
 
-Keel operates as a background service, you don't need to interact with it directly, just add labels to your deployments. 
+Documentation is viewable on the Keel Website:
 
-### Example deployment
-
-Here is an example deployment which specifies that keel should always update image if a new version is available:
-
-```
----
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata: 
-  name: wd
-  namespace: default
-  labels: 
-      name: "wd"
-      keel.sh/policy: all
-spec:
-  replicas: 1
-  template:
-    metadata:
-      name: wd
-      labels:
-        app: wd        
-
-    spec:
-      containers:                    
-        - image: karolisr/webhook-demo:0.0.2
-          imagePullPolicy: Always            
-          name: wd
-          command: ["/bin/webhook-demo"]
-          ports:
-            - containerPort: 8090       
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8090
-            initialDelaySeconds: 30
-            timeoutSeconds: 10
-          securityContext:
-            privileged: true      
-```
-
-Available policy options:
-
-* __all__ - update whenever there is a version bump
-* __major__ - update major versions
-* __minor__ - update only minor versions (ignores major)
-* __patch__ - update only patch versions (ignores minor and major versions)
-* __force__ - force update even if tag is not semver, ie: `latest`
-
-## Deployment and triggers
-
-### Step 1: Choosing triggers
-
-#### GCE Kubernetes + GCR pubsub configuration (recommended option for deployments in Google Container Engine)
-
-Since Keel requires access for the pubsub in GCE Kubernetes to work - your cluster node pools need to have permissions. If you are creating a new cluster - just enable pubsub from the start. If you have an existing cluster - currently the only way is to create a new node-pool through the gcloud CLI (more info in the [docs](https://cloud.google.com/sdk/gcloud/reference/container/node-pools/create?hl=en_US&_ga=1.2114551.650086469.1487625651):
-
-```
-gcloud container node-pools create new-pool --cluster CLUSTER_NAME --scopes https://www.googleapis.com/auth/pubsub
-``` 
-
-Make sure that in the Keel's deployment.yml you have set environment variables __PUBSUB=1__ and __PROJECT_ID=your-project-id__. 
-
-#### Webhooks
-
-Keel supports two types of webhooks:
-
-* [DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/) - go to your repository on 
-  `https://hub.docker.com/r/your-namespace/your-repository/~/settings/webhooks/` and point webhooks
-  to `http://your-keel-address.com/v1/webhooks/dockerhub`. 
-* Native webhooks (simplified version) - shoot webhooks at `http://your-keel-address.com/v1/webhooks/native` with a payload that has __name__ and __tag__ fields: `{"name": "gcr.io/v2-namespace/hello-world", "tag": "1.1.1"}`
-
-If you don't want to expose your Keel service - I would recommend using [https://webhookrelay.com/](https://webhookrelay.com/) which can deliver webhooks to your internal Keel service through a sidecar container.
-
-#### Polling
-
-Polling is currently not enabled by default. To enable polling support for your deployments - set environment variable
-__POLL=1__. 
-
-This will be enabled by default in future releases.
-
-Since only the owners of docker registries can control webhooks - it's sometimes convenient to use
-polling. Be aware that registries can be rate limited so it's a good practice to set up reasonable polling intervals.
-
-Add label:
-```
-keel.sh/trigger=poll
-```
-
-To specify custom polling schedule, use annotations:
-```
-keel.sh/pollSchedule=@every 1m
-```
-
-Example deployment file for polling:
-
-```
----
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata: 
-  name: wd
-  namespace: default
-  labels: 
-      name: "wd"
-      keel.sh/policy: force
-      keel.sh/trigger: poll      
-  annotations:
-      keel.sh/pollSchedule: "@every 10m"
-spec:
-  replicas: 1
-  template:
-    metadata:
-      name: wd
-      labels:
-        app: wd        
-
-    spec:
-      containers:                    
-        - image: karolisr/webhook-demo
-          imagePullPolicy: Always            
-          name: wd
-          command: ["/bin/webhook-demo"]
-          ports:
-            - containerPort: 8090       
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8090
-            initialDelaySeconds: 30
-            timeoutSeconds: 10
-          securityContext:
-            privileged: true      
-```            
-
-Authenticated Registries 
-
-__comming soon__
-
-### Step 2: Kubernetes
-
-Keel will be updating deployments, so let's create a new [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) in `kube-system` namespace:
-
-```
-kubectl create serviceaccount keel --namespace=kube-system
-```
-Now, edit [deployment file](https://github.com/rusenask/keel/blob/master/hack/deployment.sample.yml) that is supplied with the repository (basically point to the [newest Keel release](https://hub.docker.com/r/karolisr/keel/tags/) and set your PROJECT_ID to the actual project ID that you have):
-
-```
-kubectl create -f hack/deployment.yml
-```
-
-Once Keel is deployed in your Kubernetes cluster - it occasionally scans your current deployments and looks for ones that have label _keel.sh/policy_. It then checks whether appropriate subscriptions and topics are set for GCR registries, if not - auto-creates them.
-
-If you have any quetions or notice a problem - raise an issue.
-
-## Notifications
-
-Keel uses a simple notification framework that can easily be extended. Out of the box Keel supports
-two types of notifications: Slack and webhooks.
+[https://keel.sh/user-guide/](https://keel.sh/user-guide/)
 
 
-### Configuring Slack notifications
+### Contributing
 
-First, get a Slack token, info about that can be found in the [docs](https://get.slack.help/hc/en-us/articles/215770388-Create-and-regenerate-API-tokens).
+Before starting to work on some big or medium features - raise an issue [here](https://github.com/rusenask/keel/issues) so we can coordinate our efforts.
 
-Then, provide token via __SLACK_TOKEN__ environment variable. You should also provide __SLACK_CHANNELS__ environment variable with a comma separated list of channels where these notifications should go.
+### Developing Keel
 
-Keel will be sending messages when deployment updates succeed or fail.
+If you wish to work on Keel itself, you will need Go 1.8+ installed. Make sure you put Keel into correct Gopath and get remaining dependencies (some dependencies are already locked through glide). 
 
-### Configuring webhook notifications
+### Roadmap
 
-Provide an endpoint via __WEBHOOK_ENDPOINT__ environment variable. 
-
-Webhook payload sample:
-
-```
-{
-	"name": "update deployment",
-	"message": "Successfully updated deployment default/wd (karolisr/webhook-demo:0.0.10)",
-	"createdAt": "2017-07-08T10:08:45.226565869+01:00"	
-}
-```
+Project [roadmap available here](https://github.com/rusenask/keel/wiki/Roadmap).
