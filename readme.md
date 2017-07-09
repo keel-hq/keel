@@ -15,7 +15,7 @@ Keel provides several key features:
 
 *  __[Polling](https://keel.sh/install/#polling-trigger)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for changed SHA digest.
 
-<img src="https://github.com/rusenask/keel/raw/master/static/keel.png">
+<img src="https://keel.sh/images/keel-overview.png">
 
 ### Quick Start
 
