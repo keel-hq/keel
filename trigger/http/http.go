@@ -100,17 +100,5 @@ func (s *TriggerServer) versionHandler(resp http.ResponseWriter, req *http.Reque
 }
 
 func (s *TriggerServer) trigger(event types.Event) error {
-	s.providers.Submit(event)
-	// for _, p := range s.providers {
-	// 	err := p.Submit(event)
-	// 	if err != nil {
-	// 		log.WithFields(log.Fields{
-	// 			"error":    err,
-	// 			"provider": p.GetName(),
-	// 			"trigger":  event.TriggerName,
-	// 		}).Error("trigger.trigger: got error while submitting event to provider")
-	// 	}
-	// }
-
-	return nil
+	return s.providers.Submit(event)
 }
