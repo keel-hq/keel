@@ -57,3 +57,54 @@ func TestCallback(t *testing.T) {
 	}
 
 }
+func TestCallbackTagNotSemver(t *testing.T) {
+
+	fp := &fakeProvider{}
+	providers := provider.New([]provider.Provider{fp})
+	sub := &PubsubSubscriber{disableAck: true, providers: providers}
+
+	dataMsg := &Message{Action: "INSERT", Tag: "gcr.io/stemnapp/alpine-website:latest"}
+	data, _ := json.Marshal(dataMsg)
+
+	msg := &pubsub.Message{Data: data}
+
+	sub.callback(context.Background(), msg)
+
+	if len(fp.submitted) == 0 {
+		t.Fatalf("no events found in provider")
+	}
+	if fp.submitted[0].Repository.Name != "gcr.io/stemnapp/alpine-website" {
+		t.Errorf("expected repo name %s but got %s", "gcr.io/v2-namespace/hello-world", fp.submitted[0].Repository.Name)
+	}
+
+	if fp.submitted[0].Repository.Tag != "latest" {
+		t.Errorf("expected repo tag %s but got %s", "latest", fp.submitted[0].Repository.Tag)
+	}
+
+}
+
+func TestCallbackNoTag(t *testing.T) {
+
+	fp := &fakeProvider{}
+	providers := provider.New([]provider.Provider{fp})
+	sub := &PubsubSubscriber{disableAck: true, providers: providers}
+
+	dataMsg := &Message{Action: "INSERT", Tag: "gcr.io/stemnapp/alpine-website"}
+	data, _ := json.Marshal(dataMsg)
+
+	msg := &pubsub.Message{Data: data}
+
+	sub.callback(context.Background(), msg)
+
+	if len(fp.submitted) == 0 {
+		t.Fatalf("no events found in provider")
+	}
+	if fp.submitted[0].Repository.Name != "gcr.io/stemnapp/alpine-website" {
+		t.Errorf("expected repo name %s but got %s", "gcr.io/v2-namespace/hello-world", fp.submitted[0].Repository.Name)
+	}
+
+	if fp.submitted[0].Repository.Tag != "latest" {
+		t.Errorf("expected repo tag %s but got %s", "latest", fp.submitted[0].Repository.Tag)
+	}
+
+}
