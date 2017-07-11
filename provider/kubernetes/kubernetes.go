@@ -165,6 +165,14 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 			continue
 		}
 
+		p.sender.Send(types.EventNotification{
+			Name:      "preparing to update deployment",
+			Message:   fmt.Sprintf("Preparing to update deployment %s/%s (%s)", deployment.Namespace, deployment.Name, strings.Join(getImages(&deployment), ", ")),
+			CreatedAt: time.Now(),
+			Type:      types.NotificationPreDeploymentUpdate,
+			Level:     types.LevelDebug,
+		})
+
 		err = p.implementer.Update(&deployment)
 		if err != nil {
 			log.WithFields(log.Fields{
