@@ -13,7 +13,7 @@ import (
 
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/version"
+	"github.com/rusenask/keel/util/image"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -160,24 +160,26 @@ func (s *PubsubSubscriber) callback(ctx context.Context, msg *pubsub.Message) {
 		return
 	}
 
-	imageName, parsedVersion, err := version.GetImageNameAndVersion(decoded.Tag)
+	ref, err := image.Parse(decoded.Tag)
+
+	// imageName, parsedVersion, err := version.GetImageNameAndVersion(decoded.Tag)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"action": decoded.Action,
 			"tag":    decoded.Tag,
 			"error":  err,
-		}).Warn("trigger.pubsub: failed to get name and version from image")
+		}).Warn("trigger.pubsub: failed to parse image name")
 		return
 	}
 
 	// sending event to the providers
 	log.WithFields(log.Fields{
-		"action":  decoded.Action,
-		"tag":     decoded.Tag,
-		"version": parsedVersion.String(),
+		"action":     decoded.Action,
+		"tag":        ref.Tag(),
+		"image_name": ref.Name(),
 	}).Debug("trigger.pubsub: got message")
 	event := types.Event{
-		Repository: types.Repository{Name: imageName, Tag: parsedVersion.String()},
+		Repository: types.Repository{Name: ref.Repository(), Tag: ref.Tag()},
 		CreatedAt:  time.Now(),
 	}
 

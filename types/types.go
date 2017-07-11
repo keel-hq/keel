@@ -1,3 +1,5 @@
+//go:generate jsonenums -type=Notification
+//go:generate jsonenums -type=Level
 package types
 
 import (
@@ -146,11 +148,11 @@ const (
 
 // EventNotification notification used for sending
 type EventNotification struct {
-	Name      string       `json:"name,omitempty"`
-	Message   string       `json:"message,omitempty"`
-	CreatedAt time.Time    `json:"createdAt,omitempty"`
-	Type      Notification `json:"type,omitempty"`
-	Level     Level        `json:"level,omitempty"`
+	Name      string       `json:"name"`
+	Message   string       `json:"message"`
+	CreatedAt time.Time    `json:"createdAt"`
+	Type      Notification `json:"type"`
+	Level     Level        `json:"level"`
 }
 
 // Notification - notification types used by notifier
@@ -161,6 +163,7 @@ const (
 	PreProviderSubmitNotification Notification = iota
 	PostProviderSubmitNotification
 
+	NotificationPreDeploymentUpdate
 	NotificationDeploymentUpdate
 )
 
@@ -170,6 +173,8 @@ func (n Notification) String() string {
 		return "pre provider submit"
 	case PostProviderSubmitNotification:
 		return "post provider submit"
+	case NotificationPreDeploymentUpdate:
+		return "preparing deployment update"
 	case NotificationDeploymentUpdate:
 		return "deployment update"
 	default:
@@ -180,7 +185,8 @@ func (n Notification) String() string {
 type Level int
 
 const (
-	LevelInfo Level = iota
+	LevelDebug Level = iota
+	LevelInfo
 	LevelSuccess
 	LevelWarn
 	LevelError
