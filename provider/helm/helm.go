@@ -157,6 +157,7 @@ func parseImage(chart *hapi_chart.Chart, config *hapi_chart.Config) (*image.Refe
 		return nil, err
 	}
 
+	// FIXME: need to dynamically get repositories
 	imageTag, err := vals.PathValue("image.tag")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get image tag: %s", err)
