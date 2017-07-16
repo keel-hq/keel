@@ -36,6 +36,11 @@ type Opts struct {
 	Username, Password  string // if "" - anonymous
 }
 
+// LogFormatter - formatter callback passed into registry client
+func LogFormatter(format string, args ...interface{}) {
+	log.Debugf(format, args...)
+}
+
 // Get - get repository
 func (c *DefaultClient) Get(opts Opts) (*Repository, error) {
 
@@ -44,6 +49,7 @@ func (c *DefaultClient) Get(opts Opts) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	}
+	hub.Logf = LogFormatter
 
 	tags, err := hub.Tags(opts.Name)
 	if err != nil {
@@ -70,6 +76,7 @@ func (c *DefaultClient) Digest(opts Opts) (digest string, err error) {
 	if err != nil {
 		return
 	}
+	hub.Logf = LogFormatter
 
 	manifestDigest, err := hub.ManifestDigest(opts.Name, opts.Tag)
 	if err != nil {

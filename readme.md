@@ -13,7 +13,7 @@ Keel provides several key features:
 
 * __[DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/) support__ - Keel accepts dockerhub style webhooks on `/v1/webhooks/dockerhub` endpoint. Impacted deployments will be identified and updated.
 
-*  __[Polling](https://keel.sh/user-guide/#polling-deployment-example)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for changed SHA digest.
+*  __[Polling](https://keel.sh/user-guide/#polling-deployment-example)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for new tags (if current tag is semver) or same tag SHA digest change (ie: `latest`).
 
 * __Notifications__ - out of the box Keel has Slack and standard webhook notifications, more info [here](https://keel.sh/user-guide/#notifications)
 
