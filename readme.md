@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/rusenask/keel/tree/master.svg?style=shield&circle-token=0239846a42cfa188de531058b9a2116a4b8600d8)](https://circleci.com/gh/rusenask/keel/tree/master)
+
 # Keel - automated Kubernetes deployments for the rest of us
 
 * Website [https://keel.sh](https://keel.sh)
