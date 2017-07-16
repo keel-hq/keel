@@ -3,20 +3,30 @@ package version
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/rusenask/keel/types"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 // ErrVersionTagMissing - tag missing error
 var ErrVersionTagMissing = errors.New("version tag is missing")
+
+// ErrInvalidSemVer is returned a version is found to be invalid when
+// being parsed.
+var ErrInvalidSemVer = errors.New("invalid semantic version")
 
 // GetVersion - parse version
 func GetVersion(version string) (*types.Version, error) {
 
 	v, err := semver.NewVersion(version)
 	if err != nil {
+		if err == semver.ErrInvalidSemVer {
+			return nil, ErrInvalidSemVer
+		}
 		return nil, err
 	}
 	// TODO: probably make it customazible
@@ -58,6 +68,47 @@ func GetImageNameAndVersion(name string) (string, *types.Version, error) {
 	}
 
 	return "", nil, ErrVersionTagMissing
+}
+
+// NewAvailable - takes version and current tags. Checks whether there is a new version in the list of tags
+// and returns it as well as newAvailable bool
+func NewAvailable(current string, tags []string) (newVersion string, newAvailable bool, err error) {
+
+	currentVersion, err := semver.NewVersion(current)
+	if err != nil {
+		return "", false, err
+	}
+
+	if len(tags) == 0 {
+		return "", false, nil
+	}
+
+	var vs []*semver.Version
+	for _, r := range tags {
+		v, err := semver.NewVersion(r)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+				"tag":   r,
+			}).Debug("failed to parse tag")
+			continue
+
+		}
+
+		vs = append(vs, v)
+	}
+
+	if len(vs) == 0 {
+		log.Debug("no versions available")
+		return "", false, nil
+	}
+
+	sort.Sort(sort.Reverse(semver.Collection(vs)))
+
+	if currentVersion.LessThan(vs[0]) {
+		return vs[0].String(), true, nil
+	}
+	return "", false, nil
 }
 
 // ShouldUpdate - checks whether update is needed
