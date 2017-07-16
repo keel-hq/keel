@@ -15,11 +15,18 @@ import (
 // ErrVersionTagMissing - tag missing error
 var ErrVersionTagMissing = errors.New("version tag is missing")
 
+// ErrInvalidSemVer is returned a version is found to be invalid when
+// being parsed.
+var ErrInvalidSemVer = errors.New("invalid semantic version")
+
 // GetVersion - parse version
 func GetVersion(version string) (*types.Version, error) {
 
 	v, err := semver.NewVersion(version)
 	if err != nil {
+		if err == semver.ErrInvalidSemVer {
+			return nil, ErrInvalidSemVer
+		}
 		return nil, err
 	}
 	// TODO: probably make it customazible
@@ -83,7 +90,7 @@ func NewAvailable(current string, tags []string) (newVersion string, newAvailabl
 			log.WithFields(log.Fields{
 				"error": err,
 				"tag":   r,
-			}).Error("failed to parse tag")
+			}).Debug("failed to parse tag")
 			continue
 
 		}
@@ -92,7 +99,7 @@ func NewAvailable(current string, tags []string) (newVersion string, newAvailabl
 	}
 
 	if len(vs) == 0 {
-		log.Error("no versions available")
+		log.Debug("no versions available")
 		return "", false, nil
 	}
 
