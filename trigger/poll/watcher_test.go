@@ -160,3 +160,30 @@ func TestWatchAllTagsJob(t *testing.T) {
 		t.Errorf("expected event repository tag 1.1.3, but got: %s", submitted.Repository.Tag)
 	}
 }
+
+func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
+
+	fp := &fakeProvider{}
+	providers := provider.New([]provider.Provider{fp})
+
+	frc := &fakeRegistryClient{
+		tagsToReturn: []string{"1.1.2", "1.1.3", "0.9.1"},
+	}
+
+	reference, _ := image.Parse("foo/bar:latest")
+
+	details := &watchDetails{
+		imageRef: reference,
+	}
+
+	job := NewWatchRepositoryTagsJob(providers, frc, details)
+
+	job.Run()
+
+	// checking whether new job was submitted
+
+	if len(fp.submitted) != 0 {
+		t.Errorf("expected 0 submitted events but got something: %s", fp.submitted[0].Repository)
+	}
+
+}
