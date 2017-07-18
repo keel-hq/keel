@@ -176,3 +176,82 @@ func TestShouldUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestNewAvailable(t *testing.T) {
+	type args struct {
+		current string
+		tags    []string
+	}
+	tests := []struct {
+		name             string
+		args             args
+		wantNewVersion   string
+		wantNewAvailable bool
+		wantErr          bool
+	}{
+		{
+			name:             "new semver",
+			args:             args{current: "1.1.1", tags: []string{"1.1.1", "1.1.2"}},
+			wantNewVersion:   "1.1.2",
+			wantNewAvailable: true,
+			wantErr:          false,
+		},
+		{
+			name:             "no new semver",
+			args:             args{current: "1.1.1", tags: []string{"1.1.0", "1.1.1"}},
+			wantNewVersion:   "",
+			wantNewAvailable: false,
+			wantErr:          false,
+		},
+		{
+			name:             "no semvers in tag list",
+			args:             args{current: "1.1.1", tags: []string{"latest", "alpha"}},
+			wantNewVersion:   "",
+			wantNewAvailable: false,
+			wantErr:          false,
+		},
+		{
+			name:             "mixed tag list",
+			args:             args{current: "1.1.1", tags: []string{"latest", "alpha", "1.1.2"}},
+			wantNewVersion:   "1.1.2",
+			wantNewAvailable: true,
+			wantErr:          false,
+		},
+		{
+			name:             "mixed tag list",
+			args:             args{current: "1.1.1", tags: []string{"1.1.0", "alpha", "1.1.2", "latest"}},
+			wantNewVersion:   "1.1.2",
+			wantNewAvailable: true,
+			wantErr:          false,
+		},
+		{
+			name:             "empty tags list",
+			args:             args{current: "1.1.1", tags: []string{}},
+			wantNewVersion:   "",
+			wantNewAvailable: false,
+			wantErr:          false,
+		},
+		{
+			name:             "not semver current tag",
+			args:             args{current: "latest", tags: []string{"1.1.1"}},
+			wantNewVersion:   "",
+			wantNewAvailable: false,
+			wantErr:          true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotNewVersion, gotNewAvailable, err := NewAvailable(tt.args.current, tt.args.tags)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewAvailable() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotNewVersion != tt.wantNewVersion {
+				t.Errorf("NewAvailable() gotNewVersion = %v, want %v", gotNewVersion, tt.wantNewVersion)
+			}
+			if gotNewAvailable != tt.wantNewAvailable {
+				t.Errorf("NewAvailable() gotNewAvailable = %v, want %v", gotNewAvailable, tt.wantNewAvailable)
+			}
+		})
+	}
+}

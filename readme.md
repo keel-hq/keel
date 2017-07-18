@@ -1,7 +1,9 @@
+[![CircleCI](https://circleci.com/gh/rusenask/keel/tree/master.svg?style=shield&circle-token=0239846a42cfa188de531058b9a2116a4b8600d8)](https://circleci.com/gh/rusenask/keel/tree/master)
+
 # Keel - automated Kubernetes deployments for the rest of us
 
 * Website [https://keel.sh](https://keel.sh)
-* Slack - [kubernetes.slack.com](kubernetes.slack.com) look for @karolis
+* Slack - [kubernetes.slack.com](https://kubernetes.slack.com) look for @karolis
 
 Keel is a tool for automating [Kubernetes](https://kubernetes.io/) deployment updates. Keel is stateless, robust and lightweight.
 
@@ -13,7 +15,7 @@ Keel provides several key features:
 
 * __[DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/) support__ - Keel accepts dockerhub style webhooks on `/v1/webhooks/dockerhub` endpoint. Impacted deployments will be identified and updated.
 
-*  __[Polling](https://keel.sh/user-guide/#polling-deployment-example)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for changed SHA digest.
+*  __[Polling](https://keel.sh/user-guide/#polling-deployment-example)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for new tags (if current tag is semver) or same tag SHA digest change (ie: `latest`).
 
 * __Notifications__ - out of the box Keel has Slack and standard webhook notifications, more info [here](https://keel.sh/user-guide/#notifications)
 

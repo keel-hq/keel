@@ -14,10 +14,15 @@ type fakeRegistryClient struct {
 	opts registry.Opts // opts set if anything called Digest(opts Opts)
 
 	digestToReturn string
+
+	tagsToReturn []string
 }
 
 func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, error) {
-	return nil, nil
+	return &registry.Repository{
+		Name: opts.Name,
+		Tags: c.tagsToReturn,
+	}, nil
 }
 
 func (c *fakeRegistryClient) Digest(opts registry.Opts) (digest string, err error) {
@@ -62,7 +67,7 @@ func TestWatchTagJob(t *testing.T) {
 
 	submitted := fp.submitted[0]
 
-	if submitted.Repository.Name != "index.docker.io/foo/bar:1.1" {
+	if submitted.Repository.Name != "index.docker.io/foo/bar" {
 		t.Errorf("unexpected event repository name: %s", submitted.Repository.Name)
 	}
 
@@ -105,7 +110,7 @@ func TestWatchTagJobLatest(t *testing.T) {
 
 	submitted := fp.submitted[0]
 
-	if submitted.Repository.Name != "index.docker.io/foo/bar:latest" {
+	if submitted.Repository.Name != "index.docker.io/foo/bar" {
 		t.Errorf("unexpected event repository name: %s", submitted.Repository.Name)
 	}
 
@@ -122,4 +127,63 @@ func TestWatchTagJobLatest(t *testing.T) {
 	if job.details.digest != frc.digestToReturn {
 		t.Errorf("job details digest wasn't updated")
 	}
+}
+
+func TestWatchAllTagsJob(t *testing.T) {
+
+	fp := &fakeProvider{}
+	providers := provider.New([]provider.Provider{fp})
+
+	frc := &fakeRegistryClient{
+		tagsToReturn: []string{"1.1.2", "1.1.3", "0.9.1"},
+	}
+
+	reference, _ := image.Parse("foo/bar:1.1.0")
+
+	details := &watchDetails{
+		imageRef: reference,
+	}
+
+	job := NewWatchRepositoryTagsJob(providers, frc, details)
+
+	job.Run()
+
+	// checking whether new job was submitted
+
+	submitted := fp.submitted[0]
+
+	if submitted.Repository.Name != "index.docker.io/foo/bar" {
+		t.Errorf("unexpected event repository name: %s", submitted.Repository.Name)
+	}
+
+	if submitted.Repository.Tag != "1.1.3" {
+		t.Errorf("expected event repository tag 1.1.3, but got: %s", submitted.Repository.Tag)
+	}
+}
+
+func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
+
+	fp := &fakeProvider{}
+	providers := provider.New([]provider.Provider{fp})
+
+	frc := &fakeRegistryClient{
+		tagsToReturn: []string{"1.1.2", "1.1.3", "0.9.1"},
+	}
+
+	reference, _ := image.Parse("foo/bar:latest")
+
+	details := &watchDetails{
+		imageRef: reference,
+	}
+
+	job := NewWatchRepositoryTagsJob(providers, frc, details)
+
+	job.Run()
+
+	// checking whether new job was submitted
+
+	if len(fp.submitted) != 0 {
+		t.Errorf("expected 0 submitted events but got something: %s", fp.submitted[0].Repository)
+	}
+
 }
