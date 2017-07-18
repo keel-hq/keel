@@ -5,9 +5,10 @@ import (
 
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/image"
+	"github.com/rusenask/keel/util/version"
 
 	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
-	rls "k8s.io/helm/pkg/proto/hapi/services"
+	// rls "k8s.io/helm/pkg/proto/hapi/services"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/ghodss/yaml"
@@ -89,27 +90,41 @@ func (p *Provider) processEvent(event *types.Event) (err error) {
 	return nil
 }
 
-func (p *Provider) getImpactedReleases(event *types.Event) ([]*rls.ListReleasesResponse, error) {
+// UpdatePlan - release update plan
+type UpdatePlan struct {
+	Namespace string
+	Name      string
+
+	// chart
+	Chart *hapi_chart.Chart
+
+	// values to update path=value
+	Values map[string]string
+}
+
+func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) {
+	var plans []*UpdatePlan
+
 	releaseList, err := p.implementer.ListReleases()
 	if err != nil {
 		return nil, err
 	}
 
 	for _, release := range releaseList.Releases {
-		ref, err := parseImage(release.Chart, release.Config)
+
+		newVersion, err := version.GetVersion(event.Repository.Tag)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
-			}).Error("provider.helm: failed to get image name and tag from release")
+			}).Error("provider.helm: failed to parse version")
 			continue
 		}
-		log.WithFields(log.Fields{
-			"parsed_image_named": ref.Remote(),
-		}).Info("provider.helm: checking image")
+
+		plan, update, err := p.checkVersionedRelease(newVersion, release.Namespace, release.Name, release.Chart, release.Config)
 
 	}
 
-	return nil, nil
+	return plans, nil
 }
 
 // resp, err := u.client.UpdateRelease(
@@ -152,40 +167,73 @@ func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_
 	return nil
 }
 
-func parseImage(chart *hapi_chart.Chart, config *hapi_chart.Config) (*image.Reference, error) {
-	vals, err := chartutil.ReadValues([]byte(config.Raw))
+// func parseImageOld(chart *hapi_chart.Chart, config *hapi_chart.Config) (*image.Reference, error) {
+// 	vals, err := chartutil.ReadValues([]byte(config.Raw))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	log.Info(config.Raw)
+
+// 	imageName, err := vals.PathValue("image.repository")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// FIXME: need to dynamically get repositories
+// 	imageTag, err := vals.PathValue("image.tag")
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get image tag: %s", err)
+// 	}
+
+// 	imageNameStr, ok := imageName.(string)
+// 	if !ok {
+// 		return nil, fmt.Errorf("failed to convert image name ref to string")
+// 	}
+
+// 	imageTagStr, ok := imageTag.(string)
+// 	if !ok {
+// 		return nil, fmt.Errorf("failed to convert image tag ref to string")
+// 	}
+
+// 	if imageTagStr != "" {
+// 		return image.Parse(imageNameStr + ":" + imageTagStr)
+// 	}
+
+// 	return image.Parse(imageNameStr)
+// }
+
+func parseImage(vals chartutil.Values, details *ImageDetails) (*image.Reference, error) {
+	if details.Repository == "" {
+		return nil, fmt.Errorf("repository name path cannot be empty")
+	}
+
+	imageName, err := getValueAsString(vals, details.Repository)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Info(config.Raw)
-
-	imageName, err := vals.PathValue("image.repository")
+	// getting image tag
+	imageTag, err := getValueAsString(vals, details.Tag)
 	if err != nil {
-		return nil, err
+		// failed to find tag, returning anyway
+		return image.Parse(imageName)
 	}
 
-	// FIXME: need to dynamically get repositories
-	imageTag, err := vals.PathValue("image.tag")
+	return image.Parse(imageName + ":" + imageTag)
+}
+
+func getValueAsString(vals chartutil.Values, path string) (string, error) {
+	valinterface, err := vals.PathValue(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get image tag: %s", err)
+		return "", err
 	}
-
-	imageNameStr, ok := imageName.(string)
+	valString, ok := valinterface.(string)
 	if !ok {
-		return nil, fmt.Errorf("failed to convert image name ref to string")
+		return "", fmt.Errorf("failed to convert value  to string")
 	}
 
-	imageTagStr, ok := imageTag.(string)
-	if !ok {
-		return nil, fmt.Errorf("failed to convert image tag ref to string")
-	}
-
-	if imageTagStr != "" {
-		return image.Parse(imageNameStr + ":" + imageTagStr)
-	}
-
-	return image.Parse(imageNameStr)
+	return valString, nil
 }
 
 func values(chart *hapi_chart.Chart, config *hapi_chart.Config) (chartutil.Values, error) {
@@ -202,6 +250,7 @@ func values(chart *hapi_chart.Chart, config *hapi_chart.Config) (chartutil.Value
 //     - repository: image.repository
 //       tag: image.tag
 
+// Root - root element of the values yaml
 type Root struct {
 	Keel KeelChartConfig `json:"keel"`
 }
