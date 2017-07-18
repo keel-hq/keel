@@ -1,5 +1,6 @@
 //go:generate jsonenums -type=Notification
 //go:generate jsonenums -type=Level
+//go:generate jsonenums -type=PolicyType
 package types
 
 import (
@@ -138,7 +139,7 @@ func (t PolicyType) String() string {
 
 // available policies
 const (
-	PolicyTypeNone = iota
+	PolicyTypeNone PolicyType = iota
 	PolicyTypeAll
 	PolicyTypeMajor
 	PolicyTypeMinor
