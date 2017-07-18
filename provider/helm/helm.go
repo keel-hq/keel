@@ -10,12 +10,21 @@ import (
 	rls "k8s.io/helm/pkg/proto/hapi/services"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/ghodss/yaml"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/helm"
 )
 
+// ProviderName - helm provider name
 const ProviderName = "helm"
 
+// keel paths
+const (
+	policyPath = "keel.policy"
+	imagesPath = "keel.images"
+)
+
+// Provider - helm provider, responsible for managing release updates
 type Provider struct {
 	implementer Implementer
 
@@ -87,7 +96,6 @@ func (p *Provider) getImpactedReleases(event *types.Event) ([]*rls.ListReleasesR
 	}
 
 	for _, release := range releaseList.Releases {
-
 		ref, err := parseImage(release.Chart, release.Config)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -178,4 +186,49 @@ func parseImage(chart *hapi_chart.Chart, config *hapi_chart.Config) (*image.Refe
 	}
 
 	return image.Parse(imageNameStr)
+}
+
+func values(chart *hapi_chart.Chart, config *hapi_chart.Config) (chartutil.Values, error) {
+	return chartutil.CoalesceValues(chart, config)
+}
+
+// keel:
+//   # keel policy (all/major/minor/patch/force)
+//   policy: all
+//   # trigger type, defaults to events such as pubsub, webhooks
+//   trigger: poll
+//   # images to track and update
+//   images:
+//     - repository: image.repository
+//       tag: image.tag
+
+type Root struct {
+	Keel KeelChartConfig `json:"keel"`
+}
+
+// KeelChartConfig - keel related configuration taken from values.yaml
+type KeelChartConfig struct {
+	Policy  types.PolicyType `json:"policy"`
+	Trigger string           `json:"trigger"`
+	Images  []ImageDetails   `json:"images"`
+}
+
+// ImageDetails - image details
+type ImageDetails struct {
+	Repository string `json:"repository"`
+	Tag        string `json:"tag"`
+}
+
+func getKeelConfig(vals chartutil.Values) (*KeelChartConfig, error) {
+	yamlFull, err := vals.YAML()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get vals config, error: %s", err)
+	}
+
+	var r Root
+	err = yaml.Unmarshal([]byte(yamlFull), &r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse keel config: %s", err)
+	}
+	return &r.Keel, nil
 }
