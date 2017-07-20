@@ -2,27 +2,47 @@ package pubsub
 
 import (
 	"testing"
+
+	"github.com/rusenask/keel/util/image"
 )
 
-func Test_extractContainerRegistryURI(t *testing.T) {
+func unsafeImageRef(img string) *image.Reference {
+	ref, err := image.Parse(img)
+	if err != nil {
+		panic(err)
+	}
+	return ref
+}
+
+func Test_isGoogleContainerRegistry(t *testing.T) {
 	type args struct {
-		imageName string
+		registry string
 	}
 	tests := []struct {
 		name string
 		args args
-		want string
+		want bool
 	}{
 		{
-			name: "gcr.io/v2-namespace/hello-world:1.1",
-			args: args{imageName: "gcr.io/v2-namespace/hello-world:1.1"},
-			want: "gcr.io",
+			name: "gcr",
+			args: args{registry: unsafeImageRef("gcr.io/v2-namespace/hello-world:1.1").Registry()},
+			want: true,
+		},
+		{
+			name: "docker registry",
+			args: args{registry: unsafeImageRef("docker.io/v2-namespace/hello-world:1.1").Registry()},
+			want: false,
+		},
+		{
+			name: "custom registry",
+			args: args{registry: unsafeImageRef("localhost:4000/v2-namespace/hello-world:1.1").Registry()},
+			want: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := extractContainerRegistryURI(tt.args.imageName); got != tt.want {
-				t.Errorf("extractContainerRegistryURI() = %v, want %v", got, tt.want)
+			if got := isGoogleContainerRegistry(tt.args.registry); got != tt.want {
+				t.Errorf("isGoogleContainerRegistry() = %v, want %v", got, tt.want)
 			}
 		})
 	}

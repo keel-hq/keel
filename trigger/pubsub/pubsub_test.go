@@ -7,25 +7,11 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/rusenask/keel/provider"
-	"github.com/rusenask/keel/types"
 
 	"testing"
 )
 
 type fakeClient struct {
-}
-
-type fakeProvider struct {
-	submitted []types.Event
-}
-
-func (p *fakeProvider) Submit(event types.Event) error {
-	p.submitted = append(p.submitted, event)
-	return nil
-}
-
-func (p *fakeProvider) GetName() string {
-	return "fakeProvider"
 }
 
 func fakeDoneFunc(id string, done bool) {
