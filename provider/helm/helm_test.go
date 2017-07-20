@@ -2,19 +2,17 @@ package helm
 
 import (
 	"fmt"
+	"reflect"
+	"testing"
 
 	"github.com/ghodss/yaml"
-
 	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/types"
-
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/helm"
 	"k8s.io/helm/pkg/proto/hapi/chart"
 	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
-
-	"testing"
 )
 
 type fakeSender struct {
@@ -130,6 +128,101 @@ keel:
 		t.Errorf("policy not found")
 	}
 }
+
+func TestGetTrackedReleases(t *testing.T) {
+
+	chartVals := `
+name: chart-x
+where:
+  city: kaunas
+  title: hmm
+image:
+  repository: gcr.io/v2-namespace/bye-world
+  tag: 1.1.0
+
+image2:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.2.0 
+
+keel:  
+  policy: all  
+  trigger: poll  
+  images:
+    - repository: image.repository
+      tag: image.tag
+
+`
+
+	fakeImpl := &fakeImplementer{
+		listReleasesResponse: &rls.ListReleasesResponse{
+			Releases: []*hapi_release5.Release{
+				&hapi_release5.Release{
+					Name: "release-1",
+					Chart: &chart.Chart{
+						Values: &chart.Config{Raw: chartVals},
+					},
+					Config: &chart.Config{Raw: ""},
+				},
+			},
+		},
+	}
+
+	prov := NewProvider(fakeImpl, &fakeSender{})
+
+	tracked, _ := prov.TrackedImages()
+
+	if tracked[0].Image.Remote() != "gcr.io/v2-namespace/bye-world:1.1.0" {
+		t.Errorf("unexpected image: %s", tracked[0].Image.Remote())
+	}
+}
+
+func TestGetTrackedReleasesTotallyNonStandard(t *testing.T) {
+
+	chartVals := `
+name: chart-x
+where:
+  city: kaunas
+  title: hmm
+ihavemyownstandard:
+  repo: gcr.io/v2-namespace/bye-world
+  version: 1.1.0
+
+image2:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.2.0 
+
+keel:  
+  policy: all  
+  trigger: poll  
+  images:
+    - repository: ihavemyownstandard.repo
+      tag: ihavemyownstandard.version
+
+`
+
+	fakeImpl := &fakeImplementer{
+		listReleasesResponse: &rls.ListReleasesResponse{
+			Releases: []*hapi_release5.Release{
+				&hapi_release5.Release{
+					Name: "release-1",
+					Chart: &chart.Chart{
+						Values: &chart.Config{Raw: chartVals},
+					},
+					Config: &chart.Config{Raw: ""},
+				},
+			},
+		},
+	}
+
+	prov := NewProvider(fakeImpl, &fakeSender{})
+
+	tracked, _ := prov.TrackedImages()
+
+	if tracked[0].Image.Remote() != "gcr.io/v2-namespace/bye-world:1.1.0" {
+		t.Errorf("unexpected image: %s", tracked[0].Image.Remote())
+	}
+}
+
 func TestGetTriggerFromConfig(t *testing.T) {
 	vals, err := testingConfigYaml(&KeelChartConfig{Trigger: types.TriggerTypePoll})
 	if err != nil {
@@ -274,5 +367,92 @@ func TestGetPollingSchedule(t *testing.T) {
 
 	if cfg.PollSchedule != "@every 12m" {
 		t.Errorf("unexpected polling schedule: %s", cfg.PollSchedule)
+	}
+}
+
+func Test_getKeelConfig(t *testing.T) {
+
+	var valuesBasicStr = `
+name: al Rashid
+where:
+  city: Basrah
+  title: caliph
+image:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.1.0
+
+keel:  
+  policy: all  
+  images:
+    - repository: image.repository
+      tag: image.tag
+
+`
+	valuesBasic, _ := chartutil.ReadValues([]byte(valuesBasicStr))
+
+	var valuesPollStr = `
+name: al Rashid
+where:
+  city: Basrah
+  title: caliph
+image:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.1.0
+
+keel:  
+  policy: major  
+  trigger: poll
+  pollSchedule: "@every 30m"
+  images:
+    - repository: image.repository
+      tag: image.tag
+
+`
+	valuesPoll, _ := chartutil.ReadValues([]byte(valuesPollStr))
+
+	type args struct {
+		vals chartutil.Values
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *KeelChartConfig
+		wantErr bool
+	}{
+		{
+			name: "correct config",
+			args: args{vals: valuesBasic},
+			want: &KeelChartConfig{
+				Policy:  types.PolicyTypeAll,
+				Trigger: types.TriggerTypeDefault,
+				Images: []ImageDetails{
+					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+				},
+			},
+		},
+		{
+			name: "correct polling config",
+			args: args{vals: valuesPoll},
+			want: &KeelChartConfig{
+				Policy:       types.PolicyTypeMajor,
+				Trigger:      types.TriggerTypePoll,
+				PollSchedule: "@every 30m",
+				Images: []ImageDetails{
+					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getKeelConfig(tt.args.vals)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getKeelConfig() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getKeelConfig() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

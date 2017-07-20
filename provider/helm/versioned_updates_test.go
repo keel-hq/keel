@@ -85,6 +85,17 @@ keel:
   images:
     - repository: image.repository      
 `
+
+	chartValuesNoKeelCfg := `
+name: al Rashid
+where:
+  city: Basrah
+  title: caliph
+image:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.0.0
+`
+
 	helloWorldChart := &hapi_chart.Chart{
 		Values: &hapi_chart.Config{Raw: chartValuesA},
 	}
@@ -97,6 +108,10 @@ keel:
 	}
 	helloWorldNoTagChart := &hapi_chart.Chart{
 		Values: &hapi_chart.Config{Raw: chartValuesNoTag},
+	}
+
+	helloWorldNoKeelCfg := &hapi_chart.Chart{
+		Values: &hapi_chart.Config{Raw: chartValuesNoKeelCfg},
 	}
 
 	type args struct {
@@ -196,6 +211,20 @@ keel:
 			},
 			wantPlan:                &UpdatePlan{Namespace: "default", Name: "release-1-no-tag", Chart: helloWorldNoTagChart, Values: map[string]string{"image.repository": "gcr.io/v2-namespace/hello-world:1.1.0"}},
 			wantShouldUpdateRelease: true,
+			wantErr:                 false,
+		},
+		{
+			name: "no keel config",
+			args: args{
+				newVersion: unsafeGetVersion("1.1.0"),
+				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.0"},
+				namespace:  "default",
+				name:       "release-1-no-tag",
+				chart:      helloWorldNoKeelCfg,
+				config:     &hapi_chart.Config{Raw: ""},
+			},
+			wantPlan:                &UpdatePlan{Namespace: "default", Name: "release-1-no-tag", Chart: helloWorldNoKeelCfg, Values: map[string]string{}},
+			wantShouldUpdateRelease: false,
 			wantErr:                 false,
 		},
 	}
