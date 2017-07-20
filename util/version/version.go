@@ -132,12 +132,10 @@ func ShouldUpdate(current *types.Version, new *types.Version, policy types.Polic
 	}
 
 	switch policy {
-	case types.PolicyTypeAll:
+	case types.PolicyTypeAll, types.PolicyTypeMajor:
 		return true, nil
-	case types.PolicyTypeMajor:
-		return newVersion.Major() > currentVersion.Major(), nil
 	case types.PolicyTypeMinor:
-		return newVersion.Major() == currentVersion.Major() && newVersion.Minor() > currentVersion.Minor(), nil
+		return newVersion.Major() == currentVersion.Major(), nil
 	case types.PolicyTypePatch:
 		return newVersion.Major() == currentVersion.Major() && newVersion.Minor() == currentVersion.Minor() && newVersion.Patch() > currentVersion.Patch(), nil
 	}
