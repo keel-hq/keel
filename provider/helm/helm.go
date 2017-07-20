@@ -2,13 +2,16 @@ package helm
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/image"
 	"github.com/rusenask/keel/util/version"
 
 	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
-	// rls "k8s.io/helm/pkg/proto/hapi/services"
+
+	"github.com/rusenask/keel/extension/notification"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/ghodss/yaml"
@@ -17,14 +20,14 @@ import (
 	"k8s.io/helm/pkg/strvals"
 )
 
+// Manager - high level interface into helm provider related data used by
+// triggers
+type Manager interface {
+	Images() ([]*image.Reference, error)
+}
+
 // ProviderName - helm provider name
 const ProviderName = "helm"
-
-// keel paths
-const (
-	policyPath = "keel.policy"
-	imagesPath = "keel.images"
-)
 
 // UpdatePlan - release update plan
 type UpdatePlan struct {
@@ -43,6 +46,7 @@ type UpdatePlan struct {
 //   policy: all
 //   # trigger type, defaults to events such as pubsub, webhooks
 //   trigger: poll
+//   pollSchedule: "@every 2m"
 //   # images to track and update
 //   images:
 //     - repository: image.repository
@@ -55,9 +59,10 @@ type Root struct {
 
 // KeelChartConfig - keel related configuration taken from values.yaml
 type KeelChartConfig struct {
-	Policy  types.PolicyType `json:"policy"`
-	Trigger string           `json:"trigger"`
-	Images  []ImageDetails   `json:"images"`
+	Policy       types.PolicyType  `json:"policy"`
+	Trigger      types.TriggerType `json:"trigger"`
+	PollSchedule string            `json:"pollSchedule"`
+	Images       []ImageDetails    `json:"images"`
 }
 
 // ImageDetails - image details
@@ -70,18 +75,23 @@ type ImageDetails struct {
 type Provider struct {
 	implementer Implementer
 
+	sender notification.Sender
+
 	events chan *types.Event
 	stop   chan struct{}
 }
 
-func NewProvider(implementer Implementer) *Provider {
+// NewProvider - create new Helm provider
+func NewProvider(implementer Implementer, sender notification.Sender) *Provider {
 	return &Provider{
 		implementer: implementer,
+		sender:      sender,
 		events:      make(chan *types.Event, 100),
 		stop:        make(chan struct{}),
 	}
 }
 
+// GetName - get provider name
 func (p *Provider) GetName() string {
 	return ProviderName
 }
@@ -102,8 +112,9 @@ func (p *Provider) Stop() {
 	close(p.stop)
 }
 
-func (p *Provider) Releases() ([]*types.HelmRelease, error) {
-	releases := []*types.HelmRelease{}
+// TrackedImages - returns tracked images from all releases that have keel configuration
+func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
+	var trackedImages []*types.TrackedImage
 
 	releaseList, err := p.implementer.ListReleases()
 	if err != nil {
@@ -111,10 +122,53 @@ func (p *Provider) Releases() ([]*types.HelmRelease, error) {
 	}
 
 	for _, release := range releaseList.Releases {
-		
+		// getting configuration
+		vals, err := values(release.Chart, release.Config)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":     err,
+				"release":   release.Name,
+				"namespace": release.Namespace,
+			}).Error("provider.helm: failed to get values.yaml for release")
+			continue
+		}
+
+		cfg, err := getKeelConfig(vals)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":     err,
+				"release":   release.Name,
+				"namespace": release.Namespace,
+			}).Error("provider.helm: failed to get config for release")
+			continue
+		}
+
+		if cfg.PollSchedule == "" {
+			cfg.PollSchedule = types.KeelPollDefaultSchedule
+		}
+
+		releaseImages, err := getImages(vals)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":     err,
+				"release":   release.Name,
+				"namespace": release.Namespace,
+			}).Error("provider.helm: failed to get images for release")
+			continue
+		}
+
+		for _, img := range releaseImages {
+			trackedImages = append(trackedImages, &types.TrackedImage{
+				Image:        img,
+				PollSchedule: cfg.PollSchedule,
+				Trigger:      cfg.Trigger,
+				Provider:     ProviderName,
+			})
+		}
+
 	}
 
-	return releases, nil
+	return trackedImages, nil
 }
 
 func (p *Provider) startInternal() error {
@@ -162,6 +216,22 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 
 		newVersion, err := version.GetVersion(event.Repository.Tag)
 		if err != nil {
+
+			plan, update, errCheck := checkUnversionedRelease(&event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
+			if errCheck != nil {
+				log.WithFields(log.Fields{
+					"error":      err,
+					"deployment": release.Name,
+					"namespace":  release.Namespace,
+				}).Error("provider.kubernetes: got error while checking unversioned release")
+				continue
+			}
+
+			if update {
+				plans = append(plans, plan)
+				continue
+			}
+
 			log.WithFields(log.Fields{
 				"error": err,
 			}).Error("provider.helm: failed to parse version")
@@ -187,6 +257,15 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 
 func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 	for _, plan := range plans {
+
+		p.sender.Send(types.EventNotification{
+			Name:      "update release",
+			Message:   fmt.Sprintf("Preparing to update release %s/%s (%s)", plan.Namespace, plan.Name, strings.Join(mapToSlice(plan.Values), ", ")),
+			CreatedAt: time.Now(),
+			Type:      types.NotificationPreReleaseUpdate,
+			Level:     types.LevelDebug,
+		})
+
 		err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -194,8 +273,25 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 				"name":      plan.Name,
 				"namespace": plan.Namespace,
 			}).Error("provider.helm: failed to apply plan")
+
+			p.sender.Send(types.EventNotification{
+				Name:      "update release",
+				Message:   fmt.Sprintf("Release update feailed %s/%s (%s), error: %s", plan.Namespace, plan.Name, strings.Join(mapToSlice(plan.Values), ", "), err),
+				CreatedAt: time.Now(),
+				Type:      types.NotificationReleaseUpdate,
+				Level:     types.LevelError,
+			})
 			continue
 		}
+
+		p.sender.Send(types.EventNotification{
+			Name:      "update release",
+			Message:   fmt.Sprintf("Successfully updated release %s/%s (%s)", plan.Namespace, plan.Name, strings.Join(mapToSlice(plan.Values), ", ")),
+			CreatedAt: time.Now(),
+			Type:      types.NotificationReleaseUpdate,
+			Level:     types.LevelSuccess,
+		})
+
 	}
 
 	return nil
