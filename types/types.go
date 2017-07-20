@@ -1,6 +1,7 @@
 //go:generate jsonenums -type=Notification
 //go:generate jsonenums -type=Level
 //go:generate jsonenums -type=PolicyType
+//go:generate jsonenums -type=TriggerType
 package types
 
 import (
@@ -85,7 +86,7 @@ func (t TriggerType) String() string {
 	case TriggerTypePoll:
 		return "poll"
 	default:
-		return "unknown"
+		return "default"
 	}
 }
 
@@ -164,8 +165,13 @@ const (
 	PreProviderSubmitNotification Notification = iota
 	PostProviderSubmitNotification
 
+	// Kubernetes notification types
 	NotificationPreDeploymentUpdate
 	NotificationDeploymentUpdate
+
+	// Helm notification types
+	NotificationPreReleaseUpdate
+	NotificationReleaseUpdate
 )
 
 func (n Notification) String() string {
@@ -178,6 +184,10 @@ func (n Notification) String() string {
 		return "preparing deployment update"
 	case NotificationDeploymentUpdate:
 		return "deployment update"
+	case NotificationPreReleaseUpdate:
+		return "preparing release update"
+	case NotificationReleaseUpdate:
+		return "release update"
 	default:
 		return "unknown"
 	}
