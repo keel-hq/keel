@@ -5,13 +5,11 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
-
-	"github.com/rusenask/cron"
 	// "github.com/rusenask/keel/image"
-	"github.com/rusenask/keel/provider/kubernetes"
+	// "github.com/rusenask/keel/provider/helm"
+	// "github.com/rusenask/keel/provider/kubernetes"
+	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/policies"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -19,7 +17,11 @@ import (
 // DefaultManager - default manager is responsible for scanning deployments and identifying
 // deployments that have market
 type DefaultManager struct {
-	implementer kubernetes.Implementer
+	// kubernetes implementer
+	// implementer kubernetes.Implementer
+
+	providers provider.Providers
+
 	// repository watcher
 	watcher Watcher
 
@@ -33,12 +35,14 @@ type DefaultManager struct {
 }
 
 // NewPollManager - new default poller
-func NewPollManager(implementer kubernetes.Implementer, watcher Watcher) *DefaultManager {
+func NewPollManager(providers provider.Providers, watcher Watcher) *DefaultManager {
 	return &DefaultManager{
-		implementer: implementer,
-		watcher:     watcher,
-		mu:          &sync.Mutex{},
-		scanTick:    55,
+		// implementer: implementer,
+		// helmManager: helmManager,
+		providers: providers,
+		watcher:   watcher,
+		mu:        &sync.Mutex{},
+		scanTick:  55,
 	}
 }
 
@@ -65,7 +69,7 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error": err,
-				}).Error("trigger.poll.manager: scan failed")
+				}).Error("trigger.poll.manager: kubernetes scan failed")
 			}
 		}
 	}
@@ -74,100 +78,124 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 }
 
 func (s *DefaultManager) scan(ctx context.Context) error {
-	deploymentLists, err := s.deployments()
+	trackedImages, err := s.providers.TrackedImages()
 	if err != nil {
 		return err
 	}
 
-	for _, deploymentList := range deploymentLists {
-		for _, deployment := range deploymentList.Items {
-			labels := deployment.GetLabels()
-
-			// ignoring unlabelled deployments
-			policy := policies.GetPolicy(labels)
-			if policy == types.PolicyTypeNone {
-				continue
-			}
-
-			// trigger type, we only care for "poll" type triggers
-			trigger := policies.GetTriggerPolicy(labels)
-			if trigger != types.TriggerTypePoll {
-				continue
-			}
-
-			err = s.checkDeployment(&deployment)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":      err,
-					"deployment": deployment.Name,
-					"namespace":  deployment.Namespace,
-				}).Error("trigger.poll.manager: failed to check deployment poll status")
-			}
-		}
-	}
-	return nil
-}
-
-// checkDeployment - checks whether we are already watching for this deployment
-func (s *DefaultManager) checkDeployment(deployment *v1beta1.Deployment) error {
-	annotations := deployment.GetAnnotations()
-
-	for _, c := range deployment.Spec.Template.Spec.Containers {
-
-		schedule, ok := annotations[types.KeelPollScheduleAnnotation]
-		if ok {
-			_, err := cron.Parse(schedule)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":      err,
-					"schedule":   schedule,
-					"image":      c.Image,
-					"deployment": deployment.Name,
-					"namespace":  deployment.Namespace,
-				}).Error("trigger.poll.manager: failed to parse poll schedule")
-				return err
-			}
-		} else {
-			schedule = types.KeelPollDefaultSchedule
+	for _, trackedImage := range trackedImages {
+		if trackedImage.Trigger != types.TriggerTypePoll {
+			continue
 		}
 
-		err := s.watcher.Watch(c.Image, schedule, "", "")
+		err := s.watcher.Watch(trackedImage.Image.Remote(), trackedImage.PollSchedule, "", "")
 		if err != nil {
 			log.WithFields(log.Fields{
-				"error":      err,
-				"schedule":   schedule,
-				"image":      c.Image,
-				"deployment": deployment.Name,
-				"namespace":  deployment.Namespace,
+				"error":    err,
+				"schedule": trackedImage.PollSchedule,
+				"image":    trackedImage.Image.Remote(),
 			}).Error("trigger.poll.manager: failed to start watching repository")
 			return err
 		}
-		// continue
 	}
-
 	return nil
 }
 
-func (s *DefaultManager) deployments() ([]*v1beta1.DeploymentList, error) {
-	// namespaces := p.client.Namespaces()
-	deployments := []*v1beta1.DeploymentList{}
+// func (s *DefaultManager) scanKubernetes(ctx context.Context) error {
+// 	deploymentLists, err := s.deployments()
+// 	if err != nil {
+// 		return err
+// 	}
 
-	n, err := s.implementer.Namespaces()
-	if err != nil {
-		return nil, err
-	}
+// 	for _, deploymentList := range deploymentLists {
+// 		for _, deployment := range deploymentList.Items {
+// 			labels := deployment.GetLabels()
 
-	for _, n := range n.Items {
-		l, err := s.implementer.Deployments(n.GetName())
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":     err,
-				"namespace": n.GetName(),
-			}).Error("trigger.pubsub.manager: failed to list deployments")
-			continue
-		}
-		deployments = append(deployments, l)
-	}
+// 			// ignoring unlabelled deployments
+// 			policy := policies.GetPolicy(labels)
+// 			if policy == types.PolicyTypeNone {
+// 				continue
+// 			}
 
-	return deployments, nil
-}
+// 			// trigger type, we only care for "poll" type triggers
+// 			trigger := policies.GetTriggerPolicy(labels)
+// 			if trigger != types.TriggerTypePoll {
+// 				continue
+// 			}
+
+// 			err = s.checkDeployment(&deployment)
+// 			if err != nil {
+// 				log.WithFields(log.Fields{
+// 					"error":      err,
+// 					"deployment": deployment.Name,
+// 					"namespace":  deployment.Namespace,
+// 				}).Error("trigger.poll.manager: failed to check deployment poll status")
+// 			}
+// 		}
+// 	}
+// 	return nil
+// }
+
+// // checkDeployment - checks whether we are already watching for this deployment
+// func (s *DefaultManager) checkDeployment(deployment *v1beta1.Deployment) error {
+// 	annotations := deployment.GetAnnotations()
+
+// 	for _, c := range deployment.Spec.Template.Spec.Containers {
+
+// 		schedule, ok := annotations[types.KeelPollScheduleAnnotation]
+// 		if ok {
+// 			_, err := cron.Parse(schedule)
+// 			if err != nil {
+// 				log.WithFields(log.Fields{
+// 					"error":      err,
+// 					"schedule":   schedule,
+// 					"image":      c.Image,
+// 					"deployment": deployment.Name,
+// 					"namespace":  deployment.Namespace,
+// 				}).Error("trigger.poll.manager: failed to parse poll schedule")
+// 				return err
+// 			}
+// 		} else {
+// 			schedule = types.KeelPollDefaultSchedule
+// 		}
+
+// 		err := s.watcher.Watch(c.Image, schedule, "", "")
+// 		if err != nil {
+// 			log.WithFields(log.Fields{
+// 				"error":      err,
+// 				"schedule":   schedule,
+// 				"image":      c.Image,
+// 				"deployment": deployment.Name,
+// 				"namespace":  deployment.Namespace,
+// 			}).Error("trigger.poll.manager: failed to start watching repository")
+// 			return err
+// 		}
+// 		// continue
+// 	}
+
+// 	return nil
+// }
+
+// func (s *DefaultManager) deployments() ([]*v1beta1.DeploymentList, error) {
+// 	// namespaces := p.client.Namespaces()
+// 	deployments := []*v1beta1.DeploymentList{}
+
+// 	n, err := s.implementer.Namespaces()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	for _, n := range n.Items {
+// 		l, err := s.implementer.Deployments(n.GetName())
+// 		if err != nil {
+// 			log.WithFields(log.Fields{
+// 				"error":     err,
+// 				"namespace": n.GetName(),
+// 			}).Error("trigger.pubsub.manager: failed to list deployments")
+// 			continue
+// 		}
+// 		deployments = append(deployments, l)
+// 	}
+
+// 	return deployments, nil
+// }
