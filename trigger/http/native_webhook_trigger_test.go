@@ -13,6 +13,7 @@ import (
 
 type fakeProvider struct {
 	submitted []types.Event
+	images    []*types.TrackedImage
 }
 
 func (p *fakeProvider) Submit(event types.Event) error {
@@ -20,10 +21,18 @@ func (p *fakeProvider) Submit(event types.Event) error {
 	return nil
 }
 
-func (p *fakeProvider) GetName() string {
-	return "fakeProvider"
+func (p *fakeProvider) TrackedImages() ([]*types.TrackedImage, error) {
+	return p.images, nil
 }
-
+func (p *fakeProvider) List() []string {
+	return []string{"fakeprovider"}
+}
+func (p *fakeProvider) Stop() {
+	return
+}
+func (p *fakeProvider) GetName() string {
+	return "fp"
+}
 func TestNativeWebhookHandler(t *testing.T) {
 
 	fp := &fakeProvider{}
