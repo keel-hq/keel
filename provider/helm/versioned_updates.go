@@ -7,7 +7,6 @@ import (
 	"github.com/rusenask/keel/util/image"
 	"github.com/rusenask/keel/util/version"
 
-	"k8s.io/helm/pkg/chartutil"
 	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
 
 	log "github.com/Sirupsen/logrus"
@@ -47,10 +46,6 @@ func checkVersionedRelease(newVersion *types.Version, repo *types.Repository, na
 		// ignoring this release, no keel config found
 		return plan, false, nil
 	}
-
-	fmt.Println("configuration parsed")
-	fmt.Println(keelCfg.Images)
-
 	// checking for impacted images
 	for _, imageDetails := range keelCfg.Images {
 		fmt.Println(imageDetails.TagPath)
@@ -148,41 +143,4 @@ func checkVersionedRelease(newVersion *types.Version, repo *types.Repository, na
 
 	}
 	return plan, shouldUpdateRelease, nil
-}
-
-func getPlanValues(newVersion *types.Version, ref *image.Reference, imageDetails *ImageDetails) (path, value string) {
-	// vals := make(map[string]string)
-	// if tag is not supplied, then user specified full image name
-	if imageDetails.TagPath == "" {
-		return imageDetails.RepositoryPath, getUpdatedImage(ref, newVersion.String())
-	}
-	return imageDetails.TagPath, newVersion.String()
-}
-
-func getUpdatedImage(ref *image.Reference, version string) string {
-	// updating image
-	if ref.Registry() == image.DefaultRegistryHostname {
-		return fmt.Sprintf("%s:%s", ref.ShortName(), version)
-	}
-	return fmt.Sprintf("%s:%s", ref.Repository(), version)
-}
-
-func parseImage(vals chartutil.Values, details *ImageDetails) (*image.Reference, error) {
-	if details.RepositoryPath == "" {
-		return nil, fmt.Errorf("repository name path cannot be empty")
-	}
-
-	imageName, err := getValueAsString(vals, details.RepositoryPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// getting image tag
-	imageTag, err := getValueAsString(vals, details.TagPath)
-	if err != nil {
-		// failed to find tag, returning anyway
-		return image.Parse(imageName)
-	}
-
-	return image.Parse(imageName + ":" + imageTag)
 }
