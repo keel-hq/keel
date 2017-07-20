@@ -6,18 +6,14 @@ import (
 
 	"golang.org/x/net/context"
 
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
-
-	"github.com/rusenask/keel/provider/kubernetes"
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/policies"
+	"github.com/rusenask/keel/provider"
 
 	log "github.com/Sirupsen/logrus"
 )
 
 // DefaultManager - subscription manager
 type DefaultManager struct {
-	implementer kubernetes.Implementer
+	providers provider.Providers
 
 	client Subscriber
 	// existing subscribers
@@ -43,9 +39,9 @@ type Subscriber interface {
 }
 
 // NewDefaultManager - creates new pubsub manager to create subscription for deployments
-func NewDefaultManager(projectID string, implementer kubernetes.Implementer, subClient Subscriber) *DefaultManager {
+func NewDefaultManager(projectID string, providers provider.Providers, subClient Subscriber) *DefaultManager {
 	return &DefaultManager{
-		implementer: implementer,
+		providers:   providers,
 		client:      subClient,
 		projectID:   projectID,
 		subscribers: make(map[string]context.Context),
@@ -86,32 +82,21 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 }
 
 func (s *DefaultManager) scan(ctx context.Context) error {
-	deploymentLists, err := s.deployments()
+	trackedImages, err := s.providers.TrackedImages()
 	if err != nil {
 		return err
 	}
 
-	for _, deploymentList := range deploymentLists {
-		for _, deployment := range deploymentList.Items {
-			labels := deployment.GetLabels()
-
-			// ignoring unlabelled deployments
-			policy := policies.GetPolicy(labels)
-			if policy == types.PolicyTypeNone {
-				continue
-			}
-
-			err = s.checkDeployment(&deployment)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":      err,
-					"deployment": deployment.Name,
-					"namespace":  deployment.Namespace,
-				}).Error("trigger.pubsub.manager: failed to check deployment subscription status")
-			}
+	for _, trackedImage := range trackedImages {
+		if !isGoogleContainerRegistry(trackedImage.Image.Registry()) {
+			log.Debug("registry %s is not a GCR, skipping", trackedImage.Image.Registry())
+			continue
 		}
-	}
 
+		// uri
+		gcrURI := containerRegistryURI(s.projectID, trackedImage.Image.Registry())
+		s.ensureSubscription(gcrURI)
+	}
 	return nil
 }
 
@@ -153,50 +138,4 @@ func (s *DefaultManager) removeSubscription(gcrURI string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.subscribers, gcrURI)
-}
-
-// checkDeployment - gets deployment image and checks whether we have appropriate topic
-// and subscription for this deployment
-func (s *DefaultManager) checkDeployment(deployment *v1beta1.Deployment) error {
-
-	for _, c := range deployment.Spec.Template.Spec.Containers {
-		// registry host
-		registry := extractContainerRegistryURI(c.Image)
-
-		if !isGoogleContainerRegistry(registry) {
-			log.Debug("registry %s is not a GCR, skipping", registry)
-			continue
-		}
-
-		// uri
-		gcrURI := containerRegistryURI(s.projectID, registry)
-		s.ensureSubscription(gcrURI)
-
-	}
-
-	return nil
-}
-
-func (s *DefaultManager) deployments() ([]*v1beta1.DeploymentList, error) {
-	// namespaces := p.client.Namespaces()
-	deployments := []*v1beta1.DeploymentList{}
-
-	n, err := s.implementer.Namespaces()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, n := range n.Items {
-		l, err := s.implementer.Deployments(n.GetName())
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":     err,
-				"namespace": n.GetName(),
-			}).Error("trigger.pubsub.manager: failed to list deployments")
-			continue
-		}
-		deployments = append(deployments, l)
-	}
-
-	return deployments, nil
 }
