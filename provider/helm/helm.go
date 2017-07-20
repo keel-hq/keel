@@ -14,6 +14,7 @@ import (
 	"github.com/ghodss/yaml"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/helm"
+	"k8s.io/helm/pkg/strvals"
 )
 
 // ProviderName - helm provider name
@@ -24,6 +25,46 @@ const (
 	policyPath = "keel.policy"
 	imagesPath = "keel.images"
 )
+
+// UpdatePlan - release update plan
+type UpdatePlan struct {
+	Namespace string
+	Name      string
+
+	// chart
+	Chart *hapi_chart.Chart
+
+	// values to update path=value
+	Values map[string]string
+}
+
+// keel:
+//   # keel policy (all/major/minor/patch/force)
+//   policy: all
+//   # trigger type, defaults to events such as pubsub, webhooks
+//   trigger: poll
+//   # images to track and update
+//   images:
+//     - repository: image.repository
+//       tag: image.tag
+
+// Root - root element of the values yaml
+type Root struct {
+	Keel KeelChartConfig `json:"keel"`
+}
+
+// KeelChartConfig - keel related configuration taken from values.yaml
+type KeelChartConfig struct {
+	Policy  types.PolicyType `json:"policy"`
+	Trigger string           `json:"trigger"`
+	Images  []ImageDetails   `json:"images"`
+}
+
+// ImageDetails - image details
+type ImageDetails struct {
+	RepositoryPath string `json:"repository"`
+	TagPath        string `json:"tag"`
+}
 
 // Provider - helm provider, responsible for managing release updates
 type Provider struct {
@@ -61,6 +102,21 @@ func (p *Provider) Stop() {
 	close(p.stop)
 }
 
+func (p *Provider) Releases() ([]*types.HelmRelease, error) {
+	releases := []*types.HelmRelease{}
+
+	releaseList, err := p.implementer.ListReleases()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, release := range releaseList.Releases {
+		
+	}
+
+	return releases, nil
+}
+
 func (p *Provider) startInternal() error {
 	for {
 		select {
@@ -86,20 +142,12 @@ func (p *Provider) startInternal() error {
 }
 
 func (p *Provider) processEvent(event *types.Event) (err error) {
+	plans, err := p.createUpdatePlans(event)
+	if err != nil {
+		return err
+	}
 
-	return nil
-}
-
-// UpdatePlan - release update plan
-type UpdatePlan struct {
-	Namespace string
-	Name      string
-
-	// chart
-	Chart *hapi_chart.Chart
-
-	// values to update path=value
-	Values map[string]string
+	return p.applyPlans(plans)
 }
 
 func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) {
@@ -120,11 +168,37 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 			continue
 		}
 
-		plan, update, err := p.checkVersionedRelease(newVersion, release.Namespace, release.Name, release.Chart, release.Config)
-
+		plan, update, err := checkVersionedRelease(newVersion, &event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":     err,
+				"name":      release.Name,
+				"namespace": release.Namespace,
+			}).Error("provider.helm: failed to process versioned release")
+			continue
+		}
+		if update {
+			plans = append(plans, plan)
+		}
 	}
 
 	return plans, nil
+}
+
+func (p *Provider) applyPlans(plans []*UpdatePlan) error {
+	for _, plan := range plans {
+		err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":     err,
+				"name":      plan.Name,
+				"namespace": plan.Namespace,
+			}).Error("provider.helm: failed to apply plan")
+			continue
+		}
+	}
+
+	return nil
 }
 
 // resp, err := u.client.UpdateRelease(
@@ -143,10 +217,15 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 // 		return fmt.Errorf("UPGRADE FAILED: %v", prettyError(err))
 // 	}
 
-func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_chart.Chart, rawVals string) error {
+func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_chart.Chart, overrideValues map[string]string) error {
+
+	overrideBts, err := convertToYaml(mapToSlice(overrideValues))
+	if err != nil {
+		return err
+	}
 
 	resp, err := implementer.UpdateReleaseFromChart(releaseName, chart,
-		helm.UpdateValueOverrides([]byte(rawVals)),
+		helm.UpdateValueOverrides(overrideBts),
 		helm.UpgradeDryRun(false),
 		helm.UpgradeRecreate(false),
 		helm.UpgradeForce(true),
@@ -167,60 +246,25 @@ func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_
 	return nil
 }
 
-// func parseImageOld(chart *hapi_chart.Chart, config *hapi_chart.Config) (*image.Reference, error) {
-// 	vals, err := chartutil.ReadValues([]byte(config.Raw))
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func mapToSlice(values map[string]string) []string {
+	converted := []string{}
+	for k, v := range values {
+		concat := k + "=" + v
+		converted = append(converted, concat)
+	}
+	return converted
+}
 
-// 	log.Info(config.Raw)
-
-// 	imageName, err := vals.PathValue("image.repository")
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	// FIXME: need to dynamically get repositories
-// 	imageTag, err := vals.PathValue("image.tag")
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to get image tag: %s", err)
-// 	}
-
-// 	imageNameStr, ok := imageName.(string)
-// 	if !ok {
-// 		return nil, fmt.Errorf("failed to convert image name ref to string")
-// 	}
-
-// 	imageTagStr, ok := imageTag.(string)
-// 	if !ok {
-// 		return nil, fmt.Errorf("failed to convert image tag ref to string")
-// 	}
-
-// 	if imageTagStr != "" {
-// 		return image.Parse(imageNameStr + ":" + imageTagStr)
-// 	}
-
-// 	return image.Parse(imageNameStr)
-// }
-
-func parseImage(vals chartutil.Values, details *ImageDetails) (*image.Reference, error) {
-	if details.Repository == "" {
-		return nil, fmt.Errorf("repository name path cannot be empty")
+// parse
+func convertToYaml(values []string) ([]byte, error) {
+	base := map[string]interface{}{}
+	for _, value := range values {
+		if err := strvals.ParseInto(value, base); err != nil {
+			return []byte{}, fmt.Errorf("failed parsing --set data: %s", err)
+		}
 	}
 
-	imageName, err := getValueAsString(vals, details.Repository)
-	if err != nil {
-		return nil, err
-	}
-
-	// getting image tag
-	imageTag, err := getValueAsString(vals, details.Tag)
-	if err != nil {
-		// failed to find tag, returning anyway
-		return image.Parse(imageName)
-	}
-
-	return image.Parse(imageName + ":" + imageTag)
+	return yaml.Marshal(base)
 }
 
 func getValueAsString(vals chartutil.Values, path string) (string, error) {
@@ -238,34 +282,6 @@ func getValueAsString(vals chartutil.Values, path string) (string, error) {
 
 func values(chart *hapi_chart.Chart, config *hapi_chart.Config) (chartutil.Values, error) {
 	return chartutil.CoalesceValues(chart, config)
-}
-
-// keel:
-//   # keel policy (all/major/minor/patch/force)
-//   policy: all
-//   # trigger type, defaults to events such as pubsub, webhooks
-//   trigger: poll
-//   # images to track and update
-//   images:
-//     - repository: image.repository
-//       tag: image.tag
-
-// Root - root element of the values yaml
-type Root struct {
-	Keel KeelChartConfig `json:"keel"`
-}
-
-// KeelChartConfig - keel related configuration taken from values.yaml
-type KeelChartConfig struct {
-	Policy  types.PolicyType `json:"policy"`
-	Trigger string           `json:"trigger"`
-	Images  []ImageDetails   `json:"images"`
-}
-
-// ImageDetails - image details
-type ImageDetails struct {
-	Repository string `json:"repository"`
-	Tag        string `json:"tag"`
 }
 
 func getKeelConfig(vals chartutil.Values) (*KeelChartConfig, error) {
