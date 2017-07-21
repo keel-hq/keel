@@ -134,7 +134,6 @@ func main() {
 	}()
 
 	<-cleanupDone
-
 }
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
