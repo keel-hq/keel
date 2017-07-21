@@ -5,6 +5,8 @@ import (
 )
 
 func TestImplementerList(t *testing.T) {
+	t.Skip()
+
 	imp := NewHelmImplementer("192.168.99.100:30083")
 	releases, err := imp.ListReleases()
 	if err != nil {
