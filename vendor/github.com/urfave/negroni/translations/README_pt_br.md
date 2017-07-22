@@ -1,4 +1,4 @@
-# Negroni [![GoDoc](https://godoc.org/github.com/urfave/negroni?status.svg)](http://godoc.org/github.com/urfave/negroni) [![wercker status](https://app.wercker.com/status/13688a4a94b82d84a0b8d038c4965b61/s "wercker status")](https://app.wercker.com/project/bykey/13688a4a94b82d84a0b8d038c4965b61)
+# Negroni [![GoDoc](https://godoc.org/github.com/codegangsta/negroni?status.svg)](http://godoc.org/github.com/codegangsta/negroni) [![wercker status](https://app.wercker.com/status/13688a4a94b82d84a0b8d038c4965b61/s "wercker status")](https://app.wercker.com/project/bykey/13688a4a94b82d84a0b8d038c4965b61)
 
 Negroni é uma abordagem idiomática para middleware web em Go. É pequeno, não intrusivo, e incentiva uso da biblioteca `net/http`.
 
@@ -12,7 +12,7 @@ Depois de instalar Go e definir seu [GOPATH](http://golang.org/doc/code.html#GOP
 package main
 
 import (
-  "github.com/urfave/negroni"
+  "github.com/codegangsta/negroni"
   "net/http"
   "fmt"
 )
@@ -31,7 +31,7 @@ func main() {
 
 Depois instale o pacote Negroni (**go 1.1** ou superior)
 ~~~
-go get github.com/urfave/negroni
+go get github.com/codegangsta/negroni
 ~~~
 
 Depois execute seu servidor:
@@ -143,7 +143,6 @@ Aqui está uma lista atual de Middleware Compatíveis com Negroni. Sinta se livr
 
 | Middleware | Autor | Descrição |
 | -----------|--------|-------------|
-| [authz](https://github.com/casbin/negroni) | [Yang Luo](https://github.com/hsluoyz) | ACL, RBAC, ABAC Authorization middlware based on [Casbin](https://github.com/casbin/casbin) |
 | [Graceful](https://github.com/stretchr/graceful) | [Tyler Bunnell](https://github.com/tylerb) | Graceful HTTP Shutdown |
 | [secure](https://github.com/unrolled/secure) | [Cory Jacobsen](https://github.com/unrolled) |  Implementa rapidamente itens de segurança.|
 | [binding](https://github.com/mholt/binding) | [Matt Holt](https://github.com/mholt) | Handler para mapeamento/validação de um request a estrutura. |

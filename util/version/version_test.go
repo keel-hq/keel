@@ -109,7 +109,7 @@ func TestShouldUpdate(t *testing.T) {
 				new:     &types.Version{Major: 1, Minor: 5, Patch: 5},
 				policy:  types.PolicyTypeMajor,
 			},
-			want:    false,
+			want:    true,
 			wantErr: false,
 		},
 		{
@@ -158,6 +158,26 @@ func TestShouldUpdate(t *testing.T) {
 				current: &types.Version{Major: 1, Minor: 4, Patch: 5},
 				new:     &types.Version{Major: 1, Minor: 5, Patch: 5},
 				policy:  types.PolicyTypeMinor,
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "patch increase, policy minor",
+			args: args{
+				current: &types.Version{Major: 1, Minor: 4, Patch: 5},
+				new:     &types.Version{Major: 1, Minor: 4, Patch: 6},
+				policy:  types.PolicyTypeMinor,
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "patch increase, policy ptach",
+			args: args{
+				current: &types.Version{Major: 1, Minor: 4, Patch: 5},
+				new:     &types.Version{Major: 1, Minor: 4, Patch: 6},
+				policy:  types.PolicyTypePatch,
 			},
 			want:    true,
 			wantErr: false,

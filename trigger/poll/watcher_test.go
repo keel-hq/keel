@@ -32,6 +32,7 @@ func (c *fakeRegistryClient) Digest(opts registry.Opts) (digest string, err erro
 // ======== fake provider for testing =======
 type fakeProvider struct {
 	submitted []types.Event
+	images    []*types.TrackedImage
 }
 
 func (p *fakeProvider) Submit(event types.Event) error {
@@ -41,6 +42,12 @@ func (p *fakeProvider) Submit(event types.Event) error {
 
 func (p *fakeProvider) GetName() string {
 	return "fakeProvider"
+}
+func (p *fakeProvider) Stop() {
+	return
+}
+func (p *fakeProvider) TrackedImages() ([]*types.TrackedImage, error) {
+	return p.images, nil
 }
 
 func TestWatchTagJob(t *testing.T) {

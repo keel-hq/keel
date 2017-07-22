@@ -482,7 +482,6 @@ func (r *Route) URL(pairs ...string) (*url.URL, error) {
 		return nil, err
 	}
 	var scheme, host, path string
-	queries := make([]string, 0, len(r.regexp.queries))
 	if r.regexp.host != nil {
 		if host, err = r.regexp.host.url(values); err != nil {
 			return nil, err
@@ -497,18 +496,10 @@ func (r *Route) URL(pairs ...string) (*url.URL, error) {
 			return nil, err
 		}
 	}
-	for _, q := range r.regexp.queries {
-		var query string
-		if query, err = q.url(values); err != nil {
-			return nil, err
-		}
-		queries = append(queries, query)
-	}
 	return &url.URL{
-		Scheme:   scheme,
-		Host:     host,
-		Path:     path,
-		RawQuery: strings.Join(queries, "&"),
+		Scheme: scheme,
+		Host:   host,
+		Path:   path,
 	}, nil
 }
 

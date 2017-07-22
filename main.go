@@ -13,6 +13,7 @@ import (
 	"github.com/rusenask/keel/constants"
 	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/provider"
+	"github.com/rusenask/keel/provider/helm"
 	"github.com/rusenask/keel/provider/kubernetes"
 	"github.com/rusenask/keel/registry"
 	"github.com/rusenask/keel/trigger/http"
@@ -33,6 +34,9 @@ const (
 	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
 	EnvTriggerPoll   = "POLL"   // set to 1 or something to enable poll trigger
 	EnvProjectID     = "PROJECT_ID"
+
+	EnvHelmProvider      = "HELM_PROVIDER"  // helm provider
+	EnvHelmTillerAddress = "TILLER_ADDRESS" // helm provider
 )
 
 // kubernetes config, if empty - will default to InCluster
@@ -91,9 +95,9 @@ func main() {
 	}
 
 	// setting up providers
-	providers, teardownProviders := setupProviders(implementer, sender)
+	providers := setupProviders(implementer, sender)
 
-	teardownTriggers := setupTriggers(ctx, implementer, providers)
+	teardownTriggers := setupTriggers(ctx, providers)
 
 	teardownBot, err := setupBot(implementer)
 	if err != nil {
@@ -120,7 +124,8 @@ func main() {
 				}
 			}()
 
-			teardownProviders()
+			// teardownProviders()
+			providers.Stop()
 			teardownTriggers()
 			teardownBot()
 
@@ -129,12 +134,13 @@ func main() {
 	}()
 
 	<-cleanupDone
-
 }
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
 // provider map
-func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.Sender) (providers provider.Providers, teardown func()) {
+func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.Sender) (providers provider.Providers) {
+	var enabledProviders []provider.Provider
+
 	k8sProvider, err := kubernetes.NewProvider(k8sImplementer, sender)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -142,14 +148,20 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 		}).Fatal("main.setupProviders: failed to create kubernetes provider")
 	}
 	go k8sProvider.Start()
+	enabledProviders = append(enabledProviders, k8sProvider)
 
-	providers = provider.New([]provider.Provider{k8sProvider})
+	if os.Getenv(EnvHelmProvider) == "1" {
+		tillerAddr := os.Getenv(EnvHelmTillerAddress)
+		helmImplementer := helm.NewHelmImplementer(tillerAddr)
+		helmProvider := helm.NewProvider(helmImplementer, sender)
 
-	teardown = func() {
-		k8sProvider.Stop()
+		go helmProvider.Start()
+		enabledProviders = append(enabledProviders, helmProvider)
 	}
 
-	return providers, teardown
+	providers = provider.New(enabledProviders)
+
+	return providers
 }
 
 func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error) {
@@ -185,7 +197,7 @@ func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
 // should go through all providers (or not if there is a reason) and submit events)
-func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, providers provider.Providers) (teardown func()) {
+func setupTriggers(ctx context.Context, providers provider.Providers) (teardown func()) {
 
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{
@@ -214,7 +226,7 @@ func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, p
 			return
 		}
 
-		subManager := pubsub.NewDefaultManager(projectID, k8sImplementer, ps)
+		subManager := pubsub.NewDefaultManager(projectID, providers, ps)
 		go subManager.Start(ctx)
 	}
 
@@ -222,7 +234,7 @@ func setupTriggers(ctx context.Context, k8sImplementer kubernetes.Implementer, p
 
 		registryClient := registry.New()
 		watcher := poll.NewRepositoryWatcher(providers, registryClient)
-		pollManager := poll.NewPollManager(k8sImplementer, watcher)
+		pollManager := poll.NewPollManager(providers, watcher)
 
 		// start poll manager, will finish with ctx
 		go watcher.Start(ctx)

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rusenask/cron"
+
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
@@ -68,6 +70,69 @@ func (p *Provider) Start() error {
 // Stop - stops kubernetes provider
 func (p *Provider) Stop() {
 	close(p.stop)
+}
+
+func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
+	var trackedImages []*types.TrackedImage
+
+	deploymentLists, err := p.deployments()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, deploymentList := range deploymentLists {
+		for _, deployment := range deploymentList.Items {
+			labels := deployment.GetLabels()
+
+			// ignoring unlabelled deployments
+			policy := policies.GetPolicy(labels)
+			if policy == types.PolicyTypeNone {
+				continue
+			}
+
+			annotations := deployment.GetAnnotations()
+			schedule, ok := annotations[types.KeelPollScheduleAnnotation]
+			if ok {
+				_, err := cron.Parse(schedule)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"error":      err,
+						"schedule":   schedule,
+						"deployment": deployment.Name,
+						"namespace":  deployment.Namespace,
+					}).Error("trigger.poll.manager: failed to parse poll schedule, setting default schedule")
+					schedule = types.KeelPollDefaultSchedule
+				}
+			} else {
+				schedule = types.KeelPollDefaultSchedule
+			}
+
+			// trigger type, we only care for "poll" type triggers
+			trigger := policies.GetTriggerPolicy(labels)
+
+			images := getImages(&deployment)
+			for _, img := range images {
+				ref, err := image.Parse(img)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"error":     err,
+						"image":     img,
+						"namespace": deployment.Namespace,
+						"name":      deployment.Name,
+					}).Error("provider.kubernetes: failed to parse image")
+					continue
+				}
+				trackedImages = append(trackedImages, &types.TrackedImage{
+					Image:        ref,
+					PollSchedule: schedule,
+					Trigger:      trigger,
+					Provider:     ProviderName,
+				})
+			}
+		}
+	}
+
+	return trackedImages, nil
 }
 
 func (p *Provider) startInternal() error {

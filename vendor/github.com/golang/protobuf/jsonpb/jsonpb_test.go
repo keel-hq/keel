@@ -35,13 +35,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"math"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
 
 	pb "github.com/golang/protobuf/jsonpb/jsonpb_test_proto"
 	proto3pb "github.com/golang/protobuf/proto/proto3_proto"
+	"github.com/golang/protobuf/ptypes"
 	anypb "github.com/golang/protobuf/ptypes/any"
 	durpb "github.com/golang/protobuf/ptypes/duration"
 	stpb "github.com/golang/protobuf/ptypes/struct"
@@ -107,7 +110,7 @@ var (
 		RSint32: []int32{-1, -2, -3},
 		RSint64: []int64{-6789012345, -3456789012},
 		RFloat:  []float32{3.14, 6.28},
-		RDouble: []float64{299792458, 6.62606957e-34},
+		RDouble: []float64{299792458 * 1e20, 6.62606957e-34},
 		RString: []string{"happy", "days"},
 		RBytes:  [][]byte{[]byte("skittles"), []byte("m&m's")},
 	}
@@ -121,7 +124,7 @@ var (
 		`"rSint32":[-1,-2,-3],` +
 		`"rSint64":["-6789012345","-3456789012"],` +
 		`"rFloat":[3.14,6.28],` +
-		`"rDouble":[2.99792458e+08,6.62606957e-34],` +
+		`"rDouble":[2.99792458e+28,6.62606957e-34],` +
 		`"rString":["happy","days"],` +
 		`"rBytes":["c2tpdHRsZXM=","bSZtJ3M="]` +
 		`}`
@@ -164,7 +167,7 @@ var (
     6.28
   ],
   "rDouble": [
-    2.99792458e+08,
+    2.99792458e+28,
     6.62606957e-34
   ],
   "rString": [
@@ -306,6 +309,23 @@ var (
     "value": "1.212s"
   }
 }`
+
+	nonFinites = &pb.NonFinites{
+		FNan:  proto.Float32(float32(math.NaN())),
+		FPinf: proto.Float32(float32(math.Inf(1))),
+		FNinf: proto.Float32(float32(math.Inf(-1))),
+		DNan:  proto.Float64(float64(math.NaN())),
+		DPinf: proto.Float64(float64(math.Inf(1))),
+		DNinf: proto.Float64(float64(math.Inf(-1))),
+	}
+	nonFinitesJSON = `{` +
+		`"fNan":"NaN",` +
+		`"fPinf":"Infinity",` +
+		`"fNinf":"-Infinity",` +
+		`"dNan":"NaN",` +
+		`"dPinf":"Infinity",` +
+		`"dNinf":"-Infinity"` +
+		`}`
 )
 
 func init() {
@@ -325,6 +345,7 @@ var marshalingTests = []struct {
 }{
 	{"simple flat object", marshaler, simpleObject, simpleObjectJSON},
 	{"simple pretty object", marshalerAllOptions, simpleObject, simpleObjectPrettyJSON},
+	{"non-finite floats fields object", marshaler, nonFinites, nonFinitesJSON},
 	{"repeated fields flat object", marshaler, repeatsObject, repeatsObjectJSON},
 	{"repeated fields pretty object", marshalerAllOptions, repeatsObject, repeatsObjectPrettyJSON},
 	{"nested message/enum flat object", marshaler, complexObject, complexObjectJSON},
@@ -349,6 +370,9 @@ var marshalingTests = []struct {
 		`{"rFunny":[1,2]}`},
 	{"empty value", marshaler, &pb.Simple3{}, `{}`},
 	{"empty value emitted", Marshaler{EmitDefaults: true}, &pb.Simple3{}, `{"dub":0}`},
+	{"empty repeated emitted", Marshaler{EmitDefaults: true}, &pb.SimpleSlice3{}, `{"slices":[]}`},
+	{"empty map emitted", Marshaler{EmitDefaults: true}, &pb.SimpleMap3{}, `{"stringy":{}}`},
+	{"nested struct null", Marshaler{EmitDefaults: true}, &pb.SimpleNull3{}, `{"simple":null}`},
 	{"map<int64, int32>", marshaler, &pb.Mappy{Nummy: map[int64]int32{1: 2, 3: 4}}, `{"nummy":{"1":2,"3":4}}`},
 	{"map<int64, int32>", marshalerAllOptions, &pb.Mappy{Nummy: map[int64]int32{1: 2, 3: 4}}, nummyPrettyJSON},
 	{"map<string, string>", marshaler,
@@ -364,6 +388,10 @@ var marshalingTests = []struct {
 	// TODO: This is broken.
 	//{"map<string, enum>", marshaler, &pb.Mappy{Enumy: map[string]pb.Numeral{"XIV": pb.Numeral_ROMAN}}, `{"enumy":{"XIV":"ROMAN"}`},
 	{"map<string, enum as int>", Marshaler{EnumsAsInts: true}, &pb.Mappy{Enumy: map[string]pb.Numeral{"XIV": pb.Numeral_ROMAN}}, `{"enumy":{"XIV":2}}`},
+	{"map<int32, bool>", marshaler, &pb.Mappy{S32Booly: map[int32]bool{1: true, 3: false, 10: true, 12: false}}, `{"s32booly":{"1":true,"3":false,"10":true,"12":false}}`},
+	{"map<int64, bool>", marshaler, &pb.Mappy{S64Booly: map[int64]bool{1: true, 3: false, 10: true, 12: false}}, `{"s64booly":{"1":true,"3":false,"10":true,"12":false}}`},
+	{"map<uint32, bool>", marshaler, &pb.Mappy{U32Booly: map[uint32]bool{1: true, 3: false, 10: true, 12: false}}, `{"u32booly":{"1":true,"3":false,"10":true,"12":false}}`},
+	{"map<uint64, bool>", marshaler, &pb.Mappy{U64Booly: map[uint64]bool{1: true, 3: false, 10: true, 12: false}}, `{"u64booly":{"1":true,"3":false,"10":true,"12":false}}`},
 	{"proto2 map<int64, string>", marshaler, &pb.Maps{MInt64Str: map[int64]string{213: "cat"}},
 		`{"mInt64Str":{"213":"cat"}}`},
 	{"proto2 map<bool, Object>", marshaler,
@@ -381,11 +409,36 @@ var marshalingTests = []struct {
 	{"Duration", marshaler, &pb.KnownTypes{Dur: &durpb.Duration{Seconds: 3}}, `{"dur":"3.000s"}`},
 	{"Struct", marshaler, &pb.KnownTypes{St: &stpb.Struct{
 		Fields: map[string]*stpb.Value{
-			"one": &stpb.Value{Kind: &stpb.Value_StringValue{"loneliest number"}},
-			"two": &stpb.Value{Kind: &stpb.Value_NullValue{stpb.NullValue_NULL_VALUE}},
+			"one": {Kind: &stpb.Value_StringValue{"loneliest number"}},
+			"two": {Kind: &stpb.Value_NullValue{stpb.NullValue_NULL_VALUE}},
 		},
 	}}, `{"st":{"one":"loneliest number","two":null}}`},
+	{"empty ListValue", marshaler, &pb.KnownTypes{Lv: &stpb.ListValue{}}, `{"lv":[]}`},
+	{"basic ListValue", marshaler, &pb.KnownTypes{Lv: &stpb.ListValue{Values: []*stpb.Value{
+		{Kind: &stpb.Value_StringValue{"x"}},
+		{Kind: &stpb.Value_NullValue{}},
+		{Kind: &stpb.Value_NumberValue{3}},
+		{Kind: &stpb.Value_BoolValue{true}},
+	}}}, `{"lv":["x",null,3,true]}`},
 	{"Timestamp", marshaler, &pb.KnownTypes{Ts: &tspb.Timestamp{Seconds: 14e8, Nanos: 21e6}}, `{"ts":"2014-05-13T16:53:20.021Z"}`},
+	{"number Value", marshaler, &pb.KnownTypes{Val: &stpb.Value{Kind: &stpb.Value_NumberValue{1}}}, `{"val":1}`},
+	{"null Value", marshaler, &pb.KnownTypes{Val: &stpb.Value{Kind: &stpb.Value_NullValue{stpb.NullValue_NULL_VALUE}}}, `{"val":null}`},
+	{"string number value", marshaler, &pb.KnownTypes{Val: &stpb.Value{Kind: &stpb.Value_StringValue{"9223372036854775807"}}}, `{"val":"9223372036854775807"}`},
+	{"list of lists Value", marshaler, &pb.KnownTypes{Val: &stpb.Value{
+		Kind: &stpb.Value_ListValue{&stpb.ListValue{
+			Values: []*stpb.Value{
+				{Kind: &stpb.Value_StringValue{"x"}},
+				{Kind: &stpb.Value_ListValue{&stpb.ListValue{
+					Values: []*stpb.Value{
+						{Kind: &stpb.Value_ListValue{&stpb.ListValue{
+							Values: []*stpb.Value{{Kind: &stpb.Value_StringValue{"y"}}},
+						}}},
+						{Kind: &stpb.Value_StringValue{"z"}},
+					},
+				}}},
+			},
+		}},
+	}}, `{"val":["x",[["y"],"z"]]}`},
 
 	{"DoubleValue", marshaler, &pb.KnownTypes{Dbl: &wpb.DoubleValue{Value: 1.2}}, `{"dbl":1.2}`},
 	{"FloatValue", marshaler, &pb.KnownTypes{Flt: &wpb.FloatValue{Value: 1.2}}, `{"flt":1.2}`},
@@ -409,67 +462,158 @@ func TestMarshaling(t *testing.T) {
 	}
 }
 
+func TestMarshalJSONPBMarshaler(t *testing.T) {
+	rawJson := `{ "foo": "bar", "baz": [0, 1, 2, 3] }`
+	msg := dynamicMessage{rawJson: rawJson}
+	str, err := new(Marshaler).MarshalToString(&msg)
+	if err != nil {
+		t.Errorf("an unexpected error occurred when marshalling JSONPBMarshaler: %v", err)
+	}
+	if str != rawJson {
+		t.Errorf("marshalling JSON produced incorrect output: got %s, wanted %s", str, rawJson)
+	}
+}
+
+func TestMarshalAnyJSONPBMarshaler(t *testing.T) {
+	msg := dynamicMessage{rawJson: `{ "foo": "bar", "baz": [0, 1, 2, 3] }`}
+	a, err := ptypes.MarshalAny(&msg)
+	if err != nil {
+		t.Errorf("an unexpected error occurred when marshalling to Any: %v", err)
+	}
+	str, err := new(Marshaler).MarshalToString(a)
+	if err != nil {
+		t.Errorf("an unexpected error occurred when marshalling Any to JSON: %v", err)
+	}
+	// after custom marshaling, it's round-tripped through JSON decoding/encoding already,
+	// so the keys are sorted, whitespace is compacted, and "@type" key has been added
+	expected := `{"@type":"type.googleapis.com/` + dynamicMessageName +`","baz":[0,1,2,3],"foo":"bar"}`
+	if str != expected {
+		t.Errorf("marshalling JSON produced incorrect output: got %s, wanted %s", str, expected)
+	}
+}
+
 var unmarshalingTests = []struct {
-	desc string
-	json string
-	pb   proto.Message
+	desc        string
+	unmarshaler Unmarshaler
+	json        string
+	pb          proto.Message
 }{
-	{"simple flat object", simpleObjectJSON, simpleObject},
-	{"simple pretty object", simpleObjectPrettyJSON, simpleObject},
-	{"repeated fields flat object", repeatsObjectJSON, repeatsObject},
-	{"repeated fields pretty object", repeatsObjectPrettyJSON, repeatsObject},
-	{"nested message/enum flat object", complexObjectJSON, complexObject},
-	{"nested message/enum pretty object", complexObjectPrettyJSON, complexObject},
-	{"enum-string object", `{"color":"BLUE"}`, &pb.Widget{Color: pb.Widget_BLUE.Enum()}},
-	{"enum-value object", "{\n \"color\": 2\n}", &pb.Widget{Color: pb.Widget_BLUE.Enum()}},
-	{"proto3 enum string", `{"hilarity":"PUNS"}`, &proto3pb.Message{Hilarity: proto3pb.Message_PUNS}},
-	{"proto3 enum value", `{"hilarity":1}`, &proto3pb.Message{Hilarity: proto3pb.Message_PUNS}},
+	{"simple flat object", Unmarshaler{}, simpleObjectJSON, simpleObject},
+	{"simple pretty object", Unmarshaler{}, simpleObjectPrettyJSON, simpleObject},
+	{"repeated fields flat object", Unmarshaler{}, repeatsObjectJSON, repeatsObject},
+	{"repeated fields pretty object", Unmarshaler{}, repeatsObjectPrettyJSON, repeatsObject},
+	{"nested message/enum flat object", Unmarshaler{}, complexObjectJSON, complexObject},
+	{"nested message/enum pretty object", Unmarshaler{}, complexObjectPrettyJSON, complexObject},
+	{"enum-string object", Unmarshaler{}, `{"color":"BLUE"}`, &pb.Widget{Color: pb.Widget_BLUE.Enum()}},
+	{"enum-value object", Unmarshaler{}, "{\n \"color\": 2\n}", &pb.Widget{Color: pb.Widget_BLUE.Enum()}},
+	{"unknown field with allowed option", Unmarshaler{AllowUnknownFields: true}, `{"unknown": "foo"}`, new(pb.Simple)},
+	{"proto3 enum string", Unmarshaler{}, `{"hilarity":"PUNS"}`, &proto3pb.Message{Hilarity: proto3pb.Message_PUNS}},
+	{"proto3 enum value", Unmarshaler{}, `{"hilarity":1}`, &proto3pb.Message{Hilarity: proto3pb.Message_PUNS}},
 	{"unknown enum value object",
+		Unmarshaler{},
 		"{\n  \"color\": 1000,\n  \"r_color\": [\n    \"RED\"\n  ]\n}",
 		&pb.Widget{Color: pb.Widget_Color(1000).Enum(), RColor: []pb.Widget_Color{pb.Widget_RED}}},
-	{"repeated proto3 enum", `{"rFunny":["PUNS","SLAPSTICK"]}`,
+	{"repeated proto3 enum", Unmarshaler{}, `{"rFunny":["PUNS","SLAPSTICK"]}`,
 		&proto3pb.Message{RFunny: []proto3pb.Message_Humour{
 			proto3pb.Message_PUNS,
 			proto3pb.Message_SLAPSTICK,
 		}}},
-	{"repeated proto3 enum as int", `{"rFunny":[1,2]}`,
+	{"repeated proto3 enum as int", Unmarshaler{}, `{"rFunny":[1,2]}`,
 		&proto3pb.Message{RFunny: []proto3pb.Message_Humour{
 			proto3pb.Message_PUNS,
 			proto3pb.Message_SLAPSTICK,
 		}}},
-	{"repeated proto3 enum as mix of strings and ints", `{"rFunny":["PUNS",2]}`,
+	{"repeated proto3 enum as mix of strings and ints", Unmarshaler{}, `{"rFunny":["PUNS",2]}`,
 		&proto3pb.Message{RFunny: []proto3pb.Message_Humour{
 			proto3pb.Message_PUNS,
 			proto3pb.Message_SLAPSTICK,
 		}}},
-	{"unquoted int64 object", `{"oInt64":-314}`, &pb.Simple{OInt64: proto.Int64(-314)}},
-	{"unquoted uint64 object", `{"oUint64":123}`, &pb.Simple{OUint64: proto.Uint64(123)}},
-	{"map<int64, int32>", `{"nummy":{"1":2,"3":4}}`, &pb.Mappy{Nummy: map[int64]int32{1: 2, 3: 4}}},
-	{"map<string, string>", `{"strry":{"\"one\"":"two","three":"four"}}`, &pb.Mappy{Strry: map[string]string{`"one"`: "two", "three": "four"}}},
-	{"map<int32, Object>", `{"objjy":{"1":{"dub":1}}}`, &pb.Mappy{Objjy: map[int32]*pb.Simple3{1: &pb.Simple3{Dub: 1}}}},
+	{"unquoted int64 object", Unmarshaler{}, `{"oInt64":-314}`, &pb.Simple{OInt64: proto.Int64(-314)}},
+	{"unquoted uint64 object", Unmarshaler{}, `{"oUint64":123}`, &pb.Simple{OUint64: proto.Uint64(123)}},
+	{"NaN", Unmarshaler{}, `{"oDouble":"NaN"}`, &pb.Simple{ODouble: proto.Float64(math.NaN())}},
+	{"Inf", Unmarshaler{}, `{"oFloat":"Infinity"}`, &pb.Simple{OFloat: proto.Float32(float32(math.Inf(1)))}},
+	{"-Inf", Unmarshaler{}, `{"oDouble":"-Infinity"}`, &pb.Simple{ODouble: proto.Float64(math.Inf(-1))}},
+	{"map<int64, int32>", Unmarshaler{}, `{"nummy":{"1":2,"3":4}}`, &pb.Mappy{Nummy: map[int64]int32{1: 2, 3: 4}}},
+	{"map<string, string>", Unmarshaler{}, `{"strry":{"\"one\"":"two","three":"four"}}`, &pb.Mappy{Strry: map[string]string{`"one"`: "two", "three": "four"}}},
+	{"map<int32, Object>", Unmarshaler{}, `{"objjy":{"1":{"dub":1}}}`, &pb.Mappy{Objjy: map[int32]*pb.Simple3{1: &pb.Simple3{Dub: 1}}}},
+	{"proto2 extension", Unmarshaler{}, realNumberJSON, realNumber},
+	{"Any with message", Unmarshaler{}, anySimpleJSON, anySimple},
+	{"Any with message and indent", Unmarshaler{}, anySimplePrettyJSON, anySimple},
+	{"Any with WKT", Unmarshaler{}, anyWellKnownJSON, anyWellKnown},
+	{"Any with WKT and indent", Unmarshaler{}, anyWellKnownPrettyJSON, anyWellKnown},
 	// TODO: This is broken.
-	//{"map<string, enum>", `{"enumy":{"XIV":"ROMAN"}`, &pb.Mappy{Enumy: map[string]pb.Numeral{"XIV": pb.Numeral_ROMAN}}},
-	{"map<string, enum as int>", `{"enumy":{"XIV":2}}`, &pb.Mappy{Enumy: map[string]pb.Numeral{"XIV": pb.Numeral_ROMAN}}},
-	{"oneof", `{"salary":31000}`, &pb.MsgWithOneof{Union: &pb.MsgWithOneof_Salary{31000}}},
-	{"oneof spec name", `{"country":"Australia"}`, &pb.MsgWithOneof{Union: &pb.MsgWithOneof_Country{"Australia"}}},
-	{"oneof orig_name", `{"Country":"Australia"}`, &pb.MsgWithOneof{Union: &pb.MsgWithOneof_Country{"Australia"}}},
-	{"orig_name input", `{"o_bool":true}`, &pb.Simple{OBool: proto.Bool(true)}},
-	{"camelName input", `{"oBool":true}`, &pb.Simple{OBool: proto.Bool(true)}},
+	//{"map<string, enum>", Unmarshaler{}, `{"enumy":{"XIV":"ROMAN"}`, &pb.Mappy{Enumy: map[string]pb.Numeral{"XIV": pb.Numeral_ROMAN}}},
+	{"map<string, enum as int>", Unmarshaler{}, `{"enumy":{"XIV":2}}`, &pb.Mappy{Enumy: map[string]pb.Numeral{"XIV": pb.Numeral_ROMAN}}},
+	{"oneof", Unmarshaler{}, `{"salary":31000}`, &pb.MsgWithOneof{Union: &pb.MsgWithOneof_Salary{31000}}},
+	{"oneof spec name", Unmarshaler{}, `{"Country":"Australia"}`, &pb.MsgWithOneof{Union: &pb.MsgWithOneof_Country{"Australia"}}},
+	{"oneof orig_name", Unmarshaler{}, `{"Country":"Australia"}`, &pb.MsgWithOneof{Union: &pb.MsgWithOneof_Country{"Australia"}}},
+	{"oneof spec name2", Unmarshaler{}, `{"homeAddress":"Australia"}`, &pb.MsgWithOneof{Union: &pb.MsgWithOneof_HomeAddress{"Australia"}}},
+	{"oneof orig_name2", Unmarshaler{}, `{"home_address":"Australia"}`, &pb.MsgWithOneof{Union: &pb.MsgWithOneof_HomeAddress{"Australia"}}},
+	{"orig_name input", Unmarshaler{}, `{"o_bool":true}`, &pb.Simple{OBool: proto.Bool(true)}},
+	{"camelName input", Unmarshaler{}, `{"oBool":true}`, &pb.Simple{OBool: proto.Bool(true)}},
 
-	{"Duration", `{"dur":"3.000s"}`, &pb.KnownTypes{Dur: &durpb.Duration{Seconds: 3}}},
-	{"Timestamp", `{"ts":"2014-05-13T16:53:20.021Z"}`, &pb.KnownTypes{Ts: &tspb.Timestamp{Seconds: 14e8, Nanos: 21e6}}},
+	{"Duration", Unmarshaler{}, `{"dur":"3.000s"}`, &pb.KnownTypes{Dur: &durpb.Duration{Seconds: 3}}},
+	{"null Duration", Unmarshaler{}, `{"dur":null}`, &pb.KnownTypes{Dur: &durpb.Duration{Seconds: 0}}},
+	{"Timestamp", Unmarshaler{}, `{"ts":"2014-05-13T16:53:20.021Z"}`, &pb.KnownTypes{Ts: &tspb.Timestamp{Seconds: 14e8, Nanos: 21e6}}},
+	{"PreEpochTimestamp", Unmarshaler{}, `{"ts":"1969-12-31T23:59:58.999999995Z"}`, &pb.KnownTypes{Ts: &tspb.Timestamp{Seconds: -2, Nanos: 999999995}}},
+	{"ZeroTimeTimestamp", Unmarshaler{}, `{"ts":"0001-01-01T00:00:00Z"}`, &pb.KnownTypes{Ts: &tspb.Timestamp{Seconds: -62135596800, Nanos: 0}}},
+	{"null Timestamp", Unmarshaler{}, `{"ts":null}`, &pb.KnownTypes{Ts: &tspb.Timestamp{Seconds: 0, Nanos: 0}}},
+	{"null Struct", Unmarshaler{}, `{"st": null}`, &pb.KnownTypes{St: &stpb.Struct{}}},
+	{"empty Struct", Unmarshaler{}, `{"st": {}}`, &pb.KnownTypes{St: &stpb.Struct{}}},
+	{"basic Struct", Unmarshaler{}, `{"st": {"a": "x", "b": null, "c": 3, "d": true}}`, &pb.KnownTypes{St: &stpb.Struct{Fields: map[string]*stpb.Value{
+		"a": {Kind: &stpb.Value_StringValue{"x"}},
+		"b": {Kind: &stpb.Value_NullValue{}},
+		"c": {Kind: &stpb.Value_NumberValue{3}},
+		"d": {Kind: &stpb.Value_BoolValue{true}},
+	}}}},
+	{"nested Struct", Unmarshaler{}, `{"st": {"a": {"b": 1, "c": [{"d": true}, "f"]}}}`, &pb.KnownTypes{St: &stpb.Struct{Fields: map[string]*stpb.Value{
+		"a": {Kind: &stpb.Value_StructValue{&stpb.Struct{Fields: map[string]*stpb.Value{
+			"b": {Kind: &stpb.Value_NumberValue{1}},
+			"c": {Kind: &stpb.Value_ListValue{&stpb.ListValue{Values: []*stpb.Value{
+				{Kind: &stpb.Value_StructValue{&stpb.Struct{Fields: map[string]*stpb.Value{"d": {Kind: &stpb.Value_BoolValue{true}}}}}},
+				{Kind: &stpb.Value_StringValue{"f"}},
+			}}}},
+		}}}},
+	}}}},
+	{"null ListValue", Unmarshaler{}, `{"lv": null}`, &pb.KnownTypes{Lv: &stpb.ListValue{}}},
+	{"empty ListValue", Unmarshaler{}, `{"lv": []}`, &pb.KnownTypes{Lv: &stpb.ListValue{}}},
+	{"basic ListValue", Unmarshaler{}, `{"lv": ["x", null, 3, true]}`, &pb.KnownTypes{Lv: &stpb.ListValue{Values: []*stpb.Value{
+		{Kind: &stpb.Value_StringValue{"x"}},
+		{Kind: &stpb.Value_NullValue{}},
+		{Kind: &stpb.Value_NumberValue{3}},
+		{Kind: &stpb.Value_BoolValue{true}},
+	}}}},
+	{"number Value", Unmarshaler{}, `{"val":1}`, &pb.KnownTypes{Val: &stpb.Value{Kind: &stpb.Value_NumberValue{1}}}},
+	{"null Value", Unmarshaler{}, `{"val":null}`, &pb.KnownTypes{Val: &stpb.Value{Kind: &stpb.Value_NullValue{stpb.NullValue_NULL_VALUE}}}},
+	{"bool Value", Unmarshaler{}, `{"val":true}`, &pb.KnownTypes{Val: &stpb.Value{Kind: &stpb.Value_BoolValue{true}}}},
+	{"string Value", Unmarshaler{}, `{"val":"x"}`, &pb.KnownTypes{Val: &stpb.Value{Kind: &stpb.Value_StringValue{"x"}}}},
+	{"string number value", Unmarshaler{}, `{"val":"9223372036854775807"}`, &pb.KnownTypes{Val: &stpb.Value{Kind: &stpb.Value_StringValue{"9223372036854775807"}}}},
+	{"list of lists Value", Unmarshaler{}, `{"val":["x", [["y"], "z"]]}`, &pb.KnownTypes{Val: &stpb.Value{
+		Kind: &stpb.Value_ListValue{&stpb.ListValue{
+			Values: []*stpb.Value{
+				{Kind: &stpb.Value_StringValue{"x"}},
+				{Kind: &stpb.Value_ListValue{&stpb.ListValue{
+					Values: []*stpb.Value{
+						{Kind: &stpb.Value_ListValue{&stpb.ListValue{
+							Values: []*stpb.Value{{Kind: &stpb.Value_StringValue{"y"}}},
+						}}},
+						{Kind: &stpb.Value_StringValue{"z"}},
+					},
+				}}},
+			},
+		}}}}},
 
-	{"DoubleValue", `{"dbl":1.2}`, &pb.KnownTypes{Dbl: &wpb.DoubleValue{Value: 1.2}}},
-	{"FloatValue", `{"flt":1.2}`, &pb.KnownTypes{Flt: &wpb.FloatValue{Value: 1.2}}},
-	{"Int64Value", `{"i64":"-3"}`, &pb.KnownTypes{I64: &wpb.Int64Value{Value: -3}}},
-	{"UInt64Value", `{"u64":"3"}`, &pb.KnownTypes{U64: &wpb.UInt64Value{Value: 3}}},
-	{"Int32Value", `{"i32":-4}`, &pb.KnownTypes{I32: &wpb.Int32Value{Value: -4}}},
-	{"UInt32Value", `{"u32":4}`, &pb.KnownTypes{U32: &wpb.UInt32Value{Value: 4}}},
-	{"BoolValue", `{"bool":true}`, &pb.KnownTypes{Bool: &wpb.BoolValue{Value: true}}},
-	{"StringValue", `{"str":"plush"}`, &pb.KnownTypes{Str: &wpb.StringValue{Value: "plush"}}},
-	{"BytesValue", `{"bytes":"d293"}`, &pb.KnownTypes{Bytes: &wpb.BytesValue{Value: []byte("wow")}}},
+	{"DoubleValue", Unmarshaler{}, `{"dbl":1.2}`, &pb.KnownTypes{Dbl: &wpb.DoubleValue{Value: 1.2}}},
+	{"FloatValue", Unmarshaler{}, `{"flt":1.2}`, &pb.KnownTypes{Flt: &wpb.FloatValue{Value: 1.2}}},
+	{"Int64Value", Unmarshaler{}, `{"i64":"-3"}`, &pb.KnownTypes{I64: &wpb.Int64Value{Value: -3}}},
+	{"UInt64Value", Unmarshaler{}, `{"u64":"3"}`, &pb.KnownTypes{U64: &wpb.UInt64Value{Value: 3}}},
+	{"Int32Value", Unmarshaler{}, `{"i32":-4}`, &pb.KnownTypes{I32: &wpb.Int32Value{Value: -4}}},
+	{"UInt32Value", Unmarshaler{}, `{"u32":4}`, &pb.KnownTypes{U32: &wpb.UInt32Value{Value: 4}}},
+	{"BoolValue", Unmarshaler{}, `{"bool":true}`, &pb.KnownTypes{Bool: &wpb.BoolValue{Value: true}}},
+	{"StringValue", Unmarshaler{}, `{"str":"plush"}`, &pb.KnownTypes{Str: &wpb.StringValue{Value: "plush"}}},
+	{"BytesValue", Unmarshaler{}, `{"bytes":"d293"}`, &pb.KnownTypes{Bytes: &wpb.BytesValue{Value: []byte("wow")}}},
 	// `null` is also a permissible value. Let's just test one.
-	{"null DoubleValue", `{"dbl":null}`, &pb.KnownTypes{Dbl: &wpb.DoubleValue{}}},
+	{"null DoubleValue", Unmarshaler{}, `{"dbl":null}`, &pb.KnownTypes{Dbl: &wpb.DoubleValue{}}},
 }
 
 func TestUnmarshaling(t *testing.T) {
@@ -477,7 +621,7 @@ func TestUnmarshaling(t *testing.T) {
 		// Make a new instance of the type of our expected object.
 		p := reflect.New(reflect.TypeOf(tt.pb).Elem()).Interface().(proto.Message)
 
-		err := UnmarshalString(tt.json, p)
+		err := tt.unmarshaler.Unmarshal(strings.NewReader(tt.json), p)
 		if err != nil {
 			t.Errorf("%s: %v", tt.desc, err)
 			continue
@@ -507,7 +651,7 @@ func TestUnmarshalNext(t *testing.T) {
 		// Make a new instance of the type of our expected object.
 		p := reflect.New(reflect.TypeOf(tt.pb).Elem()).Interface().(proto.Message)
 
-		err := UnmarshalNext(dec, p)
+		err := tt.unmarshaler.UnmarshalNext(dec, p)
 		if err != nil {
 			t.Errorf("%s: %v", tt.desc, err)
 			continue
@@ -522,7 +666,7 @@ func TestUnmarshalNext(t *testing.T) {
 	}
 
 	p := &pb.Simple{}
-	err := UnmarshalNext(dec, p)
+	err := new(Unmarshaler).UnmarshalNext(dec, p)
 	if err != io.EOF {
 		t.Errorf("eof: got %v, expected io.EOF", err)
 	}
@@ -535,6 +679,7 @@ var unmarshalingShouldError = []struct {
 }{
 	{"a value", "666", new(pb.Simple)},
 	{"gibberish", "{adskja123;l23=-=", new(pb.Simple)},
+	{"unknown field", `{"unknown": "foo"}`, new(pb.Simple)},
 	{"unknown enum name", `{"hilarity":"DAVE"}`, new(proto3pb.Message)},
 }
 
@@ -545,4 +690,70 @@ func TestUnmarshalingBadInput(t *testing.T) {
 			t.Errorf("an error was expected when parsing %q instead of an object", tt.desc)
 		}
 	}
+}
+
+func TestUnmarshalJSONPBUnmarshaler(t *testing.T) {
+	rawJson := `{ "foo": "bar", "baz": [0, 1, 2, 3] }`
+	var msg dynamicMessage
+	if err := Unmarshal(strings.NewReader(rawJson), &msg); err != nil {
+		t.Errorf("an unexpected error occurred when parsing into JSONPBUnmarshaler: %v", err)
+	}
+	if msg.rawJson != rawJson {
+		t.Errorf("message contents not set correctly after unmarshalling JSON: got %s, wanted %s", msg.rawJson, rawJson)
+	}
+}
+
+func TestUnmarshalAnyJSONPBUnmarshaler(t *testing.T) {
+	rawJson := `{ "@type": "blah.com/` + dynamicMessageName + `", "foo": "bar", "baz": [0, 1, 2, 3] }`
+	var got anypb.Any
+	if err := Unmarshal(strings.NewReader(rawJson), &got); err != nil {
+		t.Errorf("an unexpected error occurred when parsing into JSONPBUnmarshaler: %v", err)
+	}
+
+	dm := &dynamicMessage{rawJson: `{"baz":[0,1,2,3],"foo":"bar"}`}
+	var want anypb.Any
+	if b, err := proto.Marshal(dm); err != nil {
+		t.Errorf("an unexpected error occurred when marshaling message: %v", err)
+	} else {
+		want.TypeUrl = "blah.com/" + dynamicMessageName
+		want.Value = b
+	}
+
+	if !proto.Equal(&got, &want) {
+		t.Errorf("message contents not set correctly after unmarshalling JSON: got %s, wanted %s", got, want)
+	}
+}
+
+const (
+	dynamicMessageName = "google.protobuf.jsonpb.testing.dynamicMessage"
+)
+func init() {
+	// we register the custom type below so that we can use it in Any types
+	proto.RegisterType((*dynamicMessage)(nil), dynamicMessageName)
+}
+
+// dynamicMessage implements protobuf.Message but is not a normal generated message type.
+// It provides implementations of JSONPBMarshaler and JSONPBUnmarshaler for JSON support.
+type dynamicMessage struct {
+	rawJson string `protobuf:"bytes,1,opt,name=rawJson"`
+}
+
+func (m *dynamicMessage) Reset() {
+	m.rawJson = "{}"
+}
+
+func (m *dynamicMessage) String() string {
+	return m.rawJson
+}
+
+func (m *dynamicMessage) ProtoMessage() {
+}
+
+func (m *dynamicMessage) MarshalJSONPB(jm *Marshaler) ([]byte, error) {
+	return []byte(m.rawJson), nil
+}
+
+func (m *dynamicMessage) UnmarshalJSONPB(jum *Unmarshaler, js []byte) error {
+	m.rawJson = string(js)
+	return nil
 }
