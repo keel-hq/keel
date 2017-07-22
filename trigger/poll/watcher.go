@@ -2,6 +2,7 @@ package poll
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/rusenask/cron"
 	"github.com/rusenask/keel/provider"
@@ -94,6 +95,20 @@ func (w *RepositoryWatcher) Unwatch(imageName string) error {
 // Watch - starts watching repository for changes, if it's already watching - ignores,
 // if details changed - updates details
 func (w *RepositoryWatcher) Watch(imageName, schedule, registryUsername, registryPassword string) error {
+
+	if schedule == "" {
+		return fmt.Errorf("cron schedule cannot be empty")
+	}
+
+	_, err := cron.Parse(schedule)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":    err,
+			"image":    imageName,
+			"schedule": schedule,
+		}).Error("trigger.poll.RepositoryWatcher.addJob: invalid cron schedule")
+		return fmt.Errorf("invalid cron schedule: %s", err)
+	}
 
 	imageRef, err := image.Parse(imageName)
 	if err != nil {

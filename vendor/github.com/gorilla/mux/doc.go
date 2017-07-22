@@ -12,8 +12,8 @@ or other conditions. The main features are:
 
 	* Requests can be matched based on URL host, path, path prefix, schemes,
 	  header and query values, HTTP methods or using custom matchers.
-	* URL hosts, paths and query values can have variables with an optional
-	  regular expression.
+	* URL hosts and paths can have variables with an optional regular
+	  expression.
 	* Registered URLs can be built, or "reversed", which helps maintaining
 	  references to resources.
 	* Routes can be used as subrouters: nested routes are only tested if the
@@ -188,20 +188,18 @@ key/value pairs for the route variables. For the previous route, we would do:
 
 	"/articles/technology/42"
 
-This also works for host and query value variables:
+This also works for host variables:
 
 	r := mux.NewRouter()
 	r.Host("{subdomain}.domain.com").
 	  Path("/articles/{category}/{id:[0-9]+}").
-	  Queries("filter", "{filter}").
 	  HandlerFunc(ArticleHandler).
 	  Name("article")
 
-	// url.String() will be "http://news.domain.com/articles/technology/42?filter=gorilla"
+	// url.String() will be "http://news.domain.com/articles/technology/42"
 	url, err := r.Get("article").URL("subdomain", "news",
 	                                 "category", "technology",
-	                                 "id", "42",
-	                                 "filter", "gorilla")
+	                                 "id", "42")
 
 All variables defined in the route are required, and their values must
 conform to the corresponding patterns. These requirements guarantee that a

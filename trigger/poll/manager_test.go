@@ -1,24 +1,38 @@
 package poll
 
 import (
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	"context"
 
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/image"
-	keelTesting "github.com/rusenask/keel/util/testing"
 
 	"testing"
 )
 
 func TestCheckDeployment(t *testing.T) {
 	// fake provider listening for events
-	fp := &fakeProvider{}
+	imgA, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.1")
+	imgB, _ := image.Parse("gcr.io/v2-namespace/greetings-world:1.1.1")
+	fp := &fakeProvider{
+		images: []*types.TrackedImage{
+
+			&types.TrackedImage{
+				Image:        imgA,
+				Trigger:      types.TriggerTypePoll,
+				Provider:     "fp",
+				PollSchedule: types.KeelPollDefaultSchedule,
+			},
+
+			&types.TrackedImage{
+				Trigger:      types.TriggerTypePoll,
+				Image:        imgB,
+				Provider:     "fp",
+				PollSchedule: types.KeelPollDefaultSchedule,
+			},
+		},
+	}
 	providers := provider.New([]provider.Provider{fp})
-	// implementer should not be called in this case
-	k8sImplementer := &keelTesting.FakeK8sImplementer{}
 
 	// returning some sha
 	frc := &fakeRegistryClient{
@@ -27,39 +41,12 @@ func TestCheckDeployment(t *testing.T) {
 
 	watcher := NewRepositoryWatcher(providers, frc)
 
-	pm := NewPollManager(k8sImplementer, watcher)
+	pm := NewPollManager(providers, watcher)
 
 	imageA := "gcr.io/v2-namespace/hello-world:1.1.1"
 	imageB := "gcr.io/v2-namespace/greetings-world:1.1.1"
 
-	dep := &v1beta1.Deployment{
-		meta_v1.TypeMeta{},
-		meta_v1.ObjectMeta{
-			Name:      "dep-1",
-			Namespace: "xxxx",
-			Labels:    map[string]string{types.KeelPolicyLabel: "all"},
-		},
-		v1beta1.DeploymentSpec{
-			Template: v1.PodTemplateSpec{
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						v1.Container{
-							Image: imageA,
-						},
-						v1.Container{
-							Image: imageB,
-						},
-					},
-				},
-			},
-		},
-		v1beta1.DeploymentStatus{},
-	}
-
-	err := pm.checkDeployment(dep)
-	if err != nil {
-		t.Errorf("deployment check failed: %s", err)
-	}
+	pm.scan(context.Background())
 
 	// 2 subscriptions should be added
 	entries := watcher.cron.Entries()

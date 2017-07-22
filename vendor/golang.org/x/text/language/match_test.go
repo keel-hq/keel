@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"golang.org/x/text/internal/testtext"
 )
 
 var verbose = flag.Bool("verbose", false, "set to true to print the internal tables of matchers")
@@ -186,11 +188,13 @@ func TestRegionDistance(t *testing.T) {
 		{"ZZ", "QQ", 2},
 	}
 	for i, tt := range tests {
-		ra, _ := getRegionID([]byte(tt.a))
-		rb, _ := getRegionID([]byte(tt.b))
-		if d := regionDistance(ra, rb); d != tt.d {
-			t.Errorf("%d: d(%s, %s) = %v; want %v", i, tt.a, tt.b, d, tt.d)
-		}
+		testtext.Run(t, tt.a+"/"+tt.b, func(t *testing.T) {
+			ra, _ := getRegionID([]byte(tt.a))
+			rb, _ := getRegionID([]byte(tt.b))
+			if d := regionDistance(ra, rb); d != tt.d {
+				t.Errorf("%d: d(%s, %s) = %v; want %v", i, tt.a, tt.b, d, tt.d)
+			}
+		})
 	}
 }
 
@@ -246,26 +250,39 @@ func (t haveTag) String() string {
 	return fmt.Sprintf("%v:%d:%v:%v-%v|%v", t.tag, t.index, t.conf, t.maxRegion, t.maxScript, t.altScript)
 }
 
+func parseSupported(list string) (out []Tag) {
+	for _, s := range strings.Split(list, ",") {
+		out = append(out, mk(strings.TrimSpace(s)))
+	}
+	return out
+}
+
 // The test set for TestBestMatch is defined in data_test.go.
 func TestBestMatch(t *testing.T) {
-	parse := func(list string) (out []Tag) {
-		for _, s := range strings.Split(list, ",") {
-			out = append(out, mk(strings.TrimSpace(s)))
-		}
-		return out
-	}
 	for i, tt := range matchTests {
-		supported := parse(tt.supported)
+		supported := parseSupported(tt.supported)
 		m := newMatcher(supported)
 		if *verbose {
 			fmt.Printf("%s:\n%v\n", tt.comment, m)
 		}
 		for _, tm := range tt.test {
-			tag, _, conf := m.Match(parse(tm.desired)...)
+			tag, _, conf := m.Match(parseSupported(tm.desired)...)
 			if tag.String() != tm.match {
 				t.Errorf("%d:%s: find %s in %q: have %s; want %s (%v)\n", i, tt.comment, tm.desired, tt.supported, tag, tm.match, conf)
 			}
 		}
+	}
+}
+
+func TestBestMatchAlloc(t *testing.T) {
+	m := NewMatcher(parseSupported("en sr nl"))
+	// Go allocates when creating a list of tags from a single tag!
+	list := []Tag{English}
+	avg := testtext.AllocsPerRun(1, func() {
+		m.Match(list...)
+	})
+	if avg > 0 {
+		t.Errorf("got %f; want 0", avg)
 	}
 }
 

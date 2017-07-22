@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -36,7 +35,6 @@ type routeTest struct {
 	scheme         string            // the expected scheme of the built URL
 	host           string            // the expected host of the built URL
 	path           string            // the expected path of the built URL
-	query          string            // the expected query string of the built URL
 	pathTemplate   string            // the expected path template of the route
 	hostTemplate   string            // the expected host template of the route
 	methods        []string          // the expected route methods
@@ -745,7 +743,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
-			query:       "foo=bar&baz=ding",
 			shouldMatch: true,
 		},
 		{
@@ -755,7 +752,6 @@ func TestQueries(t *testing.T) {
 			vars:         map[string]string{},
 			host:         "",
 			path:         "",
-			query:        "foo=bar&baz=ding",
 			pathTemplate: `/api`,
 			hostTemplate: `www.example.com`,
 			shouldMatch:  true,
@@ -767,7 +763,6 @@ func TestQueries(t *testing.T) {
 			vars:         map[string]string{},
 			host:         "",
 			path:         "",
-			query:        "foo=bar&baz=ding",
 			pathTemplate: `/api`,
 			hostTemplate: `www.example.com`,
 			shouldMatch:  true,
@@ -788,7 +783,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"v1": "bar"},
 			host:        "",
 			path:        "",
-			query:       "foo=bar",
 			shouldMatch: true,
 		},
 		{
@@ -798,7 +792,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"v1": "bar", "v2": "ding"},
 			host:        "",
 			path:        "",
-			query:       "foo=bar&baz=ding",
 			shouldMatch: true,
 		},
 		{
@@ -808,7 +801,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"v1": "10"},
 			host:        "",
 			path:        "",
-			query:       "foo=10",
 			shouldMatch: true,
 		},
 		{
@@ -827,7 +819,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"v1": "1"},
 			host:        "",
 			path:        "",
-			query:       "foo=1",
 			shouldMatch: true,
 		},
 		{
@@ -837,7 +828,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"v1": "1"},
 			host:        "",
 			path:        "",
-			query:       "foo=1",
 			shouldMatch: true,
 		},
 		{
@@ -856,7 +846,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"v1": "1a"},
 			host:        "",
 			path:        "",
-			query:       "foo=1a",
 			shouldMatch: true,
 		},
 		{
@@ -875,7 +864,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"v-1": "bar"},
 			host:        "",
 			path:        "",
-			query:       "foo=bar",
 			shouldMatch: true,
 		},
 		{
@@ -885,7 +873,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"v-1": "bar", "v-2": "ding"},
 			host:        "",
 			path:        "",
-			query:       "foo=bar&baz=ding",
 			shouldMatch: true,
 		},
 		{
@@ -895,7 +882,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"v-1": "10"},
 			host:        "",
 			path:        "",
-			query:       "foo=10",
 			shouldMatch: true,
 		},
 		{
@@ -905,7 +891,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"v-1": "1a"},
 			host:        "",
 			path:        "",
-			query:       "foo=1a",
 			shouldMatch: true,
 		},
 		{
@@ -915,7 +900,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
-			query:       "foo=",
 			shouldMatch: true,
 		},
 		{
@@ -934,7 +918,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
-			query:       "foo=",
 			shouldMatch: true,
 		},
 		{
@@ -962,7 +945,6 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{"foo": ""},
 			host:        "",
 			path:        "",
-			query:       "foo=",
 			shouldMatch: true,
 		},
 		{
@@ -973,16 +955,6 @@ func TestQueries(t *testing.T) {
 			host:        "",
 			path:        "",
 			shouldMatch: false,
-		},
-		{
-			title:       "Queries route with pattern, match, escaped value",
-			route:       new(Route).Queries("foo", "{v1}"),
-			request:     newRequest("GET", "http://localhost?foo=%25bar%26%20%2F%3D%3F"),
-			vars:        map[string]string{"v1": "%bar& /=?"},
-			host:        "",
-			path:        "",
-			query:       "foo=%25bar%26+%2F%3D%3F",
-			shouldMatch: true,
 		},
 	}
 
@@ -1410,55 +1382,11 @@ func TestWalkNested(t *testing.T) {
 	l2 := l1.PathPrefix("/l").Subrouter()
 	l2.Path("/a")
 
-	testCases := []struct {
-		path      string
-		ancestors []*Route
-	}{
-		{"/g", []*Route{}},
-		{"/g/o", []*Route{g.parent.(*Route)}},
-		{"/g/o/r", []*Route{g.parent.(*Route), o.parent.(*Route)}},
-		{"/g/o/r/i", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route)}},
-		{"/g/o/r/i/l", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route), i.parent.(*Route)}},
-		{"/g/o/r/i/l/l", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route), i.parent.(*Route), l1.parent.(*Route)}},
-		{"/g/o/r/i/l/l/a", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route), i.parent.(*Route), l1.parent.(*Route), l2.parent.(*Route)}},
-	}
-
-	idx := 0
-	err := router.Walk(func(route *Route, router *Router, ancestors []*Route) error {
-		path := testCases[idx].path
-		tpl := route.regexp.path.template
-		if tpl != path {
-			t.Errorf(`Expected %s got %s`, path, tpl)
-		}
-		currWantAncestors := testCases[idx].ancestors
-		if !reflect.DeepEqual(currWantAncestors, ancestors) {
-			t.Errorf(`Expected %+v got %+v`, currWantAncestors, ancestors)
-		}
-		idx++
-		return nil
-	})
-	if err != nil {
-		panic(err)
-	}
-	if idx != len(testCases) {
-		t.Errorf("Expected %d routes, found %d", len(testCases), idx)
-	}
-}
-
-func TestWalkSubrouters(t *testing.T) {
-	router := NewRouter()
-
-	g := router.Path("/g").Subrouter()
-	o := g.PathPrefix("/o").Subrouter()
-	o.Methods("GET")
-	o.Methods("PUT")
-
-	// all 4 routes should be matched, but final 2 routes do not have path templates
-	paths := []string{"/g", "/g/o", "", ""}
+	paths := []string{"/g", "/g/o", "/g/o/r", "/g/o/r/i", "/g/o/r/i/l", "/g/o/r/i/l/l", "/g/o/r/i/l/l/a"}
 	idx := 0
 	err := router.Walk(func(route *Route, router *Router, ancestors []*Route) error {
 		path := paths[idx]
-		tpl, _ := route.GetPathTemplate()
+		tpl := route.regexp.path.template
 		if tpl != path {
 			t.Errorf(`Expected %s got %s`, path, tpl)
 		}
@@ -1564,7 +1492,6 @@ func testRoute(t *testing.T, test routeTest) {
 	route := test.route
 	vars := test.vars
 	shouldMatch := test.shouldMatch
-	query := test.query
 	shouldRedirect := test.shouldRedirect
 	uri := url.URL{
 		Scheme: test.scheme,
@@ -1631,13 +1558,6 @@ func testRoute(t *testing.T, test routeTest) {
 			}
 			if expected, got := uri.String(), u.String(); expected != got {
 				t.Errorf("(%v) URL not equal: expected %v, got %v -- %v", test.title, expected, got, getRouteTemplate(route))
-				return
-			}
-		}
-		if query != "" {
-			u, _ := route.URL(mapToPairs(match.Vars)...)
-			if query != u.RawQuery {
-				t.Errorf("(%v) URL query not equal: expected %v, got %v", test.title, query, u.RawQuery)
 				return
 			}
 		}

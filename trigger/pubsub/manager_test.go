@@ -5,11 +5,9 @@ import (
 	"sync"
 	"time"
 
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
-
+	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/image"
 
 	"testing"
 )
@@ -32,42 +30,52 @@ func (s *fakeSubscriber) Subscribe(ctx context.Context, topic, subscription stri
 	}
 }
 
+type fakeProvider struct {
+	images    []*types.TrackedImage
+	submitted []types.Event
+}
+
+func (p *fakeProvider) Submit(event types.Event) error {
+	p.submitted = append(p.submitted, event)
+	return nil
+}
+func (p *fakeProvider) TrackedImages() ([]*types.TrackedImage, error) {
+	return p.images, nil
+}
+func (p *fakeProvider) List() []string {
+	return []string{"fakeprovider"}
+}
+func (p *fakeProvider) Stop() {
+	return
+}
+func (p *fakeProvider) GetName() string {
+	return "fp"
+}
+
 func TestCheckDeployment(t *testing.T) {
+	img, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1")
+	fp := &fakeProvider{
+		images: []*types.TrackedImage{
+			&types.TrackedImage{
+				Image:    img,
+				Provider: "fp",
+			},
+		},
+	}
+	providers := provider.New([]provider.Provider{fp})
+
 	fs := &fakeSubscriber{}
 	mng := &DefaultManager{
+		providers:   providers,
 		client:      fs,
 		mu:          &sync.Mutex{},
 		ctx:         context.Background(),
 		subscribers: make(map[string]context.Context),
 	}
 
-	dep := &v1beta1.Deployment{
-		meta_v1.TypeMeta{},
-		meta_v1.ObjectMeta{
-			Name:      "dep-1",
-			Namespace: "xxxx",
-			Labels:    map[string]string{types.KeelPolicyLabel: "all"},
-		},
-		v1beta1.DeploymentSpec{
-			Template: v1.PodTemplateSpec{
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						v1.Container{
-							Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-						},
-						v1.Container{
-							Image: "gcr.io/v2-namespace/greetings-world:1.1.1",
-						},
-					},
-				},
-			},
-		},
-		v1beta1.DeploymentStatus{},
-	}
-
-	err := mng.checkDeployment(dep)
+	err := mng.scan(context.Background())
 	if err != nil {
-		t.Errorf("deployment check failed: %s", err)
+		t.Errorf("failed to scan: %s", err)
 	}
 
 	// sleeping a bit since our fake subscriber goes into a separate goroutine

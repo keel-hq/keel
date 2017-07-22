@@ -11,6 +11,10 @@ type Reference struct {
 	scheme string // registry scheme, i.e. http, https
 }
 
+func (r Reference) String() string {
+	return r.Name()
+}
+
 // Name returns the image's name. (ie: debian[:8.2])
 func (r Reference) Name() string {
 	return r.named.RemoteName() + r.tag

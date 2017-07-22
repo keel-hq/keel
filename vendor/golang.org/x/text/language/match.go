@@ -396,8 +396,8 @@ type matcher struct {
 // matchHeader has the lists of tags for exact matches and matches based on
 // maximized and canonicalized tags for a given language.
 type matchHeader struct {
-	exact []haveTag
-	max   []haveTag
+	exact []*haveTag
+	max   []*haveTag
 }
 
 // haveTag holds a supported Tag and its maximized script and region. The maximized
@@ -440,8 +440,10 @@ func makeHaveTag(tag Tag, index int) (haveTag, langID) {
 // script to map to another and we rely on this to keep the code simple.
 func altScript(l langID, s scriptID) scriptID {
 	for _, alt := range matchScript {
-		if (alt.lang == 0 || langID(alt.lang) == l) && scriptID(alt.have) == s {
-			return scriptID(alt.want)
+		// TODO: also match cases where language is not the same.
+		if (langID(alt.wantLang) == l || langID(alt.haveLang) == l) &&
+			scriptID(alt.haveScript) == s {
+			return scriptID(alt.wantScript)
 		}
 	}
 	return 0
@@ -457,7 +459,7 @@ func (h *matchHeader) addIfNew(n haveTag, exact bool) {
 		}
 	}
 	if exact {
-		h.exact = append(h.exact, n)
+		h.exact = append(h.exact, &n)
 	}
 	// Allow duplicate maximized tags, but create a linked list to allow quickly
 	// comparing the equivalents and bail out.
@@ -472,7 +474,7 @@ func (h *matchHeader) addIfNew(n haveTag, exact bool) {
 			break
 		}
 	}
-	h.max = append(h.max, n)
+	h.max = append(h.max, &n)
 }
 
 // header returns the matchHeader for the given language. It creates one if
@@ -484,6 +486,16 @@ func (m *matcher) header(l langID) *matchHeader {
 	h := &matchHeader{}
 	m.index[l] = h
 	return h
+}
+
+func toConf(d uint8) Confidence {
+	if d <= 10 {
+		return High
+	}
+	if d < 30 {
+		return Low
+	}
+	return No
 }
 
 // newMatcher builds an index for the given supported tags and returns it as
@@ -503,7 +515,7 @@ func newMatcher(supported []Tag) *matcher {
 		pair, _ := makeHaveTag(tag, i)
 		m.header(tag.lang).addIfNew(pair, true)
 	}
-	m.default_ = &m.header(supported[0].lang).exact[0]
+	m.default_ = m.header(supported[0].lang).exact[0]
 	for i, tag := range supported {
 		pair, max := makeHaveTag(tag, i)
 		if max != tag.lang {
@@ -520,7 +532,8 @@ func newMatcher(supported []Tag) *matcher {
 				return
 			}
 			hw := m.header(langID(want))
-			for _, v := range hh.max {
+			for _, ht := range hh.max {
+				v := *ht
 				if conf < v.conf {
 					v.conf = conf
 				}
@@ -536,9 +549,9 @@ func newMatcher(supported []Tag) *matcher {
 	// Add entries for languages with mutual intelligibility as defined by CLDR's
 	// languageMatch data.
 	for _, ml := range matchLang {
-		update(ml.want, ml.have, Confidence(ml.conf), false)
+		update(ml.want, ml.have, toConf(ml.distance), false)
 		if !ml.oneway {
-			update(ml.have, ml.want, Confidence(ml.conf), false)
+			update(ml.have, ml.want, toConf(ml.distance), false)
 		}
 	}
 
@@ -580,7 +593,7 @@ func (m *matcher) getBest(want ...Tag) (got *haveTag, orig Tag, c Confidence) {
 				continue
 			}
 			for i := range h.exact {
-				have := &h.exact[i]
+				have := h.exact[i]
 				if have.tag.equalsRest(w) {
 					return have, w, Exact
 				}
@@ -591,7 +604,7 @@ func (m *matcher) getBest(want ...Tag) (got *haveTag, orig Tag, c Confidence) {
 			// Base language is not defined.
 			if h != nil {
 				for i := range h.exact {
-					have := &h.exact[i]
+					have := h.exact[i]
 					if have.tag.equalsRest(w) {
 						return have, w, Exact
 					}
@@ -609,11 +622,11 @@ func (m *matcher) getBest(want ...Tag) (got *haveTag, orig Tag, c Confidence) {
 		}
 		// Check for match based on maximized tag.
 		for i := range h.max {
-			have := &h.max[i]
+			have := h.max[i]
 			best.update(have, w, max.script, max.region)
 			if best.conf == Exact {
 				for have.nextMax != 0 {
-					have = &h.max[have.nextMax]
+					have = h.max[have.nextMax]
 					best.update(have, w, max.script, max.region)
 				}
 				return best.have, best.want, High

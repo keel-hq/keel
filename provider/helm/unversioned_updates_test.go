@@ -1,0 +1,120 @@
+package helm
+
+import (
+	"reflect"
+	"testing"
+
+	"github.com/rusenask/keel/types"
+	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
+)
+
+func Test_checkUnversionedRelease(t *testing.T) {
+	chartValuesPolicyForce := `
+name: al Rashid
+where:
+  city: Basrah
+  title: caliph
+image:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.1.0
+
+keel:  
+  policy: force  
+  trigger: poll  
+  images:
+    - repository: image.repository
+      tag: image.tag
+
+`
+
+	chartValuesPolicyMajor := `
+name: al Rashid
+where:
+  city: Basrah
+  title: caliph
+image:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.1.0
+
+keel:  
+  policy: major  
+  trigger: poll  
+  images:
+    - repository: image.repository
+      tag: image.tag
+
+`
+
+	helloWorldChart := &hapi_chart.Chart{
+		Values: &hapi_chart.Config{Raw: chartValuesPolicyForce},
+	}
+
+	helloWorldChartPolicyMajor := &hapi_chart.Chart{
+		Values: &hapi_chart.Config{Raw: chartValuesPolicyMajor},
+	}
+
+	type args struct {
+		repo      *types.Repository
+		namespace string
+		name      string
+		chart     *hapi_chart.Chart
+		config    *hapi_chart.Config
+	}
+	tests := []struct {
+		name                    string
+		args                    args
+		wantPlan                *UpdatePlan
+		wantShouldUpdateRelease bool
+		wantErr                 bool
+	}{
+		{
+			name: "correct force update",
+			args: args{
+				repo:      &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "latest"},
+				namespace: "default",
+				name:      "release-1",
+				chart:     helloWorldChart,
+				config:    &hapi_chart.Config{Raw: ""},
+			},
+			wantPlan: &UpdatePlan{
+				Namespace: "default",
+				Name:      "release-1",
+				Chart:     helloWorldChart,
+				Values:    map[string]string{"image.tag": "latest"}},
+			wantShouldUpdateRelease: true,
+			wantErr:                 false,
+		},
+		{
+			name: "update without force",
+			args: args{
+				repo:      &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "latest"},
+				namespace: "default",
+				name:      "release-1",
+				chart:     helloWorldChartPolicyMajor,
+				config:    &hapi_chart.Config{Raw: ""},
+			},
+			wantPlan: &UpdatePlan{
+				Namespace: "default",
+				Name:      "release-1",
+				Chart:     helloWorldChartPolicyMajor,
+				Values:    map[string]string{}},
+			wantShouldUpdateRelease: false,
+			wantErr:                 false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotPlan, gotShouldUpdateRelease, err := checkUnversionedRelease(tt.args.repo, tt.args.namespace, tt.args.name, tt.args.chart, tt.args.config)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("checkUnversionedRelease() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotPlan, tt.wantPlan) {
+				t.Errorf("checkUnversionedRelease() gotPlan = %v, want %v", gotPlan, tt.wantPlan)
+			}
+			if gotShouldUpdateRelease != tt.wantShouldUpdateRelease {
+				t.Errorf("checkUnversionedRelease() gotShouldUpdateRelease = %v, want %v", gotShouldUpdateRelease, tt.wantShouldUpdateRelease)
+			}
+		})
+	}
+}

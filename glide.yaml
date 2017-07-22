@@ -1,43 +1,60 @@
 package: github.com/rusenask/keel
 import:
+# - package: cloud.google.com/go
+#   version: ^0.10.0
+#   subpackages:
+#   - pubsub
 - package: cloud.google.com/go
   version: b4e9a381a01e953e880e6d2cf7fd02d412977cae
   subpackages:
   - pubsub
   - iam
   - internal
+- package: github.com/Masterminds/semver
+  version: ^1.3.1
+- package: github.com/Sirupsen/logrus
+- package: github.com/docker/distribution
+  version: ^2.6.2
+  subpackages:
+  - digest
+  - reference
+- package: github.com/ghodss/yaml
+  version: ^1.0.0
+- package: github.com/gorilla/mux
+  version: ^1.4.0
+- package: github.com/nlopes/slack
+  version: ^0.1.0
+- package: github.com/rusenask/cron
+  version: v1.1.0
+- package: github.com/rusenask/docker-registry-client
+  subpackages:
+  - registry
+- package: github.com/urfave/negroni
+  version: ^0.2.0
+- package: golang.org/x/text
+  version: 836efe42bb4aa16aaa17b9c155d8813d336ed720
+- package: golang.org/x/net
+  version: ab5485076ff3407ad2d02db054635913f017b0ed
+  subpackages:
+  - context
+# - package: google.golang.org/api
+#   subpackages:
+#   - option
+- package: github.com/golang/protobuf
+  version: 0a4f71a498b7c4812f64969510bcb4eca251e33a
 - package: google.golang.org/api
-  version: 324744a33f1f37e63dd1695cfb3ec9a3e4a1cb05
+  # version: 324744a33f1f37e63dd1695cfb3ec9a3e4a1cb05
+  version: 295e4bb0ade057ae2cfb9876ab0b54635dbfcea4
   subpackages:
   - iterator
   - option
   - support
   - transport
 - package: google.golang.org/grpc
-  version: a94a7ac054dc76e5ab6cf170a9d82faba8aaf33f
+  version: v1.5.0  
+- package: k8s.io/apimachinery
   subpackages:
   - status
-- package: github.com/sirupsen/logrus
-  subpackages:
-  - formatters
-  - formatters/logstash
-- package: github.com/gorilla/mux
-- package: github.com/urfave/negroni
-- package: golang.org/x/net
-  subpackages:
-  - context
-  - oauth2
-- package: github.com/gogo/protobuf
-  version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
-  subpackages:
-  - sortkeys
-  - protoc-gen-gogo/descriptor
-  - gogoproto
-  - plugin/testgen
-  - protoc-gen-gogo/generator
-- package: k8s.io/apimachinery
-  version: 75b8dd260ef0469d96d578705a87cffd0e09dab8
-  subpackages:
   - pkg/apis/meta/v1
 - package: k8s.io/client-go
   version: v3.0.0-beta.0
@@ -47,13 +64,11 @@ import:
   - pkg/apis/extensions/v1beta1
   - rest
   - tools/clientcmd
-- package: github.com/nlopes/slack
-  version: ^0.1.0
-- package: github.com/docker/distribution
-  version: ^2.6.1
+- package: k8s.io/helm
+  version: ^2.5.0
   subpackages:
-  - digest
-- package: github.com/Masterminds/semver
-  version: ^1.3.0
-- package: github.com/opencontainers/go-digest
-  version: ^1.0.0-rc0
+  - pkg/chartutil
+  - pkg/helm
+  - pkg/proto/hapi/chart
+  - pkg/proto/hapi/services
+  - pkg/strvals
