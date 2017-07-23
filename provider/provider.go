@@ -28,7 +28,7 @@ func New(providers []Provider) *DefaultProviders {
 
 	for _, p := range providers {
 		pvs[p.GetName()] = p
-		log.Infof("provider.DefaultProviders: provider '%s' registered", p.GetName())
+		log.Infof("provider.defaultProviders: provider '%s' registered", p.GetName())
 	}
 
 	return &DefaultProviders{
@@ -51,7 +51,7 @@ func (p *DefaultProviders) Submit(event types.Event) error {
 				"provider": provider.GetName(),
 				"event":    event.Repository,
 				"trigger":  event.TriggerName,
-			}).Error("provider.DefaultProviders: submit event failed")
+			}).Error("provider.defaultProviders: submit event failed")
 		}
 	}
 
@@ -67,7 +67,7 @@ func (p *DefaultProviders) TrackedImages() ([]*types.TrackedImage, error) {
 			log.WithFields(log.Fields{
 				"error":    err,
 				"provider": provider.GetName(),
-			}).Error("provider.DefaultProviders: failed to get tracked images")
+			}).Error("provider.defaultProviders: failed to get tracked images")
 			continue
 		}
 		trackedImages = append(trackedImages, ti...)

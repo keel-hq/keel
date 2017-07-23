@@ -57,7 +57,7 @@ func main() {
 		"version":    ver.Version,
 		"go_version": ver.GoVersion,
 		"arch":       ver.Arch,
-	}).Info("Keel starting..")
+	}).Info("keel starting..")
 
 	if os.Getenv(EnvDebug) != "" {
 		log.SetLevel(log.DebugLevel)
@@ -230,7 +230,7 @@ func setupTriggers(ctx context.Context, providers provider.Providers) (teardown 
 		go subManager.Start(ctx)
 	}
 
-	if os.Getenv(EnvTriggerPoll) != "" {
+	if os.Getenv(EnvTriggerPoll) != "0" {
 
 		registryClient := registry.New()
 		watcher := poll.NewRepositoryWatcher(providers, registryClient)

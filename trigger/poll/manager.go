@@ -51,6 +51,8 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 	// setting root context
 	s.ctx = ctx
 
+	log.Info("trigger.poll.manager: polling trigger configured")
+
 	// initial scan
 	err := s.scan(ctx)
 	if err != nil {

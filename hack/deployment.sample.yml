@@ -20,8 +20,8 @@ spec:
         - image: karolisr/keel:0.3.1
           imagePullPolicy: Always
           env:          
-            - name: POLL
-              value: "1"               
+            # - name: POLL
+            #   value: "1"               
             - name: PUBSUB
               value: "1"
             # Enable/disable Helm provider  
