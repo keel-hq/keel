@@ -1,0 +1,5 @@
+1. The {{ template "name" .}} is getting provisioned in your cluster. After a few minutes, you can run the following to verify.
+
+To verify that {{ template "name" . }} has started, run:
+
+  kubectl --namespace=kube-system get pods -l "app={{ template "name" . }}"
