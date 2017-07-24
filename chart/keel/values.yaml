@@ -2,8 +2,6 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
-
 image:
   repository: karolisr/keel
   tag: 0.4.0-rc.3
@@ -15,7 +13,6 @@ service:
   type: LoadBalancer
   externalPort: 9300
   internalPort: 9300
-
 
 # Polling is enabled by default,
 # you can disable it setting value below to false
@@ -39,6 +36,20 @@ webhook:
   enabled: false
   endpoint: ""
 
+# Webhook Relay integration
+# If you don’t want to expose your Keel service, you can use https://webhookrelay.com/
+# which can deliver webhooks to your internal Keel service through Keel sidecar container.
+webhookRelay:
+  enabled: false
+  image:
+    repository: webhookrelay/webhookrelayd
+    tag: 0.2.7
+    pullPolicy: IfNotPresent
+  # webhookrelay.com credentials
+  key: ""
+  secret: ""
+  bucket: ""
+
 # Slack notification
 slack:
   enabled: false
@@ -46,14 +57,28 @@ slack:
   channel: ""
 
 # Resources
-resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #  cpu: 100m
-  #  memory: 128Mi
-  #requests:
-  #  cpu: 100m
-  #  memory: 128Mi
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# Keel self-update
+# uncomment lines below if you want Keel to automaticly
+# self-update to the latest release version
+keel:
+  # keel policy (all/major/minor/patch/force)
+  policy: all
+  # trigger type, defaults to events such as pubsub, webhooks
+  trigger: poll
+  # polling schedule
+  pollSchedule: "@every 3m"
+  # images to track and update
+  images:
+   - repository: image.repository
+     tag: image.tag
+
+# NodeSelector
+nodeSelector: {}
