@@ -11,7 +11,7 @@ metadata:
   annotations:
     kubernetes.io/service-account.name: keel
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   template:
     metadata:
       labels:
@@ -65,3 +65,26 @@ spec:
             timeoutSeconds: 10
           resources:
 {{ toYaml .Values.resources | indent 12 }}
+{{- if .Values.webhookRelay.enabled }}
+        - name: webhookrelayd
+          image: "{{ .Values.webhookRelay.image.repository }}:{{ .Values.webhookRelay.image.tag }}"
+          imagePullPolicy: {{ .Values.webhookRelay.image.pullPolicy }}
+          command: ["/webhookrelayd"]
+          env:
+            - name: KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "name" . }}-webhookrelay
+                  key: key
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "name" . }}-webhookrelay
+                  key: secret
+            - name: BUCKET
+              value: "{{ .Values.webhookRelay.bucket }}"
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+{{- end }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}

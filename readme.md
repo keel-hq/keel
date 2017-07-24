@@ -9,11 +9,15 @@ Keel is a tool for automating [Kubernetes](https://kubernetes.io/) deployment up
 
 Keel provides several key features:
 
-* __Semver policies__ - specify update policy for each deployment individually.
+* __[Kubernetes](https://kubernetes.io/) and [Helm](https://helm.sh) providers__ - Keel has direct integrations with Kubernetes and Helm.
+
+* __No CLI/API__ - tired of `f***ctl` for everything? Keel doesn't have one. Gets job done through labels, annotations, charts.
+
+* __Semver policies__ - specify update policy for each deployment/Helm release individually.
 
 * __Automatic [Google Container Registry](https://cloud.google.com/container-registry/) configuration__ - Keel automatically sets up topic and subscriptions for your deployment images by periodically scanning your environment.
 
-* __[DockerHub Webhooks](https://docs.docker.com/docker-hub/webhooks/) support__ - Keel accepts dockerhub style webhooks on `/v1/webhooks/dockerhub` endpoint. Impacted deployments will be identified and updated.
+* __[Native, DockerHub and Quay webhooks](https://keel.sh/user-guide/triggers/#webhooks) support__ -  once webhook is received impacted deployments will be identified and updated.
 
 *  __[Polling](https://keel.sh/user-guide/#polling-deployment-example)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for new tags (if current tag is semver) or same tag SHA digest change (ie: `latest`).
 
@@ -40,7 +44,7 @@ Before starting to work on some big or medium features - raise an issue [here](h
 
 ### Developing Keel
 
-If you wish to work on Keel itself, you will need Go 1.8+ installed. Make sure you put Keel into correct Gopath and get remaining dependencies (some dependencies are already locked through glide). 
+If you wish to work on Keel itself, you will need Go 1.8+ installed. Make sure you put Keel into correct Gopath and `go build` (dependency management is done through Glide). 
 
 ### Roadmap
 
