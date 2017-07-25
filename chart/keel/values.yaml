@@ -4,15 +4,8 @@
 
 image:
   repository: karolisr/keel
-  tag: 0.4.0-rc.3
+  tag: 0.4.0
   pullPolicy: IfNotPresent
-
-# Service gets set only if webhook is enabled
-service:
-  name: ui
-  type: LoadBalancer
-  externalPort: 9300
-  internalPort: 9300
 
 # Polling is enabled by default,
 # you can disable it setting value below to false
@@ -31,39 +24,39 @@ gcr:
   pubSub:
     enabled: false
 
-# Webhook Endpoint
+# Webhook Notification
+# Remote webhook endpoint for notification delivery
 webhook:
   enabled: false
   endpoint: ""
 
-# Webhook Relay integration
-# If you don’t want to expose your Keel service, you can use https://webhookrelay.com/
-# which can deliver webhooks to your internal Keel service through Keel sidecar container.
-webhookRelay:
-  enabled: false
-  image:
-    repository: webhookrelay/webhookrelayd
-    tag: 0.2.7
-    pullPolicy: IfNotPresent
-  # webhookrelay.com credentials
-  key: ""
-  secret: ""
-  bucket: ""
-
-# Slack notification
+# Slack Notification
 slack:
   enabled: false
   token: ""
   channel: ""
 
-# Resources
-resources:
-  limits:
-    cpu: 100m
-    memory: 128Mi
-  requests:
-    cpu: 50m
-    memory: 64Mi
+# Keel service
+# Enable to receive webhooks from Docker registries
+service:
+  enabled: false
+  type: LoadBalancer
+  externalPort: 9300
+
+# Webhook Relay service
+# If you don’t want to expose your Keel service, you can use https://webhookrelay.com/
+# which can deliver webhooks to your internal Keel service through Keel sidecar container.
+webhookRelay:
+  enabled: false
+  # webhookrelay.com credentials
+  key: ""
+  secret: ""
+  bucket: ""
+  # webhookrelay docker image
+  image:
+    repository: webhookrelay/webhookrelayd
+    tag: 0.2.7
+    pullPolicy: IfNotPresent
 
 # Keel self-update
 # uncomment lines below if you want Keel to automaticly
@@ -79,6 +72,15 @@ keel:
   images:
    - repository: image.repository
      tag: image.tag
+
+# Resources
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
 
 # NodeSelector
 nodeSelector: {}

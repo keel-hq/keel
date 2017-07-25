@@ -56,11 +56,11 @@ spec:
               value: "{{ .Values.slack.channel }}"
 {{- end }}
           ports:
-            - containerPort: {{ .Values.service.internalPort }}
+            - containerPort: 9300
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.service.internalPort }}
+              port: 9300
             initialDelaySeconds: 30
             timeoutSeconds: 10
           resources:
