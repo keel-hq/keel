@@ -1,4 +1,4 @@
-{{- if .Values.webhook.enabled }}
+{{- if .Values.service.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -13,9 +13,9 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.externalPort }}
-      targetPort: {{ .Values.service.internalPort }}
+      targetPort: 9300
       protocol: TCP
-      name: {{ .Values.service.name }}
+      name: keel
   selector:
     app: {{ template "name" . }}
   sessionAffinity: None
