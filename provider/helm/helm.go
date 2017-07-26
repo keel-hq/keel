@@ -29,6 +29,9 @@ type Manager interface {
 // ProviderName - helm provider name
 const ProviderName = "helm"
 
+// DefaultUpdateTimeout - update timeout in seconds
+const DefaultUpdateTimeout = 300
+
 // UpdatePlan - release update plan
 type UpdatePlan struct {
 	Namespace string
@@ -326,7 +329,7 @@ func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_
 		helm.UpgradeRecreate(false),
 		helm.UpgradeForce(true),
 		helm.UpgradeDisableHooks(false),
-		helm.UpgradeTimeout(30),
+		helm.UpgradeTimeout(DefaultUpdateTimeout),
 		helm.ResetValues(false),
 		helm.ReuseValues(true),
 		helm.UpgradeWait(true))

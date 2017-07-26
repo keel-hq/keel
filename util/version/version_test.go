@@ -258,6 +258,13 @@ func TestNewAvailable(t *testing.T) {
 			wantNewAvailable: false,
 			wantErr:          true,
 		},
+		{
+			name:             "staging",
+			args:             args{current: "1.1.1", tags: []string{"v1.2.1-staging.1"}},
+			wantNewVersion:   "1.2.1-staging.1",
+			wantNewAvailable: true,
+			wantErr:          false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
