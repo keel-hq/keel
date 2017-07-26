@@ -1,6 +1,8 @@
 package pubsub
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/rusenask/keel/util/image"
@@ -45,5 +47,37 @@ func Test_isGoogleContainerRegistry(t *testing.T) {
 				t.Errorf("isGoogleContainerRegistry() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestClusterName(t *testing.T) {
+
+	cn := "my-cluster-x"
+
+	handler := func(resp http.ResponseWriter, req *http.Request) {
+		resp.WriteHeader(200)
+		resp.Write([]byte(cn))
+	}
+
+	// create test server with handler
+	ts := httptest.NewServer(http.HandlerFunc(handler))
+	defer ts.Close()
+
+	name, err := clusterName(ts.URL)
+	if err != nil {
+		t.Errorf("unexpected error while getting cluster name")
+	}
+
+	if name != cn {
+		t.Errorf("unexpected cluster name: %s", name)
+	}
+}
+
+func TestGetContainerRegistryURI(t *testing.T) {
+
+	name := containerRegistrySubName("project-1", "topic-1")
+
+	if name != "keel-unknown-project-1-topic-1" {
+		t.Errorf("unexpected topic name: %s", name)
 	}
 }
