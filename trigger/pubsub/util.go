@@ -9,7 +9,7 @@ import (
 )
 
 // MetadataEndpoint - default metadata server for gcloud pubsub
-const MetadataEndpoint = "metadata/computeMetadata/v1/instance/attributes/cluster-name"
+const MetadataEndpoint = "http://metadata/computeMetadata/v1/instance/attributes/cluster-name"
 
 func containerRegistryURI(projectID, registry string) string {
 	return registry + "%2F" + projectID
