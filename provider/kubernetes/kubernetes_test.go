@@ -696,3 +696,63 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 	}
 
 }
+
+func TestTrackedImages(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	fp.deploymentList = &v1beta1.DeploymentList{
+		Items: []v1beta1.Deployment{
+			v1beta1.Deployment{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{
+					Name:      "dep-1",
+					Namespace: "xxxx",
+					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+				},
+				v1beta1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								v1.Container{
+									Image: "gcr.io/v2-namespace/hello-world:1.1",
+								},
+							},
+							ImagePullSecrets: []v1.LocalObjectReference{
+								v1.LocalObjectReference{
+									Name: "very-secret",
+								},
+							},
+						},
+					},
+				},
+				v1beta1.DeploymentStatus{},
+			},
+		},
+	}
+
+	provider, err := NewProvider(fp, &fakeSender{})
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	imgs, err := provider.TrackedImages()
+	if err != nil {
+		t.Errorf("failed to get image: %s", err)
+	}
+	if len(imgs) != 1 {
+		t.Errorf("expected to find 1 image, got: %d", len(imgs))
+	}
+
+	if imgs[0].Credentials.Secrets[0] != "very-secret" {
+		t.Errorf("could not find image pull secret")
+	}
+}
