@@ -13,7 +13,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-const dockerConfigJSONKey = ".dockerconfigjson"
+// const dockerConfigJSONKey = ".dockerconfigjson"
+const dockerConfigJSONKey = ".dockercfg"
 
 var (
 	ErrNamespaceNotSpecified = errors.New("namespace not specified")
@@ -71,14 +72,25 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 			continue
 		}
 
-		secretDataBts := secret.Data[dockerConfigJSONKey]
-		dockerCfg, err := decodeSecret(secretDataBts)
-		if err != nil {
+		secretDataBts, ok := secret.Data[dockerConfigJSONKey]
+		if !ok {
 			log.WithFields(log.Fields{
 				"image":      image.Image.Repository(),
 				"namespace":  image.Namespace,
 				"secret_ref": secretRef,
-				"error":      err,
+				"type":       secret.Type,
+				"data":       secret.Data,
+			}).Warn("secrets.defaultGetter: secret is missing key '.dockerconfigjson', ensure that key exists")
+			continue
+		}
+		dockerCfg, err := decodeSecret(secretDataBts)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"image":       image.Image.Repository(),
+				"namespace":   image.Namespace,
+				"secret_ref":  secretRef,
+				"secret_data": string(secretDataBts),
+				"error":       err,
 			}).Error("secrets.defaultGetter: failed to decode secret")
 			continue
 		}
