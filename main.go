@@ -16,6 +16,7 @@ import (
 	"github.com/rusenask/keel/provider/helm"
 	"github.com/rusenask/keel/provider/kubernetes"
 	"github.com/rusenask/keel/registry"
+	"github.com/rusenask/keel/secrets"
 	"github.com/rusenask/keel/trigger/http"
 	"github.com/rusenask/keel/trigger/poll"
 	"github.com/rusenask/keel/trigger/pubsub"
@@ -97,7 +98,9 @@ func main() {
 	// setting up providers
 	providers := setupProviders(implementer, sender)
 
-	teardownTriggers := setupTriggers(ctx, providers)
+	secretsGetter := secrets.NewGetter(implementer)
+
+	teardownTriggers := setupTriggers(ctx, providers, secretsGetter)
 
 	teardownBot, err := setupBot(implementer)
 	if err != nil {
@@ -197,7 +200,7 @@ func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
 // should go through all providers (or not if there is a reason) and submit events)
-func setupTriggers(ctx context.Context, providers provider.Providers) (teardown func()) {
+func setupTriggers(ctx context.Context, providers provider.Providers, secretsGetter secrets.Getter) (teardown func()) {
 
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{
@@ -234,7 +237,7 @@ func setupTriggers(ctx context.Context, providers provider.Providers) (teardown 
 
 		registryClient := registry.New()
 		watcher := poll.NewRepositoryWatcher(providers, registryClient)
-		pollManager := poll.NewPollManager(providers, watcher)
+		pollManager := poll.NewPollManager(providers, watcher, secretsGetter)
 
 		// start poll manager, will finish with ctx
 		go watcher.Start(ctx)
