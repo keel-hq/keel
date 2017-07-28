@@ -110,6 +110,8 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 			// trigger type, we only care for "poll" type triggers
 			trigger := policies.GetTriggerPolicy(labels)
 
+			secrets := getImagePullSecrets(&deployment)
+
 			images := getImages(&deployment)
 			for _, img := range images {
 				ref, err := image.Parse(img)
@@ -127,6 +129,8 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 					PollSchedule: schedule,
 					Trigger:      trigger,
 					Provider:     ProviderName,
+					Namespace:    deployment.Namespace,
+					Secrets:      secrets,
 				})
 			}
 		}
@@ -282,6 +286,14 @@ func getImages(deployment *v1beta1.Deployment) []string {
 	}
 
 	return images
+}
+
+func getImagePullSecrets(deployment *v1beta1.Deployment) []string {
+	var secrets []string
+	for _, s := range deployment.Spec.Template.Spec.ImagePullSecrets {
+		secrets = append(secrets, s.Name)
+	}
+	return secrets
 }
 
 // applies required changes for deployment, looks for images with tag 0.0.0 and
