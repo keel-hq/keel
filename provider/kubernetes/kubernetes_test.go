@@ -18,6 +18,8 @@ type fakeImplementer struct {
 
 	// stores value of an updated deployment
 	updated *v1beta1.Deployment
+
+	availableSecret *v1.Secret
 }
 
 func (i *fakeImplementer) Namespaces() (*v1.NamespaceList, error) {
@@ -35,6 +37,10 @@ func (i *fakeImplementer) Deployments(namespace string) (*v1beta1.DeploymentList
 func (i *fakeImplementer) Update(deployment *v1beta1.Deployment) error {
 	i.updated = deployment
 	return nil
+}
+
+func (i *fakeImplementer) Secret(namespace, name string) (*v1.Secret, error) {
+	return i.availableSecret, nil
 }
 
 type fakeSender struct {
@@ -752,7 +758,7 @@ func TestTrackedImages(t *testing.T) {
 		t.Errorf("expected to find 1 image, got: %d", len(imgs))
 	}
 
-	if imgs[0].Credentials.Secrets[0] != "very-secret" {
+	if imgs[0].Secrets[0] != "very-secret" {
 		t.Errorf("could not find image pull secret")
 	}
 }
