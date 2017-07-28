@@ -109,7 +109,7 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 				"schedule": trackedImage.PollSchedule,
 				"image":    trackedImage.Image.Remote(),
 			}).Error("trigger.poll.manager: failed to start watching repository")
-			return err
+			// continue processing other images
 		}
 	}
 	return nil
