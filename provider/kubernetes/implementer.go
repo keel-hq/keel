@@ -19,6 +19,7 @@ type Implementer interface {
 	Deployment(namespace, name string) (*v1beta1.Deployment, error)
 	Deployments(namespace string) (*v1beta1.DeploymentList, error)
 	Update(deployment *v1beta1.Deployment) error
+	Secret(namespace, name string) (*v1.Secret, error)
 }
 
 // KubernetesImplementer - default kubernetes client implementer, uses
@@ -98,4 +99,8 @@ func (i *KubernetesImplementer) Deployments(namespace string) (*v1beta1.Deployme
 func (i *KubernetesImplementer) Update(deployment *v1beta1.Deployment) error {
 	_, err := i.client.Extensions().Deployments(deployment.Namespace).Update(deployment)
 	return err
+}
+
+func (i *KubernetesImplementer) Secret(namespace, name string) (*v1.Secret, error) {
+	return i.client.Secrets(namespace).Get(name, meta_v1.GetOptions{})
 }
