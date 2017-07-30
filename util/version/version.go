@@ -19,6 +19,15 @@ var ErrVersionTagMissing = errors.New("version tag is missing")
 // being parsed.
 var ErrInvalidSemVer = errors.New("invalid semantic version")
 
+// MustParse - must parse version, if fails - panics
+func MustParse(version string) *types.Version {
+	ver, err := GetVersion(version)
+	if err != nil {
+		panic(err)
+	}
+	return ver
+}
+
 // GetVersion - parse version
 func GetVersion(version string) (*types.Version, error) {
 
@@ -29,11 +38,6 @@ func GetVersion(version string) (*types.Version, error) {
 		}
 		return nil, err
 	}
-	// TODO: probably make it customazible
-	prefix := ""
-	if strings.HasPrefix(version, "v") {
-		prefix = "v"
-	}
 
 	return &types.Version{
 		Major:      v.Major(),
@@ -41,7 +45,7 @@ func GetVersion(version string) (*types.Version, error) {
 		Patch:      v.Patch(),
 		PreRelease: string(v.Prerelease()),
 		Metadata:   v.Metadata(),
-		Prefix:     prefix,
+		Original:   v.Original(),
 	}, nil
 }
 
