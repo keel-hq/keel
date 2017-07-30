@@ -8,7 +8,6 @@ import (
 	"github.com/rusenask/keel/util/image"
 
 	"k8s.io/helm/pkg/chartutil"
-	// hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -16,7 +15,7 @@ import (
 var ErrKeelConfigNotFound = errors.New("keel configuration not found")
 
 // getImages - get images from chart values
-func getImages(vals chartutil.Values) ([]*image.Reference, error) {
+func getImages(vals chartutil.Values) ([]*types.TrackedImage, error) {
 	keelCfg, err := getKeelConfig(vals)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -26,7 +25,7 @@ func getImages(vals chartutil.Values) ([]*image.Reference, error) {
 		return nil, ErrKeelConfigNotFound
 	}
 
-	var images []*image.Reference
+	var images []*types.TrackedImage
 
 	for _, imageDetails := range keelCfg.Images {
 		imageRef, err := parseImage(vals, &imageDetails)
@@ -39,7 +38,26 @@ func getImages(vals chartutil.Values) ([]*image.Reference, error) {
 			continue
 		}
 
-		images = append(images, imageRef)
+		trackedImage := &types.TrackedImage{
+			Image:        imageRef,
+			PollSchedule: keelCfg.PollSchedule,
+			Trigger:      keelCfg.Trigger,
+		}
+
+		if imageDetails.ImagePullSecretPath != "" {
+			secretName, err := getValueAsString(vals, imageDetails.ImagePullSecretPath)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":           err,
+					"repository_name": imageDetails.RepositoryPath,
+					"repository_tag":  imageDetails.TagPath,
+				}).Warn("provider.helm: image pull secret was defined but failed to get it from values.yaml")
+			} else {
+				trackedImage.Secrets = []string{secretName}
+			}
+		}
+
+		images = append(images, trackedImage)
 	}
 
 	return images, nil
@@ -54,7 +72,7 @@ func getPlanValues(newVersion *types.Version, ref *image.Reference, imageDetails
 	return imageDetails.TagPath, newVersion.String()
 }
 
-func getUnversionedPlanValues(newTag string, ref *image.Reference, imageDetails *ImageDetails) (path, value string) {	
+func getUnversionedPlanValues(newTag string, ref *image.Reference, imageDetails *ImageDetails) (path, value string) {
 	// if tag is not supplied, then user specified full image name
 	if imageDetails.TagPath == "" {
 		return imageDetails.RepositoryPath, getUpdatedImage(ref, newTag)
