@@ -318,6 +318,64 @@ func TestProcessEvent(t *testing.T) {
 	}
 }
 
+func TestProcessEventBuildNumber(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	fp.deploymentList = &v1beta1.DeploymentList{
+		Items: []v1beta1.Deployment{
+			v1beta1.Deployment{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{
+					Name:      "deployment-1",
+					Namespace: "xxxx",
+					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+				},
+				v1beta1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								v1.Container{
+									Image: "gcr.io/v2-namespace/hello-world:10",
+								},
+							},
+						},
+					},
+				},
+				v1beta1.DeploymentStatus{},
+			},
+		},
+	}
+
+	provider, err := NewProvider(fp, &fakeSender{})
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	repo := types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "11",
+	}
+
+	event := &types.Event{Repository: repo}
+	_, err = provider.processEvent(event)
+	if err != nil {
+		t.Errorf("got error while processing event: %s", err)
+	}
+
+	if fp.updated.Spec.Template.Spec.Containers[0].Image != repo.Name+":"+repo.Tag {
+		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Spec.Template.Spec.Containers[0].Image)
+	}
+}
+
 // Test to check how many deployments are "impacted" if we have sidecar container
 func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 	fp := &fakeImplementer{}

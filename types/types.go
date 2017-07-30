@@ -50,14 +50,14 @@ type Version struct {
 	PreRelease string
 	Metadata   string
 
-	Prefix string // v prefix
+	Original string
 }
 
 func (v Version) String() string {
-	var buf bytes.Buffer
-	if v.Prefix != "" {
-		fmt.Fprintf(&buf, v.Prefix)
+	if v.Original != "" {
+		return v.Original
 	}
+	var buf bytes.Buffer
 
 	fmt.Fprintf(&buf, "%d.%d.%d", v.Major, v.Minor, v.Patch)
 	if v.PreRelease != "" {
@@ -68,6 +68,7 @@ func (v Version) String() string {
 	}
 
 	return buf.String()
+
 }
 
 // TriggerType - trigger types
