@@ -60,7 +60,7 @@ func TestVersion_String(t *testing.T) {
 		Patch      int64
 		PreRelease string
 		Metadata   string
-		Prefix     string
+		Original   string
 	}
 	tests := []struct {
 		name   string
@@ -70,19 +70,20 @@ func TestVersion_String(t *testing.T) {
 		{
 			name: "semver with v",
 			fields: fields{
-				Major:  1,
-				Minor:  1,
-				Patch:  0,
-				Prefix: "v",
+				Major:    1,
+				Minor:    1,
+				Patch:    0,
+				Original: "v1.1.0",
 			},
 			want: "v1.1.0",
 		},
 		{
 			name: "semver standard",
 			fields: fields{
-				Major: 1,
-				Minor: 1,
-				Patch: 5,
+				Major:    1,
+				Minor:    1,
+				Patch:    5,
+				Original: "1.1.5",
 			},
 			want: "1.1.5",
 		},
@@ -95,7 +96,7 @@ func TestVersion_String(t *testing.T) {
 				Patch:      tt.fields.Patch,
 				PreRelease: tt.fields.PreRelease,
 				Metadata:   tt.fields.Metadata,
-				Prefix:     tt.fields.Prefix,
+				Original:   tt.fields.Original,
 			}
 			if got := v.String(); got != tt.want {
 				t.Errorf("Version.String() = %v, want %v", got, tt.want)
