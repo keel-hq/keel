@@ -10,6 +10,13 @@ import (
 	"testing"
 )
 
+type FakeSecretsGetter struct {
+}
+
+func (g *FakeSecretsGetter) Get(image *types.TrackedImage) (*types.Credentials, error) {
+	return &types.Credentials{}, nil
+}
+
 func TestCheckDeployment(t *testing.T) {
 	// fake provider listening for events
 	imgA, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.1")
@@ -41,7 +48,7 @@ func TestCheckDeployment(t *testing.T) {
 
 	watcher := NewRepositoryWatcher(providers, frc)
 
-	pm := NewPollManager(providers, watcher)
+	pm := NewPollManager(providers, watcher, &FakeSecretsGetter{})
 
 	imageA := "gcr.io/v2-namespace/hello-world:1.1.1"
 	imageB := "gcr.io/v2-namespace/greetings-world:1.1.1"

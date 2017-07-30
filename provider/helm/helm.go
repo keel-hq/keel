@@ -70,8 +70,9 @@ type KeelChartConfig struct {
 
 // ImageDetails - image details
 type ImageDetails struct {
-	RepositoryPath string `json:"repository"`
-	TagPath        string `json:"tag"`
+	RepositoryPath      string `json:"repository"`
+	TagPath             string `json:"tag"`
+	ImagePullSecretPath string `json:"imagePullSecret"`
 }
 
 // Provider - helm provider, responsible for managing release updates
@@ -161,12 +162,9 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		}
 
 		for _, img := range releaseImages {
-			trackedImages = append(trackedImages, &types.TrackedImage{
-				Image:        img,
-				PollSchedule: cfg.PollSchedule,
-				Trigger:      cfg.Trigger,
-				Provider:     ProviderName,
-			})
+			img.Namespace = release.Namespace
+			img.Provider = ProviderName
+			trackedImages = append(trackedImages, img)
 		}
 
 	}

@@ -18,6 +18,8 @@ type fakeImplementer struct {
 
 	// stores value of an updated deployment
 	updated *v1beta1.Deployment
+
+	availableSecret *v1.Secret
 }
 
 func (i *fakeImplementer) Namespaces() (*v1.NamespaceList, error) {
@@ -35,6 +37,10 @@ func (i *fakeImplementer) Deployments(namespace string) (*v1beta1.DeploymentList
 func (i *fakeImplementer) Update(deployment *v1beta1.Deployment) error {
 	i.updated = deployment
 	return nil
+}
+
+func (i *fakeImplementer) Secret(namespace, name string) (*v1.Secret, error) {
+	return i.availableSecret, nil
 }
 
 type fakeSender struct {
@@ -695,4 +701,64 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 		t.Errorf("couldn't find expected deployment in impacted deployment list")
 	}
 
+}
+
+func TestTrackedImages(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	fp.deploymentList = &v1beta1.DeploymentList{
+		Items: []v1beta1.Deployment{
+			v1beta1.Deployment{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{
+					Name:      "dep-1",
+					Namespace: "xxxx",
+					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+				},
+				v1beta1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								v1.Container{
+									Image: "gcr.io/v2-namespace/hello-world:1.1",
+								},
+							},
+							ImagePullSecrets: []v1.LocalObjectReference{
+								v1.LocalObjectReference{
+									Name: "very-secret",
+								},
+							},
+						},
+					},
+				},
+				v1beta1.DeploymentStatus{},
+			},
+		},
+	}
+
+	provider, err := NewProvider(fp, &fakeSender{})
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	imgs, err := provider.TrackedImages()
+	if err != nil {
+		t.Errorf("failed to get image: %s", err)
+	}
+	if len(imgs) != 1 {
+		t.Errorf("expected to find 1 image, got: %d", len(imgs))
+	}
+
+	if imgs[0].Secrets[0] != "very-secret" {
+		t.Errorf("could not find image pull secret")
+	}
 }

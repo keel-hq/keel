@@ -169,6 +169,8 @@ func (w *RepositoryWatcher) addJob(ref *image.Reference, registryUsername, regis
 		Registry: reg,
 		Name:     ref.ShortName(),
 		Tag:      ref.Tag(),
+		Username: registryUsername,
+		Password: registryPassword,
 	})
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -243,6 +245,8 @@ func (j *WatchTagJob) Run() {
 		Registry: reg,
 		Name:     j.details.imageRef.ShortName(),
 		Tag:      j.details.imageRef.Tag(),
+		Username: j.details.registryUsername,
+		Password: j.details.registryPassword,
 	})
 
 	if err != nil {
@@ -310,6 +314,8 @@ func (j *WatchRepositoryTagsJob) Run() {
 		Registry: reg,
 		Name:     j.details.imageRef.ShortName(),
 		Tag:      j.details.latest,
+		Username: j.details.registryUsername,
+		Password: j.details.registryPassword,
 	})
 
 	if err != nil {
