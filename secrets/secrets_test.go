@@ -1,6 +1,8 @@
 package secrets
 
 import (
+	"fmt"
+
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/image"
 
@@ -45,4 +47,33 @@ func TestGetSecret(t *testing.T) {
 		t.Errorf("unexpected pass: %s", creds.Password)
 	}
 
+}
+
+func TestGetSecretNotFound(t *testing.T) {
+	imgRef, _ := image.Parse("karolisr/webhook-demo:0.0.11")
+
+	impl := &testutil.FakeK8sImplementer{
+		Error: fmt.Errorf("some error"),
+	}
+
+	getter := NewGetter(impl)
+
+	trackedImage := &types.TrackedImage{
+		Image:     imgRef,
+		Namespace: "default",
+		Secrets:   []string{"myregistrysecret"},
+	}
+
+	creds, err := getter.Get(trackedImage)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if creds.Username != "" {
+		t.Errorf("expected empty username")
+	}
+
+	if creds.Password != "" {
+		t.Errorf("expected empty password")
+	}
 }

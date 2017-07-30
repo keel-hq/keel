@@ -16,6 +16,9 @@ type FakeK8sImplementer struct {
 	Updated *v1beta1.Deployment
 
 	AvailableSecret *v1.Secret
+
+	// error to return
+	Error error
 }
 
 func (i *FakeK8sImplementer) Namespaces() (*v1.NamespaceList, error) {
@@ -36,5 +39,8 @@ func (i *FakeK8sImplementer) Update(deployment *v1beta1.Deployment) error {
 }
 
 func (i *FakeK8sImplementer) Secret(namespace, name string) (*v1.Secret, error) {
+	if i.Error != nil {
+		return nil, i.Error
+	}
 	return i.AvailableSecret, nil
 }
