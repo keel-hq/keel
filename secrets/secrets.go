@@ -49,10 +49,6 @@ func (g *DefaultGetter) Get(image *types.TrackedImage) (*types.Credentials, erro
 			return nil, err
 		}
 
-		log.WithFields(log.Fields{
-			"secrets": secrets,
-		}).Info("SECRETS PROVIDER: HELM SECRETS LOOKED UP")
-
 		// populating secrets
 		image.Secrets = secrets
 	}
@@ -156,12 +152,16 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 			if h == image.Image.Registry() {
 				credentials.Username = auth.Username
 				credentials.Password = auth.Password
+
+				log.WithFields(log.Fields{
+					"namespace": image.Namespace,
+					"provider":  image.Provider,
+					"registry":  image.Image.Registry(),
+					"image":     image.Image.Repository(),
+				}).Info("secrets.defaultGetter: secret looked up successfully")
+
 				return credentials, nil
 			}
-			log.WithFields(log.Fields{
-				"registry": registry,
-				"want":     image.Image.Registry(),
-			}).Info("scanning registries")
 		}
 
 	}

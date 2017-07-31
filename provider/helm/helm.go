@@ -239,6 +239,7 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 
 			log.WithFields(log.Fields{
 				"error": err,
+				"tag":   event.Repository.Tag,
 			}).Error("provider.helm: failed to parse version")
 			continue
 		}
