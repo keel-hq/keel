@@ -27,56 +27,9 @@ keel:
 
 `
 
-var chartValuesBSecret = `
---- 
-image: 
-  imagePullSecret: muchsecrecy
-  repository: gcr.io/v2-namespace/hello-world
-  tag: "1.1.0"
-keel: 
-  images: 
-    - 
-      imagePullSecret: image.imagePullSecret
-      repository: image.repository
-      tag: image.tag
-  policy: all
-  trigger: poll
-name: "al Rashid"
-where: 
-  city: Basrah
-  title: caliph`
-
-var chartValuesBSecretNoPath = `
---- 
-image:   
-  repository: gcr.io/v2-namespace/hello-world
-  tag: "1.1.0"
-keel: 
-  images: 
-    - 
-      imagePullSecret: image.imagePullSecret
-      repository: image.repository
-      tag: image.tag
-  policy: all
-  trigger: poll
-name: "al Rashid"
-where: 
-  city: Basrah
-  title: caliph`
-
 func Test_getImages(t *testing.T) {
 	vals, _ := chartutil.ReadValues([]byte(chartValuesA))
 	img, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.0")
-
-	valsSecret, err := chartutil.ReadValues([]byte(chartValuesBSecret))
-	if err != nil {
-		t.Fatalf("failed to parse chartValuesBSecret")
-	}
-
-	valsSecretNoPath, err := chartutil.ReadValues([]byte(chartValuesBSecretNoPath))
-	if err != nil {
-		t.Fatalf("failed to parse chartValuesBSecretNoPath")
-	}
 
 	type args struct {
 		vals chartutil.Values
@@ -91,33 +44,6 @@ func Test_getImages(t *testing.T) {
 			name: "hello-world image",
 			args: args{
 				vals: vals,
-			},
-			want: []*types.TrackedImage{
-				&types.TrackedImage{
-					Image:   img,
-					Trigger: types.TriggerTypePoll,
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "hello-world image with secrets",
-			args: args{
-				vals: valsSecret,
-			},
-			want: []*types.TrackedImage{
-				&types.TrackedImage{
-					Image:   img,
-					Trigger: types.TriggerTypePoll,
-					Secrets: []string{"muchsecrecy"},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "hello-world image with secret but no actual value",
-			args: args{
-				vals: valsSecretNoPath,
 			},
 			want: []*types.TrackedImage{
 				&types.TrackedImage{

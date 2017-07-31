@@ -1,8 +1,6 @@
 package helm
 
 import (
-	"fmt"
-
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/image"
 
@@ -54,7 +52,6 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 
 	// checking for impacted images
 	for _, imageDetails := range keelCfg.Images {
-		fmt.Println(imageDetails.TagPath)
 
 		imageRef, err := parseImage(vals, &imageDetails)
 		if err != nil {
@@ -65,8 +62,6 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 			}).Error("provider.helm: failed to parse image")
 			continue
 		}
-
-		fmt.Println(imageRef.Repository())
 
 		if imageRef.Repository() != eventRepoRef.Repository() {
 			log.WithFields(log.Fields{

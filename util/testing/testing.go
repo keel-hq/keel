@@ -17,6 +17,8 @@ type FakeK8sImplementer struct {
 
 	AvailableSecret *v1.Secret
 
+	AvailablePods *v1.PodList
+
 	// error to return
 	Error error
 }
@@ -43,4 +45,8 @@ func (i *FakeK8sImplementer) Secret(namespace, name string) (*v1.Secret, error) 
 		return nil, i.Error
 	}
 	return i.AvailableSecret, nil
+}
+
+func (i *FakeK8sImplementer) Pods(namespace, labelSelector string) (*v1.PodList, error) {
+	return i.AvailablePods, nil
 }

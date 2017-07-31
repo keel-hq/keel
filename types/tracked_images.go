@@ -17,6 +17,7 @@ type TrackedImage struct {
 	Provider     string
 	Namespace    string
 	Secrets      []string
+	Meta         map[string]string // metadata supplied by providers
 }
 
 func (i TrackedImage) String() string {
