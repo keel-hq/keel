@@ -20,6 +20,7 @@ type Implementer interface {
 	Deployments(namespace string) (*v1beta1.DeploymentList, error)
 	Update(deployment *v1beta1.Deployment) error
 	Secret(namespace, name string) (*v1.Secret, error)
+	Pods(namespace, labelSelector string) (*v1.PodList, error)
 }
 
 // KubernetesImplementer - default kubernetes client implementer, uses
@@ -101,6 +102,13 @@ func (i *KubernetesImplementer) Update(deployment *v1beta1.Deployment) error {
 	return err
 }
 
+// Secret - get secret
 func (i *KubernetesImplementer) Secret(namespace, name string) (*v1.Secret, error) {
+
 	return i.client.Secrets(namespace).Get(name, meta_v1.GetOptions{})
+}
+
+// Pods - get pods
+func (i *KubernetesImplementer) Pods(namespace, labelSelector string) (*v1.PodList, error) {
+	return i.client.Pods(namespace).List(meta_v1.ListOptions{LabelSelector: labelSelector})
 }
