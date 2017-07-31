@@ -152,7 +152,6 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 
 	// All messages past this point are directed to @gopher itself
 	if !b.isBotMessage(event, eventText) {
-		log.Info("not a bot message")
 		return
 	}
 

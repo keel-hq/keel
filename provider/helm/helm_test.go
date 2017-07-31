@@ -1,7 +1,6 @@
 package helm
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -90,7 +89,8 @@ keel:
 				&hapi_release5.Release{
 					Name: "release-1",
 					Chart: &chart.Chart{
-						Values: &chart.Config{Raw: chartVals},
+						Values:   &chart.Config{Raw: chartVals},
+						Metadata: &chart.Metadata{Name: "app-x"},
 					},
 					Config: &chart.Config{Raw: ""},
 				},
@@ -116,8 +116,6 @@ keel:
 		if err != nil {
 			t.Errorf("failed to get image paths: %s", err)
 		}
-
-		fmt.Println(cfg)
 
 		if cfg.Policy == types.PolicyTypeAll {
 			policyFound = true
@@ -159,7 +157,8 @@ keel:
 				&hapi_release5.Release{
 					Name: "release-1",
 					Chart: &chart.Chart{
-						Values: &chart.Config{Raw: chartVals},
+						Values:   &chart.Config{Raw: chartVals},
+						Metadata: &chart.Metadata{Name: "app-x"},
 					},
 					Config: &chart.Config{Raw: ""},
 				},
@@ -206,7 +205,8 @@ keel:
 				&hapi_release5.Release{
 					Name: "release-1",
 					Chart: &chart.Chart{
-						Values: &chart.Config{Raw: chartVals},
+						Values:   &chart.Config{Raw: chartVals},
+						Metadata: &chart.Metadata{Name: "app-x"},
 					},
 					Config: &chart.Config{Raw: ""},
 				},

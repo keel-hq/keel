@@ -88,21 +88,18 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 
 		// anonymous credentials
 		creds := &types.Credentials{}
-
-		if trackedImage.Namespace != "" && len(trackedImage.Secrets) > 0 {
-			imageCreds, err := s.secretsGetter.Get(trackedImage)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":   err,
-					"secrets": trackedImage.Secrets,
-					"image":   trackedImage.Image.Remote(),
-				}).Error("trigger.poll.manager: failed to get authentication credentials")
-			} else {
-				creds = imageCreds
-			}
+		imageCreds, err := s.secretsGetter.Get(trackedImage)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":   err,
+				"secrets": trackedImage.Secrets,
+				"image":   trackedImage.Image.Remote(),
+			}).Error("trigger.poll.manager: failed to get authentication credentials")
+		} else {
+			creds = imageCreds
 		}
 
-		err := s.watcher.Watch(trackedImage.Image.Remote(), trackedImage.PollSchedule, creds.Username, creds.Password)
+		err = s.watcher.Watch(trackedImage.Image.Remote(), trackedImage.PollSchedule, creds.Username, creds.Password)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":    err,

@@ -16,6 +16,8 @@ type fakeImplementer struct {
 	deployment     *v1beta1.Deployment
 	deploymentList *v1beta1.DeploymentList
 
+	podList *v1.PodList
+
 	// stores value of an updated deployment
 	updated *v1beta1.Deployment
 
@@ -41,6 +43,10 @@ func (i *fakeImplementer) Update(deployment *v1beta1.Deployment) error {
 
 func (i *fakeImplementer) Secret(namespace, name string) (*v1.Secret, error) {
 	return i.availableSecret, nil
+}
+
+func (i *fakeImplementer) Pods(namespace, labelSelector string) (*v1.PodList, error) {
+	return i.podList, nil
 }
 
 type fakeSender struct {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/url"
 
+	"github.com/rusenask/keel/provider/helm"
 	"github.com/rusenask/keel/provider/kubernetes"
 	"github.com/rusenask/keel/types"
 
@@ -40,10 +41,49 @@ func (g *DefaultGetter) Get(image *types.TrackedImage) (*types.Credentials, erro
 		return nil, ErrNamespaceNotSpecified
 	}
 
-	if len(image.Secrets) == 0 {
-		return nil, ErrSecretsNotSpecified
+	switch image.Provider {
+	case helm.ProviderName:
+		// looking up secrets based on selector
+		secrets, err := g.lookupSecrets(image)
+		if err != nil {
+			return nil, err
+		}
+
+		// populating secrets
+		image.Secrets = secrets
 	}
+
 	return g.getCredentialsFromSecret(image)
+}
+
+func (g *DefaultGetter) lookupSecrets(image *types.TrackedImage) ([]string, error) {
+	secrets := []string{}
+
+	selector, ok := image.Meta["selector"]
+	if !ok {
+		// nothing
+		return secrets, nil
+	}
+
+	podList, err := g.kubernetesImplementer.Pods(image.Namespace, selector)
+	if err != nil {
+		return secrets, err
+	}
+
+	for _, pod := range podList.Items {
+		podSecrets := getPodImagePullSecrets(&pod)
+		secrets = append(secrets, podSecrets...)
+	}
+
+	return secrets, nil
+}
+
+func getPodImagePullSecrets(pod *v1.Pod) []string {
+	var secrets []string
+	for _, s := range pod.Spec.ImagePullSecrets {
+		secrets = append(secrets, s.Name)
+	}
+	return secrets
 }
 
 func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*types.Credentials, error) {
@@ -112,12 +152,16 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 			if h == image.Image.Registry() {
 				credentials.Username = auth.Username
 				credentials.Password = auth.Password
+
+				log.WithFields(log.Fields{
+					"namespace": image.Namespace,
+					"provider":  image.Provider,
+					"registry":  image.Image.Registry(),
+					"image":     image.Image.Repository(),
+				}).Info("secrets.defaultGetter: secret looked up successfully")
+
 				return credentials, nil
 			}
-			log.WithFields(log.Fields{
-				"registry": registry,
-				"want":     image.Image.Registry(),
-			}).Info("scanning registries")
 		}
 
 	}
