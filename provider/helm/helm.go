@@ -70,9 +70,8 @@ type KeelChartConfig struct {
 
 // ImageDetails - image details
 type ImageDetails struct {
-	RepositoryPath      string `json:"repository"`
-	TagPath             string `json:"tag"`
-	ImagePullSecretPath string `json:"imagePullSecret"`
+	RepositoryPath string `json:"repository"`
+	TagPath        string `json:"tag"`
 }
 
 // Provider - helm provider, responsible for managing release updates
@@ -150,6 +149,8 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		if cfg.PollSchedule == "" {
 			cfg.PollSchedule = types.KeelPollDefaultSchedule
 		}
+		// used to check pod secrets
+		selector := fmt.Sprintf("app=%s,release=%s", release.Chart.Metadata.Name, release.Name)
 
 		releaseImages, err := getImages(vals)
 		if err != nil {
@@ -162,6 +163,9 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		}
 
 		for _, img := range releaseImages {
+			img.Meta = map[string]string{
+				"selector": selector,
+			}
 			img.Namespace = release.Namespace
 			img.Provider = ProviderName
 			trackedImages = append(trackedImages, img)

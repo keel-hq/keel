@@ -12,6 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// ErrKeelConfigNotFound - default error when keel configuration for chart is not defined
 var ErrKeelConfigNotFound = errors.New("keel configuration not found")
 
 // getImages - get images from chart values
@@ -42,19 +43,6 @@ func getImages(vals chartutil.Values) ([]*types.TrackedImage, error) {
 			Image:        imageRef,
 			PollSchedule: keelCfg.PollSchedule,
 			Trigger:      keelCfg.Trigger,
-		}
-
-		if imageDetails.ImagePullSecretPath != "" {
-			secretName, err := getValueAsString(vals, imageDetails.ImagePullSecretPath)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":           err,
-					"repository_name": imageDetails.RepositoryPath,
-					"repository_tag":  imageDetails.TagPath,
-				}).Warn("provider.helm: image pull secret was defined but failed to get it from values.yaml")
-			} else {
-				trackedImage.Secrets = []string{secretName}
-			}
 		}
 
 		images = append(images, trackedImage)
