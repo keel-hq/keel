@@ -1,9 +1,12 @@
 package secrets
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/rusenask/keel/provider/helm"
 	"github.com/rusenask/keel/provider/kubernetes"
@@ -72,7 +75,26 @@ func (g *DefaultGetter) lookupSecrets(image *types.TrackedImage) ([]string, erro
 
 	for _, pod := range podList.Items {
 		podSecrets := getPodImagePullSecrets(&pod)
+		log.WithFields(log.Fields{
+			"namespace":    image.Namespace,
+			"provider":     image.Provider,
+			"registry":     image.Image.Registry(),
+			"image":        image.Image.Repository(),
+			"pod_selector": selector,
+			"secrets":      podSecrets,
+		}).Info("secrets.defaultGetter.lookupSecrets: pod secrets found")
 		secrets = append(secrets, podSecrets...)
+	}
+
+	if len(secrets) == 0 {
+		log.WithFields(log.Fields{
+			"namespace":    image.Namespace,
+			"provider":     image.Provider,
+			"registry":     image.Image.Registry(),
+			"image":        image.Image.Repository(),
+			"pod_selector": selector,
+			"pods_checked": len(podList.Items),
+		}).Info("secrets.defaultGetter.lookupSecrets: no secrets for image found")
 	}
 
 	return secrets, nil
@@ -108,7 +130,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 				"namespace":  image.Namespace,
 				"secret_ref": secretRef,
 				"type":       secret.Type,
-			}).Warn("secrets.defaultGetter: supplied secret is not kubernetes.io/dockerconfigjson, ignoring")
+			}).Warn("secrets.defaultGetter: supplied secret is not kubernetes.io/dockercfg, ignoring")
 			continue
 		}
 
@@ -150,8 +172,33 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 			}
 
 			if h == image.Image.Registry() {
-				credentials.Username = auth.Username
-				credentials.Password = auth.Password
+				if auth.Username != "" && auth.Password != "" {
+					credentials.Username = auth.Username
+					credentials.Password = auth.Password
+				} else if auth.Auth != "" {
+					username, password, err := decodeBase64Secret(auth.Auth)
+					if err != nil {
+						log.WithFields(log.Fields{
+							"image":      image.Image.Repository(),
+							"namespace":  image.Namespace,
+							"registry":   registry,
+							"secret_ref": secretRef,
+							"error":      err,
+						}).Error("secrets.defaultGetter: failed to decode auth secret")
+						continue
+					}
+					credentials.Username = username
+					credentials.Password = password
+				} else {
+					log.WithFields(log.Fields{
+						"image":      image.Image.Repository(),
+						"namespace":  image.Namespace,
+						"registry":   registry,
+						"secret_ref": secretRef,
+						"error":      err,
+					}).Warn("secrets.defaultGetter: secret doesn't have username, password and base64 encoded auth, skipping")
+					continue
+				}
 
 				log.WithFields(log.Fields{
 					"namespace": image.Namespace,
@@ -163,10 +210,34 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 				return credentials, nil
 			}
 		}
+	}
 
+	if len(image.Secrets) > 0 {
+		log.WithFields(log.Fields{
+			"namespace": image.Namespace,
+			"provider":  image.Provider,
+			"registry":  image.Image.Registry(),
+			"image":     image.Image.Repository(),
+			"secrets":   image.Secrets,
+		}).Warn("secrets.defaultGetter.lookupSecrets: docker credentials were not found among secrets")
 	}
 
 	return credentials, nil
+}
+
+func decodeBase64Secret(authSecret string) (username, password string, err error) {
+	decoded, err := base64.StdEncoding.DecodeString(authSecret)
+	if err != nil {
+		return
+	}
+
+	parts := strings.Split(string(decoded), ":")
+
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("unexpected auth secret format")
+	}
+
+	return parts[0], parts[1], nil
 }
 
 func hostname(registry string) (string, error) {

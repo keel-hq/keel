@@ -14,3 +14,11 @@ test:
 build:
 	@echo "++ Building keel"
 	CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags "$(LDFLAGS)" -o keel .
+
+image:
+	docker build -t karolisr/keel:alpha -f Dockerfile .
+
+alpha: image
+	@echo "++ Pushing keel alpha"	
+	docker push karolisr/keel:alpha
+		
