@@ -72,7 +72,26 @@ func (g *DefaultGetter) lookupSecrets(image *types.TrackedImage) ([]string, erro
 
 	for _, pod := range podList.Items {
 		podSecrets := getPodImagePullSecrets(&pod)
+		log.WithFields(log.Fields{
+			"namespace":    image.Namespace,
+			"provider":     image.Provider,
+			"registry":     image.Image.Registry(),
+			"image":        image.Image.Repository(),
+			"pod_selector": selector,
+			"secrets":      podSecrets,
+		}).Info("secrets.defaultGetter.lookupSecrets: pod secrets found")
 		secrets = append(secrets, podSecrets...)
+	}
+
+	if len(secrets) == 0 {
+		log.WithFields(log.Fields{
+			"namespace":    image.Namespace,
+			"provider":     image.Provider,
+			"registry":     image.Image.Registry(),
+			"image":        image.Image.Repository(),
+			"pod_selector": selector,
+			"pods_checked": len(podList.Items),
+		}).Info("secrets.defaultGetter.lookupSecrets: no secrets for image found")
 	}
 
 	return secrets, nil
@@ -108,7 +127,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 				"namespace":  image.Namespace,
 				"secret_ref": secretRef,
 				"type":       secret.Type,
-			}).Warn("secrets.defaultGetter: supplied secret is not kubernetes.io/dockerconfigjson, ignoring")
+			}).Warn("secrets.defaultGetter: supplied secret is not kubernetes.io/dockercfg, ignoring")
 			continue
 		}
 
@@ -163,7 +182,16 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 				return credentials, nil
 			}
 		}
+	}
 
+	if len(image.Secrets) > 0 {
+		log.WithFields(log.Fields{
+			"namespace": image.Namespace,
+			"provider":  image.Provider,
+			"registry":  image.Image.Registry(),
+			"image":     image.Image.Repository(),
+			"secrets":   image.Secrets,
+		}).Warn("secrets.defaultGetter.lookupSecrets: docker credentials were not found among secrets")
 	}
 
 	return credentials, nil

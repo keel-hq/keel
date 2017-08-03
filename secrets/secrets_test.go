@@ -122,3 +122,45 @@ func TestLookupHelmSecret(t *testing.T) {
 		t.Errorf("unexpected pass: %s", creds.Password)
 	}
 }
+
+func TestLookupHelmNoSecretsFound(t *testing.T) {
+	imgRef, _ := image.Parse("karolisr/webhook-demo:0.0.11")
+
+	impl := &testutil.FakeK8sImplementer{
+		AvailablePods: &v1.PodList{
+			Items: []v1.Pod{
+				v1.Pod{
+					Spec: v1.PodSpec{ImagePullSecrets: []v1.LocalObjectReference{
+						v1.LocalObjectReference{
+							Name: "very-secret",
+						},
+					},
+					},
+				},
+			},
+		},
+		Error: fmt.Errorf("not found"),
+	}
+
+	getter := NewGetter(impl)
+
+	trackedImage := &types.TrackedImage{
+		Image:     imgRef,
+		Namespace: "default",
+		Secrets:   []string{"myregistrysecret"},
+	}
+
+	creds, err := getter.Get(trackedImage)
+	if err != nil {
+		t.Errorf("failed to get creds: %s", err)
+	}
+
+	// should be anonymous
+	if creds.Username != "" {
+		t.Errorf("unexpected username: %s", creds.Username)
+	}
+
+	if creds.Password != "" {
+		t.Errorf("unexpected pass: %s", creds.Password)
+	}
+}
