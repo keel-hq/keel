@@ -27,6 +27,7 @@ import:
 - package: github.com/rusenask/cron
   version: v1.1.0
 - package: github.com/rusenask/docker-registry-client
+  version: ^0.1.0 
   subpackages:
   - registry
 - package: github.com/urfave/negroni

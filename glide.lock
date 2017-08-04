@@ -1,5 +1,5 @@
-hash: 8aa55088148c1c47a2b28df775d5862be1e4296dddee51154e5a1c1e782ca86e
-updated: 2017-07-21T17:52:39.653942432+01:00
+hash: 4f5cf366af304cb50b974df8ea9c020057f1d3b2bf1d1f9bd462a1e436c4f13b
+updated: 2017-08-04T22:06:13.059396344+01:00
 imports:
 - name: cloud.google.com/go
   version: b4e9a381a01e953e880e6d2cf7fd02d412977cae
@@ -105,11 +105,11 @@ imports:
 - name: github.com/rusenask/cron
   version: 287f34f2c2db9a9d41ec56856746cce28dd53ec5
 - name: github.com/rusenask/docker-registry-client
-  version: c2590d539ef6f588fc2124c66ca94830367dbcb7
+  version: 315973e9173738626b8c81cb39ba247f8cb190e5
   subpackages:
   - registry
 - name: github.com/Sirupsen/logrus
-  version: 00386b3fbd637582f90cb17482dc3087646c0ac2
+  version: 181d419aa9e2223811b824e8f0b4af96f9ba9302
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/ugorji/go
@@ -119,7 +119,7 @@ imports:
 - name: github.com/urfave/negroni
   version: fde5e16d32adc7ad637e9cd9ad21d4ebc6192535
 - name: golang.org/x/crypto
-  version: d172538b2cfce0c13cee31e647d0367aa8cd2486
+  version: 42ff06aea7c329876e5a0fe94acc96902accf0ad
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -149,10 +149,12 @@ imports:
   version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
   subpackages:
   - unix
+  - windows
 - name: golang.org/x/text
   version: 836efe42bb4aa16aaa17b9c155d8813d336ed720
   subpackages:
   - cases
+  - internal
   - internal/tag
   - language
   - runes
@@ -189,7 +191,7 @@ imports:
   - socket
   - urlfetch
 - name: google.golang.org/genproto
-  version: b0a3dcfcd1a9bd48e63634bd8802960804cf8315
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis/api/annotations
   - googleapis/iam/v1
@@ -343,7 +345,7 @@ imports:
   - util/homedir
   - util/integer
 - name: k8s.io/helm
-  version: 012cb0ac1a1b2f888144ef5a67b8dab6c2d45be6
+  version: 7cf31e8d9a026287041bae077b09165be247ae66
   subpackages:
   - pkg/chartutil
   - pkg/helm

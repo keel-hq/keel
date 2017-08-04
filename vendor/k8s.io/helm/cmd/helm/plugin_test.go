@@ -23,7 +23,6 @@ import (
 	"strings"
 	"testing"
 
-	helm_env "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/plugin"
 
@@ -65,12 +64,12 @@ func TestManuallyProcessArgs(t *testing.T) {
 }
 
 func TestLoadPlugins(t *testing.T) {
-	// Set helm home to point to testdata
-	old := settings.Home
+	cleanup := resetEnv()
+	defer cleanup()
+
 	settings.Home = "testdata/helmhome"
-	defer func() {
-		settings.Home = old
-	}()
+
+	os.Setenv("HELM_HOME", settings.Home.String())
 	hh := settings.Home
 
 	out := bytes.NewBuffer(nil)
@@ -137,14 +136,12 @@ func TestLoadPlugins(t *testing.T) {
 }
 
 func TestLoadPlugins_HelmNoPlugins(t *testing.T) {
-	// Set helm home to point to testdata
-	old := settings.Home
+	cleanup := resetEnv()
+	defer cleanup()
+
 	settings.Home = "testdata/helmhome"
-	os.Setenv(helm_env.PluginDisableEnvVar, "1")
-	defer func() {
-		settings.Home = old
-		os.Unsetenv(helm_env.PluginDisableEnvVar)
-	}()
+
+	os.Setenv("HELM_NO_PLUGINS", "1")
 
 	out := bytes.NewBuffer(nil)
 	cmd := &cobra.Command{}
