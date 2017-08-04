@@ -3,9 +3,9 @@ package registry
 import (
 	"github.com/rusenask/keel/constants"
 
-	"testing"
-
 	"fmt"
+	"os"
+	"testing"
 )
 
 func TestDigest(t *testing.T) {
@@ -29,9 +29,33 @@ func TestDigest(t *testing.T) {
 func TestGet(t *testing.T) {
 	client := New()
 	repo, err := client.Get(Opts{
-		// Registry: "https://index.docker.io",
 		Registry: constants.DefaultDockerRegistry,
 		Name:     "karolisr/keel",
+	})
+
+	if err != nil {
+		t.Errorf("error while getting repo: %s", err)
+	}
+
+	fmt.Println(repo.Name)
+	fmt.Println(repo.Tags)
+}
+
+var EnvArtifactoryUsername = "ARTIFACTORY_USERNAME"
+var EnvArtifactoryPassword = "ARTIFACTORY_PASSWORD"
+
+func TestGetArtifactory(t *testing.T) {
+
+	if os.Getenv(EnvArtifactoryUsername) == "" && os.Getenv(EnvArtifactoryPassword) == "" {
+		t.Skip()
+	}
+
+	client := New()
+	repo, err := client.Get(Opts{
+		Registry: "https://keel-docker-local.jfrog.io",
+		Name:     "webhook-demo",
+		Username: os.Getenv(EnvArtifactoryUsername),
+		Password: os.Getenv(EnvArtifactoryPassword),
 	})
 
 	if err != nil {
