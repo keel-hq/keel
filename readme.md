@@ -3,7 +3,7 @@
 # Keel - automated Kubernetes deployments for the rest of us
 
 * Website [https://keel.sh](https://keel.sh)
-* Slack - [kubernetes.slack.com](https://kubernetes.slack.com) look for @karolis
+* Slack - [kubernetes.slack.com](https://kubernetes.slack.com) look for channel #keel
 
 Keel is a tool for automating [Kubernetes](https://kubernetes.io/) deployment updates. Keel is stateless, robust and lightweight.
 
