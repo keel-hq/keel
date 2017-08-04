@@ -25,7 +25,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	helm_env "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/plugin"
 )
 
@@ -37,10 +36,11 @@ import (
 func loadPlugins(baseCmd *cobra.Command, out io.Writer) {
 
 	// If HELM_NO_PLUGINS is set to 1, do not load plugins.
-	if os.Getenv(helm_env.PluginDisableEnvVar) == "1" {
+	if os.Getenv("HELM_NO_PLUGINS") == "1" {
 		return
 	}
 
+	// debug("HELM_PLUGIN_DIRS=%s", settings.PluginDirs())
 	found, err := findPlugins(settings.PluginDirs())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load plugins: %s", err)
@@ -52,7 +52,6 @@ func loadPlugins(baseCmd *cobra.Command, out io.Writer) {
 		if err := cmd.Parent().ParseFlags(k); err != nil {
 			return nil, err
 		}
-		initRootFlags(cmd)
 		return u, nil
 	}
 
