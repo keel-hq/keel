@@ -82,9 +82,7 @@ type initCmd struct {
 }
 
 func newInitCmd(out io.Writer) *cobra.Command {
-	i := &initCmd{
-		out: out,
-	}
+	i := &initCmd{out: out}
 
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -232,7 +230,7 @@ func (i *initCmd) run() error {
 
 	if !i.clientOnly {
 		if i.kubeClient == nil {
-			_, c, err := getKubeClient(kubeContext)
+			_, c, err := getKubeClient(settings.KubeContext)
 			if err != nil {
 				return fmt.Errorf("could not get kubernetes client: %s", err)
 			}
