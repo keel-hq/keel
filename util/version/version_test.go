@@ -277,9 +277,16 @@ func TestNewAvailable(t *testing.T) {
 			wantErr:          false,
 		},
 		{
-			name:             "simple semver",
+			name:             "without patch version",
 			args:             args{current: "8.1", tags: []string{"8.1", "8.2", "8.3"}},
 			wantNewVersion:   "8.3",
+			wantNewAvailable: true,
+			wantErr:          false,
+		},
+		{
+			name:             "only major version",
+			args:             args{current: "8.1.1", tags: []string{"8", "9", "10"}},
+			wantNewVersion:   "10",
 			wantNewAvailable: true,
 			wantErr:          false,
 		},
