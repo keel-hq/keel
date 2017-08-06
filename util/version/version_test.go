@@ -272,7 +272,7 @@ func TestNewAvailable(t *testing.T) {
 		{
 			name:             "staging",
 			args:             args{current: "1.1.1", tags: []string{"v1.2.1-staging.1"}},
-			wantNewVersion:   "1.2.1-staging.1",
+			wantNewVersion:   "v1.2.1-staging.1",
 			wantNewAvailable: true,
 			wantErr:          false,
 		},
