@@ -110,7 +110,7 @@ func NewAvailable(current string, tags []string) (newVersion string, newAvailabl
 	sort.Sort(sort.Reverse(semver.Collection(vs)))
 
 	if currentVersion.LessThan(vs[0]) {
-		return vs[0].String(), true, nil
+		return vs[0].Original(), true, nil
 	}
 	return "", false, nil
 }
