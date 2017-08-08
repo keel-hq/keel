@@ -19,18 +19,23 @@ type Repository struct {
 	Tags []string // available tags
 }
 
+// Client - generic docker registry client
 type Client interface {
 	Get(opts Opts) (*Repository, error)
 	Digest(opts Opts) (digest string, err error)
 }
 
+// New - new registry client
 func New() *DefaultClient {
 	return &DefaultClient{}
 }
 
+// DefaultClient - default client implementation
 type DefaultClient struct {
 }
 
+// Opts - registry client opts. If username & password are not supplied
+// it will try to authenticate as anonymous
 type Opts struct {
 	Registry, Name, Tag string
 	Username, Password  string // if "" - anonymous

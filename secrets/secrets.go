@@ -20,25 +20,30 @@ import (
 // const dockerConfigJSONKey = ".dockerconfigjson"
 const dockerConfigJSONKey = ".dockercfg"
 
+// common errors
 var (
 	ErrNamespaceNotSpecified = errors.New("namespace not specified")
 	ErrSecretsNotSpecified   = errors.New("no secrets were specified")
 )
 
+// Getter - generic secret getter interface
 type Getter interface {
 	Get(image *types.TrackedImage) (*types.Credentials, error)
 }
 
+// DefaultGetter - default kubernetes secret getter implementation
 type DefaultGetter struct {
 	kubernetesImplementer kubernetes.Implementer
 }
 
+// NewGetter - create new default getter
 func NewGetter(implementer kubernetes.Implementer) *DefaultGetter {
 	return &DefaultGetter{
 		kubernetesImplementer: implementer,
 	}
 }
 
+// Get - get secret for tracked image
 func (g *DefaultGetter) Get(image *types.TrackedImage) (*types.Credentials, error) {
 	if image.Namespace == "" {
 		return nil, ErrNamespaceNotSpecified

@@ -6,10 +6,12 @@ import (
 	"github.com/rusenask/keel/util/image"
 )
 
+// Credentials - registry credentials
 type Credentials struct {
 	Username, Password string
 }
 
+// TrackedImage - tracked image data+metadata
 type TrackedImage struct {
 	Image        *image.Reference
 	Trigger      TriggerType
