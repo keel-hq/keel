@@ -460,7 +460,7 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 	}
 
 	if len(deps) != 1 {
-		t.Errorf("expected to find 1 deployment but found %s", len(deps))
+		t.Errorf("expected to find 1 deployment but found %d", len(deps))
 	}
 
 	found := false
@@ -557,7 +557,7 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 	}
 
 	if len(deps) != 1 {
-		t.Errorf("expected to find 1 deployment but found %s", len(deps))
+		t.Errorf("expected to find 1 deployment but found %d", len(deps))
 	}
 
 	found := false
@@ -652,7 +652,7 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 	}
 
 	if len(deps) != 1 {
-		t.Errorf("expected to find 1 deployment but found %s", len(deps))
+		t.Errorf("expected to find 1 deployment but found %d", len(deps))
 	}
 
 	found := false
@@ -748,7 +748,7 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 	}
 
 	if len(deps) != 2 {
-		t.Errorf("expected to find 2 deployment but found %s", len(deps))
+		t.Errorf("expected to find 2 deployment but found %d", len(deps))
 	}
 
 	found := false
