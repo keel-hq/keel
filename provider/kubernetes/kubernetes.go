@@ -72,6 +72,7 @@ func (p *Provider) Stop() {
 	close(p.stop)
 }
 
+// TrackedImages - get tracked images
 func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 	var trackedImages []*types.TrackedImage
 

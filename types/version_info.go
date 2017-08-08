@@ -14,6 +14,7 @@ type VersionInfo struct {
 	Experimental  bool   `json:"experimental"`
 }
 
+// VersionResponse - version API call response
 type VersionResponse struct {
 	Client *VersionInfo
 	Server *VersionInfo

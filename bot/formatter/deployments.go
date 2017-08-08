@@ -16,11 +16,11 @@ type Deployment struct {
 	Images            []string `json:"images,omitempty"` // image:tag list
 }
 
+// Formatter headers
 const (
 	defaultDeploymentQuietFormat = "{{.Name}}"
 	defaultDeploymentTableFormat = "table {{.Namespace}}\t{{.Name}}\t{{.Ready}}\t{{.Images}}"
 
-	// Fields
 	DeploymentNamespaceHeader = "NAMESPACE"
 	DeploymentNameHeader      = "NAME"
 	DeploymentReadyHeader     = "READY"
@@ -57,29 +57,36 @@ func DeploymentWrite(ctx Context, Deployments []Deployment) error {
 	return ctx.Write(&DeploymentContext{}, render)
 }
 
+// DeploymentContext - deployment context is a container for each line
 type DeploymentContext struct {
 	HeaderContext
 	v Deployment
 }
 
+// MarshalJSON - marshal to json (inspect)
 func (c *DeploymentContext) MarshalJSON() ([]byte, error) {
 	return marshalJSON(c)
 }
 
+// Namespace - print namespace
 func (c *DeploymentContext) Namespace() string {
 	c.AddHeader(DeploymentNamespaceHeader)
 	return c.v.Namespace
 }
+
+// Name - print name
 func (c *DeploymentContext) Name() string {
 	c.AddHeader(DeploymentNameHeader)
 	return c.v.Name
 }
 
+// Ready - print readiness
 func (c *DeploymentContext) Ready() string {
 	c.AddHeader(DeploymentReadyHeader)
 	return fmt.Sprintf("%d/%d", c.v.AvailableReplicas, c.v.Replicas)
 }
 
+// Images - print used images
 func (c *DeploymentContext) Images() string {
 	c.AddHeader(DeploymentImagesHeader)
 	return strings.Join(c.v.Images, ", ")

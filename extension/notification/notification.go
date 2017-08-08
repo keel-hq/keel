@@ -72,17 +72,20 @@ func RegisterSender(name string, s Sender) {
 	senders[name] = s
 }
 
+// DefaultNotificationSender - default notification sender, manages configuration
 type DefaultNotificationSender struct {
 	config  *Config
 	stopper *stopper.Stopper
 }
 
+// New - create new sender
 func New(ctx context.Context) *DefaultNotificationSender {
 	return &DefaultNotificationSender{
 		stopper: stopper.NewStopper(ctx),
 	}
 }
 
+// Configure - configure is used to register multiple notification senders
 func (m *DefaultNotificationSender) Configure(config *Config) (bool, error) {
 	m.config = config
 	// Configure registered notifiers.

@@ -18,8 +18,6 @@ const (
 	// DefaultScheme is default scheme for registries
 	DefaultScheme = "https"
 
-	// // LegacyDefaultHostname is automatically converted to DefaultHostname
-	// LegacyDefaultHostname = "index.docker.io"
 	// DefaultRepoPrefix is the prefix used for default repositories in default host
 	DefaultRepoPrefix = "library/"
 )
