@@ -11,6 +11,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// Filter - deployment filter
 type Filter struct {
 	Namespace string
 	All       bool // keel or not

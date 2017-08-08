@@ -6,6 +6,7 @@ import (
 	"github.com/rusenask/keel/types"
 )
 
+// Generic tool info
 const (
 	ProductName string = "keel"
 	APIVersion         = "1"

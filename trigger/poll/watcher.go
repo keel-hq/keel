@@ -14,6 +14,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// Watcher - generic watcher interface
 type Watcher interface {
 	Watch(imageName, registryUsername, registryPassword, schedule string) error
 	Unwatch(image string) error

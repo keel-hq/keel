@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// KeelDefaultPort - default port for application
 const KeelDefaultPort = 9300
 
 // KeelPolicyLabel - keel update policies (version checking)
@@ -29,6 +30,8 @@ const KeelPollDefaultSchedule = "@every 1m"
 // KeelDigestAnnotation - digest annotation
 const KeelDigestAnnotation = "keel.sh/digest"
 
+// Repository - represents main docker repository fields that
+// keel cares about
 type Repository struct {
 	Host   string `json:"host"`
 	Name   string `json:"name"`
@@ -36,6 +39,7 @@ type Repository struct {
 	Digest string `json:"digest"` // optional digest field
 }
 
+// Event - holds information about new event from trigger
 type Event struct {
 	Repository Repository `json:"repository,omitempty"`
 	CreatedAt  time.Time  `json:"createdAt,omitempty"`
@@ -43,6 +47,7 @@ type Event struct {
 	TriggerName string `json:"triggerName,omitempty"`
 }
 
+// Version - version container
 type Version struct {
 	Major      int64
 	Minor      int64
@@ -91,6 +96,7 @@ func (t TriggerType) String() string {
 	}
 }
 
+// ParseTrigger - parse trigger string into type
 func ParseTrigger(trigger string) TriggerType {
 	switch trigger {
 	case "poll":
@@ -194,8 +200,10 @@ func (n Notification) String() string {
 	}
 }
 
+// Level - event levet
 type Level int
 
+// Available event levels
 const (
 	LevelDebug Level = iota
 	LevelInfo
@@ -205,6 +213,7 @@ const (
 	LevelFatal
 )
 
+// Color - used to assign different colors for events
 func (l Level) Color() string {
 	switch l {
 	case LevelError:

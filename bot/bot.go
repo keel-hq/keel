@@ -33,6 +33,7 @@ var (
 	dynamicBotCommandPrefixes = []string{"describe deployment"}
 )
 
+// Bot - main slack bot container
 type Bot struct {
 	id   string // bot id
 	name string // bot name
@@ -49,6 +50,7 @@ type Bot struct {
 	ctx context.Context
 }
 
+// New - create new bot instance
 func New(name, token string, k8sImplementer kubernetes.Implementer) *Bot {
 	client := slack.New(token)
 
