@@ -199,7 +199,7 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 		if reset {
 			// FIXME: giving some time for k8s to start updating as it
 			// throws an error if you try to modify deployment that's currently being updated
-			time.Sleep(10 * time.Second)
+			time.Sleep(5 * time.Second)
 
 			current, err := p.getDeployment(deployment.Namespace, deployment.Name)
 			if err != nil {
