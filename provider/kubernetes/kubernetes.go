@@ -199,7 +199,7 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 		if reset {
 			// FIXME: giving some time for k8s to start updating as it
 			// throws an error if you try to modify deployment that's currently being updated
-			time.Sleep(2 * time.Second)
+			time.Sleep(10 * time.Second)
 
 			current, err := p.getDeployment(deployment.Namespace, deployment.Name)
 			if err != nil {
@@ -222,6 +222,17 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 				}).Error("provider.kubernetes: got error while applying deployment changes after reset")
 				continue
 			}
+
+			deployment = refresh
+
+			p.sender.Send(types.EventNotification{
+				Name:      "preparing to update deployment after reset",
+				Message:   fmt.Sprintf("Preparing to update deployment %s/%s (%s)", deployment.Namespace, deployment.Name, strings.Join(getImages(&refresh), ", ")),
+				CreatedAt: time.Now(),
+				Type:      types.NotificationPreDeploymentUpdate,
+				Level:     types.LevelDebug,
+			})
+
 			err = p.implementer.Update(&refresh)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -229,8 +240,27 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 					"namespace":  deployment.Namespace,
 					"deployment": deployment.Name,
 				}).Error("provider.kubernetes: got error while update deployment")
+
+				p.sender.Send(types.EventNotification{
+					Name:      "update deployment after",
+					Message:   fmt.Sprintf("Deployment %s/%s update failed, error: %s", refresh.Namespace, refresh.Name, err),
+					CreatedAt: time.Now(),
+					Type:      types.NotificationDeploymentUpdate,
+					Level:     types.LevelError,
+				})
 				continue
 			}
+
+			p.sender.Send(types.EventNotification{
+				Name:      "update deployment after reset",
+				Message:   fmt.Sprintf("Successfully updated deployment %s/%s (%s)", refresh.Namespace, refresh.Name, strings.Join(getImages(&refresh), ", ")),
+				CreatedAt: time.Now(),
+				Type:      types.NotificationDeploymentUpdate,
+				Level:     types.LevelSuccess,
+			})
+
+			updated = append(updated, &refresh)
+
 			// success
 			continue
 		}
