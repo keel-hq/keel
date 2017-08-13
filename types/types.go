@@ -30,6 +30,9 @@ const KeelPollDefaultSchedule = "@every 1m"
 // KeelDigestAnnotation - digest annotation
 const KeelDigestAnnotation = "keel.sh/digest"
 
+// KeelMinimumApprovalsLabel - min approvals
+const KeelMinimumApprovalsLabel = "keel.sh/minApprovals"
+
 // Repository - represents main docker repository fields that
 // keel cares about
 type Repository struct {
@@ -229,4 +232,78 @@ func (l Level) Color() string {
 	default:
 		return "#9E9E9E"
 	}
+}
+
+// ProviderType - provider type used to differentiate different providers
+// when used with plugins
+type ProviderType int
+
+// Known provider types
+const (
+	ProviderTypeUnknown = iota
+	ProviderTypeKubernetes
+	ProviderTypeHelm
+)
+
+func (t ProviderType) String() string {
+	switch t {
+	case ProviderTypeUnknown:
+		return "unknown"
+	case ProviderTypeKubernetes:
+		return "kubernetes"
+	case ProviderTypeHelm:
+		return "helm"
+	default:
+		return ""
+	}
+}
+
+// Approval used to store and track updates
+type Approval struct {
+	// Provider name - Kubernetes/Helm
+	Provider ProviderType
+
+	// Identifier is used to inform user about specific
+	// Helm release or k8s deployment
+	// ie: k8s <namespace>/<deployment name>
+	//     helm: <namespace>/<release name>
+	Identifier string
+
+	// Event that triggered evaluation
+	Event *Event
+
+	Message string
+
+	CurrentVersion Version
+	NewVersion     Version
+
+	// Requirements for the update such as number of votes
+	// and deadline
+	VotesRequired int
+	VotesReceived int
+
+	// Explicitly rejected approval
+	// can be set directly by user
+	// so even if deadline is not reached approval
+	// could be turned down
+	Rejected bool
+
+	// Deadline for this request
+	Deadline time.Duration
+
+	// When this approval was created
+	CreatedAt time.Time
+	// WHen this approval was updated
+	UpdatedAt time.Time
+}
+
+// Approved - checks if approval is approved
+func (a *Approval) Approved() bool {
+	return !a.Rejected && a.VotesReceived >= a.VotesRequired
+}
+
+// Delta of what's changed
+// ie: webhookrelay/webhook-demo:0.15.0 -> webhookrelay/webhook-demo:0.16.0
+func (a *Approval) Delta() string {
+	return fmt.Sprintf("%s -> %s", a.CurrentVersion.Original, a.NewVersion.Original)
 }
