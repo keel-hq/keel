@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/urfave/negroni"
 
+	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/version"
@@ -23,22 +24,26 @@ type Opts struct {
 
 	// available providers
 	Providers provider.Providers
+
+	ApprovalManager approvals.Manager
 }
 
 // TriggerServer - webhook trigger & healthcheck server
 type TriggerServer struct {
-	providers provider.Providers
-	port      int
-	server    *http.Server
-	router    *mux.Router
+	providers        provider.Providers
+	approvalsManager approvals.Manager
+	port             int
+	server           *http.Server
+	router           *mux.Router
 }
 
 // NewTriggerServer - create new HTTP trigger based server
 func NewTriggerServer(opts *Opts) *TriggerServer {
 	return &TriggerServer{
-		port:      opts.Port,
-		providers: opts.Providers,
-		router:    mux.NewRouter(),
+		port:             opts.Port,
+		providers:        opts.Providers,
+		approvalsManager: opts.ApprovalManager,
+		router:           mux.NewRouter(),
 	}
 }
 
