@@ -3,8 +3,11 @@ package kubernetes
 import (
 	"testing"
 
+	"github.com/rusenask/keel/approvals"
+	"github.com/rusenask/keel/cache/memory"
 	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/codecs"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/api/v1"
@@ -62,6 +65,12 @@ func (s *fakeSender) Send(event types.EventNotification) error {
 	return nil
 }
 
+func approver() *approvals.DefaultManager {
+	cache := memory.NewMemoryCache(10, 10, 10)
+
+	return approvals.New(cache, codecs.DefaultSerializer())
+}
+
 func TestGetNamespaces(t *testing.T) {
 	fi := &fakeImplementer{
 		namespaces: &v1.NamespaceList{
@@ -76,7 +85,7 @@ func TestGetNamespaces(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fi, &fakeSender{})
+	provider, err := NewProvider(fi, &fakeSender{}, approver())
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -135,7 +144,7 @@ func TestGetDeployments(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{})
+	provider, err := NewProvider(fp, &fakeSender{}, approver())
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -210,7 +219,7 @@ func TestGetImpacted(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{})
+	provider, err := NewProvider(fp, &fakeSender{}, approver())
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -221,17 +230,17 @@ func TestGetImpacted(t *testing.T) {
 		Tag:  "1.1.2",
 	}
 
-	deps, err := provider.impactedDeployments(repo)
+	plans, err := provider.createUpdatePlans(repo)
 	if err != nil {
 		t.Errorf("failed to get deployments: %s", err)
 	}
 
-	if len(deps) != 1 {
-		t.Errorf("expected to find 1 deployment but found %d", len(deps))
+	if len(plans) != 1 {
+		t.Errorf("expected to find 1 deployment update plan but found %d", len(plans))
 	}
 
 	found := false
-	for _, c := range deps[0].Spec.Template.Spec.Containers {
+	for _, c := range plans[0].Deployment.Spec.Template.Spec.Containers {
 
 		containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
@@ -303,7 +312,7 @@ func TestProcessEvent(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{})
+	provider, err := NewProvider(fp, &fakeSender{}, approver())
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -361,7 +370,7 @@ func TestProcessEventBuildNumber(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{})
+	provider, err := NewProvider(fp, &fakeSender{}, approver())
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -443,7 +452,7 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{})
+	provider, err := NewProvider(fp, &fakeSender{}, approver())
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -454,17 +463,17 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 		Tag:  "1.1.2",
 	}
 
-	deps, err := provider.impactedDeployments(repo)
+	plans, err := provider.createUpdatePlans(repo)
 	if err != nil {
 		t.Errorf("failed to get deployments: %s", err)
 	}
 
-	if len(deps) != 1 {
-		t.Errorf("expected to find 1 deployment but found %d", len(deps))
+	if len(plans) != 1 {
+		t.Errorf("expected to find 1 deployment but found %d", len(plans))
 	}
 
 	found := false
-	for _, c := range deps[0].Spec.Template.Spec.Containers {
+	for _, c := range plans[0].Deployment.Spec.Template.Spec.Containers {
 
 		containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
@@ -540,7 +549,7 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{})
+	provider, err := NewProvider(fp, &fakeSender{}, approver())
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -551,17 +560,17 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 		Tag:  "1.1.2",
 	}
 
-	deps, err := provider.impactedDeployments(repo)
+	plans, err := provider.createUpdatePlans(repo)
 	if err != nil {
 		t.Errorf("failed to get deployments: %s", err)
 	}
 
-	if len(deps) != 1 {
-		t.Errorf("expected to find 1 deployment but found %d", len(deps))
+	if len(plans) != 1 {
+		t.Errorf("expected to find 1 deployment but found %d", len(plans))
 	}
 
 	found := false
-	for _, c := range deps[0].Spec.Template.Spec.Containers {
+	for _, c := range plans[0].Deployment.Spec.Template.Spec.Containers {
 
 		containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
@@ -635,7 +644,7 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{})
+	provider, err := NewProvider(fp, &fakeSender{}, approver())
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -646,17 +655,17 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 		Tag:  "1.1.2",
 	}
 
-	deps, err := provider.impactedDeployments(repo)
+	plans, err := provider.createUpdatePlans(repo)
 	if err != nil {
 		t.Errorf("failed to get deployments: %s", err)
 	}
 
-	if len(deps) != 1 {
-		t.Errorf("expected to find 1 deployment but found %d", len(deps))
+	if len(plans) != 1 {
+		t.Errorf("expected to find 1 deployment but found %d", len(plans))
 	}
 
 	found := false
-	for _, c := range deps[0].Spec.Template.Spec.Containers {
+	for _, c := range plans[0].Deployment.Spec.Template.Spec.Containers {
 
 		containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
@@ -731,7 +740,7 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{})
+	provider, err := NewProvider(fp, &fakeSender{}, approver())
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -742,17 +751,17 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 		Tag:  "1.1.2",
 	}
 
-	deps, err := provider.impactedDeployments(repo)
+	plans, err := provider.createUpdatePlans(repo)
 	if err != nil {
 		t.Errorf("failed to get deployments: %s", err)
 	}
 
-	if len(deps) != 2 {
-		t.Errorf("expected to find 2 deployment but found %d", len(deps))
+	if len(plans) != 2 {
+		t.Errorf("expected to find 2 deployment but found %d", len(plans))
 	}
 
 	found := false
-	for _, c := range deps[0].Spec.Template.Spec.Containers {
+	for _, c := range plans[0].Deployment.Spec.Template.Spec.Containers {
 
 		containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
@@ -809,7 +818,7 @@ func TestTrackedImages(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{})
+	provider, err := NewProvider(fp, &fakeSender{}, approver())
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
