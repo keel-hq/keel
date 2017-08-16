@@ -14,7 +14,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updated v1beta1.Deployment, shouldUpdateDeployment bool, err error) {
+// func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updated v1beta1.Deployment, shouldUpdateDeployment bool, err error) {
+func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
+	updatePlan = &UpdatePlan{}
+
 	eventRepoRef, err := image.Parse(repo.Name)
 	if err != nil {
 		return
@@ -148,6 +151,10 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			}
 			deployment.SetAnnotations(annotations)
 
+			updatePlan.CurrentVersion = currentVersion.Original
+			updatePlan.NewVersion = newVersion.Original
+			updatePlan.Deployment = deployment
+
 			log.WithFields(log.Fields{
 				"parsed_image":     conatinerImageRef.Remote(),
 				"raw_image_name":   c.Image,
@@ -158,7 +165,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		}
 	}
 
-	return deployment, shouldUpdateDeployment, nil
+	return updatePlan, shouldUpdateDeployment, nil
 }
 
 func updateContainer(container v1.Container, ref *image.Reference, version string) v1.Container {
