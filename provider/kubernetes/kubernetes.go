@@ -192,7 +192,9 @@ func (p *Provider) processEvent(event *types.Event) (updated []*v1beta1.Deployme
 		return
 	}
 
-	return p.updateDeployments(plans)
+	approvedPlans := p.checkForApprovals(event, plans)
+
+	return p.updateDeployments(approvedPlans)
 }
 
 // func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated []*v1beta1.Deployment, err error) {

@@ -14,6 +14,29 @@ import (
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
+type fakeProvider struct {
+	submitted []types.Event
+	images    []*types.TrackedImage
+}
+
+func (p *fakeProvider) Submit(event types.Event) error {
+	p.submitted = append(p.submitted, event)
+	return nil
+}
+
+func (p *fakeProvider) TrackedImages() ([]*types.TrackedImage, error) {
+	return p.images, nil
+}
+func (p *fakeProvider) List() []string {
+	return []string{"fakeprovider"}
+}
+func (p *fakeProvider) Stop() {
+	return
+}
+func (p *fakeProvider) GetName() string {
+	return "fp"
+}
+
 type fakeImplementer struct {
 	namespaces     *v1.NamespaceList
 	deployment     *v1beta1.Deployment
@@ -68,7 +91,7 @@ func (s *fakeSender) Send(event types.EventNotification) error {
 func approver() *approvals.DefaultManager {
 	cache := memory.NewMemoryCache(10, 10, 10)
 
-	return approvals.New(cache, codecs.DefaultSerializer())
+	return approvals.New(cache, codecs.DefaultSerializer(), &fakeProvider{})
 }
 
 func TestGetNamespaces(t *testing.T) {
@@ -757,16 +780,18 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 	}
 
 	if len(plans) != 2 {
-		t.Errorf("expected to find 2 deployment but found %d", len(plans))
+		t.Fatalf("expected to find 2 deployment but found %d", len(plans))
 	}
 
 	found := false
-	for _, c := range plans[0].Deployment.Spec.Template.Spec.Containers {
+	for _, plan := range plans {
+		for _, c := range plan.Deployment.Spec.Template.Spec.Containers {
 
-		containerImageName := versionreg.ReplaceAllString(c.Image, "")
+			containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
-		if containerImageName == repo.Name {
-			found = true
+			if containerImageName == repo.Name {
+				found = true
+			}
 		}
 	}
 
