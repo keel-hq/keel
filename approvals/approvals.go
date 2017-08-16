@@ -3,9 +3,11 @@ package approvals
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/rusenask/keel/cache"
+	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/codecs"
 
@@ -16,16 +18,25 @@ import (
 type Manager interface {
 	// request approval for deployment/release/etc..
 	Create(r *types.Approval) error
+	// Update whole approval object
 	Update(r *types.Approval) error
+
+	// Increases Approval votes by 1
+	Approve(provider types.ProviderType, identifier string) (*types.Approval, error)
+	// Rejects Approval
+	Reject(provider types.ProviderType, identifier string) (*types.Approval, error)
+
 	Get(provider types.ProviderType, identifier string) (*types.Approval, error)
 	List(provider types.ProviderType) ([]*types.Approval, error)
 	Delete(provider types.ProviderType, identifier string) error
 }
 
+// Approvals related errors
 var (
 	ErrApprovalAlreadyExists = errors.New("approval already exists")
 )
 
+// Approvals cache prefix
 const (
 	ApprovalsPrefix = "approvals"
 )
@@ -36,13 +47,21 @@ type DefaultManager struct {
 	// approvals/<provider name>/<identifier>
 	cache      cache.Cache
 	serializer codecs.Serializer
+
+	// providers are used to re-submit event
+	// when all approvals are collected
+	providers provider.Providers
+
+	mu *sync.Mutex
 }
 
 // New create new instance of default manager
-func New(cache cache.Cache, serializer codecs.Serializer) *DefaultManager {
+func New(cache cache.Cache, serializer codecs.Serializer, providers provider.Providers) *DefaultManager {
 	return &DefaultManager{
 		cache:      cache,
 		serializer: serializer,
+		providers:  providers,
+		mu:         &sync.Mutex{},
 	}
 }
 
@@ -76,9 +95,60 @@ func (m *DefaultManager) Update(r *types.Approval) error {
 		return err
 	}
 
-	ctx := cache.SetContextExpiration(context.Background(), r.Deadline)
+	if r.Approved() {
+		err = m.providers.Submit(*r.Event)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":    err,
+				"approval": r.Identifier,
+				"provider": r.Provider,
+			}).Error("approvals.manager: failed to re-submit event after approvals were collected")
+		}
+	}
 
+	ctx := cache.SetContextExpiration(context.Background(), r.Deadline)
 	return m.cache.Put(ctx, getKey(r.Provider, r.Identifier), bts)
+}
+
+// Approve - increase VotesReceived by 1 and returns updated version
+func (m *DefaultManager) Approve(provider types.ProviderType, identifier string) (*types.Approval, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	existing, err := m.Get(provider, identifier)
+	if err != nil {
+		return nil, err
+	}
+
+	existing.VotesReceived++
+
+	err = m.Update(existing)
+	if err != nil {
+		return nil, err
+	}
+
+	return existing, nil
+}
+
+// Reject - rejects approval (marks rejected=true), approval will not be valid even if it
+// collects required votes
+func (m *DefaultManager) Reject(provider types.ProviderType, identifier string) (*types.Approval, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	existing, err := m.Get(provider, identifier)
+	if err != nil {
+		return nil, err
+	}
+
+	existing.Rejected = true
+
+	err = m.Update(existing)
+	if err != nil {
+		return nil, err
+	}
+
+	return existing, nil
 }
 
 func (m *DefaultManager) Get(provider types.ProviderType, identifier string) (*types.Approval, error) {
