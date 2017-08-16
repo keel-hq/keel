@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -31,3 +32,8 @@ func GetContextExpiration(ctx context.Context) (exp time.Duration, ok bool) {
 	}
 	return 0, false
 }
+
+var (
+	ErrNotFound = errors.New("not found")
+	ErrExpired  = errors.New("entry expired")
+)

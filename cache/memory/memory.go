@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/rusenask/keel/cache"
 )
 
 type requestType int
@@ -82,12 +84,12 @@ func (c *Cache) service() {
 		req := <-c.requestChannel
 		resp := &response{}
 		switch req.requestType {
-		case GET:
+		case GET:			
 			val, ok := c.cache[req.key]
 			if !ok {
-				resp.error = fmt.Errorf("key '%v' not found", req.key)
+				resp.error = cache.ErrNotFound
 			} else if c.isOld(val) {
-				resp.error = fmt.Errorf("key '%v' expired (atime %v)", req.key, val.atime)
+				resp.error = cache.ErrExpired
 				delete(c.cache, req.key)
 			} else {
 				// update atime
@@ -151,7 +153,7 @@ func (c *Cache) Put(ctx context.Context, key string, value []byte) error {
 	return resp.error
 }
 
-// Del - deletes key
+// Delete - deletes key
 func (c *Cache) Delete(ctx context.Context, key string) error {
 	respChannel := make(chan *response)
 	c.requestChannel <- &request{
