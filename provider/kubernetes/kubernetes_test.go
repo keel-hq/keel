@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"testing"
+	"time"
 
 	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/cache/memory"
@@ -89,7 +90,7 @@ func (s *fakeSender) Send(event types.EventNotification) error {
 }
 
 func approver() *approvals.DefaultManager {
-	cache := memory.NewMemoryCache(10, 10, 10)
+	cache := memory.NewMemoryCache(10*time.Minute, 10*time.Minute, 10*time.Minute)
 
 	return approvals.New(cache, codecs.DefaultSerializer(), &fakeProvider{})
 }

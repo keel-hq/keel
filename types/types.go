@@ -1,3 +1,4 @@
+// Package types holds most of the types used across Keel
 //go:generate jsonenums -type=Notification
 //go:generate jsonenums -type=Level
 //go:generate jsonenums -type=PolicyType
@@ -31,7 +32,13 @@ const KeelPollDefaultSchedule = "@every 1m"
 const KeelDigestAnnotation = "keel.sh/digest"
 
 // KeelMinimumApprovalsLabel - min approvals
-const KeelMinimumApprovalsLabel = "keel.sh/minApprovals"
+const KeelMinimumApprovalsLabel = "keel.sh/approvals"
+
+// KeelApprovalTimeoutLabel - approval deadline
+const KeelApprovalTimeoutLabel = "keel.sh/approvalTimeout"
+
+// KeelApprovalTimeoutDefault - default timeout in minutes
+const KeelApprovalTimeoutDefault = 30
 
 // Repository - represents main docker repository fields that
 // keel cares about
@@ -274,8 +281,8 @@ type Approval struct {
 
 	Message string
 
-	CurrentVersion Version
-	NewVersion     Version
+	CurrentVersion string
+	NewVersion     string
 
 	// Requirements for the update such as number of votes
 	// and deadline
@@ -305,5 +312,5 @@ func (a *Approval) Approved() bool {
 // Delta of what's changed
 // ie: webhookrelay/webhook-demo:0.15.0 -> webhookrelay/webhook-demo:0.16.0
 func (a *Approval) Delta() string {
-	return fmt.Sprintf("%s -> %s", a.CurrentVersion.Original, a.NewVersion.Original)
+	return fmt.Sprintf("%s -> %s", a.CurrentVersion, a.NewVersion)
 }
