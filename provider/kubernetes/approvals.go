@@ -2,8 +2,8 @@ package kubernetes
 
 import (
 	"fmt"
-
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	"strconv"
+	"time"
 
 	"github.com/rusenask/keel/cache"
 	"github.com/rusenask/keel/types"
@@ -11,43 +11,60 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-func getIdentifier(namespace, name string) string {
-	return namespace + "/" + name
+func getIdentifier(namespace, name, version string) string {
+	return namespace + "/" + name + ":" + version
 }
 
 // checkForApprovals - filters out deployments and only passes forward approved ones
-func (p *Provider) checkForApprovals(event *types.Event, deployments []v1beta1.Deployment) (approved []v1beta1.Deployment) {
-	for _, deployment := range deployments {
-		approvedDeployment, err := p.isApproved(event, deployment)
+func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (approvedPlans []*UpdatePlan) {
+	approvedPlans = []*UpdatePlan{}
+	for _, plan := range plans {
+		approved, err := p.isApproved(event, plan)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
-				"deployment": deployment.Name,
-				"namespace":  deployment.Namespace,
+				"deployment": plan.Deployment.Name,
+				"namespace":  plan.Deployment.Namespace,
 			}).Error("provider.kubernetes: failed to check approval status for deployment")
 			continue
 		}
-		if approvedDeployment {
-			approved = append(approved, deployment)
+		if approved {
+			approvedPlans = append(approvedPlans, plan)
 		}
 	}
-	return approved
+	return approvedPlans
 }
 
-func (p *Provider) isApproved(event *types.Event, deployment v1beta1.Deployment) (bool, error) {
-	labels := deployment.GetLabels()
+func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error) {
+	labels := plan.Deployment.GetLabels()
 
-	minApprovals, ok := labels[types.KeelMinimumApprovalsLabel]
+	minApprovalsStr, ok := labels[types.KeelMinimumApprovalsLabel]
 	if !ok {
 		// no approvals required - passing
 		return true, nil
 	}
 
-	if minApprovals == "0" {
+	minApprovals, err := strconv.Atoi(minApprovalsStr)
+	if err != nil {
+		return false, err
+	}
+
+	if minApprovals == 0 {
 		return true, nil
 	}
 
-	identifier := getIdentifier(deployment.Namespace, deployment.Name)
+	deadline := types.KeelApprovalTimeoutDefault
+
+	// deadline
+	deadlineStr, ok := labels[types.KeelApprovalTimeoutLabel]
+	if ok {
+		d, err := strconv.Atoi(deadlineStr)
+		if err == nil {
+			deadline = d
+		}
+	}
+
+	identifier := getIdentifier(plan.Deployment.Namespace, plan.Deployment.Name, plan.NewVersion)
 
 	// checking for existing approval
 	existing, err := p.approvalManager.Get(types.ProviderTypeKubernetes, identifier)
@@ -56,11 +73,24 @@ func (p *Provider) isApproved(event *types.Event, deployment v1beta1.Deployment)
 
 			// creating new one
 			approval := &types.Approval{
-				Provider:   types.ProviderTypeKubernetes,
-				Identifier: identifier,
-				Event:      event,
-				Message:    fmt.Sprintf("New image is available for deployment %s/%s"),
+				Provider:       types.ProviderTypeKubernetes,
+				Identifier:     identifier,
+				Event:          event,
+				CurrentVersion: plan.CurrentVersion,
+				NewVersion:     plan.NewVersion,
+				VotesRequired:  minApprovals,
+				VotesReceived:  0,
+				Rejected:       false,
+				Deadline:       time.Duration(deadline) * time.Minute,
 			}
+
+			approval.Message = fmt.Sprintf("New image is available for deployment %s/%s (%s)",
+				plan.Deployment.Namespace,
+				plan.Deployment.Name,
+				approval.Delta(),
+			)
+
+			fmt.Println("requesting approval, ns: ", plan.Deployment.Namespace)
 
 			return false, p.approvalManager.Create(approval)
 		}
