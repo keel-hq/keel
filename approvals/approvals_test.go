@@ -197,7 +197,7 @@ func TestApprove(t *testing.T) {
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
-		Identifier:     "xxx/app-1",
+		Identifier:     "xxx/app-1:1.2.5",
 		CurrentVersion: "1.2.3",
 		NewVersion:     "1.2.5",
 		Deadline:       0,
@@ -209,9 +209,9 @@ func TestApprove(t *testing.T) {
 		t.Fatalf("failed to create approval: %s", err)
 	}
 
-	am.Approve(types.ProviderTypeKubernetes, "xxx/app-1")
+	am.Approve(types.ProviderTypeKubernetes, "xxx/app-1:1.2.5")
 
-	stored, err := am.Get(types.ProviderTypeKubernetes, "xxx/app-1")
+	stored, err := am.Get(types.ProviderTypeKubernetes, "xxx/app-1:1.2.5")
 	if err != nil {
 		t.Fatalf("failed to get approval: %s", err)
 	}
