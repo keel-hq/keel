@@ -2,13 +2,20 @@ package bot
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/nlopes/slack"
 
+	"github.com/rusenask/keel/extension/approval"
+
+	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/provider/kubernetes"
+	"github.com/rusenask/keel/types"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -31,6 +38,9 @@ var (
 
 	// dynamic bot command prefixes have to be matched
 	dynamicBotCommandPrefixes = []string{"describe deployment"}
+
+	approvalResponseKeyword = "lgtm"
+	rejectResponseKeyword   = "reject"
 )
 
 // Bot - main slack bot container
@@ -45,6 +55,10 @@ type Bot struct {
 	slackClient *slack.Client
 	slackRTM    *slack.RTM
 
+	approvalsCh chan *approvalResponse
+
+	approvalsManager approvals.Manager
+
 	k8sImplementer kubernetes.Implementer
 
 	ctx context.Context
@@ -54,11 +68,23 @@ type Bot struct {
 func New(name, token string, k8sImplementer kubernetes.Implementer) *Bot {
 	client := slack.New(token)
 
-	return &Bot{
+	bot := &Bot{
 		slackClient:    client,
 		k8sImplementer: k8sImplementer,
 		name:           name,
+		approvalsCh:    make(chan *approvalResponse), // don't add buffer to make it blocking
 	}
+
+	// register slack bot as approval collector
+	approval.RegisterCollector("slack", bot)
+
+	return bot
+}
+
+// Configure - sets approval manager during init
+func (b *Bot) Configure(approvalsManager approvals.Manager) (bool, error) {
+	b.approvalsManager = approvalsManager
+	return true, nil
 }
 
 // Start - start bot
@@ -134,10 +160,249 @@ func (b *Bot) startInternal() error {
 			default:
 
 				// Ignore other events..
-				// fmt.Printf("Unexpected: %v\n", msg.Data)
+				fmt.Printf("Unexpected: %v\n", msg.Data)
 			}
 		}
 	}
+}
+
+func (b *Bot) subscribeForApprovals() error {
+	approvalsCh, err := b.approvalsManager.Subscribe(b.ctx)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-b.ctx.Done():
+			return nil
+		case a := <-approvalsCh:
+			err = b.request(a)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":    err,
+					"approval": a.Identifier,
+				}).Error("bot.subscribeForApprovals: approval request failed")
+			}
+
+		}
+	}
+}
+
+// Request - request approval
+func (b *Bot) request(req *types.Approval) error {
+
+	err := b.postMessage(
+		"Approval required",
+		req.Message,
+		types.LevelSuccess.Color(),
+		[]slack.AttachmentField{
+			slack.AttachmentField{
+				Title: "Approval required!",
+				Value: req.Message,
+				Short: false,
+			},
+			slack.AttachmentField{
+				Title: "Required",
+				Value: fmt.Sprint(req.VotesRequired),
+				Short: true,
+			},
+			slack.AttachmentField{
+				Title: "Current",
+				Value: "0",
+				Short: true,
+			},
+		})
+	if err != nil {
+		return err
+	}
+
+	collected := make(map[string]*approvalResponse)
+
+	voteEnds := time.Now().Add(req.Requirements.Timeout)
+
+	// start waiting for responses
+	for {
+		select {
+		case resp := <-b.approvalsCh:
+
+			// if rejected - ending vote
+			if !resp.Approved {
+				b.postMessage(
+					"Change rejected",
+					req.Message,
+					types.LevelWarn.Color(),
+					[]slack.AttachmentField{
+						slack.AttachmentField{
+							Title: "Change rejected",
+							Value: "Change was manually rejected. Thanks for voting!",
+							Short: false,
+						},
+						slack.AttachmentField{
+							Title: "Required",
+							Value: fmt.Sprint(req.Requirements.MinimumApprovals),
+							Short: true,
+						},
+						slack.AttachmentField{
+							Title: "Current",
+							Value: fmt.Sprint(len(collected)),
+							Short: true,
+						},
+					})
+
+				return false, nil
+			}
+
+			collected[resp.User] = resp
+			if len(collected) >= req.Requirements.MinimumApprovals {
+				var voters []string
+				for k := range collected {
+					voters = append(voters, k)
+				}
+
+				b.postMessage(
+					"Approval received",
+					"All approvals received, thanks for voting!",
+					types.LevelSuccess.Color(),
+					[]slack.AttachmentField{
+						slack.AttachmentField{
+							Title: "Update approved!",
+							Value: "All approvals received, thanks for voting!",
+							Short: false,
+						},
+						slack.AttachmentField{
+							Title: "Required",
+							Value: fmt.Sprint(req.Requirements.MinimumApprovals),
+							Short: true,
+						},
+						slack.AttachmentField{
+							Title: "Current",
+							Value: fmt.Sprint(len(collected)),
+							Short: true,
+						},
+					})
+
+				return true, nil
+			}
+
+			// inform about approval and how many votes required
+			b.postMessage(
+				"Approve received",
+				"",
+				types.LevelInfo.Color(),
+				[]slack.AttachmentField{
+					slack.AttachmentField{
+						Title: "Approve received",
+						Value: "All approvals received, thanks for voting!",
+						Short: false,
+					},
+					slack.AttachmentField{
+						Title: "Required",
+						Value: fmt.Sprint(req.Requirements.MinimumApprovals),
+						Short: true,
+					},
+					slack.AttachmentField{
+						Title: "Current",
+						Value: fmt.Sprint(len(collected)),
+						Short: true,
+					},
+					slack.AttachmentField{
+						Title: "Vote ends",
+						Value: voteEnds.Format("2006/01/02 15:04:05"),
+						Short: true,
+					},
+				})
+
+			continue
+		case <-time.After(req.Requirements.Timeout):
+			// inform about timeout
+
+			b.postMessage(
+				"Vote deadline reached!",
+				"",
+				types.LevelFatal.Color(),
+				[]slack.AttachmentField{
+					slack.AttachmentField{
+						Title: "Vote deadline reached!",
+						Value: "Deadline reached, skipping update.",
+						Short: false,
+					},
+					slack.AttachmentField{
+						Title: "Required",
+						Value: fmt.Sprint(req.Requirements.MinimumApprovals),
+						Short: true,
+					},
+					slack.AttachmentField{
+						Title: "Current",
+						Value: fmt.Sprint(len(collected)),
+						Short: true,
+					},
+					slack.AttachmentField{
+						Title: "Vote ends",
+						Value: voteEnds.Format("2006/01/02 15:04:05"),
+						Short: true,
+					},
+				})
+
+			return false, nil
+		}
+	}
+}
+
+func (b *Bot) postMessage(title, message, color string, fields []slack.AttachmentField) error {
+	params := slack.NewPostMessageParameters()
+	params.Username = b.name
+
+	params.Attachments = []slack.Attachment{
+		slack.Attachment{
+			Fallback: message,
+			Color:    color,
+			Fields:   fields,
+			Footer:   "https://keel.sh",
+			Ts:       json.Number(strconv.Itoa(int(time.Now().Unix()))),
+		},
+	}
+
+	_, _, err := b.slackClient.PostMessage("general", "", params)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("bot.postMessage: failed to send message")
+	}
+	return err
+}
+
+// approvalResponse - used to track approvals once vote begins
+type approvalResponse struct {
+	User     string
+	Approved bool // can be either approved or rejected
+}
+
+func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *approvalResponse, ok bool) {
+	if strings.ToLower(eventText) == approvalResponseKeyword {
+		log.WithFields(log.Fields{
+			"user":     event.User,
+			"username": event.Username,
+			"approved": true,
+		}).Info("bot.isApproval: approval received")
+		return &approvalResponse{
+			User:     event.Username,
+			Approved: true,
+		}, true
+	}
+	if strings.ToLower(eventText) == rejectResponseKeyword {
+		log.WithFields(log.Fields{
+			"user":     event.User,
+			"username": event.Username,
+			"approved": false,
+		}).Info("bot.isApproval: approval received")
+		return &approvalResponse{
+			User:     event.Username,
+			Approved: false,
+		}, true
+	}
+
+	return nil, false
 }
 
 func (b *Bot) handleMessage(event *slack.MessageEvent) {
@@ -152,7 +417,12 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 
 	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
 
-	// All messages past this point are directed to @gopher itself
+	approval, ok := b.isApproval(event, eventText)
+	if ok {
+		b.approvalsCh <- approval
+		return
+	}
+
 	if !b.isBotMessage(event, eventText) {
 		return
 	}
