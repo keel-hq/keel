@@ -50,7 +50,7 @@ func TestCreateApproval(t *testing.T) {
 		t.Fatalf("failed to create approval: %s", err)
 	}
 
-	stored, err := am.Get(types.ProviderTypeKubernetes, "xxx/app-1")
+	stored, err := am.Get("xxx/app-1")
 	if err != nil {
 		t.Fatalf("failed to get approval: %s", err)
 	}
@@ -209,9 +209,9 @@ func TestApprove(t *testing.T) {
 		t.Fatalf("failed to create approval: %s", err)
 	}
 
-	am.Approve(types.ProviderTypeKubernetes, "xxx/app-1:1.2.5")
+	am.Approve("xxx/app-1:1.2.5")
 
-	stored, err := am.Get(types.ProviderTypeKubernetes, "xxx/app-1:1.2.5")
+	stored, err := am.Get("xxx/app-1:1.2.5")
 	if err != nil {
 		t.Fatalf("failed to get approval: %s", err)
 	}
@@ -241,9 +241,9 @@ func TestReject(t *testing.T) {
 		t.Fatalf("failed to create approval: %s", err)
 	}
 
-	am.Reject(types.ProviderTypeKubernetes, "xxx/app-1")
+	am.Reject("xxx/app-1")
 
-	stored, err := am.Get(types.ProviderTypeKubernetes, "xxx/app-1")
+	stored, err := am.Get("xxx/app-1")
 	if err != nil {
 		t.Fatalf("failed to get approval: %s", err)
 	}
