@@ -67,7 +67,7 @@ func TestCheckRequestedApproval(t *testing.T) {
 	}
 
 	// checking approvals
-	approval, err := provider.approvalManager.Get(types.ProviderTypeKubernetes, "xxxx/dep-1:1.1.2")
+	approval, err := provider.approvalManager.Get("xxxx/dep-1:1.1.2")
 	if err != nil {
 		t.Fatalf("failed to find approval, err: %s", err)
 	}

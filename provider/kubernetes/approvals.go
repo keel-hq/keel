@@ -67,7 +67,7 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 	identifier := getIdentifier(plan.Deployment.Namespace, plan.Deployment.Name, plan.NewVersion)
 
 	// checking for existing approval
-	existing, err := p.approvalManager.Get(types.ProviderTypeKubernetes, identifier)
+	existing, err := p.approvalManager.Get(identifier)
 	if err != nil {
 		if err == cache.ErrNotFound {
 
@@ -98,5 +98,5 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 		return false, err
 	}
 
-	return existing.Approved(), nil
+	return existing.Status() == types.ApprovalStatusApproved, nil
 }

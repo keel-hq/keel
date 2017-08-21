@@ -47,10 +47,8 @@ type MainCollector struct {
 }
 
 // New - create new sender
-func New(approvalsManager approvals.Manager) *MainCollector {
-	return &MainCollector{
-		approvalsManager: approvalsManager,
-	}
+func New() *MainCollector {
+	return &MainCollector{}
 }
 
 // Configure - configure is used to register multiple notification senders

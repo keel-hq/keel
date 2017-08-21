@@ -304,9 +304,39 @@ type Approval struct {
 	UpdatedAt time.Time
 }
 
-// Approved - checks if approval is approved
-func (a *Approval) Approved() bool {
-	return !a.Rejected && a.VotesReceived >= a.VotesRequired
+type ApprovalStatus int
+
+const (
+	ApprovalStatusUnknown ApprovalStatus = iota
+	ApprovalStatusPending 
+	ApprovalStatusApproved
+	ApprovalStatusRejected
+)
+
+func (s ApprovalStatus) String() string {
+	switch s {
+	case ApprovalStatusPending:
+		return "pending"
+	case ApprovalStatusApproved:
+		return "approved"
+	case ApprovalStatusRejected:
+		return "rejected"
+	default:
+		return "unknown"
+	}
+}
+
+// Status - returns current approval status
+func (a *Approval) Status() ApprovalStatus {
+	if a.Rejected {
+		return ApprovalStatusRejected
+	}
+
+	if a.VotesReceived >= a.VotesRequired {
+		return ApprovalStatusApproved
+	}
+
+	return ApprovalStatusPending
 }
 
 // Delta of what's changed
