@@ -27,13 +27,13 @@ type Manager interface {
 	Update(r *types.Approval) error
 
 	// Increases Approval votes by 1
-	Approve(provider types.ProviderType, identifier string) (*types.Approval, error)
+	Approve(identifier string) (*types.Approval, error)
 	// Rejects Approval
-	Reject(provider types.ProviderType, identifier string) (*types.Approval, error)
+	Reject(identifier string) (*types.Approval, error)
 
-	Get(provider types.ProviderType, identifier string) (*types.Approval, error)
-	List(provider types.ProviderType) ([]*types.Approval, error)
-	Delete(provider types.ProviderType, identifier string) error
+	Get(identifier string) (*types.Approval, error)
+	List() ([]*types.Approval, error)
+	Delete(identifier string) error
 }
 
 // Approvals related errors
@@ -66,7 +66,7 @@ type DefaultManager struct {
 
 // New create new instance of default manager
 func New(cache cache.Cache, serializer codecs.Serializer, providers provider.Providers) *DefaultManager {
-	return &DefaultManager{
+	man := &DefaultManager{
 		cache:      cache,
 		serializer: serializer,
 		providers:  providers,
@@ -74,6 +74,8 @@ func New(cache cache.Cache, serializer codecs.Serializer, providers provider.Pro
 		index:      0,
 		mu:         &sync.Mutex{},
 	}
+
+	return man
 }
 
 // Subscribe - subscribe for approval events
@@ -115,7 +117,7 @@ func (m *DefaultManager) publish(approval *types.Approval) error {
 
 // Create - creates new approval request and publishes to all subscribers
 func (m *DefaultManager) Create(r *types.Approval) error {
-	_, err := m.Get(r.Provider, r.Identifier)
+	_, err := m.Get(r.Identifier)
 	if err == nil {
 		return ErrApprovalAlreadyExists
 	}
@@ -127,7 +129,7 @@ func (m *DefaultManager) Create(r *types.Approval) error {
 
 	ctx := cache.SetContextExpiration(context.Background(), r.Deadline)
 
-	err = m.cache.Put(ctx, getKey(r.Provider, r.Identifier), bts)
+	err = m.cache.Put(ctx, getKey(r.Identifier), bts)
 	if err != nil {
 		return err
 	}
@@ -137,7 +139,7 @@ func (m *DefaultManager) Create(r *types.Approval) error {
 }
 
 func (m *DefaultManager) Update(r *types.Approval) error {
-	existing, err := m.Get(r.Provider, r.Identifier)
+	existing, err := m.Get(r.Identifier)
 	if err != nil {
 		return err
 	}
@@ -150,7 +152,7 @@ func (m *DefaultManager) Update(r *types.Approval) error {
 		return err
 	}
 
-	if r.Approved() {
+	if r.Status() == types.ApprovalStatusApproved {
 		err = m.providers.Submit(*r.Event)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -162,15 +164,15 @@ func (m *DefaultManager) Update(r *types.Approval) error {
 	}
 
 	ctx := cache.SetContextExpiration(context.Background(), r.Deadline)
-	return m.cache.Put(ctx, getKey(r.Provider, r.Identifier), bts)
+	return m.cache.Put(ctx, getKey(r.Identifier), bts)
 }
 
 // Approve - increase VotesReceived by 1 and returns updated version
-func (m *DefaultManager) Approve(provider types.ProviderType, identifier string) (*types.Approval, error) {
+func (m *DefaultManager) Approve(identifier string) (*types.Approval, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	existing, err := m.Get(provider, identifier)
+	existing, err := m.Get(identifier)
 	if err != nil {
 		return nil, err
 	}
@@ -187,11 +189,11 @@ func (m *DefaultManager) Approve(provider types.ProviderType, identifier string)
 
 // Reject - rejects approval (marks rejected=true), approval will not be valid even if it
 // collects required votes
-func (m *DefaultManager) Reject(provider types.ProviderType, identifier string) (*types.Approval, error) {
+func (m *DefaultManager) Reject(identifier string) (*types.Approval, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	existing, err := m.Get(provider, identifier)
+	existing, err := m.Get(identifier)
 	if err != nil {
 		return nil, err
 	}
@@ -206,8 +208,8 @@ func (m *DefaultManager) Reject(provider types.ProviderType, identifier string) 
 	return existing, nil
 }
 
-func (m *DefaultManager) Get(provider types.ProviderType, identifier string) (*types.Approval, error) {
-	bts, err := m.cache.Get(context.Background(), getKey(provider, identifier))
+func (m *DefaultManager) Get(identifier string) (*types.Approval, error) {
+	bts, err := m.cache.Get(context.Background(), getKey(identifier))
 	if err != nil {
 		return nil, err
 	}
@@ -217,12 +219,8 @@ func (m *DefaultManager) Get(provider types.ProviderType, identifier string) (*t
 	return &approval, err
 }
 
-func (m *DefaultManager) List(provider types.ProviderType) ([]*types.Approval, error) {
-	prefix := ""
-	if provider != types.ProviderTypeUnknown {
-		prefix = provider.String()
-	}
-	bts, err := m.cache.List(prefix)
+func (m *DefaultManager) List() ([]*types.Approval, error) {
+	bts, err := m.cache.List(ApprovalsPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -242,10 +240,10 @@ func (m *DefaultManager) List(provider types.ProviderType) ([]*types.Approval, e
 	return approvals, nil
 
 }
-func (m *DefaultManager) Delete(provider types.ProviderType, identifier string) error {
-	return m.cache.Delete(context.Background(), getKey(provider, identifier))
+func (m *DefaultManager) Delete(identifier string) error {
+	return m.cache.Delete(context.Background(), getKey(identifier))
 }
 
-func getKey(provider types.ProviderType, identifier string) string {
-	return ApprovalsPrefix + "/" + provider.String() + "/" + identifier
+func getKey(identifier string) string {
+	return ApprovalsPrefix + "/" + identifier
 }
