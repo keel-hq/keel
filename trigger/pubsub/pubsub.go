@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"net"
+
 	"cloud.google.com/go/pubsub"
 	"golang.org/x/net/context"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
-	"net"
 
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/types"
@@ -106,7 +107,10 @@ func (s *PubsubSubscriber) ensureSubscription(ctx context.Context, subscriptionI
 		Topic:       s.client.Topic(topicID),
 		AckDeadline: 10 * time.Second,
 	})
-	return fmt.Errorf("failed to create subscription %s, error: %s", subscriptionID, err)
+	if err != nil {
+		return fmt.Errorf("failed to create subscription %s, error: %s", subscriptionID, err)
+	}
+	return nil
 }
 
 // Subscribe - initiate PubsubSubscriber
