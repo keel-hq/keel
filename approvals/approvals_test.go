@@ -1,6 +1,7 @@
 package approvals
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -9,34 +10,10 @@ import (
 	"github.com/rusenask/keel/util/codecs"
 )
 
-type fakeProvider struct {
-	submitted []types.Event
-	images    []*types.TrackedImage
-}
-
-func (p *fakeProvider) Submit(event types.Event) error {
-	p.submitted = append(p.submitted, event)
-	return nil
-}
-
-func (p *fakeProvider) TrackedImages() ([]*types.TrackedImage, error) {
-	return p.images, nil
-}
-func (p *fakeProvider) List() []string {
-	return []string{"fakeprovider"}
-}
-func (p *fakeProvider) Stop() {
-	return
-}
-func (p *fakeProvider) GetName() string {
-	return "fp"
-}
-
 func TestCreateApproval(t *testing.T) {
 	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	fp := &fakeProvider{}
 
-	am := New(mem, codecs.DefaultSerializer(), fp)
+	am := New(mem, codecs.DefaultSerializer())
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -62,9 +39,8 @@ func TestCreateApproval(t *testing.T) {
 
 func TestUpdateApproval(t *testing.T) {
 	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	fp := &fakeProvider{}
 
-	am := New(mem, codecs.DefaultSerializer(), fp)
+	am := New(mem, codecs.DefaultSerializer())
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -84,6 +60,12 @@ func TestUpdateApproval(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("failed to create approval: %s", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ch, err := am.SubscribeApproved(ctx)
+	if err != nil {
+		t.Fatalf("failed to subscribe: %s", err)
 	}
 
 	err = am.Update(&types.Approval{
@@ -102,24 +84,20 @@ func TestUpdateApproval(t *testing.T) {
 		},
 	})
 
-	// checking provider
-	if len(fp.submitted) != 1 {
-		t.Fatalf("expected to find 1 submitted event")
-	}
+	approved := <-ch
 
-	if fp.submitted[0].Repository.Name != "very/repo" {
-		t.Errorf("unexpected repo name in re-submitted event: %s", fp.submitted[0].Repository.Name)
+	if approved.Event.Repository.Name != "very/repo" {
+		t.Errorf("unexpected repo name in re-submitted event: %s", approved.Event.Repository.Name)
 	}
-	if fp.submitted[0].Repository.Tag != "1.2.5" {
-		t.Errorf("unexpected repo tag in re-submitted event: %s", fp.submitted[0].Repository.Tag)
+	if approved.Event.Repository.Tag != "1.2.5" {
+		t.Errorf("unexpected repo tag in re-submitted event: %s", approved.Event.Repository.Tag)
 	}
 }
 
 func TestUpdateApprovalRejected(t *testing.T) {
 	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	fp := &fakeProvider{}
 
-	am := New(mem, codecs.DefaultSerializer(), fp)
+	am := New(mem, codecs.DefaultSerializer())
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -139,6 +117,13 @@ func TestUpdateApprovalRejected(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("failed to create approval: %s", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ch, err := am.SubscribeApproved(ctx)
+	if err != nil {
+		t.Fatalf("failed to subscribe: %s", err)
 	}
 
 	// rejecting
@@ -183,17 +168,20 @@ func TestUpdateApprovalRejected(t *testing.T) {
 		t.Fatalf("failed to update approval: %s", err)
 	}
 
-	// checking provider
-	if len(fp.submitted) == 1 {
-		t.Fatalf("expected to find 0 submitted event as it was rejected but found: %d", len(fp.submitted))
+	select {
+	case <-time.After(500 * time.Millisecond):
+		// success
+		return
+	case approval := <-ch:
+		t.Errorf("unexpected approval got: %s", approval.Identifier)
 	}
+
 }
 
 func TestApprove(t *testing.T) {
 	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	fp := &fakeProvider{}
 
-	am := New(mem, codecs.DefaultSerializer(), fp)
+	am := New(mem, codecs.DefaultSerializer())
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -223,9 +211,8 @@ func TestApprove(t *testing.T) {
 
 func TestReject(t *testing.T) {
 	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	fp := &fakeProvider{}
 
-	am := New(mem, codecs.DefaultSerializer(), fp)
+	am := New(mem, codecs.DefaultSerializer())
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
