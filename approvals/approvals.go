@@ -159,6 +159,9 @@ func (m *DefaultManager) Create(r *types.Approval) error {
 		return ErrApprovalAlreadyExists
 	}
 
+	r.CreatedAt = time.Now()
+	r.UpdatedAt = time.Now()
+
 	bts, err := m.serializer.Encode(r)
 	if err != nil {
 		return err

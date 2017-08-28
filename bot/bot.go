@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,7 +12,6 @@ import (
 	"github.com/nlopes/slack"
 
 	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/bot/formatter"
 	"github.com/rusenask/keel/provider/kubernetes"
 	"github.com/rusenask/keel/types"
 
@@ -331,5 +329,3 @@ func (b *Bot) trimBot(msg string) string {
 func formatAsSnippet(response string) string {
 	return "```" + response + "```"
 }
-
-
