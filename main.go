@@ -108,7 +108,7 @@ func main() {
 
 	secretsGetter := secrets.NewGetter(implementer)
 
-	teardownTriggers := setupTriggers(ctx, providers, secretsGetter)
+	teardownTriggers := setupTriggers(ctx, providers, secretsGetter, approvalsManager)
 
 	teardownBot, err := setupBot(implementer, approvalsManager)
 	if err != nil {
@@ -208,12 +208,13 @@ func setupBot(k8sImplementer kubernetes.Implementer, approvalsManager approvals.
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
 // should go through all providers (or not if there is a reason) and submit events)
-func setupTriggers(ctx context.Context, providers provider.Providers, secretsGetter secrets.Getter) (teardown func()) {
+func setupTriggers(ctx context.Context, providers provider.Providers, secretsGetter secrets.Getter, approvalsManager approvals.Manager) (teardown func()) {
 
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{
-		Port:      types.KeelDefaultPort,
-		Providers: providers,
+		Port:            types.KeelDefaultPort,
+		Providers:       providers,
+		ApprovalManager: approvalsManager,
 	})
 
 	go whs.Start()
