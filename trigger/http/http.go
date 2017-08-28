@@ -79,6 +79,10 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	mux.HandleFunc("/healthz", s.healthHandler).Methods("GET", "OPTIONS")
 	// version handler
 	mux.HandleFunc("/version", s.versionHandler).Methods("GET", "OPTIONS")
+
+	//
+	mux.HandleFunc("/v1/approvals", s.approvalsHandler).Methods("GET", "OPTIONS")
+
 	// native webhooks handler
 	mux.HandleFunc("/v1/webhooks/native", s.nativeHandler).Methods("POST", "OPTIONS")
 
