@@ -9,7 +9,10 @@ import (
 
 	netContext "golang.org/x/net/context"
 
+	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/bot"
+	"github.com/rusenask/keel/cache/memory"
+
 	"github.com/rusenask/keel/constants"
 	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/provider"
@@ -21,6 +24,7 @@ import (
 	"github.com/rusenask/keel/trigger/poll"
 	"github.com/rusenask/keel/trigger/pubsub"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/codecs"
 	"github.com/rusenask/keel/version"
 
 	// extensions
@@ -95,14 +99,18 @@ func main() {
 		}).Fatal("main: failed to create kubernetes implementer")
 	}
 
+	serializer := codecs.DefaultSerializer()
+	mem := memory.NewMemoryCache(24*time.Hour, 24*time.Hour, 1*time.Minute)
+	approvalsManager := approvals.New(mem, serializer)
+
 	// setting up providers
-	providers := setupProviders(implementer, sender)
+	providers := setupProviders(implementer, sender, approvalsManager)
 
 	secretsGetter := secrets.NewGetter(implementer)
 
 	teardownTriggers := setupTriggers(ctx, providers, secretsGetter)
 
-	teardownBot, err := setupBot(implementer)
+	teardownBot, err := setupBot(implementer, approvalsManager)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -141,10 +149,10 @@ func main() {
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
 // provider map
-func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.Sender) (providers provider.Providers) {
+func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.Sender, approvalsManager approvals.Manager) (providers provider.Providers) {
 	var enabledProviders []provider.Provider
 
-	k8sProvider, err := kubernetes.NewProvider(k8sImplementer, sender)
+	k8sProvider, err := kubernetes.NewProvider(k8sImplementer, sender, approvalsManager)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -162,12 +170,12 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 		enabledProviders = append(enabledProviders, helmProvider)
 	}
 
-	providers = provider.New(enabledProviders)
+	providers = provider.New(enabledProviders, approvalsManager)
 
 	return providers
 }
 
-func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error) {
+func setupBot(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) (teardown func(), err error) {
 
 	if os.Getenv(constants.EnvSlackToken) != "" {
 		botName := "keel"
@@ -177,7 +185,7 @@ func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error
 		}
 
 		token := os.Getenv(constants.EnvSlackToken)
-		slackBot := bot.New(botName, token, k8sImplementer)
+		slackBot := bot.New(botName, token, k8sImplementer, approvalsManager)
 
 		ctx, cancel := context.WithCancel(context.Background())
 
