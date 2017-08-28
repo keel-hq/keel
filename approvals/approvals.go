@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/rusenask/keel/cache"
-	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/codecs"
 
@@ -18,8 +17,12 @@ import (
 // Manager is used to manage updates
 type Manager interface {
 	// Subscribe for approval request events, subscriber should provide
-	// its name
+	// its name. Indented to be used by extensions that collect
+	// approvals
 	Subscribe(ctx context.Context) (<-chan *types.Approval, error)
+
+	// SubscribeApproved - is used to get approved events by the manager
+	SubscribeApproved(ctx context.Context) (<-chan *types.Approval, error)
 
 	// request approval for deployment/release/etc..
 	Create(r *types.Approval) error
@@ -53,26 +56,27 @@ type DefaultManager struct {
 	cache      cache.Cache
 	serializer codecs.Serializer
 
-	// providers are used to re-submit event
-	// when all approvals are collected
-	providers provider.Providers
-
 	// subscriber channels
 	channels map[uint64]chan *types.Approval
 	index    uint64
 
-	mu *sync.Mutex
+	// approved channels
+	approvedCh map[uint64]chan *types.Approval
+
+	mu    *sync.Mutex
+	subMu *sync.RWMutex
 }
 
 // New create new instance of default manager
-func New(cache cache.Cache, serializer codecs.Serializer, providers provider.Providers) *DefaultManager {
+func New(cache cache.Cache, serializer codecs.Serializer) *DefaultManager {
 	man := &DefaultManager{
 		cache:      cache,
 		serializer: serializer,
-		providers:  providers,
 		channels:   make(map[uint64]chan *types.Approval),
+		approvedCh: make(map[uint64]chan *types.Approval),
 		index:      0,
 		mu:         &sync.Mutex{},
+		subMu:      &sync.RWMutex{},
 	}
 
 	return man
@@ -80,23 +84,21 @@ func New(cache cache.Cache, serializer codecs.Serializer, providers provider.Pro
 
 // Subscribe - subscribe for approval events
 func (m *DefaultManager) Subscribe(ctx context.Context) (<-chan *types.Approval, error) {
-	m.mu.Lock()
-	m.mu.Unlock()
-
+	m.subMu.Lock()
 	index := atomic.AddUint64(&m.index, 1)
 	approvalsCh := make(chan *types.Approval, 10)
 	m.channels[index] = approvalsCh
-	m.mu.Unlock()
+	m.subMu.Unlock()
 
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
-				m.mu.Lock()
+				m.subMu.Lock()
 
 				delete(m.channels, index)
 
-				m.mu.Unlock()
+				m.subMu.Unlock()
 				return
 			}
 		}
@@ -105,11 +107,46 @@ func (m *DefaultManager) Subscribe(ctx context.Context) (<-chan *types.Approval,
 	return approvalsCh, nil
 }
 
-func (m *DefaultManager) publish(approval *types.Approval) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+// SubscribeApproved - subscribe for approved update requests
+func (m *DefaultManager) SubscribeApproved(ctx context.Context) (<-chan *types.Approval, error) {
+	m.subMu.Lock()
+	index := atomic.AddUint64(&m.index, 1)
+	approvedCh := make(chan *types.Approval, 10)
+	m.approvedCh[index] = approvedCh
+	m.subMu.Unlock()
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				m.subMu.Lock()
+
+				delete(m.approvedCh, index)
+
+				m.subMu.Unlock()
+				return
+			}
+		}
+	}()
+
+	return approvedCh, nil
+}
+
+func (m *DefaultManager) publishRequest(approval *types.Approval) error {
+	m.subMu.RLock()
+	defer m.subMu.RUnlock()
 
 	for _, subscriber := range m.channels {
+		subscriber <- approval
+	}
+	return nil
+}
+
+func (m *DefaultManager) publishApproved(approval *types.Approval) error {
+	m.subMu.RLock()
+	defer m.subMu.RUnlock()
+
+	for _, subscriber := range m.approvedCh {
 		subscriber <- approval
 	}
 	return nil
@@ -134,7 +171,7 @@ func (m *DefaultManager) Create(r *types.Approval) error {
 		return err
 	}
 
-	return m.publish(r)
+	return m.publishRequest(r)
 
 }
 
@@ -153,7 +190,7 @@ func (m *DefaultManager) Update(r *types.Approval) error {
 	}
 
 	if r.Status() == types.ApprovalStatusApproved {
-		err = m.providers.Submit(*r.Event)
+		err = m.publishApproved(r)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":    err,
@@ -174,6 +211,10 @@ func (m *DefaultManager) Approve(identifier string) (*types.Approval, error) {
 
 	existing, err := m.Get(identifier)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"identifier": identifier,
+			"error":      err,
+		}).Error("approvals.manager: failed to get")
 		return nil, err
 	}
 
@@ -181,8 +222,16 @@ func (m *DefaultManager) Approve(identifier string) (*types.Approval, error) {
 
 	err = m.Update(existing)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"identifier": identifier,
+			"error":      err,
+		}).Error("approvals.manager: failed to update")
 		return nil, err
 	}
+
+	log.WithFields(log.Fields{
+		"identifier": identifier,
+	}).Info("approvals.manager: approved")
 
 	return existing, nil
 }
