@@ -33,6 +33,7 @@ func (p *fakeProvider) Submit(event types.Event) error {
 func (p *fakeProvider) TrackedImages() ([]*types.TrackedImage, error) {
 	return p.images, nil
 }
+
 func (p *fakeProvider) List() []string {
 	return []string{"fakeprovider"}
 }
@@ -64,7 +65,7 @@ func (i *fakeSlackImplementer) PostMessage(channel, text string, params slack.Po
 
 func TestBotRequest(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
-	fp := &fakeProvider{}
+
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
 
@@ -73,9 +74,9 @@ func TestBotRequest(t *testing.T) {
 		t.Skip()
 	}
 
-	am := approvals.New(mem, codecs.DefaultSerializer(), fp)
+	am := approvals.New(mem, codecs.DefaultSerializer())
 
-	bot := New("keel", token, f8s)
+	bot := New("keel", token, f8s, am)
 	// replacing slack client so we can receive webhooks
 	bot.slackHTTPClient = fi
 
@@ -113,7 +114,6 @@ func TestBotRequest(t *testing.T) {
 
 func TestProcessApprovedResponse(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
-	fp := &fakeProvider{}
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
 
@@ -122,9 +122,9 @@ func TestProcessApprovedResponse(t *testing.T) {
 		t.Skip()
 	}
 
-	am := approvals.New(mem, codecs.DefaultSerializer(), fp)
+	am := approvals.New(mem, codecs.DefaultSerializer())
 
-	bot := New("keel", token, f8s)
+	bot := New("keel", token, f8s, am)
 	// replacing slack client so we can receive webhooks
 	bot.slackHTTPClient = fi
 
@@ -162,7 +162,6 @@ func TestProcessApprovedResponse(t *testing.T) {
 
 func TestProcessApprovalReply(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
-	fp := &fakeProvider{}
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
 
@@ -171,7 +170,7 @@ func TestProcessApprovalReply(t *testing.T) {
 		t.Skip()
 	}
 
-	am := approvals.New(mem, codecs.DefaultSerializer(), fp)
+	am := approvals.New(mem, codecs.DefaultSerializer())
 
 	identifier := "k8s/project/repo:1.2.3"
 
@@ -193,7 +192,7 @@ func TestProcessApprovalReply(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
-	bot := New("keel", token, f8s)
+	bot := New("keel", token, f8s, am)
 	// replacing slack client so we can receive webhooks
 	bot.slackHTTPClient = fi
 
@@ -235,7 +234,6 @@ func TestProcessApprovalReply(t *testing.T) {
 
 func TestProcessRejectedReply(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
-	fp := &fakeProvider{}
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache(100*time.Hour, 100*time.Hour, 100*time.Hour)
 
@@ -246,7 +244,7 @@ func TestProcessRejectedReply(t *testing.T) {
 
 	identifier := "k8s/project/repo:1.2.3"
 
-	am := approvals.New(mem, codecs.DefaultSerializer(), fp)
+	am := approvals.New(mem, codecs.DefaultSerializer())
 	// creating initial approve request
 	err := am.Create(&types.Approval{
 		Identifier:     identifier,
@@ -265,7 +263,7 @@ func TestProcessRejectedReply(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
-	bot := New("keel", "random", f8s)
+	bot := New("keel", "random", f8s, am)
 
 	collector := approval.New()
 	collector.Configure(am)
