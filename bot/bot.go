@@ -236,17 +236,16 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 
 	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
 
-	approval, ok := b.isApproval(event, eventText)
-	if ok {
-		b.approvalsRespCh <- approval
-		return
-	}
-
 	if !b.isBotMessage(event, eventText) {
 		return
 	}
 
 	eventText = b.trimBot(eventText)
+	approval, ok := b.isApproval(event, eventText)
+	if ok {
+		b.approvalsRespCh <- approval
+		return
+	}
 
 	// Responses that are just a canned string response
 	if responseLines, ok := botEventTextToResponse[eventText]; ok {
