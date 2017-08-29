@@ -44,17 +44,12 @@ func (b *Bot) requestApproval(req *types.Approval) error {
 		[]slack.AttachmentField{
 			slack.AttachmentField{
 				Title: "Approval required!",
-				Value: req.Message,
+				Value: req.Message + "\n" + fmt.Sprintf("To vote for change type 'lgtm <identifier>' to reject it: 'reject <identifier>."),
 				Short: false,
 			},
 			slack.AttachmentField{
-				Title: "Required",
-				Value: fmt.Sprint(req.VotesRequired),
-				Short: true,
-			},
-			slack.AttachmentField{
-				Title: "Current",
-				Value: "0",
+				Title: "Votes",
+				Value: fmt.Sprintf("%d/%d", req.VotesReceived, req.VotesRequired),
 				Short: true,
 			},
 			slack.AttachmentField{
@@ -164,7 +159,6 @@ func (b *Bot) processRejectedResponse(approvalResponse *approvalResponse) error 
 }
 
 func (b *Bot) replyToApproval(approval *types.Approval) error {
-	fmt.Println("replying")
 	switch approval.Status() {
 	case types.ApprovalStatusPending:
 		b.postMessage(
@@ -174,8 +168,13 @@ func (b *Bot) replyToApproval(approval *types.Approval) error {
 			[]slack.AttachmentField{
 				slack.AttachmentField{
 					Title: "Vote received!",
-					Value: "Waiting for remaining votes to proceed with update.",
+					Value: "Waiting for remaining votes.",
 					Short: false,
+				},
+				slack.AttachmentField{
+					Title: "Votes",
+					Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
+					Short: true,
 				},
 				slack.AttachmentField{
 					Title: "Delta",
@@ -183,8 +182,8 @@ func (b *Bot) replyToApproval(approval *types.Approval) error {
 					Short: true,
 				},
 				slack.AttachmentField{
-					Title: "Votes",
-					Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
+					Title: "Identifier",
+					Value: approval.Identifier,
 					Short: true,
 				},
 			})
@@ -196,7 +195,7 @@ func (b *Bot) replyToApproval(approval *types.Approval) error {
 			[]slack.AttachmentField{
 				slack.AttachmentField{
 					Title: "Change rejected",
-					Value: "Change was rejected. Thanks for voting!",
+					Value: "Change was rejected.",
 					Short: false,
 				},
 				slack.AttachmentField{
@@ -205,13 +204,18 @@ func (b *Bot) replyToApproval(approval *types.Approval) error {
 					Short: true,
 				},
 				slack.AttachmentField{
+					Title: "Votes",
+					Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
+					Short: true,
+				},
+				slack.AttachmentField{
 					Title: "Delta",
 					Value: approval.Delta(),
 					Short: true,
 				},
 				slack.AttachmentField{
-					Title: "Votes",
-					Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
+					Title: "Identifier",
+					Value: approval.Identifier,
 					Short: true,
 				},
 			})
@@ -227,13 +231,18 @@ func (b *Bot) replyToApproval(approval *types.Approval) error {
 					Short: false,
 				},
 				slack.AttachmentField{
+					Title: "Votes",
+					Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
+					Short: true,
+				},
+				slack.AttachmentField{
 					Title: "Delta",
 					Value: approval.Delta(),
 					Short: true,
 				},
 				slack.AttachmentField{
-					Title: "Votes",
-					Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
+					Title: "Identifier",
+					Value: approval.Identifier,
 					Short: true,
 				},
 			})
