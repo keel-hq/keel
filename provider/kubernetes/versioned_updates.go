@@ -91,6 +91,10 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 				"policy":           policy,
 			}).Info("provider.kubernetes: impacted deployment container found")
 
+			updatePlan.CurrentVersion = conatinerImageRef.Tag()
+			updatePlan.NewVersion = newVersion.Original
+			updatePlan.Deployment = deployment
+
 			// success, moving to next container
 			continue
 		}
