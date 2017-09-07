@@ -34,11 +34,11 @@ const KeelDigestAnnotation = "keel.sh/digest"
 // KeelMinimumApprovalsLabel - min approvals
 const KeelMinimumApprovalsLabel = "keel.sh/approvals"
 
-// KeelApprovalTimeoutLabel - approval deadline
-const KeelApprovalTimeoutLabel = "keel.sh/approvalTimeout"
+// KeelApprovalDeadlineLabel - approval deadline
+const KeelApprovalDeadlineLabel = "keel.sh/approvalDeadline"
 
-// KeelApprovalTimeoutDefault - default timeout in minutes
-const KeelApprovalTimeoutDefault = 30
+// KeelApprovalDeadlineDefault - default deadline in hours
+const KeelApprovalDeadlineDefault = 24
 
 // Repository - represents main docker repository fields that
 // keel cares about
@@ -289,6 +289,10 @@ type Approval struct {
 	VotesRequired int
 	VotesReceived int
 
+	// Voters is a list of voter
+	// IDs for audit
+	Voters []string
+
 	// Explicitly rejected approval
 	// can be set directly by user
 	// so even if deadline is not reached approval
@@ -296,7 +300,7 @@ type Approval struct {
 	Rejected bool
 
 	// Deadline for this request
-	Deadline time.Duration
+	Deadline time.Time
 
 	// When this approval was created
 	CreatedAt time.Time
@@ -308,7 +312,7 @@ type ApprovalStatus int
 
 const (
 	ApprovalStatusUnknown ApprovalStatus = iota
-	ApprovalStatusPending 
+	ApprovalStatusPending
 	ApprovalStatusApproved
 	ApprovalStatusRejected
 )
@@ -337,6 +341,11 @@ func (a *Approval) Status() ApprovalStatus {
 	}
 
 	return ApprovalStatusPending
+}
+
+// Expired - checks if approval is already expired
+func (a *Approval) Expired() bool {
+	return a.Deadline.Before(time.Now())
 }
 
 // Delta of what's changed
