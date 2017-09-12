@@ -226,7 +226,7 @@ func TestApprove(t *testing.T) {
 		t.Fatalf("failed to create approval: %s", err)
 	}
 
-	am.Approve("xxx/app-1:1.2.5")
+	am.Approve("xxx/app-1:1.2.5", "warda")
 
 	stored, err := am.Get("xxx/app-1:1.2.5")
 	if err != nil {
@@ -234,6 +234,72 @@ func TestApprove(t *testing.T) {
 	}
 
 	if stored.VotesReceived != 1 {
+		t.Errorf("unexpected number of received votes: %d", stored.VotesReceived)
+	}
+}
+
+func TestApproveTwiceSameVoter(t *testing.T) {
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+
+	am := New(mem, codecs.DefaultSerializer())
+
+	err := am.Create(&types.Approval{
+		Provider:       types.ProviderTypeKubernetes,
+		Identifier:     "xxx/app-1:1.2.5",
+		CurrentVersion: "1.2.3",
+		NewVersion:     "1.2.5",
+		Deadline:       time.Now().Add(5 * time.Minute),
+		VotesRequired:  2,
+		VotesReceived:  0,
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create approval: %s", err)
+	}
+
+	am.Approve("xxx/app-1:1.2.5", "warda")
+	am.Approve("xxx/app-1:1.2.5", "warda")
+
+	stored, err := am.Get("xxx/app-1:1.2.5")
+	if err != nil {
+		t.Fatalf("failed to get approval: %s", err)
+	}
+
+	// should still be the same
+	if stored.VotesReceived != 1 {
+		t.Errorf("unexpected number of received votes: %d", stored.VotesReceived)
+	}
+}
+
+func TestApproveTwoVoters(t *testing.T) {
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+
+	am := New(mem, codecs.DefaultSerializer())
+
+	err := am.Create(&types.Approval{
+		Provider:       types.ProviderTypeKubernetes,
+		Identifier:     "xxx/app-1:1.2.5",
+		CurrentVersion: "1.2.3",
+		NewVersion:     "1.2.5",
+		Deadline:       time.Now().Add(5 * time.Minute),
+		VotesRequired:  2,
+		VotesReceived:  0,
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create approval: %s", err)
+	}
+
+	am.Approve("xxx/app-1:1.2.5", "w")
+	am.Approve("xxx/app-1:1.2.5", "k")
+
+	stored, err := am.Get("xxx/app-1:1.2.5")
+	if err != nil {
+		t.Fatalf("failed to get approval: %s", err)
+	}
+
+	// should still be the same
+	if stored.VotesReceived != 2 {
 		t.Errorf("unexpected number of received votes: %d", stored.VotesReceived)
 	}
 }

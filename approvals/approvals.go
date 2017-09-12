@@ -30,7 +30,7 @@ type Manager interface {
 	Update(r *types.Approval) error
 
 	// Increases Approval votes by 1
-	Approve(identifier string) (*types.Approval, error)
+	Approve(identifier, voter string) (*types.Approval, error)
 	// Rejects Approval
 	Reject(identifier string) (*types.Approval, error)
 
@@ -265,7 +265,7 @@ func (m *DefaultManager) Update(r *types.Approval) error {
 }
 
 // Approve - increase VotesReceived by 1 and returns updated version
-func (m *DefaultManager) Approve(identifier string) (*types.Approval, error) {
+func (m *DefaultManager) Approve(identifier, voter string) (*types.Approval, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -278,6 +278,14 @@ func (m *DefaultManager) Approve(identifier string) (*types.Approval, error) {
 		return nil, err
 	}
 
+	for _, v := range existing.Voters {
+		if v == voter {
+			// nothing to do, same voter
+			return existing, nil
+		}
+	}
+
+	existing.Voters = append(existing.Voters, voter)
 	existing.VotesReceived++
 
 	err = m.Update(existing)
