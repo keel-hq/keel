@@ -11,7 +11,7 @@ import (
 
 	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/bot"
-	"github.com/rusenask/keel/cache/memory"
+	"github.com/rusenask/keel/cache/kubekv"
 
 	"github.com/rusenask/keel/constants"
 	"github.com/rusenask/keel/extension/notification"
@@ -39,6 +39,8 @@ const (
 	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
 	EnvTriggerPoll   = "POLL"   // set to 1 or something to enable poll trigger
 	EnvProjectID     = "PROJECT_ID"
+
+	EnvNamespace = "NAMESPACE" // Keel's namespace
 
 	EnvHelmProvider      = "HELM_PROVIDER"  // helm provider
 	EnvHelmTillerAddress = "TILLER_ADDRESS" // helm provider
@@ -99,9 +101,22 @@ func main() {
 		}).Fatal("main: failed to create kubernetes implementer")
 	}
 
+	keelsNamespace := constants.DefaultNamespace
+	if os.Getenv(EnvNamespace) != "" {
+		keelsNamespace = os.Getenv(EnvNamespace)
+	}
+
+	kkv, err := kubekv.New(implementer.ConfigMaps(keelsNamespace), "approvals")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":     err,
+			"namespace": keelsNamespace,
+		}).Fatal("main: failed to initialise kube-kv")
+	}
+
 	serializer := codecs.DefaultSerializer()
-	mem := memory.NewMemoryCache(24*time.Hour, 24*time.Hour, 1*time.Minute)
-	approvalsManager := approvals.New(mem, serializer)
+	// mem := memory.NewMemoryCache(24*time.Hour, 24*time.Hour, 1*time.Minute)
+	approvalsManager := approvals.New(kkv, serializer)
 
 	go approvalsManager.StartExpiryService(ctx)
 
