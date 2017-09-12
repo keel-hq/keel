@@ -59,13 +59,11 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 				Deadline:       time.Now().Add(time.Duration(plan.Config.ApprovalDeadline) * time.Hour),
 			}
 
-			approval.Message = fmt.Sprintf("New image is available for deployment %s/%s (%s).",
+			approval.Message = fmt.Sprintf("New image is available for release %s/%s (%s).",
 				plan.Namespace,
 				plan.Name,
 				approval.Delta(),
 			)
-
-			fmt.Println("requesting approval, ns: ", plan.Namespace)
 
 			return false, p.approvalManager.Create(approval)
 		}

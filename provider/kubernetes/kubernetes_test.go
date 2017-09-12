@@ -11,6 +11,7 @@ import (
 	"github.com/rusenask/keel/util/codecs"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
@@ -74,6 +75,10 @@ func (i *fakeImplementer) Secret(namespace, name string) (*v1.Secret, error) {
 
 func (i *fakeImplementer) Pods(namespace, labelSelector string) (*v1.PodList, error) {
 	return i.podList, nil
+}
+
+func (i *fakeImplementer) ConfigMaps(namespace string) core_v1.ConfigMapInterface {
+	return nil
 }
 
 type fakeSender struct {

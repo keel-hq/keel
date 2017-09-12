@@ -44,7 +44,7 @@ func (b *Bot) requestApproval(req *types.Approval) error {
 		[]slack.AttachmentField{
 			slack.AttachmentField{
 				Title: "Approval required!",
-				Value: req.Message + "\n" + fmt.Sprintf("To vote for change type 'lgtm <identifier>' to reject it: 'reject <identifier>."),
+				Value: req.Message + "\n" + fmt.Sprintf("To vote for change type '%s lgtm <identifier>' to reject it: '%s reject <identifier>.", b.name, b.name),
 				Short: false,
 			},
 			slack.AttachmentField{
@@ -106,7 +106,8 @@ func (b *Bot) processApprovedResponse(approvalResponse *approvalResponse) error 
 			continue
 		}
 		fmt.Println("approving: ", identifier)
-		approval, err := b.approvalsManager.Approve(identifier)
+		fmt.Println("user: ", approvalResponse.User)
+		approval, err := b.approvalsManager.Approve(identifier, approvalResponse.User)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,

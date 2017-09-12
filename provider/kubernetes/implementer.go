@@ -5,6 +5,7 @@ import (
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	"k8s.io/client-go/rest"
@@ -21,6 +22,7 @@ type Implementer interface {
 	Update(deployment *v1beta1.Deployment) error
 	Secret(namespace, name string) (*v1.Secret, error)
 	Pods(namespace, labelSelector string) (*v1.PodList, error)
+	ConfigMaps(namespace string) core_v1.ConfigMapInterface
 }
 
 // KubernetesImplementer - default kubernetes client implementer, uses
@@ -111,4 +113,9 @@ func (i *KubernetesImplementer) Secret(namespace, name string) (*v1.Secret, erro
 // Pods - get pods
 func (i *KubernetesImplementer) Pods(namespace, labelSelector string) (*v1.PodList, error) {
 	return i.client.Pods(namespace).List(meta_v1.ListOptions{LabelSelector: labelSelector})
+}
+
+// ConfigMaps - returns an interface to config maps for a specified namespace
+func (i *KubernetesImplementer) ConfigMaps(namespace string) core_v1.ConfigMapInterface {
+	return i.client.ConfigMaps(namespace)
 }
