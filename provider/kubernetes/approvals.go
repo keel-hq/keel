@@ -53,10 +53,10 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 		return true, nil
 	}
 
-	deadline := types.KeelApprovalTimeoutDefault
+	deadline := types.KeelApprovalDeadlineDefault
 
 	// deadline
-	deadlineStr, ok := labels[types.KeelApprovalTimeoutLabel]
+	deadlineStr, ok := labels[types.KeelApprovalDeadlineLabel]
 	if ok {
 		d, err := strconv.Atoi(deadlineStr)
 		if err == nil {
@@ -81,7 +81,7 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 				VotesRequired:  minApprovals,
 				VotesReceived:  0,
 				Rejected:       false,
-				Deadline:       time.Duration(deadline) * time.Minute,
+				Deadline:       time.Now().Add(time.Duration(deadline) * time.Hour),
 			}
 
 			approval.Message = fmt.Sprintf("New image is available for deployment %s/%s (%s).",

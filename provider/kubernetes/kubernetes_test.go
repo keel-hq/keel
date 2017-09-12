@@ -92,7 +92,7 @@ func (s *fakeSender) Send(event types.EventNotification) error {
 func approver() *approvals.DefaultManager {
 	cache := memory.NewMemoryCache(10*time.Minute, 10*time.Minute, 10*time.Minute)
 
-	return approvals.New(cache, codecs.DefaultSerializer(), &fakeProvider{})
+	return approvals.New(cache, codecs.DefaultSerializer())
 }
 
 func TestGetNamespaces(t *testing.T) {
