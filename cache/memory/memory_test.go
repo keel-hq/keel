@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"context"
 	"log"
 	"testing"
 	"time"
@@ -10,12 +9,12 @@ import (
 func TestCacheSetGet(t *testing.T) {
 	c := NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
 
-	err := c.Put(context.Background(), "a", []byte("b"))
+	err := c.Put("a", []byte("b"))
 	if err != nil {
 		t.Errorf("failed to SET a key, got error: %s", err)
 	}
 
-	val, err := c.Get(context.Background(), "a")
+	val, err := c.Get("a")
 	if err != nil {
 		t.Errorf("failed to GET a key, got error: %s", err)
 	}
@@ -33,12 +32,12 @@ func TestCacheSetGet(t *testing.T) {
 func TestCacheDel(t *testing.T) {
 	c := NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
 
-	err := c.Put(context.Background(), "a", []byte("b"))
+	err := c.Put("a", []byte("b"))
 	if err != nil {
 		t.Errorf("failed to SET a key, got error: %s", err)
 	}
 
-	val, err := c.Get(context.Background(), "a")
+	val, err := c.Get("a")
 	if err != nil {
 		t.Errorf("failed to GET a key, got error: %s", err)
 	}
@@ -47,12 +46,12 @@ func TestCacheDel(t *testing.T) {
 		log.Panicf("value %v", val)
 	}
 
-	err = c.Delete(context.Background(), "a")
+	err = c.Delete("a")
 	if err != nil {
 		t.Errorf("faield to delete entry, got error: %s", err)
 	}
 
-	_, err = c.Get(context.Background(), "a")
+	_, err = c.Get("a")
 	if err == nil {
 		t.Errorf("expected to get an error after deletion, but got nil")
 	}
@@ -61,12 +60,12 @@ func TestCacheDel(t *testing.T) {
 func TestCacheExpiration(t *testing.T) {
 	c := NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
 
-	err := c.Put(context.Background(), "a", []byte("b"))
+	err := c.Put("a", []byte("b"))
 	if err != nil {
 		t.Errorf("failed to SET a key, got error: %s", err)
 	}
 
-	val, err := c.Get(context.Background(), "a")
+	val, err := c.Get("a")
 	if err != nil {
 		t.Errorf("failed to GET a key, got error: %s", err)
 	}
@@ -77,7 +76,7 @@ func TestCacheExpiration(t *testing.T) {
 
 	time.Sleep(200 * time.Millisecond)
 
-	_, err = c.Get(context.Background(), "a")
+	_, err = c.Get("a")
 	if err == nil {
 		t.Errorf("expected to get an error after deletion, but got nil")
 	}

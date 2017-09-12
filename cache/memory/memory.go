@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -84,7 +83,7 @@ func (c *Cache) service() {
 		req := <-c.requestChannel
 		resp := &response{}
 		switch req.requestType {
-		case GET:			
+		case GET:
 			val, ok := c.cache[req.key]
 			if !ok {
 				resp.error = cache.ErrNotFound
@@ -129,7 +128,7 @@ func (c *Cache) service() {
 }
 
 // Get - looks up value and returns it
-func (c *Cache) Get(ctx context.Context, key string) ([]byte, error) {
+func (c *Cache) Get(key string) ([]byte, error) {
 	respChannel := make(chan *response)
 	c.requestChannel <- &request{
 		requestType:     GET,
@@ -141,7 +140,7 @@ func (c *Cache) Get(ctx context.Context, key string) ([]byte, error) {
 }
 
 // Put - sets key/string. Overwrites existing key
-func (c *Cache) Put(ctx context.Context, key string, value []byte) error {
+func (c *Cache) Put(key string, value []byte) error {
 	respChannel := make(chan *response)
 	c.requestChannel <- &request{
 		requestType:     SET,
@@ -154,7 +153,7 @@ func (c *Cache) Put(ctx context.Context, key string, value []byte) error {
 }
 
 // Delete - deletes key
-func (c *Cache) Delete(ctx context.Context, key string) error {
+func (c *Cache) Delete(key string) error {
 	respChannel := make(chan *response)
 	c.requestChannel <- &request{
 		requestType:     DELETE,
@@ -166,7 +165,7 @@ func (c *Cache) Delete(ctx context.Context, key string) error {
 }
 
 // List all values for specified prefix
-func (c *Cache) List(prefix string) ([][]byte, error) {
+func (c *Cache) List(prefix string) (map[string][]byte, error) {
 	respChannel := make(chan *response)
 	c.requestChannel <- &request{
 		requestType:     COPY,
@@ -174,11 +173,11 @@ func (c *Cache) List(prefix string) ([][]byte, error) {
 	}
 	resp := <-respChannel
 
-	var list [][]byte
+	list := make(map[string][]byte)
 
 	for k, v := range resp.mapCopy {
 		if strings.HasPrefix(k, prefix) {
-			list = append(list, v)
+			list[k] = v
 		}
 	}
 	return list, nil

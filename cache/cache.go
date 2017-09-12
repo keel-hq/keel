@@ -7,11 +7,17 @@ import (
 )
 
 // Cache - generic cache interface
+// type Cache interface {
+// 	Put(ctx context.Context, key string, value []byte) error
+// 	Get(ctx context.Context, key string) (value []byte, err error)
+// 	Delete(ctx context.Context, key string) error
+// 	List(prefix string) ([][]byte, error)
+// }
 type Cache interface {
-	Put(ctx context.Context, key string, value []byte) error
-	Get(ctx context.Context, key string) (value []byte, err error)
-	Delete(ctx context.Context, key string) error
-	List(prefix string) ([][]byte, error)
+	Put(key string, value []byte) error
+	Get(key string) (value []byte, err error)
+	Delete(key string) error
+	List(prefix string) (map[string][]byte, error)
 }
 
 type expirationContextKeyType int
