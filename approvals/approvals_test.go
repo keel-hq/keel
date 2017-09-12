@@ -20,7 +20,7 @@ func TestCreateApproval(t *testing.T) {
 		Identifier:     "xxx/app-1",
 		CurrentVersion: "1.2.3",
 		NewVersion:     "1.2.5",
-		Deadline:       0,
+		Deadline:       time.Now().Add(5 * time.Minute),
 	})
 
 	if err != nil {
@@ -37,6 +37,35 @@ func TestCreateApproval(t *testing.T) {
 	}
 }
 
+func TestDeleteApproval(t *testing.T) {
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+
+	am := New(mem, codecs.DefaultSerializer())
+
+	err := am.Create(&types.Approval{
+		Provider:       types.ProviderTypeKubernetes,
+		Identifier:     "xxx/app-1",
+		CurrentVersion: "1.2.3",
+		NewVersion:     "1.2.5",
+		Deadline:       time.Now().Add(5 * time.Minute),
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create approval: %s", err)
+	}
+
+	err = am.Delete("xxx/app-1")
+	if err != nil {
+		t.Errorf("failed to delete approval: %s", err)
+	}
+
+	_, err = am.Get("xxx/app-1")
+	if err == nil {
+		t.Errorf("expected to get an error when retrieving deleted approval")
+	}
+
+}
+
 func TestUpdateApproval(t *testing.T) {
 	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
 
@@ -49,7 +78,7 @@ func TestUpdateApproval(t *testing.T) {
 		NewVersion:     "1.2.5",
 		VotesRequired:  1,
 		VotesReceived:  0,
-		Deadline:       0,
+		Deadline:       time.Now().Add(5 * time.Minute),
 		Event: &types.Event{
 			Repository: types.Repository{
 				Name: "very/repo",
@@ -75,7 +104,7 @@ func TestUpdateApproval(t *testing.T) {
 		NewVersion:     "1.2.5",
 		VotesRequired:  1,
 		VotesReceived:  1,
-		Deadline:       0,
+		Deadline:       time.Now().Add(5 * time.Minute),
 		Event: &types.Event{
 			Repository: types.Repository{
 				Name: "very/repo",
@@ -106,7 +135,7 @@ func TestUpdateApprovalRejected(t *testing.T) {
 		NewVersion:     "1.2.5",
 		VotesRequired:  1,
 		VotesReceived:  0,
-		Deadline:       0,
+		Deadline:       time.Now().Add(5 * time.Minute),
 		Event: &types.Event{
 			Repository: types.Repository{
 				Name: "very/repo",
@@ -135,7 +164,7 @@ func TestUpdateApprovalRejected(t *testing.T) {
 		VotesRequired:  1,
 		VotesReceived:  0,
 		Rejected:       true,
-		Deadline:       0,
+		Deadline:       time.Now().Add(5 * time.Minute),
 		Event: &types.Event{
 			Repository: types.Repository{
 				Name: "very/repo",
@@ -156,7 +185,7 @@ func TestUpdateApprovalRejected(t *testing.T) {
 		VotesRequired:  1,
 		VotesReceived:  1,
 		Rejected:       true,
-		Deadline:       0,
+		Deadline:       time.Now().Add(5 * time.Minute),
 		Event: &types.Event{
 			Repository: types.Repository{
 				Name: "very/repo",
@@ -188,7 +217,7 @@ func TestApprove(t *testing.T) {
 		Identifier:     "xxx/app-1:1.2.5",
 		CurrentVersion: "1.2.3",
 		NewVersion:     "1.2.5",
-		Deadline:       0,
+		Deadline:       time.Now().Add(5 * time.Minute),
 		VotesRequired:  2,
 		VotesReceived:  0,
 	})
@@ -219,7 +248,7 @@ func TestReject(t *testing.T) {
 		Identifier:     "xxx/app-1",
 		CurrentVersion: "1.2.3",
 		NewVersion:     "1.2.5",
-		Deadline:       0,
+		Deadline:       time.Now().Add(5 * time.Minute),
 		VotesRequired:  2,
 		VotesReceived:  0,
 	})
@@ -237,5 +266,35 @@ func TestReject(t *testing.T) {
 
 	if !stored.Rejected {
 		t.Errorf("unexpected approval to be rejected")
+	}
+}
+
+func TestExpire(t *testing.T) {
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+
+	am := New(mem, codecs.DefaultSerializer())
+
+	err := am.Create(&types.Approval{
+		Provider:       types.ProviderTypeKubernetes,
+		Identifier:     "xxx/app-1",
+		CurrentVersion: "1.2.3",
+		NewVersion:     "1.2.5",
+		Deadline:       time.Now().Add(-5 * time.Minute),
+		VotesRequired:  2,
+		VotesReceived:  0,
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create approval: %s", err)
+	}
+
+	err = am.expireEntries()
+	if err != nil {
+		t.Errorf("got error while expiring entries: %s", err)
+	}
+
+	_, err = am.Get("xxx/app-1")
+	if err == nil {
+		t.Errorf("expected approval to be deleted but didn't get an error")
 	}
 }
