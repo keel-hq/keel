@@ -103,6 +103,8 @@ func main() {
 	mem := memory.NewMemoryCache(24*time.Hour, 24*time.Hour, 1*time.Minute)
 	approvalsManager := approvals.New(mem, serializer)
 
+	go approvalsManager.StartExpiryService(ctx)
+
 	// setting up providers
 	providers := setupProviders(implementer, sender, approvalsManager)
 
@@ -164,7 +166,7 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 	if os.Getenv(EnvHelmProvider) == "1" {
 		tillerAddr := os.Getenv(EnvHelmTillerAddress)
 		helmImplementer := helm.NewHelmImplementer(tillerAddr)
-		helmProvider := helm.NewProvider(helmImplementer, sender)
+		helmProvider := helm.NewProvider(helmImplementer, sender, approvalsManager)
 
 		go helmProvider.Start()
 		enabledProviders = append(enabledProviders, helmProvider)
