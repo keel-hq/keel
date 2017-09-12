@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/image"
 	"github.com/rusenask/keel/util/version"
@@ -37,11 +38,18 @@ type UpdatePlan struct {
 	Namespace string
 	Name      string
 
+	Config *KeelChartConfig
+
 	// chart
 	Chart *hapi_chart.Chart
 
 	// values to update path=value
 	Values map[string]string
+
+	// Current (last seen cluster version)
+	CurrentVersion string
+	// New version that's already in the deployment
+	NewVersion string
 }
 
 // keel:
@@ -62,10 +70,12 @@ type Root struct {
 
 // KeelChartConfig - keel related configuration taken from values.yaml
 type KeelChartConfig struct {
-	Policy       types.PolicyType  `json:"policy"`
-	Trigger      types.TriggerType `json:"trigger"`
-	PollSchedule string            `json:"pollSchedule"`
-	Images       []ImageDetails    `json:"images"`
+	Policy           types.PolicyType  `json:"policy"`
+	Trigger          types.TriggerType `json:"trigger"`
+	PollSchedule     string            `json:"pollSchedule"`
+	Approvals        int               `json:"approvals"`        // Minimum required approvals
+	ApprovalDeadline int               `json:"approvalDeadline"` // Deadline in hours
+	Images           []ImageDetails    `json:"images"`
 }
 
 // ImageDetails - image details
@@ -80,17 +90,20 @@ type Provider struct {
 
 	sender notification.Sender
 
+	approvalManager approvals.Manager
+
 	events chan *types.Event
 	stop   chan struct{}
 }
 
 // NewProvider - create new Helm provider
-func NewProvider(implementer Implementer, sender notification.Sender) *Provider {
+func NewProvider(implementer Implementer, sender notification.Sender, approvalManager approvals.Manager) *Provider {
 	return &Provider{
-		implementer: implementer,
-		sender:      sender,
-		events:      make(chan *types.Event, 100),
-		stop:        make(chan struct{}),
+		implementer:     implementer,
+		approvalManager: approvalManager,
+		sender:          sender,
+		events:          make(chan *types.Event, 100),
+		stop:            make(chan struct{}),
 	}
 }
 
@@ -206,7 +219,9 @@ func (p *Provider) processEvent(event *types.Event) (err error) {
 		return err
 	}
 
-	return p.applyPlans(plans)
+	approved := p.checkForApprovals(event, plans)
+
+	return p.applyPlans(approved)
 }
 
 func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) {
