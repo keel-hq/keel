@@ -73,6 +73,9 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 
 		path, value := getUnversionedPlanValues(repo.Tag, imageRef, &imageDetails)
 		plan.Values[path] = value
+		plan.NewVersion = repo.Tag
+		plan.CurrentVersion = imageRef.Tag()
+		plan.Config = keelCfg
 		shouldUpdateRelease = true
 	}
 

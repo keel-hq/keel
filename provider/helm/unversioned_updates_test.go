@@ -77,10 +77,23 @@ keel:
 				config:    &hapi_chart.Config{Raw: ""},
 			},
 			wantPlan: &UpdatePlan{
-				Namespace: "default",
-				Name:      "release-1",
-				Chart:     helloWorldChart,
-				Values:    map[string]string{"image.tag": "latest"}},
+				Namespace:      "default",
+				Name:           "release-1",
+				Chart:          helloWorldChart,
+				Values:         map[string]string{"image.tag": "latest"},
+				CurrentVersion: "1.1.0",
+				NewVersion:     "latest",
+				Config: &KeelChartConfig{
+					Policy:  types.PolicyTypeForce,
+					Trigger: types.TriggerTypePoll,
+					Images: []ImageDetails{
+						ImageDetails{
+							RepositoryPath: "image.repository",
+							TagPath:        "image.tag",
+						},
+					},
+				},
+			},
 			wantShouldUpdateRelease: true,
 			wantErr:                 false,
 		},
