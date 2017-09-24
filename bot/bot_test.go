@@ -67,7 +67,7 @@ func TestBotRequest(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {
@@ -88,7 +88,7 @@ func TestBotRequest(t *testing.T) {
 		t.Fatalf("failed to start bot: %s", err)
 	}
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	err = am.Create(&types.Approval{
 		Identifier:     "k8s/project/repo:1.2.3",
@@ -107,15 +107,17 @@ func TestBotRequest(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
+	time.Sleep(1 * time.Second)
+
 	if len(fi.postedMessages) != 1 {
-		t.Errorf("expected to find one message")
+		t.Errorf("expected to find one message, but got: %d", len(fi.postedMessages))
 	}
 }
 
 func TestProcessApprovedResponse(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {
@@ -136,7 +138,7 @@ func TestProcessApprovedResponse(t *testing.T) {
 		t.Fatalf("failed to start bot: %s", err)
 	}
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	err = am.Create(&types.Approval{
 		Identifier:     "k8s/project/repo:1.2.3",
@@ -154,6 +156,8 @@ func TestProcessApprovedResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
+
+	time.Sleep(1 * time.Second)
 
 	if len(fi.postedMessages) != 1 {
 		t.Errorf("expected to find one message")
@@ -163,7 +167,7 @@ func TestProcessApprovedResponse(t *testing.T) {
 func TestProcessApprovalReply(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {

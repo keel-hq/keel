@@ -18,6 +18,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+const (
+	removeApprovalPrefix = "rm approval"
+)
+
 var (
 	botEventTextToResponse = map[string][]string{
 		"help": {
@@ -37,9 +41,9 @@ var (
 	}
 
 	// dynamic bot command prefixes have to be matched
-	dynamicBotCommandPrefixes = []string{"describe deployment"}
+	dynamicBotCommandPrefixes = []string{removeApprovalPrefix}
 
-	approvalResponseKeyword = "lgtm"
+	approvalResponseKeyword = "approve"
 	rejectResponseKeyword   = "reject"
 )
 
@@ -207,7 +211,7 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *approvalResponse, ok bool) {
 	if strings.HasPrefix(strings.ToLower(eventText), approvalResponseKeyword) {
 		return &approvalResponse{
-			User:   event.Username,
+			User:   event.User,
 			Status: types.ApprovalStatusApproved,
 			Text:   eventText,
 		}, true
@@ -215,7 +219,7 @@ func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *app
 
 	if strings.HasPrefix(strings.ToLower(eventText), rejectResponseKeyword) {
 		return &approvalResponse{
-			User:   event.Username,
+			User:   event.User,
 			Status: types.ApprovalStatusRejected,
 			Text:   eventText,
 		}, true
@@ -291,6 +295,12 @@ func (b *Bot) handleCommand(event *slack.MessageEvent, eventText string) {
 	case "get approvals":
 		response := b.approvalsResponse()
 		b.respond(event, formatAsSnippet(response))
+		return
+	}
+
+	// handle dynamic commands
+	if strings.HasPrefix(eventText, removeApprovalPrefix) {
+		b.respond(event, formatAsSnippet(b.removeApprovalHandler(strings.TrimSpace(strings.TrimPrefix(eventText, removeApprovalPrefix)))))
 		return
 	}
 

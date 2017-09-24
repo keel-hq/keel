@@ -48,7 +48,7 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 
 			// creating new one
 			approval := &types.Approval{
-				Provider:       types.ProviderTypeKubernetes,
+				Provider:       types.ProviderTypeHelm,
 				Identifier:     identifier,
 				Event:          event,
 				CurrentVersion: plan.CurrentVersion,

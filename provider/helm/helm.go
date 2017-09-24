@@ -243,7 +243,7 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 					"error":      err,
 					"deployment": release.Name,
 					"namespace":  release.Namespace,
-				}).Error("provider.kubernetes: got error while checking unversioned release")
+				}).Error("provider.helm: got error while checking unversioned release")
 				continue
 			}
 
