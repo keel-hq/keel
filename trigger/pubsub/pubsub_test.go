@@ -2,11 +2,15 @@ package pubsub
 
 import (
 	"encoding/json"
+	"time"
 
 	"cloud.google.com/go/pubsub"
 	"golang.org/x/net/context"
 
+	"github.com/rusenask/keel/approvals"
+	"github.com/rusenask/keel/cache/memory"
 	"github.com/rusenask/keel/provider"
+	"github.com/rusenask/keel/util/codecs"
 
 	"testing"
 )
@@ -21,7 +25,9 @@ func fakeDoneFunc(id string, done bool) {
 func TestCallback(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := provider.New([]provider.Provider{fp})
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
 	sub := &PubsubSubscriber{disableAck: true, providers: providers}
 
 	dataMsg := &Message{Action: "INSERT", Tag: "gcr.io/v2-namespace/hello-world:1.1.1"}
@@ -46,7 +52,9 @@ func TestCallback(t *testing.T) {
 func TestCallbackTagNotSemver(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := provider.New([]provider.Provider{fp})
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
 	sub := &PubsubSubscriber{disableAck: true, providers: providers}
 
 	dataMsg := &Message{Action: "INSERT", Tag: "gcr.io/stemnapp/alpine-website:latest"}
@@ -72,7 +80,9 @@ func TestCallbackTagNotSemver(t *testing.T) {
 func TestCallbackNoTag(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := provider.New([]provider.Provider{fp})
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
 	sub := &PubsubSubscriber{disableAck: true, providers: providers}
 
 	dataMsg := &Message{Action: "INSERT", Tag: "gcr.io/stemnapp/alpine-website"}
@@ -92,5 +102,4 @@ func TestCallbackNoTag(t *testing.T) {
 	if fp.submitted[0].Repository.Tag != "latest" {
 		t.Errorf("expected repo tag %s but got %s", "latest", fp.submitted[0].Repository.Tag)
 	}
-
 }

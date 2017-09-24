@@ -2,10 +2,14 @@ package poll
 
 import (
 	"testing"
+	"time"
 
+	"github.com/rusenask/keel/approvals"
+	"github.com/rusenask/keel/cache/memory"
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/registry"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/codecs"
 	"github.com/rusenask/keel/util/image"
 )
 
@@ -53,7 +57,9 @@ func (p *fakeProvider) TrackedImages() ([]*types.TrackedImage, error) {
 func TestWatchTagJob(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := provider.New([]provider.Provider{fp})
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
 		digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
@@ -96,7 +102,9 @@ func TestWatchTagJob(t *testing.T) {
 func TestWatchTagJobLatest(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := provider.New([]provider.Provider{fp})
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
 		digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
@@ -139,7 +147,9 @@ func TestWatchTagJobLatest(t *testing.T) {
 func TestWatchAllTagsJob(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := provider.New([]provider.Provider{fp})
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
 		tagsToReturn: []string{"1.1.2", "1.1.3", "0.9.1"},
@@ -171,7 +181,9 @@ func TestWatchAllTagsJob(t *testing.T) {
 func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := provider.New([]provider.Provider{fp})
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
 		tagsToReturn: []string{"1.1.2", "1.1.3", "0.9.1"},
