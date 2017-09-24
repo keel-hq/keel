@@ -64,7 +64,7 @@ func main() {
 		"version":    ver.Version,
 		"go_version": ver.GoVersion,
 		"arch":       ver.Arch,
-	}).Info("keel starting..")
+	}).Info("keel starting...")
 
 	if os.Getenv(EnvDebug) != "" {
 		log.SetLevel(log.DebugLevel)

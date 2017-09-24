@@ -44,7 +44,7 @@ func (b *Bot) requestApproval(req *types.Approval) error {
 		[]slack.AttachmentField{
 			slack.AttachmentField{
 				Title: "Approval required!",
-				Value: req.Message + "\n" + fmt.Sprintf("To vote for change type '%s lgtm <identifier>' to reject it: '%s reject <identifier>.", b.name, b.name),
+				Value: req.Message + "\n" + fmt.Sprintf("To vote for change type '%s approve %s' to reject it: '%s reject %s'.", b.name, req.Identifier, b.name, req.Identifier),
 				Short: false,
 			},
 			slack.AttachmentField{
@@ -60,6 +60,11 @@ func (b *Bot) requestApproval(req *types.Approval) error {
 			slack.AttachmentField{
 				Title: "Identifier",
 				Value: req.Identifier,
+				Short: true,
+			},
+			slack.AttachmentField{
+				Title: "Provider",
+				Value: req.Provider.String(),
 				Short: true,
 			},
 		})
@@ -105,8 +110,6 @@ func (b *Bot) processApprovedResponse(approvalResponse *approvalResponse) error 
 		if identifier == "" {
 			continue
 		}
-		fmt.Println("approving: ", identifier)
-		fmt.Println("user: ", approvalResponse.User)
 		approval, err := b.approvalsManager.Approve(identifier, approvalResponse.User)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -115,8 +118,6 @@ func (b *Bot) processApprovedResponse(approvalResponse *approvalResponse) error 
 			}).Error("bot.processApprovedResponse: failed to approve")
 			continue
 		}
-
-		fmt.Println("approved: ", identifier)
 
 		err = b.replyToApproval(approval)
 		if err != nil {
@@ -274,4 +275,12 @@ func (b *Bot) approvalsResponse() string {
 	}
 
 	return buf.String()
+}
+
+func (b *Bot) removeApprovalHandler(identifier string) string {
+	err := b.approvalsManager.Delete(identifier)
+	if err != nil {
+		return fmt.Sprintf("failed to remove '%s' approval: %s.", identifier, err)
+	}
+	return fmt.Sprintf("approval '%s' removed.", identifier)
 }
