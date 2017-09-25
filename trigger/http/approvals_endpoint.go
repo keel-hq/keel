@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/rusenask/keel/types"
 )
 
 func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Request) {
@@ -13,6 +15,10 @@ func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Req
 		fmt.Fprintf(resp, "%s", err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	if len(approvals) == 0 {
+		approvals = make([]*types.Approval, 0)
 	}
 
 	bts, err := json.Marshal(&approvals)
