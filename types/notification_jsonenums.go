@@ -13,6 +13,8 @@ var (
 		"PostProviderSubmitNotification":  PostProviderSubmitNotification,
 		"NotificationPreDeploymentUpdate": NotificationPreDeploymentUpdate,
 		"NotificationDeploymentUpdate":    NotificationDeploymentUpdate,
+		"NotificationPreReleaseUpdate":    NotificationPreReleaseUpdate,
+		"NotificationReleaseUpdate":       NotificationReleaseUpdate,
 	}
 
 	_NotificationValueToName = map[Notification]string{
@@ -20,6 +22,8 @@ var (
 		PostProviderSubmitNotification:  "PostProviderSubmitNotification",
 		NotificationPreDeploymentUpdate: "NotificationPreDeploymentUpdate",
 		NotificationDeploymentUpdate:    "NotificationDeploymentUpdate",
+		NotificationPreReleaseUpdate:    "NotificationPreReleaseUpdate",
+		NotificationReleaseUpdate:       "NotificationReleaseUpdate",
 	}
 )
 
@@ -31,6 +35,8 @@ func init() {
 			interface{}(PostProviderSubmitNotification).(fmt.Stringer).String():  PostProviderSubmitNotification,
 			interface{}(NotificationPreDeploymentUpdate).(fmt.Stringer).String(): NotificationPreDeploymentUpdate,
 			interface{}(NotificationDeploymentUpdate).(fmt.Stringer).String():    NotificationDeploymentUpdate,
+			interface{}(NotificationPreReleaseUpdate).(fmt.Stringer).String():    NotificationPreReleaseUpdate,
+			interface{}(NotificationReleaseUpdate).(fmt.Stringer).String():       NotificationReleaseUpdate,
 		}
 	}
 }

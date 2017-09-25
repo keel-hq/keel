@@ -3,6 +3,7 @@
 //go:generate jsonenums -type=Level
 //go:generate jsonenums -type=PolicyType
 //go:generate jsonenums -type=TriggerType
+//go:generate jsonenums -type=ProviderType
 package types
 
 import (
@@ -247,7 +248,7 @@ type ProviderType int
 
 // Known provider types
 const (
-	ProviderTypeUnknown = iota
+	ProviderTypeUnknown ProviderType = iota
 	ProviderTypeKubernetes
 	ProviderTypeHelm
 )
@@ -268,48 +269,51 @@ func (t ProviderType) String() string {
 // Approval used to store and track updates
 type Approval struct {
 	// Provider name - Kubernetes/Helm
-	Provider ProviderType
+	Provider ProviderType `json:"provider,omitempty"`
 
 	// Identifier is used to inform user about specific
 	// Helm release or k8s deployment
 	// ie: k8s <namespace>/<deployment name>
 	//     helm: <namespace>/<release name>
-	Identifier string
+	Identifier string `json:"identifier,omitempty"`
 
 	// Event that triggered evaluation
-	Event *Event
+	Event *Event `json:"event,omitempty"`
 
-	Message string
+	Message string `json:"message,omitempty"`
 
-	CurrentVersion string
-	NewVersion     string
+	CurrentVersion string `json:"currentVersion,omitempty"`
+	NewVersion     string `json:"newVersion,omitempty"`
 
 	// Requirements for the update such as number of votes
 	// and deadline
-	VotesRequired int
-	VotesReceived int
+	VotesRequired int `json:"votesRequired,omitempty"`
+	VotesReceived int `json:"votesReceived,omitempty"`
 
 	// Voters is a list of voter
 	// IDs for audit
-	Voters []string
+	Voters []string `json:"voters,omitempty"`
 
 	// Explicitly rejected approval
 	// can be set directly by user
 	// so even if deadline is not reached approval
 	// could be turned down
-	Rejected bool
+	Rejected bool `json:"rejected,omitempty"`
 
 	// Deadline for this request
-	Deadline time.Time
+	Deadline time.Time `json:"deadline,omitempty"`
 
 	// When this approval was created
-	CreatedAt time.Time
+	CreatedAt time.Time `json:"createdAt,omitempty"`
 	// WHen this approval was updated
-	UpdatedAt time.Time
+	UpdatedAt time.Time `json:"updatedAt,omitempty"`
 }
 
+// ApprovalStatus - approval status type used in approvals
+// to determine whether it was rejected/approved or still pending
 type ApprovalStatus int
 
+// Available approval status types
 const (
 	ApprovalStatusUnknown ApprovalStatus = iota
 	ApprovalStatusPending
