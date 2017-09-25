@@ -28,6 +28,9 @@ var (
 			`Here's a list of supported commands`,
 			`- "get deployments" -> get a list of all deployments`,
 			`- "get approvals" -> get a list of approvals`,
+			`- "rm approval <approval identifier>" -> remove approval`,
+			`- "approve <approval identifier>" -> approve update request`,
+			`- "reject <approval identifier>" -> reject update request`,
 			// `- "get deployments all" -> get a list of all deployments`,
 			// `- "describe deployment <deployment>" -> get details for specified deployment`,
 		},
@@ -35,9 +38,8 @@ var (
 
 	// static bot commands can be used straight away
 	staticBotCommands = map[string]bool{
-		"get deployments":     true,
-		"get approvals":       true,
-		"get deployments all": true,
+		"get deployments": true,
+		"get approvals":   true,
 	}
 
 	// dynamic bot command prefixes have to be matched
