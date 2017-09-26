@@ -30,3 +30,17 @@ func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Req
 
 	resp.Write(bts)
 }
+
+func (s *TriggerServer) approvalDeleteHandler(resp http.ResponseWriter, req *http.Request) {
+	identifier := getID(req)
+
+	err := s.approvalsManager.Delete(identifier)
+	if err != nil {
+		fmt.Fprintf(resp, "%s", err)
+		resp.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
+	fmt.Fprintf(resp, identifier)
+}

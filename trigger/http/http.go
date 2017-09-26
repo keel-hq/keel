@@ -71,7 +71,10 @@ func (s *TriggerServer) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	s.server.Shutdown(ctx)
+}
 
+func getID(req *http.Request) string {
+	return mux.Vars(req)["id"]
 }
 
 func (s *TriggerServer) registerRoutes(mux *mux.Router) {
@@ -80,8 +83,9 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	// version handler
 	mux.HandleFunc("/version", s.versionHandler).Methods("GET", "OPTIONS")
 
-	//
+	// approvals
 	mux.HandleFunc("/v1/approvals", s.approvalsHandler).Methods("GET", "OPTIONS")
+	mux.HandleFunc("/v1/approvals/{id}", s.approvalDeleteHandler).Methods("DELETE", "OPTIONS")
 
 	// native webhooks handler
 	mux.HandleFunc("/v1/webhooks/native", s.nativeHandler).Methods("POST", "OPTIONS")
