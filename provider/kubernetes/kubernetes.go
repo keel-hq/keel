@@ -247,7 +247,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 
 			p.sender.Send(types.EventNotification{
 				Name:      "preparing to update deployment after reset",
-				Message:   fmt.Sprintf("Preparing to update deployment %s/%s (%s)", deployment.Namespace, deployment.Name, strings.Join(getImages(&refresh), ", ")),
+				Message:   fmt.Sprintf("Preparing to update deployment %s/%s %s->%s (%s)", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&refresh), ", ")),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationPreDeploymentUpdate,
 				Level:     types.LevelDebug,
@@ -263,7 +263,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 
 				p.sender.Send(types.EventNotification{
 					Name:      "update deployment after",
-					Message:   fmt.Sprintf("Deployment %s/%s update failed, error: %s", refresh.Namespace, refresh.Name, err),
+					Message:   fmt.Sprintf("Deployment %s/%s update %s->%s failed, error: %s", refresh.Namespace, refresh.Name, plan.CurrentVersion, plan.NewVersion, err),
 					CreatedAt: time.Now(),
 					Type:      types.NotificationDeploymentUpdate,
 					Level:     types.LevelError,
@@ -273,7 +273,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 
 			p.sender.Send(types.EventNotification{
 				Name:      "update deployment after reset",
-				Message:   fmt.Sprintf("Successfully updated deployment %s/%s (%s)", refresh.Namespace, refresh.Name, strings.Join(getImages(&refresh), ", ")),
+				Message:   fmt.Sprintf("Successfully updated deployment %s/%s %s->%s (%s)", refresh.Namespace, refresh.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&refresh), ", ")),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationDeploymentUpdate,
 				Level:     types.LevelSuccess,
@@ -287,7 +287,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 
 		p.sender.Send(types.EventNotification{
 			Name:      "preparing to update deployment",
-			Message:   fmt.Sprintf("Preparing to update deployment %s/%s (%s)", deployment.Namespace, deployment.Name, strings.Join(getImages(&deployment), ", ")),
+			Message:   fmt.Sprintf("Preparing to update deployment %s/%s %s->%s (%s)", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&deployment), ", ")),
 			CreatedAt: time.Now(),
 			Type:      types.NotificationPreDeploymentUpdate,
 			Level:     types.LevelDebug,
@@ -303,7 +303,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 
 			p.sender.Send(types.EventNotification{
 				Name:      "update deployment",
-				Message:   fmt.Sprintf("Deployment %s/%s update failed, error: %s", deployment.Namespace, deployment.Name, err),
+				Message:   fmt.Sprintf("Deployment %s/%s update %s->%s failed, error: %s", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, err),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationDeploymentUpdate,
 				Level:     types.LevelError,
@@ -314,7 +314,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 
 		p.sender.Send(types.EventNotification{
 			Name:      "update deployment",
-			Message:   fmt.Sprintf("Successfully updated deployment %s/%s (%s)", deployment.Namespace, deployment.Name, strings.Join(getImages(&deployment), ", ")),
+			Message:   fmt.Sprintf("Successfully updated deployment %s/%s %s->%s (%s)", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&deployment), ", ")),
 			CreatedAt: time.Now(),
 			Type:      types.NotificationDeploymentUpdate,
 			Level:     types.LevelSuccess,

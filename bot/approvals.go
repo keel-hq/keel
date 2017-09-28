@@ -169,7 +169,7 @@ func (b *Bot) replyToApproval(approval *types.Approval) error {
 			types.LevelInfo.Color(),
 			[]slack.AttachmentField{
 				slack.AttachmentField{
-					Title: "Vote received!",
+					Title: "vote received!",
 					Value: "Waiting for remaining votes.",
 					Short: false,
 				},
@@ -196,7 +196,7 @@ func (b *Bot) replyToApproval(approval *types.Approval) error {
 			types.LevelWarn.Color(),
 			[]slack.AttachmentField{
 				slack.AttachmentField{
-					Title: "Change rejected",
+					Title: "change rejected",
 					Value: "Change was rejected.",
 					Short: false,
 				},
@@ -223,12 +223,12 @@ func (b *Bot) replyToApproval(approval *types.Approval) error {
 			})
 	case types.ApprovalStatusApproved:
 		b.postMessage(
-			"Approval received",
+			"approval received",
 			"All approvals received, thanks for voting!",
 			types.LevelSuccess.Color(),
 			[]slack.AttachmentField{
 				slack.AttachmentField{
-					Title: "Update approved!",
+					Title: "update approved!",
 					Value: "All approvals received, thanks for voting!",
 					Short: false,
 				},

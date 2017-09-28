@@ -281,7 +281,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 
 		p.sender.Send(types.EventNotification{
 			Name:      "update release",
-			Message:   fmt.Sprintf("Preparing to update release %s/%s (%s)", plan.Namespace, plan.Name, strings.Join(mapToSlice(plan.Values), ", ")),
+			Message:   fmt.Sprintf("Preparing to update release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", ")),
 			CreatedAt: time.Now(),
 			Type:      types.NotificationPreReleaseUpdate,
 			Level:     types.LevelDebug,
@@ -297,7 +297,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 
 			p.sender.Send(types.EventNotification{
 				Name:      "update release",
-				Message:   fmt.Sprintf("Release update feailed %s/%s (%s), error: %s", plan.Namespace, plan.Name, strings.Join(mapToSlice(plan.Values), ", "), err),
+				Message:   fmt.Sprintf("Release update feailed %s/%s %s->%s (%s), error: %s", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "), err),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationReleaseUpdate,
 				Level:     types.LevelError,
@@ -307,7 +307,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 
 		p.sender.Send(types.EventNotification{
 			Name:      "update release",
-			Message:   fmt.Sprintf("Successfully updated release %s/%s (%s)", plan.Namespace, plan.Name, strings.Join(mapToSlice(plan.Values), ", ")),
+			Message:   fmt.Sprintf("Successfully updated release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", ")),
 			CreatedAt: time.Now(),
 			Type:      types.NotificationReleaseUpdate,
 			Level:     types.LevelSuccess,
