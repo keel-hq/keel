@@ -12,7 +12,12 @@ import:
   - internal
 - package: github.com/Masterminds/semver
   version: ^1.3.1
+- package: github.com/sirupsen/logrus
+  version: master
 - package: github.com/Sirupsen/logrus
+  repo: https://github.com/sirupsen/logrus.git
+  vcs: git
+  version: master
 - package: github.com/docker/distribution
   version: ^2.6.2
   subpackages:

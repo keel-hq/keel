@@ -2,6 +2,7 @@ package types
 
 import (
 	"testing"
+	"time"
 )
 
 func TestParsePolicy(t *testing.T) {
@@ -102,5 +103,26 @@ func TestVersion_String(t *testing.T) {
 				t.Errorf("Version.String() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestExpired(t *testing.T) {
+	aprv := Approval{
+		Deadline: time.Now().Add(-5 * time.Second),
+	}
+
+	if !aprv.Expired() {
+		t.Errorf("expected approval to be expired")
+	}
+}
+
+func TestNotExpired(t *testing.T) {
+	aprv := Approval{
+		Deadline: time.Now().Add(5 * time.Second),
+	}
+
+	if aprv.Expired() {
+		t.Errorf("expected approval to be not expired")
+
 	}
 }

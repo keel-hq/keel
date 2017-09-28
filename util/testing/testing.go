@@ -1,6 +1,7 @@
 package testing
 
 import (
+	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
@@ -54,4 +55,10 @@ func (i *FakeK8sImplementer) Secret(namespace, name string) (*v1.Secret, error) 
 // Pods - available pods
 func (i *FakeK8sImplementer) Pods(namespace, labelSelector string) (*v1.PodList, error) {
 	return i.AvailablePods, nil
+}
+
+// ConfigMaps - returns nothing (not implemented)
+func (i *FakeK8sImplementer) ConfigMaps(namespace string) core_v1.ConfigMapInterface {
+	panic("not implemented")
+	return nil
 }

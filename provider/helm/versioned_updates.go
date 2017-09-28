@@ -69,7 +69,9 @@ func checkVersionedRelease(newVersion *types.Version, repo *types.Repository, na
 		if keelCfg.Policy == types.PolicyTypeForce || imageRef.Tag() == "latest" {
 			path, value := getPlanValues(newVersion, imageRef, &imageDetails)
 			plan.Values[path] = value
-
+			plan.NewVersion = newVersion.String()
+			plan.CurrentVersion = imageRef.Tag()
+			plan.Config = keelCfg
 			shouldUpdateRelease = true
 
 			log.WithFields(log.Fields{
@@ -125,7 +127,9 @@ func checkVersionedRelease(newVersion *types.Version, repo *types.Repository, na
 		if shouldUpdate {
 			path, value := getPlanValues(newVersion, imageRef, &imageDetails)
 			plan.Values[path] = value
-
+			plan.NewVersion = newVersion.String()
+			plan.CurrentVersion = currentVersion.String()
+			plan.Config = keelCfg
 			shouldUpdateRelease = true
 
 			log.WithFields(log.Fields{

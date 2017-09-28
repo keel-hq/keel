@@ -3,8 +3,12 @@ package http
 import (
 	"bytes"
 	"net/http"
+	"time"
 
+	"github.com/rusenask/keel/approvals"
+	"github.com/rusenask/keel/cache/memory"
 	"github.com/rusenask/keel/provider"
+	"github.com/rusenask/keel/util/codecs"
 
 	"net/http/httptest"
 	"testing"
@@ -25,7 +29,9 @@ var fakeQuayWebhook = `{
 func TestQuayWebhookHandler(t *testing.T) {
 
 	fp := &fakeProvider{}
-	providers := provider.New([]provider.Provider{fp})
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{Providers: providers})
 	srv.registerRoutes(srv.router)
 

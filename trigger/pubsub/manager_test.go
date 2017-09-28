@@ -1,12 +1,16 @@
 package pubsub
 
 import (
-	"golang.org/x/net/context"
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
+	"github.com/rusenask/keel/approvals"
+	"github.com/rusenask/keel/cache/memory"
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/codecs"
 	"github.com/rusenask/keel/util/image"
 
 	"testing"
@@ -62,7 +66,10 @@ func TestCheckDeployment(t *testing.T) {
 			},
 		},
 	}
-	providers := provider.New([]provider.Provider{fp})
+
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
 
 	fs := &fakeSubscriber{}
 	mng := &DefaultManager{

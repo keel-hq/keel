@@ -3,6 +3,9 @@ package constants
 // DefaultDockerRegistry - default docker registry
 const DefaultDockerRegistry = "https://index.docker.io"
 
+// DefaultNamespace - default namespace to initialise configmaps based kv
+const DefaultNamespace = "kube-system"
+
 // WebhookEndpointEnv if set - enables webhook notifications
 const WebhookEndpointEnv = "WEBHOOK_ENDPOINT"
 

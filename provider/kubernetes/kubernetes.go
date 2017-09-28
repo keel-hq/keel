@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
+	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/image"
@@ -31,23 +32,36 @@ const forceUpdateImageAnnotation = "keel.sh/update-image"
 // forceUpdateResetTag - tag used to reset container to force pull image
 const forceUpdateResetTag = "0.0.0"
 
+// UpdatePlan - deployment update plan
+type UpdatePlan struct {
+	// Updated deployment version
+	Deployment v1beta1.Deployment
+	// Current (last seen cluster version)
+	CurrentVersion string
+	// New version that's already in the deployment
+	NewVersion string
+}
+
 // Provider - kubernetes provider for auto update
 type Provider struct {
 	implementer Implementer
 
 	sender notification.Sender
 
+	approvalManager approvals.Manager
+
 	events chan *types.Event
 	stop   chan struct{}
 }
 
 // NewProvider - create new kubernetes based provider
-func NewProvider(implementer Implementer, sender notification.Sender) (*Provider, error) {
+func NewProvider(implementer Implementer, sender notification.Sender, approvalManager approvals.Manager) (*Provider, error) {
 	return &Provider{
-		implementer: implementer,
-		events:      make(chan *types.Event, 100),
-		stop:        make(chan struct{}),
-		sender:      sender,
+		implementer:     implementer,
+		approvalManager: approvalManager,
+		events:          make(chan *types.Event, 100),
+		stop:            make(chan struct{}),
+		sender:          sender,
 	}, nil
 }
 
@@ -101,7 +115,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 						"schedule":   schedule,
 						"deployment": deployment.Name,
 						"namespace":  deployment.Namespace,
-					}).Error("trigger.poll.manager: failed to parse poll schedule, setting default schedule")
+					}).Error("provider.kubernetes: failed to parse poll schedule, setting default schedule")
 					schedule = types.KeelPollDefaultSchedule
 				}
 			} else {
@@ -165,24 +179,30 @@ func (p *Provider) startInternal() error {
 }
 
 func (p *Provider) processEvent(event *types.Event) (updated []*v1beta1.Deployment, err error) {
-	impacted, err := p.impactedDeployments(&event.Repository)
+	plans, err := p.createUpdatePlans(&event.Repository)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(impacted) == 0 {
+	if len(plans) == 0 {
 		log.WithFields(log.Fields{
 			"image": event.Repository.Name,
 			"tag":   event.Repository.Tag,
-		}).Info("provider.kubernetes: no impacted deployments found for this event")
+		}).Info("provider.kubernetes: no plans for deployment updates found for this event")
 		return
 	}
 
-	return p.updateDeployments(impacted)
+	approvedPlans := p.checkForApprovals(event, plans)
+
+	return p.updateDeployments(approvedPlans)
 }
 
-func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated []*v1beta1.Deployment, err error) {
-	for _, deployment := range deployments {
+// func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated []*v1beta1.Deployment, err error) {
+func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.Deployment, err error) {
+	// for _, deployment := range plans {
+	for _, plan := range plans {
+
+		deployment := plan.Deployment
 
 		reset, delta, err := checkForReset(deployment, p.implementer)
 		if err != nil {
@@ -227,7 +247,7 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 
 			p.sender.Send(types.EventNotification{
 				Name:      "preparing to update deployment after reset",
-				Message:   fmt.Sprintf("Preparing to update deployment %s/%s (%s)", deployment.Namespace, deployment.Name, strings.Join(getImages(&refresh), ", ")),
+				Message:   fmt.Sprintf("Preparing to update deployment %s/%s %s->%s (%s)", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&refresh), ", ")),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationPreDeploymentUpdate,
 				Level:     types.LevelDebug,
@@ -243,7 +263,7 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 
 				p.sender.Send(types.EventNotification{
 					Name:      "update deployment after",
-					Message:   fmt.Sprintf("Deployment %s/%s update failed, error: %s", refresh.Namespace, refresh.Name, err),
+					Message:   fmt.Sprintf("Deployment %s/%s update %s->%s failed, error: %s", refresh.Namespace, refresh.Name, plan.CurrentVersion, plan.NewVersion, err),
 					CreatedAt: time.Now(),
 					Type:      types.NotificationDeploymentUpdate,
 					Level:     types.LevelError,
@@ -253,7 +273,7 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 
 			p.sender.Send(types.EventNotification{
 				Name:      "update deployment after reset",
-				Message:   fmt.Sprintf("Successfully updated deployment %s/%s (%s)", refresh.Namespace, refresh.Name, strings.Join(getImages(&refresh), ", ")),
+				Message:   fmt.Sprintf("Successfully updated deployment %s/%s %s->%s (%s)", refresh.Namespace, refresh.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&refresh), ", ")),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationDeploymentUpdate,
 				Level:     types.LevelSuccess,
@@ -267,7 +287,7 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 
 		p.sender.Send(types.EventNotification{
 			Name:      "preparing to update deployment",
-			Message:   fmt.Sprintf("Preparing to update deployment %s/%s (%s)", deployment.Namespace, deployment.Name, strings.Join(getImages(&deployment), ", ")),
+			Message:   fmt.Sprintf("Preparing to update deployment %s/%s %s->%s (%s)", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&deployment), ", ")),
 			CreatedAt: time.Now(),
 			Type:      types.NotificationPreDeploymentUpdate,
 			Level:     types.LevelDebug,
@@ -283,7 +303,7 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 
 			p.sender.Send(types.EventNotification{
 				Name:      "update deployment",
-				Message:   fmt.Sprintf("Deployment %s/%s update failed, error: %s", deployment.Namespace, deployment.Name, err),
+				Message:   fmt.Sprintf("Deployment %s/%s update %s->%s failed, error: %s", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, err),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationDeploymentUpdate,
 				Level:     types.LevelError,
@@ -294,7 +314,7 @@ func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated 
 
 		p.sender.Send(types.EventNotification{
 			Name:      "update deployment",
-			Message:   fmt.Sprintf("Successfully updated deployment %s/%s (%s)", deployment.Namespace, deployment.Name, strings.Join(getImages(&deployment), ", ")),
+			Message:   fmt.Sprintf("Successfully updated deployment %s/%s %s->%s (%s)", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&deployment), ", ")),
 			CreatedAt: time.Now(),
 			Type:      types.NotificationDeploymentUpdate,
 			Level:     types.LevelSuccess,
@@ -402,8 +422,9 @@ func (p *Provider) getDeployment(namespace, name string) (*v1beta1.Deployment, e
 	return p.implementer.Deployment(namespace, name)
 }
 
-// gets impacted deployments by changed repository
-func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deployment, error) {
+// createUpdatePlans - impacted deployments by changed repository
+// func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deployment, error) {
+func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, error) {
 
 	deploymentLists, err := p.deployments()
 	if err != nil {
@@ -413,7 +434,8 @@ func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deploy
 		return nil, err
 	}
 
-	impacted := []v1beta1.Deployment{}
+	// impacted := []v1beta1.Deployment{}
+	impacted := []*UpdatePlan{}
 
 	for _, deploymentList := range deploymentLists {
 		for _, deployment := range deploymentList.Items {

@@ -11,7 +11,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updated v1beta1.Deployment, shouldUpdateDeployment bool, err error) {
+// func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updated v1beta1.Deployment, shouldUpdateDeployment bool, err error) {
+func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
+	updatePlan = &UpdatePlan{}
+
 	eventRepoRef, err := image.Parse(repo.Name)
 	if err != nil {
 		return
@@ -82,6 +85,10 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 
 		deployment.SetAnnotations(annotations)
 
+		updatePlan.CurrentVersion = containerImageRef.Tag()
+		updatePlan.NewVersion = repo.Tag
+		updatePlan.Deployment = deployment
+
 		log.WithFields(log.Fields{
 			"parsed_image":     containerImageRef.Remote(),
 			"raw_image_name":   c.Image,
@@ -92,5 +99,5 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 
 	}
 
-	return deployment, shouldUpdateDeployment, nil
+	return updatePlan, shouldUpdateDeployment, nil
 }
