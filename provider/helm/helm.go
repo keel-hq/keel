@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/image"
 	"github.com/rusenask/keel/util/version"
@@ -37,11 +38,18 @@ type UpdatePlan struct {
 	Namespace string
 	Name      string
 
+	Config *KeelChartConfig
+
 	// chart
 	Chart *hapi_chart.Chart
 
 	// values to update path=value
 	Values map[string]string
+
+	// Current (last seen cluster version)
+	CurrentVersion string
+	// New version that's already in the deployment
+	NewVersion string
 }
 
 // keel:
@@ -62,10 +70,12 @@ type Root struct {
 
 // KeelChartConfig - keel related configuration taken from values.yaml
 type KeelChartConfig struct {
-	Policy       types.PolicyType  `json:"policy"`
-	Trigger      types.TriggerType `json:"trigger"`
-	PollSchedule string            `json:"pollSchedule"`
-	Images       []ImageDetails    `json:"images"`
+	Policy           types.PolicyType  `json:"policy"`
+	Trigger          types.TriggerType `json:"trigger"`
+	PollSchedule     string            `json:"pollSchedule"`
+	Approvals        int               `json:"approvals"`        // Minimum required approvals
+	ApprovalDeadline int               `json:"approvalDeadline"` // Deadline in hours
+	Images           []ImageDetails    `json:"images"`
 }
 
 // ImageDetails - image details
@@ -80,17 +90,20 @@ type Provider struct {
 
 	sender notification.Sender
 
+	approvalManager approvals.Manager
+
 	events chan *types.Event
 	stop   chan struct{}
 }
 
 // NewProvider - create new Helm provider
-func NewProvider(implementer Implementer, sender notification.Sender) *Provider {
+func NewProvider(implementer Implementer, sender notification.Sender, approvalManager approvals.Manager) *Provider {
 	return &Provider{
-		implementer: implementer,
-		sender:      sender,
-		events:      make(chan *types.Event, 100),
-		stop:        make(chan struct{}),
+		implementer:     implementer,
+		approvalManager: approvalManager,
+		sender:          sender,
+		events:          make(chan *types.Event, 100),
+		stop:            make(chan struct{}),
 	}
 }
 
@@ -206,7 +219,9 @@ func (p *Provider) processEvent(event *types.Event) (err error) {
 		return err
 	}
 
-	return p.applyPlans(plans)
+	approved := p.checkForApprovals(event, plans)
+
+	return p.applyPlans(approved)
 }
 
 func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) {
@@ -228,7 +243,7 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 					"error":      err,
 					"deployment": release.Name,
 					"namespace":  release.Namespace,
-				}).Error("provider.kubernetes: got error while checking unversioned release")
+				}).Error("provider.helm: got error while checking unversioned release")
 				continue
 			}
 
@@ -266,7 +281,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 
 		p.sender.Send(types.EventNotification{
 			Name:      "update release",
-			Message:   fmt.Sprintf("Preparing to update release %s/%s (%s)", plan.Namespace, plan.Name, strings.Join(mapToSlice(plan.Values), ", ")),
+			Message:   fmt.Sprintf("Preparing to update release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", ")),
 			CreatedAt: time.Now(),
 			Type:      types.NotificationPreReleaseUpdate,
 			Level:     types.LevelDebug,
@@ -282,7 +297,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 
 			p.sender.Send(types.EventNotification{
 				Name:      "update release",
-				Message:   fmt.Sprintf("Release update feailed %s/%s (%s), error: %s", plan.Namespace, plan.Name, strings.Join(mapToSlice(plan.Values), ", "), err),
+				Message:   fmt.Sprintf("Release update feailed %s/%s %s->%s (%s), error: %s", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "), err),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationReleaseUpdate,
 				Level:     types.LevelError,
@@ -292,7 +307,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 
 		p.sender.Send(types.EventNotification{
 			Name:      "update release",
-			Message:   fmt.Sprintf("Successfully updated release %s/%s (%s)", plan.Namespace, plan.Name, strings.Join(mapToSlice(plan.Values), ", ")),
+			Message:   fmt.Sprintf("Successfully updated release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", ")),
 			CreatedAt: time.Now(),
 			Type:      types.NotificationReleaseUpdate,
 			Level:     types.LevelSuccess,

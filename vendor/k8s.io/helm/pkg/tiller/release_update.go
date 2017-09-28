@@ -30,10 +30,21 @@ import (
 
 // UpdateRelease takes an existing release and new information, and upgrades the release.
 func (s *ReleaseServer) UpdateRelease(c ctx.Context, req *services.UpdateReleaseRequest) (*services.UpdateReleaseResponse, error) {
+	if err := validateReleaseName(req.Name); err != nil {
+		s.Log("updateRelease: Release name is invalid: %s", req.Name)
+		return nil, err
+	}
 	s.Log("preparing update for %s", req.Name)
 	currentRelease, updatedRelease, err := s.prepareUpdate(req)
 	if err != nil {
 		return nil, err
+	}
+
+	if !req.DryRun {
+		s.Log("creating updated release for %s", req.Name)
+		if err := s.env.Releases.Create(updatedRelease); err != nil {
+			return nil, err
+		}
 	}
 
 	s.Log("performing update for %s", req.Name)
@@ -43,8 +54,8 @@ func (s *ReleaseServer) UpdateRelease(c ctx.Context, req *services.UpdateRelease
 	}
 
 	if !req.DryRun {
-		s.Log("creating updated release for %s", req.Name)
-		if err := s.env.Releases.Create(updatedRelease); err != nil {
+		s.Log("updating status for updated release for %s", req.Name)
+		if err := s.env.Releases.Update(updatedRelease); err != nil {
 			return res, err
 		}
 	}
@@ -54,10 +65,6 @@ func (s *ReleaseServer) UpdateRelease(c ctx.Context, req *services.UpdateRelease
 
 // prepareUpdate builds an updated release for an update operation.
 func (s *ReleaseServer) prepareUpdate(req *services.UpdateReleaseRequest) (*release.Release, *release.Release, error) {
-	if !ValidName.MatchString(req.Name) {
-		return nil, nil, errMissingRelease
-	}
-
 	if req.Chart == nil {
 		return nil, nil, errMissingChart
 	}
@@ -109,7 +116,7 @@ func (s *ReleaseServer) prepareUpdate(req *services.UpdateReleaseRequest) (*rele
 		Info: &release.Info{
 			FirstDeployed: currentRelease.Info.FirstDeployed,
 			LastDeployed:  ts,
-			Status:        &release.Status{Code: release.Status_UNKNOWN},
+			Status:        &release.Status{Code: release.Status_PENDING_UPGRADE},
 			Description:   "Preparing upgrade", // This should be overwritten later.
 		},
 		Version:  revision,

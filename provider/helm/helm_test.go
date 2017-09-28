@@ -3,16 +3,26 @@ package helm
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/ghodss/yaml"
+	"github.com/rusenask/keel/approvals"
+	"github.com/rusenask/keel/cache/memory"
 	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/codecs"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/helm"
 	"k8s.io/helm/pkg/proto/hapi/chart"
 	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
 )
+
+func approver() *approvals.DefaultManager {
+	cache := memory.NewMemoryCache(10*time.Minute, 10*time.Minute, 10*time.Minute)
+
+	return approvals.New(cache, codecs.DefaultSerializer())
+}
 
 type fakeSender struct {
 	sentEvent types.EventNotification
@@ -166,7 +176,7 @@ keel:
 		},
 	}
 
-	prov := NewProvider(fakeImpl, &fakeSender{})
+	prov := NewProvider(fakeImpl, &fakeSender{}, approver())
 
 	tracked, _ := prov.TrackedImages()
 
@@ -214,7 +224,7 @@ keel:
 		},
 	}
 
-	prov := NewProvider(fakeImpl, &fakeSender{})
+	prov := NewProvider(fakeImpl, &fakeSender{}, approver())
 
 	tracked, _ := prov.TrackedImages()
 
@@ -316,7 +326,7 @@ keel:
 		},
 	}
 
-	provider := NewProvider(fakeImpl, &fakeSender{})
+	provider := NewProvider(fakeImpl, &fakeSender{}, approver())
 
 	err := provider.processEvent(&types.Event{
 		Repository: types.Repository{

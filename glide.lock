@@ -1,5 +1,5 @@
-hash: 4f5cf366af304cb50b974df8ea9c020057f1d3b2bf1d1f9bd462a1e436c4f13b
-updated: 2017-08-04T22:06:13.059396344+01:00
+hash: 7745d67060c2a5cdcec48b6caad7fe970628b1a8cf19496cce7060f9ede1421a
+updated: 2017-09-12T19:36:03.621062651+03:00
 imports:
 - name: cloud.google.com/go
   version: b4e9a381a01e953e880e6d2cf7fd02d412977cae
@@ -75,11 +75,11 @@ imports:
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/googleapis/gax-go
-  version: 84ed26760e7f6f80887a2fbfb50db3cc415d2cea
+  version: 8c160ca1523d8eea3932fbaa494c8964b7724aa8
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
-  version: bcd8bc72b08df0f70df986b97f95590779502d31
+  version: 24fca303ac6da784b9e8269f724ddeb0b2eea5e7
 - name: github.com/howeyc/gopass
   version: 3ca23474a7c7203e0a0a070fd33508f6efdb9b3d
 - name: github.com/imdario/mergo
@@ -108,8 +108,16 @@ imports:
   version: 315973e9173738626b8c81cb39ba247f8cb190e5
   subpackages:
   - registry
+- name: github.com/rusenask/k8s-kv
+  version: 5a87a1fe426104552279cfe8e8de6b48e537a2d9
+  subpackages:
+  - kv
 - name: github.com/Sirupsen/logrus
-  version: 181d419aa9e2223811b824e8f0b4af96f9ba9302
+  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+  repo: https://github.com/sirupsen/logrus.git
+  vcs: git
+- name: github.com/sirupsen/logrus
+  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/ugorji/go
@@ -119,7 +127,7 @@ imports:
 - name: github.com/urfave/negroni
   version: fde5e16d32adc7ad637e9cd9ad21d4ebc6192535
 - name: golang.org/x/crypto
-  version: 42ff06aea7c329876e5a0fe94acc96902accf0ad
+  version: 88e95fbb56610f02dbc78ebc3b207bec8cf56b86
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -191,7 +199,7 @@ imports:
   - socket
   - urlfetch
 - name: google.golang.org/genproto
-  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
+  version: 595979c8a7bf586b2d293fb42246bf91a0b893d9
   subpackages:
   - googleapis/api/annotations
   - googleapis/iam/v1
@@ -345,7 +353,7 @@ imports:
   - util/homedir
   - util/integer
 - name: k8s.io/helm
-  version: 7cf31e8d9a026287041bae077b09165be247ae66
+  version: bbc1f71dc03afc5f00c6ac84b9308f8ecb4f39ac
   subpackages:
   - pkg/chartutil
   - pkg/helm

@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/urfave/negroni"
 
+	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/provider"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/version"
@@ -23,22 +24,26 @@ type Opts struct {
 
 	// available providers
 	Providers provider.Providers
+
+	ApprovalManager approvals.Manager
 }
 
 // TriggerServer - webhook trigger & healthcheck server
 type TriggerServer struct {
-	providers provider.Providers
-	port      int
-	server    *http.Server
-	router    *mux.Router
+	providers        provider.Providers
+	approvalsManager approvals.Manager
+	port             int
+	server           *http.Server
+	router           *mux.Router
 }
 
 // NewTriggerServer - create new HTTP trigger based server
 func NewTriggerServer(opts *Opts) *TriggerServer {
 	return &TriggerServer{
-		port:      opts.Port,
-		providers: opts.Providers,
-		router:    mux.NewRouter(),
+		port:             opts.Port,
+		providers:        opts.Providers,
+		approvalsManager: opts.ApprovalManager,
+		router:           mux.NewRouter(),
 	}
 }
 
@@ -66,7 +71,10 @@ func (s *TriggerServer) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	s.server.Shutdown(ctx)
+}
 
+func getID(req *http.Request) string {
+	return mux.Vars(req)["id"]
 }
 
 func (s *TriggerServer) registerRoutes(mux *mux.Router) {
@@ -74,6 +82,11 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	mux.HandleFunc("/healthz", s.healthHandler).Methods("GET", "OPTIONS")
 	// version handler
 	mux.HandleFunc("/version", s.versionHandler).Methods("GET", "OPTIONS")
+
+	// approvals
+	mux.HandleFunc("/v1/approvals", s.approvalsHandler).Methods("GET", "OPTIONS")
+	mux.HandleFunc("/v1/approvals/{id}", s.approvalDeleteHandler).Methods("DELETE", "OPTIONS")
+
 	// native webhooks handler
 	mux.HandleFunc("/v1/webhooks/native", s.nativeHandler).Methods("POST", "OPTIONS")
 

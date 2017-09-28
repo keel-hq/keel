@@ -2,15 +2,24 @@ package bot
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/nlopes/slack"
 
+	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/provider/kubernetes"
+	"github.com/rusenask/keel/types"
 
 	log "github.com/Sirupsen/logrus"
+)
+
+const (
+	removeApprovalPrefix = "rm approval"
 )
 
 var (
@@ -18,6 +27,10 @@ var (
 		"help": {
 			`Here's a list of supported commands`,
 			`- "get deployments" -> get a list of all deployments`,
+			`- "get approvals" -> get a list of approvals`,
+			`- "rm approval <approval identifier>" -> remove approval`,
+			`- "approve <approval identifier>" -> approve update request`,
+			`- "reject <approval identifier>" -> reject update request`,
 			// `- "get deployments all" -> get a list of all deployments`,
 			// `- "describe deployment <deployment>" -> get details for specified deployment`,
 		},
@@ -25,13 +38,29 @@ var (
 
 	// static bot commands can be used straight away
 	staticBotCommands = map[string]bool{
-		"get deployments":     true,
-		"get deployments all": true,
+		"get deployments": true,
+		"get approvals":   true,
 	}
 
 	// dynamic bot command prefixes have to be matched
-	dynamicBotCommandPrefixes = []string{"describe deployment"}
+	dynamicBotCommandPrefixes = []string{removeApprovalPrefix}
+
+	approvalResponseKeyword = "approve"
+	rejectResponseKeyword   = "reject"
 )
+
+// SlackImplementer - implementes slack HTTP functionality, used to
+// send messages with attachments
+type SlackImplementer interface {
+	PostMessage(channel, text string, params slack.PostMessageParameters) (string, string, error)
+}
+
+// approvalResponse - used to track approvals once vote begins
+type approvalResponse struct {
+	User   string
+	Status types.ApprovalStatus
+	Text   string
+}
 
 // Bot - main slack bot container
 type Bot struct {
@@ -45,20 +74,31 @@ type Bot struct {
 	slackClient *slack.Client
 	slackRTM    *slack.RTM
 
+	slackHTTPClient SlackImplementer
+
+	approvalsRespCh chan *approvalResponse
+
+	approvalsManager approvals.Manager
+
 	k8sImplementer kubernetes.Implementer
 
 	ctx context.Context
 }
 
 // New - create new bot instance
-func New(name, token string, k8sImplementer kubernetes.Implementer) *Bot {
+func New(name, token string, k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) *Bot {
 	client := slack.New(token)
 
-	return &Bot{
-		slackClient:    client,
-		k8sImplementer: k8sImplementer,
-		name:           name,
+	bot := &Bot{
+		slackClient:      client,
+		slackHTTPClient:  client,
+		k8sImplementer:   k8sImplementer,
+		name:             name,
+		approvalsManager: approvalsManager,
+		approvalsRespCh:  make(chan *approvalResponse), // don't add buffer to make it blocking
 	}
+
+	return bot
 }
 
 // Start - start bot
@@ -90,7 +130,14 @@ func (b *Bot) Start(ctx context.Context) error {
 
 	b.msgPrefix = strings.ToLower("<@" + b.id + ">")
 
+	// processing messages coming from slack RTM client
 	go b.startInternal()
+
+	// processing slack approval responses
+	go b.processApprovalResponses()
+
+	// subscribing for approval requests
+	go b.subscribeForApprovals()
 
 	return nil
 }
@@ -140,6 +187,49 @@ func (b *Bot) startInternal() error {
 	}
 }
 
+func (b *Bot) postMessage(title, message, color string, fields []slack.AttachmentField) error {
+	params := slack.NewPostMessageParameters()
+	params.Username = b.name
+
+	params.Attachments = []slack.Attachment{
+		slack.Attachment{
+			Fallback: message,
+			Color:    color,
+			Fields:   fields,
+			Footer:   "https://keel.sh",
+			Ts:       json.Number(strconv.Itoa(int(time.Now().Unix()))),
+		},
+	}
+
+	_, _, err := b.slackHTTPClient.PostMessage("general", "", params)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("bot.postMessage: failed to send message")
+	}
+	return err
+}
+
+func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *approvalResponse, ok bool) {
+	if strings.HasPrefix(strings.ToLower(eventText), approvalResponseKeyword) {
+		return &approvalResponse{
+			User:   event.User,
+			Status: types.ApprovalStatusApproved,
+			Text:   eventText,
+		}, true
+	}
+
+	if strings.HasPrefix(strings.ToLower(eventText), rejectResponseKeyword) {
+		return &approvalResponse{
+			User:   event.User,
+			Status: types.ApprovalStatusRejected,
+			Text:   eventText,
+		}, true
+	}
+
+	return nil, false
+}
+
 func (b *Bot) handleMessage(event *slack.MessageEvent) {
 	if event.BotID != "" || event.User == "" || event.SubType == "bot_message" {
 		log.WithFields(log.Fields{
@@ -152,12 +242,16 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 
 	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
 
-	// All messages past this point are directed to @gopher itself
 	if !b.isBotMessage(event, eventText) {
 		return
 	}
 
 	eventText = b.trimBot(eventText)
+	approval, ok := b.isApproval(event, eventText)
+	if ok {
+		b.approvalsRespCh <- approval
+		return
+	}
 
 	// Responses that are just a canned string response
 	if responseLines, ok := botEventTextToResponse[eventText]; ok {
@@ -199,6 +293,16 @@ func (b *Bot) handleCommand(event *slack.MessageEvent, eventText string) {
 		log.Info("getting deployments")
 		response := b.deploymentsResponse(Filter{})
 		b.respond(event, formatAsSnippet(response))
+		return
+	case "get approvals":
+		response := b.approvalsResponse()
+		b.respond(event, formatAsSnippet(response))
+		return
+	}
+
+	// handle dynamic commands
+	if strings.HasPrefix(eventText, removeApprovalPrefix) {
+		b.respond(event, formatAsSnippet(b.removeApprovalHandler(strings.TrimSpace(strings.TrimPrefix(eventText, removeApprovalPrefix)))))
 		return
 	}
 

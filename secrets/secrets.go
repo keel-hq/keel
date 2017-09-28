@@ -87,7 +87,7 @@ func (g *DefaultGetter) lookupSecrets(image *types.TrackedImage) ([]string, erro
 			"image":        image.Image.Repository(),
 			"pod_selector": selector,
 			"secrets":      podSecrets,
-		}).Info("secrets.defaultGetter.lookupSecrets: pod secrets found")
+		}).Debug("secrets.defaultGetter.lookupSecrets: pod secrets found")
 		secrets = append(secrets, podSecrets...)
 	}
 
@@ -99,7 +99,7 @@ func (g *DefaultGetter) lookupSecrets(image *types.TrackedImage) ([]string, erro
 			"image":        image.Image.Repository(),
 			"pod_selector": selector,
 			"pods_checked": len(podList.Items),
-		}).Info("secrets.defaultGetter.lookupSecrets: no secrets for image found")
+		}).Warn("secrets.defaultGetter.lookupSecrets: no secrets for image found")
 	}
 
 	return secrets, nil
@@ -210,7 +210,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 					"provider":  image.Provider,
 					"registry":  image.Image.Registry(),
 					"image":     image.Image.Repository(),
-				}).Info("secrets.defaultGetter: secret looked up successfully")
+				}).Debug("secrets.defaultGetter: secret looked up successfully")
 
 				return credentials, nil
 			}

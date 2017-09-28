@@ -160,7 +160,7 @@ const (
 	// The query is finished, but there may be more results after the end
 	// cursor.
 	QueryResultBatch_MORE_RESULTS_AFTER_CURSOR QueryResultBatch_MoreResultsType = 4
-	// The query has been exhausted.
+	// The query is finished, and there are no more results.
 	QueryResultBatch_NO_MORE_RESULTS QueryResultBatch_MoreResultsType = 3
 )
 

@@ -35,6 +35,12 @@ func (s *ReleaseServer) RollbackRelease(c ctx.Context, req *services.RollbackRel
 		return nil, err
 	}
 
+	if !req.DryRun {
+		s.Log("creating rolled back release for %s", req.Name)
+		if err := s.env.Releases.Create(targetRelease); err != nil {
+			return nil, err
+		}
+	}
 	s.Log("performing rollback of %s", req.Name)
 	res, err := s.performRollback(currentRelease, targetRelease, req)
 	if err != nil {
@@ -42,8 +48,8 @@ func (s *ReleaseServer) RollbackRelease(c ctx.Context, req *services.RollbackRel
 	}
 
 	if !req.DryRun {
-		s.Log("creating rolled back release %s", req.Name)
-		if err := s.env.Releases.Create(targetRelease); err != nil {
+		s.Log("updating status for rolled back release for %s", req.Name)
+		if err := s.env.Releases.Update(targetRelease); err != nil {
 			return res, err
 		}
 	}
@@ -54,10 +60,12 @@ func (s *ReleaseServer) RollbackRelease(c ctx.Context, req *services.RollbackRel
 // prepareRollback finds the previous release and prepares a new release object with
 // the previous release's configuration
 func (s *ReleaseServer) prepareRollback(req *services.RollbackReleaseRequest) (*release.Release, *release.Release, error) {
-	switch {
-	case !ValidName.MatchString(req.Name):
-		return nil, nil, errMissingRelease
-	case req.Version < 0:
+	if err := validateReleaseName(req.Name); err != nil {
+		s.Log("prepareRollback: Release name is invalid: %s", req.Name)
+		return nil, nil, err
+	}
+
+	if req.Version < 0 {
 		return nil, nil, errInvalidRevision
 	}
 
@@ -88,7 +96,7 @@ func (s *ReleaseServer) prepareRollback(req *services.RollbackReleaseRequest) (*
 			FirstDeployed: crls.Info.FirstDeployed,
 			LastDeployed:  timeconv.Now(),
 			Status: &release.Status{
-				Code:  release.Status_UNKNOWN,
+				Code:  release.Status_PENDING_ROLLBACK,
 				Notes: prls.Info.Status.Notes,
 			},
 			// Because we lose the reference to rbv elsewhere, we set the

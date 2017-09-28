@@ -4,6 +4,8 @@ import (
 	"k8s.io/helm/pkg/helm"
 	"k8s.io/helm/pkg/proto/hapi/chart"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 // TillerAddress - default tiller address
@@ -26,6 +28,8 @@ type HelmImplementer struct {
 func NewHelmImplementer(address string) *HelmImplementer {
 	if address == "" {
 		address = TillerAddress
+	} else {
+		log.Infof("provider.helm: tiller address '%s' supplied", address)
 	}
 
 	return &HelmImplementer{

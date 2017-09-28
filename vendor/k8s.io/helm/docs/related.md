@@ -35,6 +35,7 @@ or [pull request](https://github.com/kubernetes/helm/pulls).
 - [helm-nuke](https://github.com/adamreese/helm-nuke) - Plugin to destroy all releases
 - [App Registry](https://github.com/app-registry/helm-plugin) - Plugin to manage charts via the [App Registry specification](https://github.com/app-registry/spec)
 - [helm-secrets](https://github.com/futuresimple/helm-secrets) - Plugin to manage and store secrets safely
+- [helm-edit](https://github.com/mstrzele/helm-edit) - Plugin for editing release's values
 
 We also encourage GitHub authors to use the [helm-plugin](https://github.com/search?q=topic%3Ahelm-plugin&type=Repositories)
 tag on their plugin repositories.
@@ -43,6 +44,7 @@ tag on their plugin repositories.
 
 Tools layered on top of Helm or Tiller.
 
+- [Wheel](https://github.com/appscode/wheel) - Ajax friendly Helm Tiller Proxy using [grpc-gateway](https://github.com/grpc-ecosystem/grpc-gateway)
 - [Quay App Registry](https://coreos.com/blog/quay-application-registry-for-kubernetes.html) - Open Kubernetes application registry, including a Helm access client
 - [Chartify](https://github.com/appscode/chartify) - Generate Helm charts from existing Kubernetes resources.
 - [VIM-Kubernetes](https://github.com/andrewstuart/vim-kubernetes) - VIM plugin for Kubernetes and Helm

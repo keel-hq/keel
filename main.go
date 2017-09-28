@@ -9,7 +9,10 @@ import (
 
 	netContext "golang.org/x/net/context"
 
+	"github.com/rusenask/keel/approvals"
 	"github.com/rusenask/keel/bot"
+	"github.com/rusenask/keel/cache/kubekv"
+
 	"github.com/rusenask/keel/constants"
 	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/provider"
@@ -21,6 +24,7 @@ import (
 	"github.com/rusenask/keel/trigger/poll"
 	"github.com/rusenask/keel/trigger/pubsub"
 	"github.com/rusenask/keel/types"
+	"github.com/rusenask/keel/util/codecs"
 	"github.com/rusenask/keel/version"
 
 	// extensions
@@ -35,6 +39,8 @@ const (
 	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
 	EnvTriggerPoll   = "POLL"   // set to 1 or something to enable poll trigger
 	EnvProjectID     = "PROJECT_ID"
+
+	EnvNamespace = "NAMESPACE" // Keel's namespace
 
 	EnvHelmProvider      = "HELM_PROVIDER"  // helm provider
 	EnvHelmTillerAddress = "TILLER_ADDRESS" // helm provider
@@ -58,7 +64,7 @@ func main() {
 		"version":    ver.Version,
 		"go_version": ver.GoVersion,
 		"arch":       ver.Arch,
-	}).Info("keel starting..")
+	}).Info("keel starting...")
 
 	if os.Getenv(EnvDebug) != "" {
 		log.SetLevel(log.DebugLevel)
@@ -95,14 +101,33 @@ func main() {
 		}).Fatal("main: failed to create kubernetes implementer")
 	}
 
+	keelsNamespace := constants.DefaultNamespace
+	if os.Getenv(EnvNamespace) != "" {
+		keelsNamespace = os.Getenv(EnvNamespace)
+	}
+
+	kkv, err := kubekv.New(implementer.ConfigMaps(keelsNamespace), "approvals")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":     err,
+			"namespace": keelsNamespace,
+		}).Fatal("main: failed to initialise kube-kv")
+	}
+
+	serializer := codecs.DefaultSerializer()
+	// mem := memory.NewMemoryCache(24*time.Hour, 24*time.Hour, 1*time.Minute)
+	approvalsManager := approvals.New(kkv, serializer)
+
+	go approvalsManager.StartExpiryService(ctx)
+
 	// setting up providers
-	providers := setupProviders(implementer, sender)
+	providers := setupProviders(implementer, sender, approvalsManager)
 
 	secretsGetter := secrets.NewGetter(implementer)
 
-	teardownTriggers := setupTriggers(ctx, providers, secretsGetter)
+	teardownTriggers := setupTriggers(ctx, providers, secretsGetter, approvalsManager)
 
-	teardownBot, err := setupBot(implementer)
+	teardownBot, err := setupBot(implementer, approvalsManager)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -141,10 +166,10 @@ func main() {
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
 // provider map
-func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.Sender) (providers provider.Providers) {
+func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.Sender, approvalsManager approvals.Manager) (providers provider.Providers) {
 	var enabledProviders []provider.Provider
 
-	k8sProvider, err := kubernetes.NewProvider(k8sImplementer, sender)
+	k8sProvider, err := kubernetes.NewProvider(k8sImplementer, sender, approvalsManager)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -156,18 +181,18 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 	if os.Getenv(EnvHelmProvider) == "1" {
 		tillerAddr := os.Getenv(EnvHelmTillerAddress)
 		helmImplementer := helm.NewHelmImplementer(tillerAddr)
-		helmProvider := helm.NewProvider(helmImplementer, sender)
+		helmProvider := helm.NewProvider(helmImplementer, sender, approvalsManager)
 
 		go helmProvider.Start()
 		enabledProviders = append(enabledProviders, helmProvider)
 	}
 
-	providers = provider.New(enabledProviders)
+	providers = provider.New(enabledProviders, approvalsManager)
 
 	return providers
 }
 
-func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error) {
+func setupBot(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) (teardown func(), err error) {
 
 	if os.Getenv(constants.EnvSlackToken) != "" {
 		botName := "keel"
@@ -177,7 +202,7 @@ func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error
 		}
 
 		token := os.Getenv(constants.EnvSlackToken)
-		slackBot := bot.New(botName, token, k8sImplementer)
+		slackBot := bot.New(botName, token, k8sImplementer, approvalsManager)
 
 		ctx, cancel := context.WithCancel(context.Background())
 
@@ -200,12 +225,13 @@ func setupBot(k8sImplementer kubernetes.Implementer) (teardown func(), err error
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
 // should go through all providers (or not if there is a reason) and submit events)
-func setupTriggers(ctx context.Context, providers provider.Providers, secretsGetter secrets.Getter) (teardown func()) {
+func setupTriggers(ctx context.Context, providers provider.Providers, secretsGetter secrets.Getter, approvalsManager approvals.Manager) (teardown func()) {
 
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{
-		Port:      types.KeelDefaultPort,
-		Providers: providers,
+		Port:            types.KeelDefaultPort,
+		Providers:       providers,
+		ApprovalManager: approvalsManager,
 	})
 
 	go whs.Start()

@@ -4,10 +4,13 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/rusenask/keel/approvals"
+	"github.com/rusenask/keel/extension/notification"
 	"github.com/rusenask/keel/types"
 	"github.com/rusenask/keel/util/version"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
@@ -22,9 +25,11 @@ func unsafeGetVersion(ver string) *types.Version {
 
 func TestProvider_checkVersionedDeployment(t *testing.T) {
 	type fields struct {
-		implementer Implementer
-		events      chan *types.Event
-		stop        chan struct{}
+		implementer     Implementer
+		sender          notification.Sender
+		approvalManager approvals.Manager
+		events          chan *types.Event
+		stop            chan struct{}
 	}
 	type args struct {
 		newVersion *types.Version
@@ -36,7 +41,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 		name                       string
 		fields                     fields
 		args                       args
-		wantUpdated                v1beta1.Deployment
+		wantUpdatePlan             *UpdatePlan
 		wantShouldUpdateDeployment bool
 		wantErr                    bool
 	}{
@@ -68,26 +73,30 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 					v1beta1.DeploymentStatus{},
 				},
 			},
-			wantUpdated: v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-1",
-					Namespace:   "xxxx",
-					Annotations: map[string]string{},
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.2",
+			wantUpdatePlan: &UpdatePlan{
+				Deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
+									},
 								},
 							},
 						},
 					},
+					v1beta1.DeploymentStatus{},
 				},
-				v1beta1.DeploymentStatus{},
+				NewVersion:     "1.1.2",
+				CurrentVersion: "1.1.1",
 			},
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,
@@ -120,26 +129,10 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 					v1beta1.DeploymentStatus{},
 				},
 			},
-			wantUpdated: v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-1",
-					Namespace:   "xxxx",
-					Annotations: map[string]string{},
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
-							},
-						},
-					},
-				},
-				v1beta1.DeploymentStatus{},
+			wantUpdatePlan: &UpdatePlan{
+				Deployment:     v1beta1.Deployment{},
+				NewVersion:     "",
+				CurrentVersion: "",
 			},
 			wantShouldUpdateDeployment: false,
 			wantErr:                    false,
@@ -175,29 +168,33 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 					v1beta1.DeploymentStatus{},
 				},
 			},
-			wantUpdated: v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-1",
-					Namespace:   "xxxx",
-					Annotations: map[string]string{},
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.2",
-								},
-								v1.Container{
-									Image: "yo-world:1.1.1",
+			wantUpdatePlan: &UpdatePlan{
+				Deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
+									},
+									v1.Container{
+										Image: "yo-world:1.1.1",
+									},
 								},
 							},
 						},
 					},
+					v1beta1.DeploymentStatus{},
 				},
-				v1beta1.DeploymentStatus{},
+				NewVersion:     "1.1.2",
+				CurrentVersion: "1.1.1",
 			},
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,
@@ -233,29 +230,33 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 					v1beta1.DeploymentStatus{},
 				},
 			},
-			wantUpdated: v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-1",
-					Namespace:   "xxxx",
-					Annotations: map[string]string{forceUpdateImageAnnotation: "gcr.io/v2-namespace/hello-world:1.1.2"},
-					Labels:      map[string]string{types.KeelPolicyLabel: "force"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.2",
-								},
-								v1.Container{
-									Image: "yo-world:1.1.1",
+			wantUpdatePlan: &UpdatePlan{
+				Deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{forceUpdateImageAnnotation: "gcr.io/v2-namespace/hello-world:1.1.2"},
+						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
+									},
+									v1.Container{
+										Image: "yo-world:1.1.1",
+									},
 								},
 							},
 						},
 					},
+					v1beta1.DeploymentStatus{},
 				},
-				v1beta1.DeploymentStatus{},
+				NewVersion:     "1.1.2",
+				CurrentVersion: "latest",
 			},
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,
@@ -264,17 +265,19 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Provider{
-				implementer: tt.fields.implementer,
-				events:      tt.fields.events,
-				stop:        tt.fields.stop,
+				implementer:     tt.fields.implementer,
+				sender:          tt.fields.sender,
+				approvalManager: tt.fields.approvalManager,
+				events:          tt.fields.events,
+				stop:            tt.fields.stop,
 			}
-			gotUpdated, gotShouldUpdateDeployment, err := p.checkVersionedDeployment(tt.args.newVersion, tt.args.policy, tt.args.repo, tt.args.deployment)
+			gotUpdatePlan, gotShouldUpdateDeployment, err := p.checkVersionedDeployment(tt.args.newVersion, tt.args.policy, tt.args.repo, tt.args.deployment)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Provider.checkVersionedDeployment() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(gotUpdated, tt.wantUpdated) {
-				t.Errorf("Provider.checkVersionedDeployment() gotUpdated = %v, want %v", gotUpdated, tt.wantUpdated)
+			if !reflect.DeepEqual(gotUpdatePlan, tt.wantUpdatePlan) {
+				t.Errorf("Provider.checkVersionedDeployment() gotUpdatePlan = %v, want %v", gotUpdatePlan, tt.wantUpdatePlan)
 			}
 			if gotShouldUpdateDeployment != tt.wantShouldUpdateDeployment {
 				t.Errorf("Provider.checkVersionedDeployment() gotShouldUpdateDeployment = %v, want %v", gotShouldUpdateDeployment, tt.wantShouldUpdateDeployment)
