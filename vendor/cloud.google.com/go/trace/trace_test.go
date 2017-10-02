@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -88,6 +87,7 @@ func (f *fakeDatastoreServer) Lookup(ctx context.Context, req *dspb.LookupReques
 // uploaded any traces.
 func makeRequests(t *testing.T, span *Span, rt *fakeRoundTripper, synchronous bool, expectTrace bool) *http.Request {
 	ctx := NewContext(context.Background(), span)
+	tc := newTestClient(&noopTransport{})
 
 	// An HTTP request.
 	{
@@ -144,7 +144,7 @@ func makeRequests(t *testing.T, span *Span, rt *fakeRoundTripper, synchronous bo
 		}
 		dspb.RegisterDatastoreServer(srv.Gsrv, &fakeDatastoreServer{fail: fail})
 		srv.Start()
-		conn, err := grpc.Dial(srv.Addr, grpc.WithInsecure(), grpc.WithUnaryInterceptor(GRPCClientInterceptor()))
+		conn, err := grpc.Dial(srv.Addr, grpc.WithInsecure(), grpc.WithUnaryInterceptor(tc.GRPCClientInterceptor()))
 		if err != nil {
 			t.Fatalf("connecting to test datastore server: %v", err)
 		}
@@ -456,7 +456,7 @@ func TestNewSpan(t *testing.T) {
 		s.SpanId = 0
 		s.StartTime = ""
 	}
-	if !reflect.DeepEqual(patch, expected) {
+	if !testutil.Equal(patch, expected) {
 		got, _ := json.Marshal(patch)
 		want, _ := json.Marshal(expected)
 		t.Errorf("PatchTraces request: got %s want %s", got, want)
@@ -619,7 +619,7 @@ func testTrace(t *testing.T, synchronous bool, fromRequest bool) {
 		s.SpanId = 0
 		s.StartTime = ""
 	}
-	if !reflect.DeepEqual(patch, expected) {
+	if !testutil.Equal(patch, expected) {
 		got, _ := json.Marshal(patch)
 		want, _ := json.Marshal(expected)
 		t.Errorf("PatchTraces request: got %s \n\n want %s", got, want)

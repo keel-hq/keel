@@ -49,6 +49,18 @@ func ExampleClient_CreateTopic() {
 	_ = topic // TODO: use the topic.
 }
 
+// Use TopicInProject to refer to a topic that is not in the client's project, such
+// as a public topic.
+func ExampleClient_TopicInProject() {
+	ctx := context.Background()
+	client, err := pubsub.NewClient(ctx, "project-id")
+	if err != nil {
+		// TODO: Handle error.
+	}
+	topic := client.TopicInProject("topicName", "another-project-id")
+	_ = topic // TODO: use the topic.
+}
+
 func ExampleClient_CreateSubscription() {
 	ctx := context.Background()
 	client, err := pubsub.NewClient(ctx, "project-id")
@@ -252,14 +264,18 @@ func ExampleSubscription_Receive_maxOutstanding() {
 	}
 }
 
-func ExampleSubscription_ModifyPushConfig() {
+func ExampleSubscription_Update() {
 	ctx := context.Background()
 	client, err := pubsub.NewClient(ctx, "project-id")
 	if err != nil {
 		// TODO: Handle error.
 	}
 	sub := client.Subscription("subName")
-	if err := sub.ModifyPushConfig(ctx, pubsub.PushConfig{Endpoint: "https://example.com/push"}); err != nil {
+	subConfig, err := sub.Update(ctx, pubsub.SubscriptionConfigToUpdate{
+		PushConfig: &pubsub.PushConfig{Endpoint: "https://example.com/push"},
+	})
+	if err != nil {
 		// TODO: Handle error.
 	}
+	_ = subConfig // TODO: Use SubscriptionConfig.
 }

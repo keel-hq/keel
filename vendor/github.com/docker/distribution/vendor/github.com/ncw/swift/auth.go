@@ -12,9 +12,7 @@ import (
 //
 // This encapsulates the different authentication schemes in use
 type Authenticator interface {
-	// Request creates an http.Request for the auth - return nil if not needed
 	Request(*Connection) (*http.Request, error)
-	// Response parses the http.Response
 	Response(resp *http.Response) error
 	// The public storage URL - set Internal to true to read
 	// internal/service net URL
@@ -24,23 +22,6 @@ type Authenticator interface {
 	// The CDN url if available
 	CdnUrl() string
 }
-
-type CustomEndpointAuthenticator interface {
-	StorageUrlForEndpoint(endpointType EndpointType) string
-}
-
-type EndpointType string
-
-const (
-	// Use public URL as storage URL
-	EndpointTypePublic = EndpointType("public")
-
-	// Use internal URL as storage URL
-	EndpointTypeInternal = EndpointType("internal")
-
-	// Use admin URL as storage URL
-	EndpointTypeAdmin = EndpointType("admin")
-)
 
 // newAuth - create a new Authenticator from the AuthUrl
 //
@@ -194,20 +175,15 @@ func (auth *v2Auth) Response(resp *http.Response) error {
 // Region if set or defaulting to the first one if not
 //
 // Returns "" if not found
-func (auth *v2Auth) endpointUrl(Type string, endpointType EndpointType) string {
+func (auth *v2Auth) endpointUrl(Type string, Internal bool) string {
 	for _, catalog := range auth.Auth.Access.ServiceCatalog {
 		if catalog.Type == Type {
 			for _, endpoint := range catalog.Endpoints {
 				if auth.Region == "" || (auth.Region == endpoint.Region) {
-					switch endpointType {
-					case EndpointTypeInternal:
+					if Internal {
 						return endpoint.InternalUrl
-					case EndpointTypePublic:
+					} else {
 						return endpoint.PublicUrl
-					case EndpointTypeAdmin:
-						return endpoint.AdminUrl
-					default:
-						return ""
 					}
 				}
 			}
@@ -221,18 +197,7 @@ func (auth *v2Auth) endpointUrl(Type string, endpointType EndpointType) string {
 // If Internal is true then it reads the private (internal / service
 // net) URL.
 func (auth *v2Auth) StorageUrl(Internal bool) string {
-	endpointType := EndpointTypePublic
-	if Internal {
-		endpointType = EndpointTypeInternal
-	}
-	return auth.StorageUrlForEndpoint(endpointType)
-}
-
-// v2 Authentication - read storage url
-//
-// Use the indicated endpointType to choose a URL.
-func (auth *v2Auth) StorageUrlForEndpoint(endpointType EndpointType) string {
-	return auth.endpointUrl("object-store", endpointType)
+	return auth.endpointUrl("object-store", Internal)
 }
 
 // v2 Authentication - read auth token
@@ -242,7 +207,7 @@ func (auth *v2Auth) Token() string {
 
 // v2 Authentication - read cdn url
 func (auth *v2Auth) CdnUrl() string {
-	return auth.endpointUrl("rax:object-cdn", EndpointTypePublic)
+	return auth.endpointUrl("rax:object-cdn", false)
 }
 
 // ------------------------------------------------------------
@@ -290,7 +255,6 @@ type v2AuthResponse struct {
 			Endpoints []struct {
 				InternalUrl string
 				PublicUrl   string
-				AdminUrl    string
 				Region      string
 				TenantId    string
 			}

@@ -15,7 +15,7 @@
 // AUTO-GENERATED CODE. DO NOT EDIT.
 
 // Package monitoring is an experimental, auto-generated package for the
-// monitoring API.
+// Stackdriver Monitoring API.
 //
 // Manages your Stackdriver Monitoring data and configurations. Most projects
 // must be associated with a Stackdriver account, with a few exceptions as
@@ -34,6 +34,7 @@ func insertXGoog(ctx context.Context, val []string) context.Context {
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
+// DefaultAuthScopes reports the default set of authentication scopes to use with this package.
 func DefaultAuthScopes() []string {
 	return []string{
 		"https://www.googleapis.com/auth/cloud-platform",

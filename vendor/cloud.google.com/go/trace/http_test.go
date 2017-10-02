@@ -24,17 +24,6 @@ import (
 	"testing"
 )
 
-type noopTransport struct{}
-
-func (rt *noopTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	resp := &http.Response{
-		Status:     "200 OK",
-		StatusCode: 200,
-		Body:       ioutil.NopCloser(strings.NewReader("{}")),
-	}
-	return resp, nil
-}
-
 type recorderTransport struct {
 	ch chan *http.Request
 }
@@ -55,9 +44,11 @@ func TestNewHTTPClient(t *testing.T) {
 	}
 
 	tc := newTestClient(&noopTransport{})
-	client := tc.NewHTTPClient(&http.Client{
-		Transport: rt,
-	})
+	client := &http.Client{
+		Transport: &Transport{
+			Base: rt,
+		},
+	}
 	req, _ := http.NewRequest("GET", "http://example.com", nil)
 
 	t.Run("NoTrace", func(t *testing.T) {
@@ -90,7 +81,9 @@ func TestNewHTTPClient(t *testing.T) {
 
 func TestHTTPHandlerNoTrace(t *testing.T) {
 	tc := newTestClient(&noopTransport{})
-	client := tc.NewHTTPClient(&http.Client{})
+	client := &http.Client{
+		Transport: &Transport{},
+	}
 	handler := tc.HTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := FromContext(r.Context())
 		if span == nil {

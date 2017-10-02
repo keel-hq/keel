@@ -1,8 +1,8 @@
-hash: 7745d67060c2a5cdcec48b6caad7fe970628b1a8cf19496cce7060f9ede1421a
-updated: 2017-09-12T19:36:03.621062651+03:00
+hash: 476bff82bacd66b7bf9ea8e80ac8048daff4c26ef962e83fc96a30587f483ba9
+updated: 2017-10-02T17:09:52.291993337+01:00
 imports:
 - name: cloud.google.com/go
-  version: b4e9a381a01e953e880e6d2cf7fd02d412977cae
+  version: f6de2c509ed9d2af648c3c147207eaaf97149aed
   subpackages:
   - compute/metadata
   - iam
@@ -17,7 +17,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/docker/distribution
-  version: 48294d928ced5dd9b378f7fd7c6f5da3ff3f2c89
+  version: cd27f179f2c10c5d300e6d09025b538c475b0d51
   subpackages:
   - context
   - digest
@@ -75,7 +75,7 @@ imports:
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/googleapis/gax-go
-  version: 8c160ca1523d8eea3932fbaa494c8964b7724aa8
+  version: 317e0006254c44a0ac427cc52a0e083ff0b9622f
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
@@ -97,7 +97,7 @@ imports:
 - name: github.com/nlopes/slack
   version: c86337c0ef2486a15edd804355d9c73d2f2caed1
 - name: github.com/opencontainers/go-digest
-  version: aa2ec055abd10d26d539eb630a92241b781ce4bc
+  version: 279bed98673dd5bef374d3b6e4b09e2af76183bf
 - name: github.com/PuerkitoBio/purell
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
@@ -105,7 +105,7 @@ imports:
 - name: github.com/rusenask/cron
   version: 287f34f2c2db9a9d41ec56856746cce28dd53ec5
 - name: github.com/rusenask/docker-registry-client
-  version: 315973e9173738626b8c81cb39ba247f8cb190e5
+  version: 10feb567ea4a2941f5821ae47b75330e0dcfe520
   subpackages:
   - registry
 - name: github.com/rusenask/k8s-kv
@@ -113,10 +113,6 @@ imports:
   subpackages:
   - kv
 - name: github.com/Sirupsen/logrus
-  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
-  repo: https://github.com/sirupsen/logrus.git
-  vcs: git
-- name: github.com/sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
@@ -127,7 +123,7 @@ imports:
 - name: github.com/urfave/negroni
   version: fde5e16d32adc7ad637e9cd9ad21d4ebc6192535
 - name: golang.org/x/crypto
-  version: 88e95fbb56610f02dbc78ebc3b207bec8cf56b86
+  version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -150,8 +146,9 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sync
-  version: f52d1811a62927559de87708c8913c1650ce4f26
+  version: 8e0aa688b654ef28caa72506fa5ec8dba9fc7690
   subpackages:
+  - errgroup
   - semaphore
 - name: golang.org/x/sys
   version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
@@ -199,7 +196,7 @@ imports:
   - socket
   - urlfetch
 - name: google.golang.org/genproto
-  version: 595979c8a7bf586b2d293fb42246bf91a0b893d9
+  version: 1e559d0a00eef8a9a43151db4665280bd8dd5886
   subpackages:
   - googleapis/api/annotations
   - googleapis/iam/v1

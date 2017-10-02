@@ -5,21 +5,16 @@ import:
 #   subpackages:
 #   - pubsub
 - package: cloud.google.com/go
-  version: b4e9a381a01e953e880e6d2cf7fd02d412977cae
+  version: ^0.11.0
   subpackages:
   - pubsub
   - iam
   - internal
 - package: github.com/Masterminds/semver
   version: ^1.3.1
-- package: github.com/sirupsen/logrus
-  version: master
 - package: github.com/Sirupsen/logrus
-  repo: https://github.com/sirupsen/logrus.git
-  vcs: git
-  version: master
 - package: github.com/docker/distribution
-  version: ^2.6.2
+  # version: 5db89f0ca68677abc5eefce8f2a0a772c98ba52d
   subpackages:
   - digest
   - reference
@@ -32,7 +27,7 @@ import:
 - package: github.com/rusenask/cron
   version: v1.1.0
 - package: github.com/rusenask/docker-registry-client
-  version: ^0.1.0 
+  version: ^0.1.2
   subpackages:
   - registry
 - package: github.com/urfave/negroni

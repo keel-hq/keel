@@ -31,6 +31,11 @@ import (
 	"google.golang.org/api/option"
 )
 
+var (
+	topicIDs = testutil.NewUIDSpace("topic")
+	subIDs   = testutil.NewUIDSpace("sub")
+)
+
 // messageData is used to hold the contents of a message so that it can be compared against the contents
 // of another message without regard to irrelevant fields.
 type messageData struct {
@@ -47,35 +52,39 @@ func extractMessageData(m *Message) *messageData {
 	}
 }
 
-func TestAll(t *testing.T) {
-	t.Parallel()
+func integrationTestClient(t *testing.T, ctx context.Context) *Client {
 	if testing.Short() {
 		t.Skip("Integration tests skipped in short mode")
 	}
-	ctx := context.Background()
+	projID := testutil.ProjID()
+	if projID == "" {
+		t.Skip("Integration tests skipped. See CONTRIBUTING.md for details")
+	}
 	ts := testutil.TokenSource(ctx, ScopePubSub, ScopeCloudPlatform)
 	if ts == nil {
 		t.Skip("Integration tests skipped. See CONTRIBUTING.md for details")
 	}
-
-	now := time.Now()
-	topicName := fmt.Sprintf("topic-%d", now.Unix())
-	subName := fmt.Sprintf("subscription-%d", now.Unix())
-
-	client, err := NewClient(ctx, testutil.ProjID(), option.WithTokenSource(ts))
+	client, err := NewClient(ctx, projID, option.WithTokenSource(ts))
 	if err != nil {
 		t.Fatalf("Creating client error: %v", err)
 	}
+	return client
+}
+
+func TestAll(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	client := integrationTestClient(t, ctx)
 	defer client.Close()
 
-	var topic *Topic
-	if topic, err = client.CreateTopic(ctx, topicName); err != nil {
+	topic, err := client.CreateTopic(ctx, topicIDs.New())
+	if err != nil {
 		t.Errorf("CreateTopic error: %v", err)
 	}
 	defer topic.Stop()
 
 	var sub *Subscription
-	if sub, err = client.CreateSubscription(ctx, subName, SubscriptionConfig{Topic: topic}); err != nil {
+	if sub, err = client.CreateSubscription(ctx, subIDs.New(), SubscriptionConfig{Topic: topic}); err != nil {
 		t.Errorf("CreateSub error: %v", err)
 	}
 
@@ -84,7 +93,7 @@ func TestAll(t *testing.T) {
 		t.Fatalf("TopicExists error: %v", err)
 	}
 	if !exists {
-		t.Errorf("topic %s should exist, but it doesn't", topic)
+		t.Errorf("topic %v should exist, but it doesn't", topic)
 	}
 
 	exists, err = sub.Exists(ctx)
@@ -92,10 +101,10 @@ func TestAll(t *testing.T) {
 		t.Fatalf("SubExists error: %v", err)
 	}
 	if !exists {
-		t.Errorf("subscription %s should exist, but it doesn't", subName)
+		t.Errorf("subscription %s should exist, but it doesn't", sub.ID())
 	}
 
-	msgs := []*Message{}
+	var msgs []*Message
 	for i := 0; i < 10; i++ {
 		text := fmt.Sprintf("a message with an index %d", i)
 		attrs := make(map[string]string)
@@ -266,4 +275,89 @@ func testIAM(ctx context.Context, h *iam.Handle, permission string) (msg string,
 		return fmt.Sprintf("TestPermissions: got %v, want %v", gotPerms, wantPerms), false
 	}
 	return "", true
+}
+
+func TestSubscriptionUpdate(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	client := integrationTestClient(t, ctx)
+	defer client.Close()
+
+	topic, err := client.CreateTopic(ctx, topicIDs.New())
+	if err != nil {
+		t.Fatalf("CreateTopic error: %v", err)
+	}
+	defer topic.Stop()
+	defer topic.Delete(ctx)
+
+	var sub *Subscription
+	if sub, err = client.CreateSubscription(ctx, subIDs.New(), SubscriptionConfig{Topic: topic}); err != nil {
+		t.Fatalf("CreateSub error: %v", err)
+	}
+	defer sub.Delete(ctx)
+
+	sc, err := sub.Config(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(sc.PushConfig, PushConfig{}) {
+		t.Fatalf("got %+v, want empty PushConfig")
+	}
+	// Add a PushConfig.
+	projID := testutil.ProjID()
+	pc := PushConfig{
+		Endpoint:   "https://" + projID + ".appspot.com/_ah/push-handlers/push",
+		Attributes: map[string]string{"x-goog-version": "v1"},
+	}
+	sc, err = sub.Update(ctx, SubscriptionConfigToUpdate{PushConfig: &pc})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Despite the docs which say that Get always returns a valid "x-goog-version"
+	// attribute, none is returned. See
+	// https://cloud.google.com/pubsub/docs/reference/rpc/google.pubsub.v1#google.pubsub.v1.PushConfig
+	pc.Attributes = nil
+	if got, want := sc.PushConfig, pc; !reflect.DeepEqual(got, want) {
+		t.Fatalf("setting push config: got\n%+v\nwant\n%+v", got, want)
+	}
+	// Remove the PushConfig, turning the subscription back into pull mode.
+	pc = PushConfig{}
+	sc, err = sub.Update(ctx, SubscriptionConfigToUpdate{PushConfig: &pc})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := sc.PushConfig, pc; !reflect.DeepEqual(got, want) {
+		t.Fatalf("removing push config: got\n%+v\nwant %+v", got, want)
+	}
+
+	// If nothing changes, our client returns an error.
+	_, err = sub.Update(ctx, SubscriptionConfigToUpdate{})
+	if err == nil {
+		t.Fatal("got nil, wanted error")
+	}
+}
+
+func TestPublicTopic(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	client := integrationTestClient(t, ctx)
+	defer client.Close()
+
+	sub, err := client.CreateSubscription(ctx, subIDs.New(), SubscriptionConfig{
+		Topic: client.TopicInProject("taxirides-realtime", "pubsub-public-data"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Delete(ctx)
+	// Confirm that Receive works. It doesn't matter if we actually get any
+	// messages.
+	ctxt, cancel := context.WithTimeout(ctx, 5*time.Second)
+	err = sub.Receive(ctxt, func(_ context.Context, msg *Message) {
+		msg.Ack()
+		cancel()
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }

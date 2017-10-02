@@ -23,9 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"cloud.google.com/go/internal/testutil"
+	"golang.org/x/net/context"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
 )
 
@@ -33,7 +32,9 @@ type fakeServer struct {
 	pb.PublisherServer
 	pb.SubscriberServer
 
-	Addr          string
+	Addr string
+
+	mu            sync.Mutex
 	Acked         map[string]bool  // acked message IDs
 	Deadlines     map[string]int32 // deadlines by message ID
 	pullResponses []*pullResponse
@@ -75,15 +76,8 @@ func (s *fakeServer) wait() {
 }
 
 func (s *fakeServer) StreamingPull(stream pb.Subscriber_StreamingPullServer) error {
-	// Receive initial request.
-	_, err := stream.Recv()
-	if err == io.EOF {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	// Consume and ignore subsequent requests.
+	s.wg.Add(1)
+	defer s.wg.Done()
 	errc := make(chan error, 1)
 	s.wg.Add(1)
 	go func() {
@@ -94,17 +88,21 @@ func (s *fakeServer) StreamingPull(stream pb.Subscriber_StreamingPullServer) err
 				errc <- err
 				return
 			}
+			s.mu.Lock()
 			for _, id := range req.AckIds {
 				s.Acked[id] = true
 			}
 			for i, id := range req.ModifyDeadlineAckIds {
 				s.Deadlines[id] = req.ModifyDeadlineSeconds[i]
 			}
+			s.mu.Unlock()
 		}
 	}()
 	// Send responses.
 	for {
+		s.mu.Lock()
 		if len(s.pullResponses) == 0 {
+			s.mu.Unlock()
 			// Nothing to send, so wait for the client to shut down the stream.
 			err := <-errc // a real error, or at least EOF
 			if err == io.EOF {
@@ -114,11 +112,12 @@ func (s *fakeServer) StreamingPull(stream pb.Subscriber_StreamingPullServer) err
 		}
 		pr := s.pullResponses[0]
 		s.pullResponses = s.pullResponses[1:]
+		s.mu.Unlock()
 		if pr.err != nil {
 			// Add a slight delay to ensure the server receives any
 			// messages en route from the client before shutting down the stream.
 			// This reduces flakiness of tests involving retry.
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 		}
 		if pr.err == io.EOF {
 			return nil

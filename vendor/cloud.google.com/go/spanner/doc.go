@@ -19,8 +19,7 @@ Package spanner provides a client for reading and writing to Cloud Spanner
 databases. See the packages under admin for clients that operate on databases
 and instances.
 
-Note: This package is in alpha. Backwards-incompatible changes may occur
-without notice.
+Note: This package is in beta. Some backwards-incompatible changes may occur.
 
 See https://cloud.google.com/spanner/docs/getting-started/go/ for an introduction
 to Cloud Spanner and additional help on using this API.
@@ -32,10 +31,10 @@ of interest:
 
     ctx := context.Background()
     client, err := spanner.NewClient(ctx, "projects/P/instances/I/databases/D")
-    defer client.Close()
     if err != nil {
         // TODO: Handle error.
     }
+    defer client.Close()
 
 Remember to close the client after use to free up the sessions in the session
 pool.

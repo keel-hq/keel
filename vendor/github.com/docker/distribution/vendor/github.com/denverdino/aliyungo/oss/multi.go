@@ -141,13 +141,9 @@ func (b *Bucket) InitMulti(key string, contType string, perm ACL, options Option
 	return &Multi{Bucket: b, Key: key, UploadId: resp.UploadId}, nil
 }
 
-func (m *Multi) PutPartCopy(n int, options CopyOptions, source string) (*CopyObjectResult, Part, error) {
-	return m.PutPartCopyWithContentLength(n, options, source, -1)
-}
-
 //
 // You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/multipart-upload&UploadPartCopy
-func (m *Multi) PutPartCopyWithContentLength(n int, options CopyOptions, source string, contentLength int64) (*CopyObjectResult, Part, error) {
+func (m *Multi) PutPartCopy(n int, options CopyOptions, source string) (*CopyObjectResult, Part, error) {
 	// TODO source format a /BUCKET/PATH/TO/OBJECT
 	// TODO not a good design. API could be changed to PutPartCopyWithinBucket(..., path) and PutPartCopyFromBucket(bucket, path)
 
@@ -159,17 +155,14 @@ func (m *Multi) PutPartCopyWithContentLength(n int, options CopyOptions, source 
 	params.Set("uploadId", m.UploadId)
 	params.Set("partNumber", strconv.FormatInt(int64(n), 10))
 
-	if contentLength < 0 {
-		sourceBucket := m.Bucket.Client.Bucket(strings.TrimRight(strings.Split(source, "/")[1], "/"))
-		//log.Println("source: ", source)
-		//log.Println("sourceBucket: ", sourceBucket.Name)
-		//log.Println("HEAD: ", strings.strings.SplitAfterN(source, "/", 3)[2])
-		// TODO SplitAfterN can be use in bucket name
-		sourceMeta, err := sourceBucket.Head(strings.SplitAfterN(source, "/", 3)[2], nil)
-		if err != nil {
-			return nil, Part{}, err
-		}
-		contentLength = sourceMeta.ContentLength
+	sourceBucket := m.Bucket.Client.Bucket(strings.TrimRight(strings.Split(source, "/")[1], "/"))
+	//log.Println("source: ", source)
+	//log.Println("sourceBucket: ", sourceBucket.Name)
+	//log.Println("HEAD: ", strings.strings.SplitAfterN(source, "/", 3)[2])
+	// TODO SplitAfterN can be use in bucket name
+	sourceMeta, err := sourceBucket.Head(strings.SplitAfterN(source, "/", 3)[2], nil)
+	if err != nil {
+		return nil, Part{}, err
 	}
 
 	for attempt := attempts.Start(); attempt.Next(); {
@@ -181,7 +174,7 @@ func (m *Multi) PutPartCopyWithContentLength(n int, options CopyOptions, source 
 			params:  params,
 		}
 		resp := &CopyObjectResult{}
-		err := m.Bucket.Client.query(req, resp)
+		err = m.Bucket.Client.query(req, resp)
 		if shouldRetry(err) && attempt.HasNext() {
 			continue
 		}
@@ -191,7 +184,7 @@ func (m *Multi) PutPartCopyWithContentLength(n int, options CopyOptions, source 
 		if resp.ETag == "" {
 			return nil, Part{}, errors.New("part upload succeeded with no ETag")
 		}
-		return resp, Part{n, resp.ETag, contentLength}, nil
+		return resp, Part{n, resp.ETag, sourceMeta.ContentLength}, nil
 	}
 	panic("unreachable")
 }

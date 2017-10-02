@@ -203,8 +203,8 @@ func TestBuilder(t *testing.T) {
 	}
 
 	references := manifest.References()
-	expected := append([]distribution.Descriptor{manifest.Target()}, descriptors...)
-	if !reflect.DeepEqual(references, expected) {
+
+	if !reflect.DeepEqual(references, descriptors) {
 		t.Fatal("References() does not match the descriptors added")
 	}
 }
