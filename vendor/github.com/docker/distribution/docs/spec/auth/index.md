@@ -1,8 +1,10 @@
----
-title: "Docker Registry Token Authentication"
-description: "Docker Registry v2 authentication schema"
-keywords: ["registry, on-prem, images, tags, repository, distribution, authentication, advanced"]
----
+<!--[metadata]>
++++
+title = "Docker Registry Token Authentication"
+description = "Docker Registry v2 authentication schema"
+keywords = ["registry, on-prem, images, tags, repository, distribution, authentication, advanced"]
++++
+<![end-metadata]-->
 
 # Docker Registry v2 authentication
 

@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/registry/client/auth/challenge"
 	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/distribution/testutil"
 )
@@ -66,7 +65,7 @@ func testServerWithAuth(rrm testutil.RequestResponseMap, authenticate string, au
 
 // ping pings the provided endpoint to determine its required authorization challenges.
 // If a version header is provided, the versions will be returned.
-func ping(manager challenge.Manager, endpoint, versionHeader string) ([]APIVersion, error) {
+func ping(manager ChallengeManager, endpoint, versionHeader string) ([]APIVersion, error) {
 	resp, err := http.Get(endpoint)
 	if err != nil {
 		return nil, err
@@ -150,7 +149,7 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 	e, c := testServerWithAuth(m, authenicate, validCheck)
 	defer c()
 
-	challengeManager1 := challenge.NewSimpleManager()
+	challengeManager1 := NewSimpleChallengeManager()
 	versions, err := ping(challengeManager1, e+"/v2/", "x-api-version")
 	if err != nil {
 		t.Fatal(err)
@@ -177,7 +176,7 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 	e2, c2 := testServerWithAuth(m, authenicate, validCheck)
 	defer c2()
 
-	challengeManager2 := challenge.NewSimpleManager()
+	challengeManager2 := NewSimpleChallengeManager()
 	versions, err = ping(challengeManager2, e2+"/v2/", "x-multi-api-version")
 	if err != nil {
 		t.Fatal(err)
@@ -274,7 +273,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	e, c := testServerWithAuth(m, authenicate, validCheck)
 	defer c()
 
-	challengeManager1 := challenge.NewSimpleManager()
+	challengeManager1 := NewSimpleChallengeManager()
 	versions, err := ping(challengeManager1, e+"/v2/", "x-api-version")
 	if err != nil {
 		t.Fatal(err)
@@ -307,7 +306,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	e2, c2 := testServerWithAuth(m, authenicate, validCheck)
 	defer c2()
 
-	challengeManager2 := challenge.NewSimpleManager()
+	challengeManager2 := NewSimpleChallengeManager()
 	versions, err = ping(challengeManager2, e2+"/v2/", "x-api-version")
 	if err != nil {
 		t.Fatal(err)
@@ -340,7 +339,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	e3, c3 := testServerWithAuth(m, authenicate, validCheck)
 	defer c3()
 
-	challengeManager3 := challenge.NewSimpleManager()
+	challengeManager3 := NewSimpleChallengeManager()
 	versions, err = ping(challengeManager3, e3+"/v2/", "x-api-version")
 	if err != nil {
 		t.Fatal(err)
@@ -360,84 +359,6 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusUnauthorized)
-	}
-}
-
-func TestEndpointAuthorizeV2RefreshToken(t *testing.T) {
-	service := "localhost.localdomain"
-	scope1 := "registry:catalog:search"
-	refreshToken1 := "0123456790abcdef"
-	tokenMap := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
-		{
-			Request: testutil.Request{
-				Method: "POST",
-				Route:  "/token",
-				Body:   []byte(fmt.Sprintf("client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken1, url.QueryEscape(scope1), service)),
-			},
-			Response: testutil.Response{
-				StatusCode: http.StatusOK,
-				Body:       []byte(fmt.Sprintf(`{"access_token":"statictoken","refresh_token":"%s"}`, refreshToken1)),
-			},
-		},
-	})
-	te, tc := testServer(tokenMap)
-	defer tc()
-
-	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
-		{
-			Request: testutil.Request{
-				Method: "GET",
-				Route:  "/v1/search",
-			},
-			Response: testutil.Response{
-				StatusCode: http.StatusAccepted,
-			},
-		},
-	})
-
-	authenicate := fmt.Sprintf("Bearer realm=%q,service=%q", te+"/token", service)
-	validCheck := func(a string) bool {
-		return a == "Bearer statictoken"
-	}
-	e, c := testServerWithAuth(m, authenicate, validCheck)
-	defer c()
-
-	challengeManager1 := challenge.NewSimpleManager()
-	versions, err := ping(challengeManager1, e+"/v2/", "x-api-version")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(versions) != 1 {
-		t.Fatalf("Unexpected version count: %d, expected 1", len(versions))
-	}
-	if check := (APIVersion{Type: "registry", Version: "2.0"}); versions[0] != check {
-		t.Fatalf("Unexpected api version: %#v, expected %#v", versions[0], check)
-	}
-	tho := TokenHandlerOptions{
-		Credentials: &testCredentialStore{
-			refreshTokens: map[string]string{
-				service: refreshToken1,
-			},
-		},
-		Scopes: []Scope{
-			RegistryScope{
-				Name:    "catalog",
-				Actions: []string{"search"},
-			},
-		},
-	}
-
-	transport1 := transport.NewTransport(nil, NewAuthorizer(challengeManager1, NewTokenHandlerWithOptions(tho)))
-	client := &http.Client{Transport: transport1}
-
-	req, _ := http.NewRequest("GET", e+"/v1/search", nil)
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("Error sending get request: %s", err)
-	}
-
-	if resp.StatusCode != http.StatusAccepted {
-		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
 	}
 }
 
@@ -497,7 +418,7 @@ func TestEndpointAuthorizeTokenBasic(t *testing.T) {
 		password: password,
 	}
 
-	challengeManager := challenge.NewSimpleManager()
+	challengeManager := NewSimpleChallengeManager()
 	_, err := ping(challengeManager, e+"/v2/", "")
 	if err != nil {
 		t.Fatal(err)
@@ -615,7 +536,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 		password: password,
 	}
 
-	challengeManager := challenge.NewSimpleManager()
+	challengeManager := NewSimpleChallengeManager()
 	_, err := ping(challengeManager, e+"/v2/", "")
 	if err != nil {
 		t.Fatal(err)
@@ -766,7 +687,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 		password: password,
 	}
 
-	challengeManager := challenge.NewSimpleManager()
+	challengeManager := NewSimpleChallengeManager()
 	_, err := ping(challengeManager, e+"/v2/", "")
 	if err != nil {
 		t.Fatal(err)
@@ -846,7 +767,7 @@ func TestEndpointAuthorizeBasic(t *testing.T) {
 		password: password,
 	}
 
-	challengeManager := challenge.NewSimpleManager()
+	challengeManager := NewSimpleChallengeManager()
 	_, err := ping(challengeManager, e+"/v2/", "")
 	if err != nil {
 		t.Fatal(err)

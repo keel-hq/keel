@@ -42,6 +42,7 @@ import (
 	"time"
 
 	"bytes"
+
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"golang.org/x/net/context"
@@ -118,7 +119,7 @@ func (s *server) CreateTable(ctx context.Context, req *btapb.CreateTableRequest)
 	s.mu.Lock()
 	if _, ok := s.tables[tbl]; ok {
 		s.mu.Unlock()
-		return nil, fmt.Errorf("table %q already exists", tbl)
+		return nil, grpc.Errorf(codes.AlreadyExists, "table %q already exists", tbl)
 	}
 	s.tables[tbl] = newTable(req)
 	s.mu.Unlock()
@@ -183,7 +184,7 @@ func (s *server) ModifyColumnFamilies(ctx context.Context, req *btapb.ModifyColu
 	for _, mod := range req.Modifications {
 		if create := mod.GetCreate(); create != nil {
 			if _, ok := tbl.families[mod.Id]; ok {
-				return nil, fmt.Errorf("family %q already exists", mod.Id)
+				return nil, grpc.Errorf(codes.AlreadyExists, "family %q already exists", mod.Id)
 			}
 			newcf := &columnFamily{
 				name:   req.Name + "/columnFamilies/" + mod.Id,
@@ -276,7 +277,6 @@ func (s *server) ReadRows(req *btpb.ReadRowsRequest, stream btpb.Bigtable_ReadRo
 	// Rows to read can be specified by a set of row keys and/or a set of row ranges.
 	// Output is a stream of sorted, de-duped rows.
 	tbl.mu.RLock()
-
 	rowSet := make(map[string]*row)
 	if req.Rows != nil {
 		// Add the explicitly given keys
@@ -458,6 +458,38 @@ func filterRow(f *btpb.RowFilter, r *row) bool {
 		if !rx.MatchString(r.key) {
 			return false
 		}
+	case *btpb.RowFilter_CellsPerRowLimitFilter:
+		// Grab the first n cells in the row.
+		lim := int(f.CellsPerRowLimitFilter)
+		for _, fam := range r.families {
+			for _, col := range fam.colNames {
+				cs := fam.cells[col]
+				if len(cs) > lim {
+					fam.cells[col] = cs[:lim]
+					lim = 0
+				} else {
+					lim -= len(cs)
+				}
+			}
+		}
+		return true
+	case *btpb.RowFilter_CellsPerRowOffsetFilter:
+		// Skip the first n cells in the row.
+		offset := int(f.CellsPerRowOffsetFilter)
+		for _, fam := range r.families {
+			for _, col := range fam.colNames {
+				cs := fam.cells[col]
+				if len(cs) > offset {
+					fam.cells[col] = cs[offset:]
+					offset = 0
+					return true
+				} else {
+					fam.cells[col] = cs[:0]
+					offset -= len(cs)
+				}
+			}
+		}
+		return true
 	}
 
 	// Any other case, operate on a per-cell basis.
@@ -591,9 +623,8 @@ func (s *server) MutateRow(ctx context.Context, req *btpb.MutateRowRequest) (*bt
 	if !ok {
 		return nil, grpc.Errorf(codes.NotFound, "table %q not found", req.TableName)
 	}
-
 	fs := tbl.columnFamilies()
-	r := tbl.mutableRow(string(req.RowKey))
+	r, _ := tbl.mutableRow(string(req.RowKey))
 	r.mu.Lock()
 	defer tbl.resortRowIndex() // Make sure the row lock is released before this grabs the table lock
 	defer r.mu.Unlock()
@@ -610,14 +641,13 @@ func (s *server) MutateRows(req *btpb.MutateRowsRequest, stream btpb.Bigtable_Mu
 	if !ok {
 		return grpc.Errorf(codes.NotFound, "table %q not found", req.TableName)
 	}
-
 	res := &btpb.MutateRowsResponse{Entries: make([]*btpb.MutateRowsResponse_Entry, len(req.Entries))}
 
 	fs := tbl.columnFamilies()
 
 	defer tbl.resortRowIndex()
 	for i, entry := range req.Entries {
-		r := tbl.mutableRow(string(entry.RowKey))
+		r, _ := tbl.mutableRow(string(entry.RowKey))
 		r.mu.Lock()
 		code, msg := int32(codes.OK), ""
 		if err := applyMutations(tbl, r, entry.Mutations, fs); err != nil {
@@ -641,12 +671,11 @@ func (s *server) CheckAndMutateRow(ctx context.Context, req *btpb.CheckAndMutate
 	if !ok {
 		return nil, grpc.Errorf(codes.NotFound, "table %q not found", req.TableName)
 	}
-
 	res := &btpb.CheckAndMutateRowResponse{}
 
 	fs := tbl.columnFamilies()
 
-	r := tbl.mutableRow(string(req.RowKey))
+	r, _ := tbl.mutableRow(string(req.RowKey))
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -797,12 +826,16 @@ func (s *server) ReadModifyWriteRow(ctx context.Context, req *btpb.ReadModifyWri
 	if !ok {
 		return nil, grpc.Errorf(codes.NotFound, "table %q not found", req.TableName)
 	}
-
 	updates := make(map[string]cell) // copy of updated cells; keyed by full column name
 
 	fs := tbl.columnFamilies()
 
-	r := tbl.mutableRow(string(req.RowKey))
+	rowKey := string(req.RowKey)
+	r, isNewRow := tbl.mutableRow(rowKey)
+	// This must be done before the row lock, acquired below, is released.
+	if isNewRow {
+		defer tbl.resortRowIndex()
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	// Assume all mutations apply to the most recent version of the cell.
@@ -992,13 +1025,13 @@ func (t *table) columnFamilies() map[string]*columnFamily {
 	return cp
 }
 
-func (t *table) mutableRow(row string) *row {
+func (t *table) mutableRow(row string) (mutRow *row, isNewRow bool) {
 	// Try fast path first.
 	t.mu.RLock()
 	r := t.rowIndex[row]
 	t.mu.RUnlock()
 	if r != nil {
-		return r
+		return r, false
 	}
 
 	// We probably need to create the row.
@@ -1010,7 +1043,7 @@ func (t *table) mutableRow(row string) *row {
 		t.rows = append(t.rows, r)
 	}
 	t.mu.Unlock()
-	return r
+	return r, true
 }
 
 func (t *table) resortRowIndex() {

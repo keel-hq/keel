@@ -21,6 +21,7 @@ import (
 
 	"fmt"
 	"golang.org/x/net/context"
+	"reflect"
 	"strings"
 )
 
@@ -42,6 +43,22 @@ func TestAdminIntegration(t *testing.T) {
 		t.Fatalf("NewAdminClient: %v", err)
 	}
 	defer adminClient.Close()
+
+	iAdminClient, err := testEnv.NewInstanceAdminClient()
+	if err != nil {
+		t.Fatalf("NewInstanceAdminClient: %v", err)
+	}
+	if iAdminClient != nil {
+		defer iAdminClient.Close()
+
+		iInfo, err := iAdminClient.InstanceInfo(ctx, adminClient.instance)
+		if err != nil {
+			t.Errorf("InstanceInfo: %v", err)
+		}
+		if iInfo.Name != adminClient.instance {
+			t.Errorf("InstanceInfo returned name %#v, want %#v", iInfo.Name, adminClient.instance)
+		}
+	}
 
 	list := func() []string {
 		tbls, err := adminClient.Tables(ctx)
@@ -89,6 +106,28 @@ func TestAdminIntegration(t *testing.T) {
 	}
 	if got, unwanted := tables, []string{"myothertable"}; containsAll(got, unwanted) {
 		t.Errorf("adminClient.Tables return %#v. unwanted %#v", got, unwanted)
+	}
+
+	tblConf := TableConf{
+		TableID: "conftable",
+		Families: map[string]GCPolicy{
+			"fam1": MaxVersionsPolicy(1),
+			"fam2": MaxVersionsPolicy(2),
+		},
+	}
+	if err := adminClient.CreateTableFromConf(ctx, &tblConf); err != nil {
+		t.Fatalf("Creating table from TableConf: %v", err)
+	}
+	defer adminClient.DeleteTable(ctx, tblConf.TableID)
+
+	tblInfo, err := adminClient.TableInfo(ctx, tblConf.TableID)
+	if err != nil {
+		t.Fatalf("Getting table info: %v", err)
+	}
+	sort.Strings(tblInfo.Families)
+	wantFams := []string{"fam1", "fam2"}
+	if !reflect.DeepEqual(tblInfo.Families, wantFams) {
+		t.Errorf("Column family mismatch, got %v, want %v", tblInfo.Families, wantFams)
 	}
 
 	// Populate mytable and drop row ranges

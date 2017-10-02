@@ -15,11 +15,13 @@
 // AUTO-GENERATED CODE. DO NOT EDIT.
 
 // Package errorreporting is an experimental, auto-generated package for the
-// errorreporting API.
+// Stackdriver Error Reporting API.
 //
 // Stackdriver Error Reporting groups and counts similar errors from cloud
 // services. The Stackdriver Error Reporting API provides a way to report new
 // errors and read access to error groups and their associated errors.
+//
+// Use the client at cloud.google.com/go/errorreporting in preference to this.
 package errorreporting // import "cloud.google.com/go/errorreporting/apiv1beta1"
 
 import (
@@ -34,6 +36,7 @@ func insertXGoog(ctx context.Context, val []string) context.Context {
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
+// DefaultAuthScopes reports the default set of authentication scopes to use with this package.
 func DefaultAuthScopes() []string {
 	return []string{
 		"https://www.googleapis.com/auth/cloud-platform",

@@ -33,7 +33,6 @@
 package auth
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -50,14 +49,6 @@ const (
 	UserNameKey = "auth.user.name"
 )
 
-var (
-	// ErrInvalidCredential is returned when the auth token does not authenticate correctly.
-	ErrInvalidCredential = errors.New("invalid authorization credential")
-
-	// ErrAuthenticationFailure returned when authentication fails.
-	ErrAuthenticationFailure = errors.New("authentication failure")
-)
-
 // UserInfo carries information about
 // an autenticated/authorized client.
 type UserInfo struct {
@@ -66,9 +57,8 @@ type UserInfo struct {
 
 // Resource describes a resource by type and name.
 type Resource struct {
-	Type  string
-	Class string
-	Name  string
+	Type string
+	Name string
 }
 
 // Access describes a specific action that is
@@ -107,11 +97,6 @@ type AccessController interface {
 	Authorized(ctx context.Context, access ...Access) (context.Context, error)
 }
 
-// CredentialAuthenticator is an object which is able to authenticate credentials
-type CredentialAuthenticator interface {
-	AuthenticateUser(username, password string) error
-}
-
 // WithUser returns a context with the authorized user info.
 func WithUser(ctx context.Context, user UserInfo) context.Context {
 	return userInfoContext{
@@ -134,39 +119,6 @@ func (uic userInfoContext) Value(key interface{}) interface{} {
 	}
 
 	return uic.Context.Value(key)
-}
-
-// WithResources returns a context with the authorized resources.
-func WithResources(ctx context.Context, resources []Resource) context.Context {
-	return resourceContext{
-		Context:   ctx,
-		resources: resources,
-	}
-}
-
-type resourceContext struct {
-	context.Context
-	resources []Resource
-}
-
-type resourceKey struct{}
-
-func (rc resourceContext) Value(key interface{}) interface{} {
-	if key == (resourceKey{}) {
-		return rc.resources
-	}
-
-	return rc.Context.Value(key)
-}
-
-// AuthorizedResources returns the list of resources which have
-// been authorized for this request.
-func AuthorizedResources(ctx context.Context) []Resource {
-	if resources, ok := ctx.Value(resourceKey{}).([]Resource); ok {
-		return resources
-	}
-
-	return nil
 }
 
 // InitFunc is the type of an AccessController factory function and is used
