@@ -15,3 +15,6 @@ const (
 	EnvSlackBotName  = "SLACK_BOT_NAME"
 	EnvSlackChannels = "SLACK_CHANNELS"
 )
+
+// EnvNotificationLevel - minimum level for notifications, defaults to info
+const EnvNotificationLevel = "NOTIFICATION_LEVEL"
