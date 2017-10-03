@@ -12,6 +12,14 @@ import (
 )
 
 var secretDataPayload = `{"https://index.docker.io/v1/":{"username":"user-x","password":"pass-x","email":"karolis.rusenas@gmail.com","auth":"somethinghere"}}`
+var secretDockerConfigJSONPayload = `{
+	"auths": {
+	  "quay.io": {
+		"auth": "a2VlbHVzZXIra2VlbHRlc3Q6U05NR0lIVlRHUkRLSTZQMTdPTkVWUFBDQUpON1g5Sk1XUDg2ODJLWDA1RDdUQU5SWDRXMDhIUEw5QldRTDAxSg==",
+		"email": ""
+	  }
+	}
+  }`
 
 func mustEncode(data string) string {
 	return base64.StdEncoding.EncodeToString([]byte(data))
@@ -23,7 +31,7 @@ func TestGetSecret(t *testing.T) {
 	impl := &testutil.FakeK8sImplementer{
 		AvailableSecret: &v1.Secret{
 			Data: map[string][]byte{
-				dockerConfigJSONKey: []byte(secretDataPayload),
+				dockerConfigKey: []byte(secretDataPayload),
 			},
 			Type: v1.SecretTypeDockercfg,
 		},
@@ -47,6 +55,40 @@ func TestGetSecret(t *testing.T) {
 	}
 
 	if creds.Password != "pass-x" {
+		t.Errorf("unexpected pass: %s", creds.Password)
+	}
+}
+
+func TestGetDockerConfigJSONSecret(t *testing.T) {
+	imgRef, _ := image.Parse("quay.io/karolisr/webhook-demo:0.0.11")
+
+	impl := &testutil.FakeK8sImplementer{
+		AvailableSecret: &v1.Secret{
+			Data: map[string][]byte{
+				dockerConfigJSONKey: []byte(secretDockerConfigJSONPayload),
+			},
+			Type: v1.SecretTypeDockerConfigJson,
+		},
+	}
+
+	getter := NewGetter(impl)
+
+	trackedImage := &types.TrackedImage{
+		Image:     imgRef,
+		Namespace: "default",
+		Secrets:   []string{"myregistrysecret"},
+	}
+
+	creds, err := getter.Get(trackedImage)
+	if err != nil {
+		t.Errorf("failed to get creds: %s", err)
+	}
+
+	if creds.Username != "keeluser+keeltest" {
+		t.Errorf("unexpected username: %s", creds.Username)
+	}
+
+	if creds.Password != "SNMGIHVTGRDKI6P17ONEVPPCAJN7X9JMWP8682KX05D7TANRX4W08HPL9BWQL01J" {
 		t.Errorf("unexpected pass: %s", creds.Password)
 	}
 }
@@ -100,7 +142,7 @@ func TestLookupHelmSecret(t *testing.T) {
 		},
 		AvailableSecret: &v1.Secret{
 			Data: map[string][]byte{
-				dockerConfigJSONKey: []byte(fmt.Sprintf(secretDataPayloadEncoded, mustEncode("user-y:pass-y"))),
+				dockerConfigKey: []byte(fmt.Sprintf(secretDataPayloadEncoded, mustEncode("user-y:pass-y"))),
 			},
 			Type: v1.SecretTypeDockercfg,
 		},
@@ -146,7 +188,7 @@ func TestLookupHelmEncodedSecret(t *testing.T) {
 		},
 		AvailableSecret: &v1.Secret{
 			Data: map[string][]byte{
-				dockerConfigJSONKey: []byte(secretDataPayload),
+				dockerConfigKey: []byte(secretDataPayload),
 			},
 			Type: v1.SecretTypeDockercfg,
 		},
@@ -261,6 +303,43 @@ func Test_decodeBase64Secret(t *testing.T) {
 			}
 			if gotPassword != tt.wantPassword {
 				t.Errorf("decodeBase64Secret() gotPassword = %v, want %v", gotPassword, tt.wantPassword)
+			}
+		})
+	}
+}
+
+func Test_hostname(t *testing.T) {
+	type args struct {
+		registry string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "dockerhub",
+			args:    args{registry: "https://index.docker.io/v1/"},
+			want:    "index.docker.io",
+			wantErr: false,
+		},
+		{
+			name:    "quay",
+			args:    args{registry: "quay.io"},
+			want:    "quay.io",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := hostname(tt.args.registry)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("hostname() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("hostname() = %v, want %v", got, tt.want)
 			}
 		})
 	}
