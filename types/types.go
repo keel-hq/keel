@@ -9,6 +9,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -223,6 +224,46 @@ const (
 	LevelError
 	LevelFatal
 )
+
+// ParseLevel takes a string level and returns notification level constant.
+func ParseLevel(lvl string) (Level, error) {
+	switch strings.ToLower(lvl) {
+	case "fatal":
+		return LevelFatal, nil
+	case "error":
+		return LevelError, nil
+	case "warn", "warning":
+		return LevelWarn, nil
+	case "info":
+		return LevelInfo, nil
+	case "success":
+		return LevelSuccess, nil
+	case "debug":
+		return LevelDebug, nil
+	}
+
+	var l Level
+	return l, fmt.Errorf("not a valid notification Level: %q", lvl)
+}
+
+func (l Level) String() string {
+	switch l {
+	case LevelDebug:
+		return "debug"
+	case LevelInfo:
+		return "info"
+	case LevelSuccess:
+		return "success"
+	case LevelWarn:
+		return "warn"
+	case LevelError:
+		return "error"
+	case LevelFatal:
+		return "fatal"
+	default:
+		return "unknown"
+	}
+}
 
 // Color - used to assign different colors for events
 func (l Level) Color() string {
