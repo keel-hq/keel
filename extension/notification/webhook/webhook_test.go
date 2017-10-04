@@ -25,7 +25,7 @@ func TestWebhookRequest(t *testing.T) {
 			t.Errorf("missing deployment type")
 		}
 
-		if !strings.Contains(bodyStr, "LevelDebug") {
+		if !strings.Contains(bodyStr, "debug") {
 			t.Errorf("missing level")
 		}
 
