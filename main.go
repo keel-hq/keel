@@ -74,8 +74,21 @@ func main() {
 	ctx, cancel := netContext.WithCancel(context.Background())
 	defer cancel()
 
+	notificationLevel := types.LevelInfo
+	if os.Getenv(constants.EnvNotificationLevel) != "" {
+		parsedLevel, err := types.ParseLevel(os.Getenv(constants.EnvNotificationLevel))
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Errorf("main: got error while parsing notification level, defaulting to: %s", notificationLevel)
+		} else {
+			notificationLevel = parsedLevel
+		}
+	}
+
 	notifCfg := &notification.Config{
 		Attempts: 10,
+		Level:    notificationLevel,
 	}
 	sender := notification.New(ctx)
 

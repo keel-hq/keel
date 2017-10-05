@@ -32,6 +32,7 @@ var (
 // notifiers.
 type Config struct {
 	Attempts int
+	Level    types.Level
 	Params   map[string]interface{} `yaml:",inline"`
 }
 
@@ -76,6 +77,7 @@ func RegisterSender(name string, s Sender) {
 type DefaultNotificationSender struct {
 	config  *Config
 	stopper *stopper.Stopper
+	level   types.Level
 }
 
 // New - create new sender
@@ -118,6 +120,10 @@ func (m *DefaultNotificationSender) Senders() map[string]Sender {
 
 // Send - send notifications through all configured senders
 func (m *DefaultNotificationSender) Send(event types.EventNotification) error {
+	if event.Level < m.config.Level {
+		return nil
+	}
+
 	sendersM.RLock()
 	defer sendersM.RUnlock()
 
