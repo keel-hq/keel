@@ -16,5 +16,6 @@ jobs:
     steps:
       - checkout
 
-      # specify any bash command here prefixed with `run: `      
+      # specify any bash command here prefixed with `run: `
+      - run: make build
       - run: make test

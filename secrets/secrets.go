@@ -18,7 +18,9 @@ import (
 )
 
 // const dockerConfigJSONKey = ".dockerconfigjson"
-const dockerConfigJSONKey = ".dockercfg"
+const dockerConfigKey = ".dockercfg"
+
+const dockerConfigJSONKey = ".dockerconfigjson"
 
 // common errors
 var (
@@ -129,36 +131,64 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 			continue
 		}
 
-		if secret.Type != v1.SecretTypeDockercfg {
+		dockerCfg := make(DockerCfg)
+
+		switch secret.Type {
+		case v1.SecretTypeDockercfg:
+			secretDataBts, ok := secret.Data[dockerConfigKey]
+			if !ok {
+				log.WithFields(log.Fields{
+					"image":      image.Image.Repository(),
+					"namespace":  image.Namespace,
+					"secret_ref": secretRef,
+					"type":       secret.Type,
+					"data":       secret.Data,
+				}).Warn("secrets.defaultGetter: secret is missing key '.dockerconfig', ensure that key exists")
+				continue
+			}
+			dockerCfg, err = decodeSecret(secretDataBts)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"image":       image.Image.Repository(),
+					"namespace":   image.Namespace,
+					"secret_ref":  secretRef,
+					"secret_data": string(secretDataBts),
+					"error":       err,
+				}).Error("secrets.defaultGetter: failed to decode secret")
+				continue
+			}
+		case v1.SecretTypeDockerConfigJson:
+			secretDataBts, ok := secret.Data[dockerConfigJSONKey]
+			if !ok {
+				log.WithFields(log.Fields{
+					"image":      image.Image.Repository(),
+					"namespace":  image.Namespace,
+					"secret_ref": secretRef,
+					"type":       secret.Type,
+					"data":       secret.Data,
+				}).Warn("secrets.defaultGetter: secret is missing key '.dockerconfigjson', ensure that key exists")
+				continue
+			}
+
+			dockerCfg, err = decodeJSONSecret(secretDataBts)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"image":       image.Image.Repository(),
+					"namespace":   image.Namespace,
+					"secret_ref":  secretRef,
+					"secret_data": string(secretDataBts),
+					"error":       err,
+				}).Error("secrets.defaultGetter: failed to decode secret")
+				continue
+			}
+
+		default:
 			log.WithFields(log.Fields{
 				"image":      image.Image.Repository(),
 				"namespace":  image.Namespace,
 				"secret_ref": secretRef,
 				"type":       secret.Type,
 			}).Warn("secrets.defaultGetter: supplied secret is not kubernetes.io/dockercfg, ignoring")
-			continue
-		}
-
-		secretDataBts, ok := secret.Data[dockerConfigJSONKey]
-		if !ok {
-			log.WithFields(log.Fields{
-				"image":      image.Image.Repository(),
-				"namespace":  image.Namespace,
-				"secret_ref": secretRef,
-				"type":       secret.Type,
-				"data":       secret.Data,
-			}).Warn("secrets.defaultGetter: secret is missing key '.dockerconfigjson', ensure that key exists")
-			continue
-		}
-		dockerCfg, err := decodeSecret(secretDataBts)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"image":       image.Image.Repository(),
-				"namespace":   image.Namespace,
-				"secret_ref":  secretRef,
-				"secret_data": string(secretDataBts),
-				"error":       err,
-			}).Error("secrets.defaultGetter: failed to decode secret")
 			continue
 		}
 
@@ -246,11 +276,15 @@ func decodeBase64Secret(authSecret string) (username, password string, err error
 }
 
 func hostname(registry string) (string, error) {
-	u, err := url.Parse(registry)
-	if err != nil {
-		return "", err
+	if strings.HasPrefix(registry, "http://") || strings.HasPrefix(registry, "https://") {
+		u, err := url.Parse(registry)
+		if err != nil {
+			return "", err
+		}
+		return u.Hostname(), nil
 	}
-	return u.Hostname(), nil
+
+	return registry, nil
 }
 
 func decodeSecret(data []byte) (DockerCfg, error) {
@@ -260,6 +294,20 @@ func decodeSecret(data []byte) (DockerCfg, error) {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+func decodeJSONSecret(data []byte) (DockerCfg, error) {
+	var cfg DockerCfgJSON
+	err := json.Unmarshal(data, &cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cfg.Auths, nil
+}
+
+// DockerCfgJSON - secret structure when dockerconfigjson is used
+type DockerCfgJSON struct {
+	Auths DockerCfg `json:"auths"`
 }
 
 // DockerCfg - registry_name=auth

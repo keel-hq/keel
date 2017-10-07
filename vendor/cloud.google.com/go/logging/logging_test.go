@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -250,7 +249,7 @@ func compareEntry(got, want *logging.Entry) bool {
 	if !ltesting.PayloadEqual(got.Payload, want.Payload) {
 		return false
 	}
-	if !reflect.DeepEqual(got.Labels, want.Labels) {
+	if !testutil.Equal(got.Labels, want.Labels) {
 		return false
 	}
 
@@ -395,11 +394,10 @@ loop:
 	// Try to log something that can't be JSON-marshalled.
 	lg := client.Logger(testLogID)
 	lg.Log(logging.Entry{Payload: func() {}})
-	// Expect an error.
-	select {
-	case <-errorc: // pass
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("expected an error but timed out")
+	// Expect an error from Flush.
+	err := lg.Flush()
+	if err == nil {
+		t.Fatal("expected error, got nil")
 	}
 }
 

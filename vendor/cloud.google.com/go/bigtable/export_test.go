@@ -64,6 +64,8 @@ type IntegrationTestConfig struct {
 type IntegrationEnv interface {
 	Config() IntegrationTestConfig
 	NewAdminClient() (*AdminClient, error)
+	// NewInstanceAdminClient will return nil if instance administration is unsupported in this environment
+	NewInstanceAdminClient() (*InstanceAdminClient, error)
 	NewClient() (*Client, error)
 	Close()
 }
@@ -96,7 +98,7 @@ type EmulatedEnv struct {
 
 // NewEmulatedEnv builds and starts the emulator based environment
 func NewEmulatedEnv(config IntegrationTestConfig) (*EmulatedEnv, error) {
-	srv, err := bttest.NewServer("127.0.0.1:0")
+	srv, err := bttest.NewServer("127.0.0.1:0", grpc.MaxRecvMsgSize(200<<20), grpc.MaxSendMsgSize(100<<20))
 	if err != nil {
 		return nil, err
 	}
@@ -141,11 +143,16 @@ func (e *EmulatedEnv) NewAdminClient() (*AdminClient, error) {
 	return NewAdminClient(ctx, e.config.Project, e.config.Instance, option.WithGRPCConn(conn))
 }
 
+// NewInstanceAdminClient returns nil for the emulated environment since the API is not implemented.
+func (e *EmulatedEnv) NewInstanceAdminClient() (*InstanceAdminClient, error) {
+	return nil, nil
+}
+
 // NewClient builds a new connected data client for this environment
 func (e *EmulatedEnv) NewClient() (*Client, error) {
 	timeout := 20 * time.Second
 	ctx, _ := context.WithTimeout(context.Background(), timeout)
-	conn, err := grpc.Dial(e.server.Addr, grpc.WithInsecure())
+	conn, err := grpc.Dial(e.server.Addr, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(100<<20), grpc.MaxCallRecvMsgSize(100<<20)))
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +196,17 @@ func (e *ProdEnv) NewAdminClient() (*AdminClient, error) {
 		clientOpts = append(clientOpts, option.WithEndpoint(endpoint))
 	}
 	return NewAdminClient(ctx, e.config.Project, e.config.Instance, clientOpts...)
+}
+
+// NewInstanceAdminClient returns a new connected instance admin client for this environment
+func (e *ProdEnv) NewInstanceAdminClient() (*InstanceAdminClient, error) {
+	timeout := 20 * time.Second
+	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	var clientOpts []option.ClientOption
+	if endpoint := e.config.AdminEndpoint; endpoint != "" {
+		clientOpts = append(clientOpts, option.WithEndpoint(endpoint))
+	}
+	return NewInstanceAdminClient(ctx, e.config.Project, clientOpts...)
 }
 
 // NewClient builds a connected data client for this environment

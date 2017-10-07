@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/api/errcode"
 )
 
 // closeResources closes all the provided resources after running the target
@@ -19,12 +20,10 @@ func closeResources(handler http.Handler, closers ...io.Closer) http.Handler {
 	})
 }
 
-// copyFullPayload copies the payload of an HTTP request to destWriter. If it
+// copyFullPayload copies the payload of a HTTP request to destWriter. If it
 // receives less content than expected, and the client disconnected during the
 // upload, it avoids sending a 400 error to keep the logs cleaner.
-//
-// The copy will be limited to `limit` bytes, if limit is greater than zero.
-func copyFullPayload(responseWriter http.ResponseWriter, r *http.Request, destWriter io.Writer, limit int64, context ctxu.Context, action string) error {
+func copyFullPayload(responseWriter http.ResponseWriter, r *http.Request, destWriter io.Writer, context ctxu.Context, action string, errSlice *errcode.Errors) error {
 	// Get a channel that tells us if the client disconnects
 	var clientClosed <-chan bool
 	if notifier, ok := responseWriter.(http.CloseNotifier); ok {
@@ -33,13 +32,8 @@ func copyFullPayload(responseWriter http.ResponseWriter, r *http.Request, destWr
 		ctxu.GetLogger(context).Warnf("the ResponseWriter does not implement CloseNotifier (type: %T)", responseWriter)
 	}
 
-	var body = r.Body
-	if limit > 0 {
-		body = http.MaxBytesReader(responseWriter, body, limit)
-	}
-
 	// Read in the data, if any.
-	copied, err := io.Copy(destWriter, body)
+	copied, err := io.Copy(destWriter, r.Body)
 	if clientClosed != nil && (err != nil || (r.ContentLength > 0 && copied < r.ContentLength)) {
 		// Didn't receive as much content as expected. Did the client
 		// disconnect during the request? If so, avoid returning a 400
@@ -64,6 +58,7 @@ func copyFullPayload(responseWriter http.ResponseWriter, r *http.Request, destWr
 
 	if err != nil {
 		ctxu.GetLogger(context).Errorf("unknown error reading request payload: %v", err)
+		*errSlice = append(*errSlice, errcode.ErrorCodeUnknown.WithDetail(err))
 		return err
 	}
 

@@ -1,8 +1,12 @@
----
-title: "Image Manifest V 2, Schema 1 "
-description: "image manifest for the Registry."
-keywords: ["registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"]
----
+<!--[metadata]>
++++
+title = "Image Manifest V 2, Schema 1 "
+description = "image manifest for the Registry."
+keywords = ["registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"]
+[menu.main]
+parent="smn_registry_ref"
++++
+<![end-metadata]-->
 
 # Image Manifest Version 2, Schema 1
 

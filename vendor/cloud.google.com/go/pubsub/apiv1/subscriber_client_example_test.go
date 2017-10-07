@@ -21,6 +21,7 @@ import (
 
 	"cloud.google.com/go/pubsub/apiv1"
 	"golang.org/x/net/context"
+	"google.golang.org/api/iterator"
 	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
 )
 
@@ -135,9 +136,11 @@ func ExampleSubscriberClient_ListSubscriptions() {
 	it := c.ListSubscriptions(ctx, req)
 	for {
 		resp, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
 		if err != nil {
 			// TODO: Handle error.
-			break
 		}
 		// TODO: Use resp.
 		_ = resp
@@ -273,9 +276,11 @@ func ExampleSubscriberClient_ListSnapshots() {
 	it := c.ListSnapshots(ctx, req)
 	for {
 		resp, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
 		if err != nil {
 			// TODO: Handle error.
-			break
 		}
 		// TODO: Use resp.
 		_ = resp
@@ -293,6 +298,24 @@ func ExampleSubscriberClient_CreateSnapshot() {
 	// TODO: Fill request struct fields.
 	}
 	resp, err := c.CreateSnapshot(ctx, req)
+	if err != nil {
+		// TODO: Handle error.
+	}
+	// TODO: Use resp.
+	_ = resp
+}
+
+func ExampleSubscriberClient_UpdateSnapshot() {
+	ctx := context.Background()
+	c, err := pubsub.NewSubscriberClient(ctx)
+	if err != nil {
+		// TODO: Handle error.
+	}
+
+	req := &pubsubpb.UpdateSnapshotRequest{
+	// TODO: Fill request struct fields.
+	}
+	resp, err := c.UpdateSnapshot(ctx, req)
 	if err != nil {
 		// TODO: Handle error.
 	}

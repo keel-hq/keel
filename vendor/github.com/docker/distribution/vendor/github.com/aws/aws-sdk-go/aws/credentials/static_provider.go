@@ -14,7 +14,7 @@ var (
 	ErrStaticCredentialsEmpty = awserr.New("EmptyStaticCreds", "static credentials are empty", nil)
 )
 
-// A StaticProvider is a set of credentials which are set programmatically,
+// A StaticProvider is a set of credentials which are set pragmatically,
 // and will never expire.
 type StaticProvider struct {
 	Value

@@ -32,11 +32,6 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-var (
-	loggingProjectPathTemplate = gax.MustCompilePathTemplate("projects/{project}")
-	loggingLogPathTemplate     = gax.MustCompilePathTemplate("projects/{project}/logs/{log}")
-)
-
 // CallOptions contains the retry settings for each method of Client.
 type CallOptions struct {
 	DeleteLog                        []gax.CallOption
@@ -59,17 +54,7 @@ func defaultCallOptions() *CallOptions {
 			gax.WithRetry(func() gax.Retryer {
 				return gax.OnCodes([]codes.Code{
 					codes.DeadlineExceeded,
-					codes.Unavailable,
-				}, gax.Backoff{
-					Initial:    100 * time.Millisecond,
-					Max:        1000 * time.Millisecond,
-					Multiplier: 1.2,
-				})
-			}),
-		},
-		{"default", "non_idempotent"}: {
-			gax.WithRetry(func() gax.Retryer {
-				return gax.OnCodes([]codes.Code{
+					codes.Internal,
 					codes.Unavailable,
 				}, gax.Backoff{
 					Initial:    100 * time.Millisecond,
@@ -82,6 +67,7 @@ func defaultCallOptions() *CallOptions {
 			gax.WithRetry(func() gax.Retryer {
 				return gax.OnCodes([]codes.Code{
 					codes.DeadlineExceeded,
+					codes.Internal,
 					codes.Unavailable,
 				}, gax.Backoff{
 					Initial:    100 * time.Millisecond,
@@ -153,27 +139,22 @@ func (c *Client) SetGoogleClientInfo(keyval ...string) {
 	c.xGoogHeader = []string{gax.XGoogHeader(kv...)}
 }
 
-// LoggingProjectPath returns the path for the project resource.
-func LoggingProjectPath(project string) string {
-	path, err := loggingProjectPathTemplate.Render(map[string]string{
-		"project": project,
-	})
-	if err != nil {
-		panic(err)
-	}
-	return path
+// ProjectPath returns the path for the project resource.
+func ProjectPath(project string) string {
+	return "" +
+		"projects/" +
+		project +
+		""
 }
 
-// LoggingLogPath returns the path for the log resource.
-func LoggingLogPath(project, log string) string {
-	path, err := loggingLogPathTemplate.Render(map[string]string{
-		"project": project,
-		"log":     log,
-	})
-	if err != nil {
-		panic(err)
-	}
-	return path
+// LogPath returns the path for the log resource.
+func LogPath(project, log string) string {
+	return "" +
+		"projects/" +
+		project +
+		"/logs/" +
+		log +
+		""
 }
 
 // DeleteLog deletes all the log entries in a log.
@@ -209,7 +190,7 @@ func (c *Client) WriteLogEntries(ctx context.Context, req *loggingpb.WriteLogEnt
 
 // ListLogEntries lists log entries.  Use this method to retrieve log entries from
 // Stackdriver Logging.  For ways to export log entries, see
-// [Exporting Logs](/logging/docs/export).
+// Exporting Logs (at /logging/docs/export).
 func (c *Client) ListLogEntries(ctx context.Context, req *loggingpb.ListLogEntriesRequest, opts ...gax.CallOption) *LogEntryIterator {
 	ctx = insertXGoog(ctx, c.xGoogHeader)
 	opts = append(c.CallOptions.ListLogEntries[0:len(c.CallOptions.ListLogEntries):len(c.CallOptions.ListLogEntries)], opts...)

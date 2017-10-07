@@ -17,13 +17,14 @@ package pubsub
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 	"time"
 
 	"cloud.google.com/go/iam"
 	"golang.org/x/net/context"
-	"google.golang.org/api/iterator"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
@@ -147,6 +148,17 @@ type ReceiveSettings struct {
 	// the value is negative, then there will be no limit on the number of bytes
 	// for unprocessed messages.
 	MaxOutstandingBytes int
+
+	// NumGoroutines is the number of goroutines Receive will spawn to pull
+	// messages concurrently. If NumGoroutines is less than 1, it will be treated
+	// as if it were DefaultReceiveSettings.NumGoroutines.
+	//
+	// NumGoroutines does not limit the number of messages that can be processed
+	// concurrently. Even with one goroutine, many messages might be processed at
+	// once, because that goroutine may continually receive messages and invoke the
+	// function passed to Receive on them. To limit the number of messages being
+	// processed concurrently, set MaxOutstandingMessages.
+	NumGoroutines int
 }
 
 // DefaultReceiveSettings holds the default values for ReceiveSettings.
@@ -154,6 +166,7 @@ var DefaultReceiveSettings = ReceiveSettings{
 	MaxExtension:           10 * time.Minute,
 	MaxOutstandingMessages: 1000,
 	MaxOutstandingBytes:    1e9, // 1G
+	NumGoroutines:          1,
 }
 
 // Delete deletes the subscription.
@@ -179,9 +192,24 @@ func (s *Subscription) Config(ctx context.Context) (SubscriptionConfig, error) {
 	return conf, nil
 }
 
-// ModifyPushConfig updates the endpoint URL and other attributes of a push subscription.
-func (s *Subscription) ModifyPushConfig(ctx context.Context, conf PushConfig) error {
-	return s.s.modifyPushConfig(ctx, s.name, conf)
+// SubscriptionConfigToUpdate describes how to update a subscription.
+type SubscriptionConfigToUpdate struct {
+	// If non-nil, the push config is changed.
+	PushConfig *PushConfig
+}
+
+// Update changes an existing subscription according to the fields set in cfg.
+// It returns the new SubscriptionConfig.
+//
+// Update returns an error if no fields were modified.
+func (s *Subscription) Update(ctx context.Context, cfg SubscriptionConfigToUpdate) (SubscriptionConfig, error) {
+	if cfg.PushConfig == nil {
+		return SubscriptionConfig{}, errors.New("pubsub: UpdateSubscription call with nothing to update")
+	}
+	if err := s.s.modifyPushConfig(ctx, s.name, *cfg.PushConfig); err != nil {
+		return SubscriptionConfig{}, err
+	}
+	return s.Config(ctx)
 }
 
 func (s *Subscription) IAM() *iam.Handle {
@@ -239,7 +267,7 @@ var errReceiveInProgress = errors.New("pubsub: Receive already in progress for t
 //
 // If the service returns a non-retryable error, Receive returns that error after
 // all of the outstanding calls to f have returned. If ctx is done, Receive
-// returns either nil after all of the outstanding calls to f have returned and
+// returns nil after all of the outstanding calls to f have returned and
 // all messages have been acknowledged or have expired.
 //
 // Receive calls f concurrently from multiple goroutines. It is encouraged to
@@ -286,6 +314,10 @@ func (s *Subscription) Receive(ctx context.Context, f func(context.Context, *Mes
 		// If MaxExtension is negative, disable automatic extension.
 		maxExt = 0
 	}
+	numGoroutines := s.ReceiveSettings.NumGoroutines
+	if numGoroutines < 1 {
+		numGoroutines = DefaultReceiveSettings.NumGoroutines
+	}
 	// TODO(jba): add tests that verify that ReceiveSettings are correctly processed.
 	po := &pullOptions{
 		maxExtension: maxExt,
@@ -296,13 +328,16 @@ func (s *Subscription) Receive(ctx context.Context, f func(context.Context, *Mes
 
 	// Wait for all goroutines started by Receive to return, so instead of an
 	// obscure goroutine leak we have an obvious blocked call to Receive.
-	var wg sync.WaitGroup
-	defer wg.Wait()
-
-	return s.receive(ctx, &wg, po, fc, f)
+	group, gctx := errgroup.WithContext(ctx)
+	for i := 0; i < numGoroutines; i++ {
+		group.Go(func() error {
+			return s.receive(gctx, po, fc, f)
+		})
+	}
+	return group.Wait()
 }
 
-func (s *Subscription) receive(ctx context.Context, wg *sync.WaitGroup, po *pullOptions, fc *flowController, f func(context.Context, *Message)) error {
+func (s *Subscription) receive(ctx context.Context, po *pullOptions, fc *flowController, f func(context.Context, *Message)) error {
 	// Cancel a sub-context when we return, to kick the context-aware callbacks
 	// and the goroutine below.
 	ctx2, cancel := context.WithCancel(ctx)
@@ -313,36 +348,50 @@ func (s *Subscription) receive(ctx context.Context, wg *sync.WaitGroup, po *pull
 	// that context would immediately stop the iterator without waiting for unacked
 	// messages.
 	iter := newMessageIterator(context.Background(), s.s, s.name, po)
+
+	// We cannot use errgroup from Receive here. Receive might already be calling group.Wait,
+	// and group.Wait cannot be called concurrently with group.Go. We give each receive() its
+	// own WaitGroup instead.
+	// Since wg.Add is only called from the main goroutine, wg.Wait is guaranteed
+	// to be called after all Adds.
+	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		<-ctx2.Done()
-		iter.Stop()
+		iter.stop()
 		wg.Done()
 	}()
+	defer wg.Wait()
+
 	defer cancel()
 	for {
-		msg, err := iter.Next()
-		if err == iterator.Done {
+		msgs, err := iter.receive()
+		if err == io.EOF {
 			return nil
 		}
 		if err != nil {
 			return err
 		}
-		// TODO(jba): call acquire closer to when the message is allocated.
-		if err := fc.acquire(ctx, len(msg.Data)); err != nil {
-			// TODO(jba): test that this "orphaned" message is nacked immediately when ctx is done.
-			msg.Nack()
-			return nil
+		for i, msg := range msgs {
+			msg := msg
+			// TODO(jba): call acquire closer to when the message is allocated.
+			if err := fc.acquire(ctx, len(msg.Data)); err != nil {
+				// TODO(jba): test that these "orphaned" messages are nacked immediately when ctx is done.
+				for _, m := range msgs[i:] {
+					m.Nack()
+				}
+				return nil
+			}
+			wg.Add(1)
+			go func() {
+				// TODO(jba): call release when the message is available for GC.
+				// This considers the message to be released when
+				// f is finished, but f may ack early or not at all.
+				defer wg.Done()
+				defer fc.release(len(msg.Data))
+				f(ctx2, msg)
+			}()
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			// TODO(jba): call release when the message is available for GC.
-			// This considers the message to be released when
-			// f is finished, but f may ack early or not at all.
-			defer fc.release(len(msg.Data))
-			f(ctx2, msg)
-		}()
 	}
 }
 

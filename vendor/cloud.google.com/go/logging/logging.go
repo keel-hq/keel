@@ -86,7 +86,11 @@ var now = time.Now
 
 // ErrOverflow signals that the number of buffered entries for a Logger
 // exceeds its BufferLimit.
-var ErrOverflow = errors.New("logging: log entry overflowed buffer limits")
+var ErrOverflow = bundler.ErrOverflow
+
+// ErrOversizedEntry signals that an entry's size exceeds the maximum number of
+// bytes that will be sent in a single call to the logging service.
+var ErrOversizedEntry = bundler.ErrOversizedItem
 
 // Client is a Logging client. A Client is associated with a single Cloud project.
 type Client struct {
@@ -96,6 +100,10 @@ type Client struct {
 	donec     chan struct{}  // closed on Client.Close to close Logger bundlers
 	loggers   sync.WaitGroup // so we can wait for loggers to close
 	closed    bool
+
+	mu      sync.Mutex
+	nErrs   int   // number of errors we saw
+	lastErr error // last error we saw
 
 	// OnError is called when an error occurs in a call to Log or Flush. The
 	// error may be due to an invalid Entry, an overflow because BufferLimit
@@ -181,6 +189,31 @@ func (c *Client) Ping(ctx context.Context) error {
 		Resource: globalResource(c.projectID),
 		Entries:  []*logpb.LogEntry{ent},
 	})
+	return err
+}
+
+// error puts the error on the client's error channel
+// without blocking, and records summary error info.
+func (c *Client) error(err error) {
+	select {
+	case c.errc <- err:
+	default:
+	}
+	c.mu.Lock()
+	c.lastErr = err
+	c.nErrs++
+	c.mu.Unlock()
+}
+
+func (c *Client) extractErrorInfo() error {
+	var err error
+	c.mu.Lock()
+	if c.lastErr != nil {
+		err = fmt.Errorf("saw %d errors; last: %v", c.nErrs, c.lastErr)
+		c.nErrs = 0
+		c.lastErr = nil
+	}
+	c.mu.Unlock()
 	return err
 }
 
@@ -302,10 +335,10 @@ type entryByteThreshold int
 func (e entryByteThreshold) set(l *Logger) { l.bundler.BundleByteThreshold = int(e) }
 
 // EntryByteLimit is the maximum number of bytes of entries that will be sent
-// in a single call to the logging service. This option limits the size of a
-// single RPC payload, to account for network or service issues with large
-// RPCs. If EntryByteLimit is smaller than EntryByteThreshold, the latter has
-// no effect.
+// in a single call to the logging service. ErrOversizedEntry is returned if an
+// entry exceeds EntryByteLimit. This option limits the size of a single RPC
+// payload, to account for network or service issues with large RPCs. If
+// EntryByteLimit is smaller than EntryByteThreshold, the latter has no effect.
 // The default is zero, meaning there is no limit.
 func EntryByteLimit(n int) LoggerOption { return entryByteLimit(n) }
 
@@ -381,7 +414,7 @@ func (w severityWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-// Close closes the client.
+// Close waits for all opened loggers to be flushed and closes the client.
 func (c *Client) Close() error {
 	if c.closed {
 		return nil
@@ -390,9 +423,12 @@ func (c *Client) Close() error {
 	c.loggers.Wait() // wait for all bundlers to flush and close
 	// Now there can be no more errors.
 	close(c.errc) // terminate error goroutine
-	// Return only the first error. Since all clients share an underlying connection,
-	// Closes after the first always report a "connection is closing" error.
-	err := c.client.Close()
+	// Prefer logging errors to close errors.
+	err := c.extractErrorInfo()
+	err2 := c.client.Close()
+	if err == nil {
+		err = err2
+	}
 	c.closed = true
 	return err
 }
@@ -653,17 +689,23 @@ func (l *Logger) LogSync(ctx context.Context, e Entry) error {
 func (l *Logger) Log(e Entry) {
 	ent, err := toLogEntry(e)
 	if err != nil {
-		l.error(err)
+		l.client.error(err)
 		return
 	}
 	if err := l.bundler.Add(ent, proto.Size(ent)); err != nil {
-		l.error(err)
+		l.client.error(err)
 	}
 }
 
 // Flush blocks until all currently buffered log entries are sent.
-func (l *Logger) Flush() {
+//
+// If any errors occurred since the last call to Flush from any Logger, or the
+// creation of the client if this is the first call, then Flush returns a non-nil
+// error with summary information about the errors. This information is unlikely to
+// be actionable. For more accurate error reporting, set Client.OnError.
+func (l *Logger) Flush() error {
 	l.bundler.Flush()
+	return l.client.extractErrorInfo()
 }
 
 func (l *Logger) writeLogEntries(ctx context.Context, entries []*logpb.LogEntry) {
@@ -675,16 +717,7 @@ func (l *Logger) writeLogEntries(ctx context.Context, entries []*logpb.LogEntry)
 	}
 	_, err := l.client.client.WriteLogEntries(ctx, req)
 	if err != nil {
-		l.error(err)
-	}
-}
-
-// error puts the error on the client's error channel
-// without blocking.
-func (l *Logger) error(err error) {
-	select {
-	case l.client.errc <- err:
-	default:
+		l.client.error(err)
 	}
 }
 

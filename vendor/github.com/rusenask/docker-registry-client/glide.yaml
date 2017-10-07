@@ -1,7 +1,7 @@
 package: github.com/rusenask/docker-registry-client
 import:
 - package: github.com/docker/distribution
-  version: ^2.6.1
+  version: 5db89f0ca68677abc5eefce8f2a0a772c98ba52d
   subpackages:
   - manifest/schema1
   - manifest/schema2

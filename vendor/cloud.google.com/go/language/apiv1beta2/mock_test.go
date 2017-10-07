@@ -38,6 +38,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	gstatus "google.golang.org/grpc/status"
 )
 
 var _ = io.EOF
@@ -105,6 +106,18 @@ func (s *mockLanguageServer) AnalyzeSyntax(ctx context.Context, req *languagepb.
 		return nil, s.err
 	}
 	return s.resps[0].(*languagepb.AnalyzeSyntaxResponse), nil
+}
+
+func (s *mockLanguageServer) ClassifyText(ctx context.Context, req *languagepb.ClassifyTextRequest) (*languagepb.ClassifyTextResponse, error) {
+	md, _ := metadata.FromIncomingContext(ctx)
+	if xg := md["x-goog-api-client"]; len(xg) == 0 || !strings.Contains(xg[0], "gl-go/") {
+		return nil, fmt.Errorf("x-goog-api-client = %v, expected gl-go key", xg)
+	}
+	s.reqs = append(s.reqs, req)
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.resps[0].(*languagepb.ClassifyTextResponse), nil
 }
 
 func (s *mockLanguageServer) AnnotateText(ctx context.Context, req *languagepb.AnnotateTextRequest) (*languagepb.AnnotateTextResponse, error) {
@@ -186,7 +199,7 @@ func TestLanguageServiceAnalyzeSentiment(t *testing.T) {
 
 func TestLanguageServiceAnalyzeSentimentError(t *testing.T) {
 	errCode := codes.PermissionDenied
-	mockLanguage.err = grpc.Errorf(errCode, "test error")
+	mockLanguage.err = gstatus.Error(errCode, "test error")
 
 	var document *languagepb.Document = &languagepb.Document{}
 	var request = &languagepb.AnalyzeSentimentRequest{
@@ -200,7 +213,9 @@ func TestLanguageServiceAnalyzeSentimentError(t *testing.T) {
 
 	resp, err := c.AnalyzeSentiment(context.Background(), request)
 
-	if c := grpc.Code(err); c != errCode {
+	if st, ok := gstatus.FromError(err); !ok {
+		t.Errorf("got error %v, expected grpc error", err)
+	} else if c := st.Code(); c != errCode {
 		t.Errorf("got error code %q, want %q", c, errCode)
 	}
 	_ = resp
@@ -217,10 +232,8 @@ func TestLanguageServiceAnalyzeEntities(t *testing.T) {
 	mockLanguage.resps = append(mockLanguage.resps[:0], expectedResponse)
 
 	var document *languagepb.Document = &languagepb.Document{}
-	var encodingType languagepb.EncodingType = languagepb.EncodingType_NONE
 	var request = &languagepb.AnalyzeEntitiesRequest{
-		Document:     document,
-		EncodingType: encodingType,
+		Document: document,
 	}
 
 	c, err := NewClient(context.Background(), clientOpt)
@@ -245,13 +258,11 @@ func TestLanguageServiceAnalyzeEntities(t *testing.T) {
 
 func TestLanguageServiceAnalyzeEntitiesError(t *testing.T) {
 	errCode := codes.PermissionDenied
-	mockLanguage.err = grpc.Errorf(errCode, "test error")
+	mockLanguage.err = gstatus.Error(errCode, "test error")
 
 	var document *languagepb.Document = &languagepb.Document{}
-	var encodingType languagepb.EncodingType = languagepb.EncodingType_NONE
 	var request = &languagepb.AnalyzeEntitiesRequest{
-		Document:     document,
-		EncodingType: encodingType,
+		Document: document,
 	}
 
 	c, err := NewClient(context.Background(), clientOpt)
@@ -261,7 +272,9 @@ func TestLanguageServiceAnalyzeEntitiesError(t *testing.T) {
 
 	resp, err := c.AnalyzeEntities(context.Background(), request)
 
-	if c := grpc.Code(err); c != errCode {
+	if st, ok := gstatus.FromError(err); !ok {
+		t.Errorf("got error %v, expected grpc error", err)
+	} else if c := st.Code(); c != errCode {
 		t.Errorf("got error code %q, want %q", c, errCode)
 	}
 	_ = resp
@@ -278,10 +291,8 @@ func TestLanguageServiceAnalyzeEntitySentiment(t *testing.T) {
 	mockLanguage.resps = append(mockLanguage.resps[:0], expectedResponse)
 
 	var document *languagepb.Document = &languagepb.Document{}
-	var encodingType languagepb.EncodingType = languagepb.EncodingType_NONE
 	var request = &languagepb.AnalyzeEntitySentimentRequest{
-		Document:     document,
-		EncodingType: encodingType,
+		Document: document,
 	}
 
 	c, err := NewClient(context.Background(), clientOpt)
@@ -306,13 +317,11 @@ func TestLanguageServiceAnalyzeEntitySentiment(t *testing.T) {
 
 func TestLanguageServiceAnalyzeEntitySentimentError(t *testing.T) {
 	errCode := codes.PermissionDenied
-	mockLanguage.err = grpc.Errorf(errCode, "test error")
+	mockLanguage.err = gstatus.Error(errCode, "test error")
 
 	var document *languagepb.Document = &languagepb.Document{}
-	var encodingType languagepb.EncodingType = languagepb.EncodingType_NONE
 	var request = &languagepb.AnalyzeEntitySentimentRequest{
-		Document:     document,
-		EncodingType: encodingType,
+		Document: document,
 	}
 
 	c, err := NewClient(context.Background(), clientOpt)
@@ -322,7 +331,9 @@ func TestLanguageServiceAnalyzeEntitySentimentError(t *testing.T) {
 
 	resp, err := c.AnalyzeEntitySentiment(context.Background(), request)
 
-	if c := grpc.Code(err); c != errCode {
+	if st, ok := gstatus.FromError(err); !ok {
+		t.Errorf("got error %v, expected grpc error", err)
+	} else if c := st.Code(); c != errCode {
 		t.Errorf("got error code %q, want %q", c, errCode)
 	}
 	_ = resp
@@ -339,10 +350,8 @@ func TestLanguageServiceAnalyzeSyntax(t *testing.T) {
 	mockLanguage.resps = append(mockLanguage.resps[:0], expectedResponse)
 
 	var document *languagepb.Document = &languagepb.Document{}
-	var encodingType languagepb.EncodingType = languagepb.EncodingType_NONE
 	var request = &languagepb.AnalyzeSyntaxRequest{
-		Document:     document,
-		EncodingType: encodingType,
+		Document: document,
 	}
 
 	c, err := NewClient(context.Background(), clientOpt)
@@ -367,13 +376,11 @@ func TestLanguageServiceAnalyzeSyntax(t *testing.T) {
 
 func TestLanguageServiceAnalyzeSyntaxError(t *testing.T) {
 	errCode := codes.PermissionDenied
-	mockLanguage.err = grpc.Errorf(errCode, "test error")
+	mockLanguage.err = gstatus.Error(errCode, "test error")
 
 	var document *languagepb.Document = &languagepb.Document{}
-	var encodingType languagepb.EncodingType = languagepb.EncodingType_NONE
 	var request = &languagepb.AnalyzeSyntaxRequest{
-		Document:     document,
-		EncodingType: encodingType,
+		Document: document,
 	}
 
 	c, err := NewClient(context.Background(), clientOpt)
@@ -383,7 +390,65 @@ func TestLanguageServiceAnalyzeSyntaxError(t *testing.T) {
 
 	resp, err := c.AnalyzeSyntax(context.Background(), request)
 
-	if c := grpc.Code(err); c != errCode {
+	if st, ok := gstatus.FromError(err); !ok {
+		t.Errorf("got error %v, expected grpc error", err)
+	} else if c := st.Code(); c != errCode {
+		t.Errorf("got error code %q, want %q", c, errCode)
+	}
+	_ = resp
+}
+func TestLanguageServiceClassifyText(t *testing.T) {
+	var expectedResponse *languagepb.ClassifyTextResponse = &languagepb.ClassifyTextResponse{}
+
+	mockLanguage.err = nil
+	mockLanguage.reqs = nil
+
+	mockLanguage.resps = append(mockLanguage.resps[:0], expectedResponse)
+
+	var document *languagepb.Document = &languagepb.Document{}
+	var request = &languagepb.ClassifyTextRequest{
+		Document: document,
+	}
+
+	c, err := NewClient(context.Background(), clientOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := c.ClassifyText(context.Background(), request)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want, got := request, mockLanguage.reqs[0]; !proto.Equal(want, got) {
+		t.Errorf("wrong request %q, want %q", got, want)
+	}
+
+	if want, got := expectedResponse, resp; !proto.Equal(want, got) {
+		t.Errorf("wrong response %q, want %q)", got, want)
+	}
+}
+
+func TestLanguageServiceClassifyTextError(t *testing.T) {
+	errCode := codes.PermissionDenied
+	mockLanguage.err = gstatus.Error(errCode, "test error")
+
+	var document *languagepb.Document = &languagepb.Document{}
+	var request = &languagepb.ClassifyTextRequest{
+		Document: document,
+	}
+
+	c, err := NewClient(context.Background(), clientOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := c.ClassifyText(context.Background(), request)
+
+	if st, ok := gstatus.FromError(err); !ok {
+		t.Errorf("got error %v, expected grpc error", err)
+	} else if c := st.Code(); c != errCode {
 		t.Errorf("got error code %q, want %q", c, errCode)
 	}
 	_ = resp
@@ -401,11 +466,9 @@ func TestLanguageServiceAnnotateText(t *testing.T) {
 
 	var document *languagepb.Document = &languagepb.Document{}
 	var features *languagepb.AnnotateTextRequest_Features = &languagepb.AnnotateTextRequest_Features{}
-	var encodingType languagepb.EncodingType = languagepb.EncodingType_NONE
 	var request = &languagepb.AnnotateTextRequest{
-		Document:     document,
-		Features:     features,
-		EncodingType: encodingType,
+		Document: document,
+		Features: features,
 	}
 
 	c, err := NewClient(context.Background(), clientOpt)
@@ -430,15 +493,13 @@ func TestLanguageServiceAnnotateText(t *testing.T) {
 
 func TestLanguageServiceAnnotateTextError(t *testing.T) {
 	errCode := codes.PermissionDenied
-	mockLanguage.err = grpc.Errorf(errCode, "test error")
+	mockLanguage.err = gstatus.Error(errCode, "test error")
 
 	var document *languagepb.Document = &languagepb.Document{}
 	var features *languagepb.AnnotateTextRequest_Features = &languagepb.AnnotateTextRequest_Features{}
-	var encodingType languagepb.EncodingType = languagepb.EncodingType_NONE
 	var request = &languagepb.AnnotateTextRequest{
-		Document:     document,
-		Features:     features,
-		EncodingType: encodingType,
+		Document: document,
+		Features: features,
 	}
 
 	c, err := NewClient(context.Background(), clientOpt)
@@ -448,7 +509,9 @@ func TestLanguageServiceAnnotateTextError(t *testing.T) {
 
 	resp, err := c.AnnotateText(context.Background(), request)
 
-	if c := grpc.Code(err); c != errCode {
+	if st, ok := gstatus.FromError(err); !ok {
+		t.Errorf("got error %v, expected grpc error", err)
+	} else if c := st.Code(); c != errCode {
 		t.Errorf("got error code %q, want %q", c, errCode)
 	}
 	_ = resp
