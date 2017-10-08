@@ -25,6 +25,12 @@ Keel provides several key features:
 
 <img src="https://keel.sh/images/keel-overview.png">
 
+### Support
+
+Support Keel's development with:
+* [Patreon](https://patreon.com/keel)
+* [Paypal](https://www.paypal.me/keelhq)
+
 ### Quick Start
 
 A step-by-step guide to install Keel on your Kubernetes cluster is viewable on the Keel website:
