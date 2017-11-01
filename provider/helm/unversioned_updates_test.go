@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/types"
 	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
 )
 

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/rusenask/keel/bot/formatter"
+	"github.com/keel-hq/keel/bot/formatter"
 
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 

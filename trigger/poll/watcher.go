@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/rusenask/cron"
-	"github.com/rusenask/keel/provider"
-	"github.com/rusenask/keel/registry"
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/image"
-	"github.com/rusenask/keel/util/version"
+	"github.com/keel-hq/keel/provider"
+	"github.com/keel-hq/keel/registry"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/image"
+	"github.com/keel-hq/keel/util/version"
 
 	log "github.com/Sirupsen/logrus"
 )

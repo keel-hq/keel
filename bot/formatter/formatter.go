@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 	"text/template"
 
-	"github.com/rusenask/keel/util/templates"
+	"github.com/keel-hq/keel/util/templates"
 )
 
 // Format keys used to specify certain kinds of output formats

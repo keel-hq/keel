@@ -1,4 +1,4 @@
-package: github.com/rusenask/keel
+package: github.com/keel-hq/keel
 import:
 # - package: cloud.google.com/go
 #   version: ^0.10.0

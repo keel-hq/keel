@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rusenask/keel/provider"
-	"github.com/rusenask/keel/secrets"
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/provider"
+	"github.com/keel-hq/keel/secrets"
+	"github.com/keel-hq/keel/types"
 
 	log "github.com/Sirupsen/logrus"
 )

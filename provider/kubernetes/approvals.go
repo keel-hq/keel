@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rusenask/keel/cache"
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/cache"
+	"github.com/keel-hq/keel/types"
 
 	log "github.com/Sirupsen/logrus"
 )

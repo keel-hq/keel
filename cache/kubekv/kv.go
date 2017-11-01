@@ -1,7 +1,7 @@
 package kubekv
 
 import (
-	"github.com/rusenask/keel/cache"
+	"github.com/keel-hq/keel/cache"
 
 	"github.com/rusenask/k8s-kv/kv"
 )

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/types"
 )
 
 func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Request) {

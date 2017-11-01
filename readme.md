@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/rusenask/keel/tree/master.svg?style=shield&circle-token=0239846a42cfa188de531058b9a2116a4b8600d8)](https://hub.docker.com/r/karolisr/keel/) [![Go Report Card](https://goreportcard.com/badge/github.com/rusenask/keel)](https://goreportcard.com/report/github.com/rusenask/keel) [![Pulls](https://img.shields.io/docker/pulls/karolisr/keel.svg)](https://img.shields.io/docker/pulls/karolisr/keel.svg)
+[![CircleCI](https://circleci.com/gh/rusenask/keel/tree/master.svg?style=shield&circle-token=0239846a42cfa188de531058b9a2116a4b8600d8)](https://hub.docker.com/r/karolisr/keel/) [![Go Report Card](https://goreportcard.com/badge/github.com/keel-hq/keel)](https://goreportcard.com/report/github.com/keel-hq/keel) [![Pulls](https://img.shields.io/docker/pulls/karolisr/keel.svg)](https://img.shields.io/docker/pulls/karolisr/keel.svg)
 
 # Keel - automated Kubernetes deployments for the rest of us
 
@@ -46,7 +46,7 @@ Documentation is viewable on the Keel Website:
 
 ### Contributing
 
-Before starting to work on some big or medium features - raise an issue [here](https://github.com/rusenask/keel/issues) so we can coordinate our efforts.
+Before starting to work on some big or medium features - raise an issue [here](https://github.com/keel-hq/keel/issues) so we can coordinate our efforts.
 
 ### Developing Keel
 
@@ -54,4 +54,4 @@ If you wish to work on Keel itself, you will need Go 1.8+ installed. Make sure y
 
 ### Roadmap
 
-Project [roadmap available here](https://github.com/rusenask/keel/wiki/Roadmap).
+Project [roadmap available here](https://github.com/keel-hq/keel/wiki/Roadmap).
