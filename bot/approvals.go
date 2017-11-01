@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/nlopes/slack"
-	"github.com/rusenask/keel/bot/formatter"
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/bot/formatter"
+	"github.com/keel-hq/keel/types"
 
 	log "github.com/Sirupsen/logrus"
 )

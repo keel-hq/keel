@@ -1,8 +1,8 @@
 package helm
 
 import (
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/image"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/image"
 
 	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
 

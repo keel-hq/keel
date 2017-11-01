@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/rusenask/keel/cache"
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/codecs"
+	"github.com/keel-hq/keel/cache"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/codecs"
 
 	log "github.com/Sirupsen/logrus"
 )

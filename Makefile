@@ -2,9 +2,9 @@ JOBDATE		?= $(shell date -u +%Y-%m-%dT%H%M%SZ)
 GIT_REVISION	= $(shell git rev-parse --short HEAD)
 VERSION		?= $(shell git describe --tags --abbrev=0)
 
-LDFLAGS		+= -X github.com/rusenask/keel/version.Version=$(VERSION)
-LDFLAGS		+= -X github.com/rusenask/keel/version.Revision=$(GIT_REVISION)
-LDFLAGS		+= -X github.com/rusenask/keel/version.BuildDate=$(JOBDATE)
+LDFLAGS		+= -X github.com/keel-hq/keel/version.Version=$(VERSION)
+LDFLAGS		+= -X github.com/keel-hq/keel/version.Revision=$(GIT_REVISION)
+LDFLAGS		+= -X github.com/keel-hq/keel/version.BuildDate=$(JOBDATE)
 
 .PHONY: release
 

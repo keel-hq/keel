@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/types"
 
 	log "github.com/Sirupsen/logrus"
 )

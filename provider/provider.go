@@ -3,8 +3,8 @@ package provider
 import (
 	"context"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/types"
 
 	log "github.com/Sirupsen/logrus"
 )

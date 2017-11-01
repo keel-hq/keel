@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/types"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/api/v1"

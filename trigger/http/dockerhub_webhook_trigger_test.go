@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/cache/memory"
-	"github.com/rusenask/keel/provider"
-	"github.com/rusenask/keel/util/codecs"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/provider"
+	"github.com/keel-hq/keel/util/codecs"
 
 	"net/http/httptest"
 	"testing"
@@ -36,7 +36,7 @@ var fakeRequest = `{
 		"star_count": 0,
 		"comment_count": 0,
 		"date_created": 1497032538,
-		"dockerfile": "FROM golang:1.8.1-alpine\nCOPY . /go/src/github.com/rusenask/keel\nWORKDIR /go/src/github.com/rusenask/keel\nRUN apk add --no-cache git && go get\nRUN CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags -'w' -o keel .\n\nFROM alpine:latest\nRUN apk --no-cache add ca-certificates\nCOPY --from=0 /go/src/github.com/rusenask/keel/keel /bin/keel\nENTRYPOINT [\"/bin/keel\"]\n\nEXPOSE 9300",
+		"dockerfile": "FROM golang:1.8.1-alpine\nCOPY . /go/src/github.com/keel-hq/keel\nWORKDIR /go/src/github.com/keel-hq/keel\nRUN apk add --no-cache git && go get\nRUN CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags -'w' -o keel .\n\nFROM alpine:latest\nRUN apk --no-cache add ca-certificates\nCOPY --from=0 /go/src/github.com/keel-hq/keel/keel /bin/keel\nENTRYPOINT [\"/bin/keel\"]\n\nEXPOSE 9300",
 		"repo_name": "karolisr/keel"
 	}
 }`

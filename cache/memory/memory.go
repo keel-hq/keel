@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rusenask/keel/cache"
+	"github.com/keel-hq/keel/cache"
 )
 
 type requestType int

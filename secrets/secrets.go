@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/rusenask/keel/provider/helm"
-	"github.com/rusenask/keel/provider/kubernetes"
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/provider/helm"
+	"github.com/keel-hq/keel/provider/kubernetes"
+	"github.com/keel-hq/keel/types"
 
 	"k8s.io/client-go/pkg/api/v1"
 

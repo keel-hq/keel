@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/extension/notification"
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/extension/notification"
+	"github.com/keel-hq/keel/types"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"

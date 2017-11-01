@@ -7,10 +7,10 @@ import (
 	"cloud.google.com/go/pubsub"
 	"golang.org/x/net/context"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/cache/memory"
-	"github.com/rusenask/keel/provider"
-	"github.com/rusenask/keel/util/codecs"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/provider"
+	"github.com/keel-hq/keel/util/codecs"
 
 	"testing"
 )

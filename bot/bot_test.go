@@ -8,16 +8,16 @@ import (
 
 	"github.com/nlopes/slack"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/cache/memory"
-	"github.com/rusenask/keel/constants"
-	"github.com/rusenask/keel/extension/approval"
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/codecs"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/constants"
+	"github.com/keel-hq/keel/extension/approval"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/codecs"
 
 	"testing"
 
-	testutil "github.com/rusenask/keel/util/testing"
+	testutil "github.com/keel-hq/keel/util/testing"
 )
 
 type fakeProvider struct {

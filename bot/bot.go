@@ -11,9 +11,9 @@ import (
 
 	"github.com/nlopes/slack"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/provider/kubernetes"
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/provider/kubernetes"
+	"github.com/keel-hq/keel/types"
 
 	log "github.com/Sirupsen/logrus"
 )

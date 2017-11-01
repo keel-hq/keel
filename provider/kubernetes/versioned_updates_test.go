@@ -4,10 +4,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/extension/notification"
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/version"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/extension/notification"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/version"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
