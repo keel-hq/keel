@@ -9,7 +9,7 @@ keywords:
 - continuous deployment
 home: https://keel.sh
 sources:
-- https://github.com/rusenask/keel
+- https://github.com/keel-hq/keel
 maintainers:
 - name: Rimas Mocevicius
   email: rmocius@gmail.com

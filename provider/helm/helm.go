@@ -5,14 +5,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/image"
-	"github.com/rusenask/keel/util/version"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/image"
+	"github.com/keel-hq/keel/util/version"
 
 	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
 
-	"github.com/rusenask/keel/extension/notification"
+	"github.com/keel-hq/keel/extension/notification"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/ghodss/yaml"

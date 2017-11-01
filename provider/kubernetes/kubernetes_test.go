@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/cache/memory"
-	"github.com/rusenask/keel/extension/notification"
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/codecs"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/extension/notification"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/codecs"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"

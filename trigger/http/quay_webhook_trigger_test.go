@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/cache/memory"
-	"github.com/rusenask/keel/provider"
-	"github.com/rusenask/keel/util/codecs"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/provider"
+	"github.com/keel-hq/keel/util/codecs"
 
 	"net/http/httptest"
 	"testing"

@@ -6,10 +6,10 @@ import (
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/image"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/image"
 
-	"github.com/rusenask/keel/util/version"
+	"github.com/keel-hq/keel/util/version"
 
 	log "github.com/Sirupsen/logrus"
 )

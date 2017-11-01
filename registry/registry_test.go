@@ -1,7 +1,7 @@
 package registry
 
 import (
-	"github.com/rusenask/keel/constants"
+	"github.com/keel-hq/keel/constants"
 
 	"fmt"
 	"os"

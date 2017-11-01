@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/cache/memory"
-	"github.com/rusenask/keel/provider"
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/codecs"
-	"github.com/rusenask/keel/util/image"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/provider"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/codecs"
+	"github.com/keel-hq/keel/util/image"
 
 	"testing"
 )

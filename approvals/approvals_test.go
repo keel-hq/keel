@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rusenask/keel/cache/memory"
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/util/codecs"
+	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/codecs"
 )
 
 func TestCreateApproval(t *testing.T) {

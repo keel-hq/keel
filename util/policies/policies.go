@@ -1,7 +1,7 @@
 package policies
 
 import (
-	"github.com/rusenask/keel/types"
+	"github.com/keel-hq/keel/types"
 )
 
 // GetPolicy - gets policy

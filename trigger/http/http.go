@@ -10,10 +10,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/urfave/negroni"
 
-	"github.com/rusenask/keel/approvals"
-	"github.com/rusenask/keel/provider"
-	"github.com/rusenask/keel/types"
-	"github.com/rusenask/keel/version"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/provider"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/version"
 
 	log "github.com/Sirupsen/logrus"
 )
