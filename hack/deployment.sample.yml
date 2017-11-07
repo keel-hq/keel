@@ -1,12 +1,10 @@
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
-metadata: 
-  annotations:
-    kubernetes.io/service-account.name: keel
+metadata:
   name: keel
   namespace: kube-system
-  labels: 
+  labels:
       name: "keel"
 spec:
   replicas: 1
@@ -14,34 +12,35 @@ spec:
     metadata:
       name: keel
       labels:
-        app: keel      
+        app: keel
     spec:
-      containers:                    
+      serviceAccountName: keel
+      containers:
         - image: karolisr/keel:0.4.0
           imagePullPolicy: Always
-          env:          
+          env:
             # - name: POLL
-            #   value: "1"               
+            #   value: "1"
             - name: PUBSUB
               value: "1"
-            # Enable/disable Helm provider  
+            # Enable/disable Helm provider
             # - name: HELM_PROVIDER
             #   value: "1"
             - name: PROJECT_ID
               value: "my-project-id"
             # - name: WEBHOOK_ENDPOINT
-            #   value: https://my.webhookrelay.com/v1/webhooks/2fc52b16-75f7-41f2-8e2d-81afbbcae709  
+            #   value: https://my.webhookrelay.com/v1/webhooks/2fc52b16-75f7-41f2-8e2d-81afbbcae709
             # - name: SLACK_TOKEN
             #   value: your-token-here
             # - name: SLACK_CHANNELS
-            #   value: general            
+            #   value: general
           name: keel
           command: ["/bin/keel"]
           ports:
-            - containerPort: 9300       
+            - containerPort: 9300
           livenessProbe:
             httpGet:
               path: /healthz
               port: 9300
             initialDelaySeconds: 30
-            timeoutSeconds: 10          
+            timeoutSeconds: 10
