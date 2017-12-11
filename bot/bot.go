@@ -79,6 +79,7 @@ type Bot struct {
 	approvalsRespCh chan *approvalResponse
 
 	approvalsManager approvals.Manager
+	approvalsChannel string // slack approvals channel name
 
 	k8sImplementer kubernetes.Implementer
 
@@ -86,7 +87,7 @@ type Bot struct {
 }
 
 // New - create new bot instance
-func New(name, token string, k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) *Bot {
+func New(name, token, approvalsChannel string, k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) *Bot {
 	client := slack.New(token)
 
 	bot := &Bot{
@@ -95,6 +96,7 @@ func New(name, token string, k8sImplementer kubernetes.Implementer, approvalsMan
 		k8sImplementer:   k8sImplementer,
 		name:             name,
 		approvalsManager: approvalsManager,
+		approvalsChannel: approvalsChannel,
 		approvalsRespCh:  make(chan *approvalResponse), // don't add buffer to make it blocking
 	}
 
@@ -201,7 +203,7 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 		},
 	}
 
-	_, _, err := b.slackHTTPClient.PostMessage("general", "", params)
+	_, _, err := b.slackHTTPClient.PostMessage(b.approvalsChannel, "", params)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -211,6 +213,10 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 }
 
 func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *approvalResponse, ok bool) {
+	// only accepting approvals from approvals channel
+	if event.Channel != b.approvalsChannel {
+		return nil, false
+	}
 	if strings.HasPrefix(strings.ToLower(eventText), approvalResponseKeyword) {
 		return &approvalResponse{
 			User:   event.User,
