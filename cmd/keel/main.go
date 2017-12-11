@@ -3,11 +3,13 @@ package main
 import (
 	"os"
 	"os/signal"
+	"path/filepath"
 	"time"
 
 	"context"
 
 	netContext "golang.org/x/net/context"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/bot"
@@ -57,6 +59,14 @@ const EnvDebug = "DEBUG"
 func main() {
 
 	ver := version.GetKeelVersion()
+
+	inCluster := kingpin.Flag("incluster", "use in cluster configuration (defaults to 'true'), use '--no-incluster' if running outside of the cluster").Default("true").Bool()
+	kubeconfig := kingpin.Flag("kubeconfig", "path to kubeconfig (if not in running inside a cluster)").Default(filepath.Join(os.Getenv("HOME"), ".kube", "config")).String()
+
+	kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version(ver.Version)
+	kingpin.CommandLine.Help = "Automated Kubernetes deployment updates. Learn more on https://keel.sh."
+	kingpin.Parse()
+
 	log.WithFields(log.Fields{
 		"os":         ver.OS,
 		"build_date": ver.BuildDate,
@@ -100,12 +110,16 @@ func main() {
 	}
 
 	// getting k8s provider
-	k8sCfg := &kubernetes.Opts{}
+	k8sCfg := &kubernetes.Opts{
+		ConfigPath: *kubeconfig,
+	}
+
 	if os.Getenv(EnvKubernetesConfig) != "" {
 		k8sCfg.ConfigPath = os.Getenv(EnvKubernetesConfig)
-	} else {
-		k8sCfg.InCluster = true
 	}
+
+	k8sCfg.InCluster = *inCluster
+
 	implementer, err := kubernetes.NewKubernetesImplementer(k8sCfg)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -175,6 +189,7 @@ func main() {
 	}()
 
 	<-cleanupDone
+
 }
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
@@ -215,7 +230,13 @@ func setupBot(k8sImplementer kubernetes.Implementer, approvalsManager approvals.
 		}
 
 		token := os.Getenv(constants.EnvSlackToken)
-		slackBot := bot.New(botName, token, k8sImplementer, approvalsManager)
+
+		approvalsChannel := "general"
+		if os.Getenv(constants.EnvSlackApprovalsChannel) != "" {
+			approvalsChannel = os.Getenv(constants.EnvSlackApprovalsChannel)
+		}
+
+		slackBot := bot.New(botName, token, approvalsChannel, k8sImplementer, approvalsManager)
 
 		ctx, cancel := context.WithCancel(context.Background())
 
