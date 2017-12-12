@@ -76,7 +76,7 @@ func TestBotRequest(t *testing.T) {
 
 	am := approvals.New(mem, codecs.DefaultSerializer())
 
-	bot := New("keel", token, f8s, am)
+	bot := New("keel", token, "approvals", f8s, am)
 	// replacing slack client so we can receive webhooks
 	bot.slackHTTPClient = fi
 
@@ -126,7 +126,7 @@ func TestProcessApprovedResponse(t *testing.T) {
 
 	am := approvals.New(mem, codecs.DefaultSerializer())
 
-	bot := New("keel", token, f8s, am)
+	bot := New("keel", token, "approvals", f8s, am)
 	// replacing slack client so we can receive webhooks
 	bot.slackHTTPClient = fi
 
@@ -196,7 +196,7 @@ func TestProcessApprovalReply(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
-	bot := New("keel", token, f8s, am)
+	bot := New("keel", token, "approvals", f8s, am)
 	// replacing slack client so we can receive webhooks
 	bot.slackHTTPClient = fi
 
@@ -267,7 +267,7 @@ func TestProcessRejectedReply(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
-	bot := New("keel", "random", f8s, am)
+	bot := New("keel", "random", "approvals", f8s, am)
 
 	collector := approval.New()
 	collector.Configure(am)
@@ -312,4 +312,43 @@ func TestProcessRejectedReply(t *testing.T) {
 		t.Errorf("expected to find one message")
 	}
 
+}
+
+func TestIsApproval(t *testing.T) {
+	f8s := &testutil.FakeK8sImplementer{}
+	mem := memory.NewMemoryCache(100*time.Hour, 100*time.Hour, 100*time.Hour)
+
+	identifier := "k8s/project/repo:1.2.3"
+
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	// creating initial approve request
+	err := am.Create(&types.Approval{
+		Identifier:     identifier,
+		VotesRequired:  2,
+		CurrentVersion: "2.3.4",
+		NewVersion:     "3.4.5",
+		Event: &types.Event{
+			Repository: types.Repository{
+				Name: "project/repo",
+				Tag:  "2.3.4",
+			},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error while creating : %s", err)
+	}
+
+	bot := New("keel", "random", "approvals", f8s, am)
+
+	_, isApproval := bot.isApproval(&slack.MessageEvent{
+		Msg: slack.Msg{
+			Channel: "approvals",
+			User:    "user-x",
+		},
+	}, "approve k8s/project/repo:1.2.3")
+
+	if !isApproval {
+		t.Errorf("event expected to be an approval")
+	}
 }
