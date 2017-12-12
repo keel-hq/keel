@@ -13,7 +13,11 @@ test:
 
 build:
 	@echo "++ Building keel"
-	CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags "$(LDFLAGS)" -o keel .
+	CGO_ENABLED=0 GOOS=linux cd cmd/keel && go build -a -tags netgo -ldflags "$(LDFLAGS) -w -s" -o keel .
+
+install:
+	@echo "++ Installing keel"
+	CGO_ENABLED=0 GOOS=linux go install -ldflags "$(LDFLAGS) -w -s" github.com/keel-hq/keel/cmd/keel
 
 image:
 	docker build -t karolisr/keel:alpha -f Dockerfile .

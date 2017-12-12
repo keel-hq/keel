@@ -79,6 +79,7 @@ type Bot struct {
 	approvalsRespCh chan *approvalResponse
 
 	approvalsManager approvals.Manager
+	approvalsChannel string // slack approvals channel name
 
 	k8sImplementer kubernetes.Implementer
 
@@ -86,7 +87,7 @@ type Bot struct {
 }
 
 // New - create new bot instance
-func New(name, token string, k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) *Bot {
+func New(name, token, approvalsChannel string, k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) *Bot {
 	client := slack.New(token)
 
 	bot := &Bot{
@@ -95,6 +96,7 @@ func New(name, token string, k8sImplementer kubernetes.Implementer, approvalsMan
 		k8sImplementer:   k8sImplementer,
 		name:             name,
 		approvalsManager: approvalsManager,
+		approvalsChannel: approvalsChannel,
 		approvalsRespCh:  make(chan *approvalResponse), // don't add buffer to make it blocking
 	}
 
@@ -201,7 +203,7 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 		},
 	}
 
-	_, _, err := b.slackHTTPClient.PostMessage("general", "", params)
+	_, _, err := b.slackHTTPClient.PostMessage(b.approvalsChannel, "", params)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -230,6 +232,17 @@ func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *app
 	return nil, false
 }
 
+// TODO(k): cache results in a map or get this info on startup. Although
+// if channel was then recreated (unlikely), we would miss results
+func (b *Bot) isApprovalsChannel(event *slack.MessageEvent) bool {
+	for _, ch := range b.slackRTM.GetInfo().Channels {
+		if ch.ID == event.Channel && ch.Name == b.approvalsChannel {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *Bot) handleMessage(event *slack.MessageEvent) {
 	if event.BotID != "" || event.User == "" || event.SubType == "bot_message" {
 		log.WithFields(log.Fields{
@@ -247,10 +260,14 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 	}
 
 	eventText = b.trimBot(eventText)
-	approval, ok := b.isApproval(event, eventText)
-	if ok {
-		b.approvalsRespCh <- approval
-		return
+
+	// only accepting approvals from approvals channel
+	if b.isApprovalsChannel(event) {
+		approval, ok := b.isApproval(event, eventText)
+		if ok {
+			b.approvalsRespCh <- approval
+			return
+		}
 	}
 
 	// Responses that are just a canned string response

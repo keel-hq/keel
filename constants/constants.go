@@ -14,6 +14,7 @@ const (
 	EnvSlackToken    = "SLACK_TOKEN"
 	EnvSlackBotName  = "SLACK_BOT_NAME"
 	EnvSlackChannels = "SLACK_CHANNELS"
+	EnvSlackApprovalsChannel = "SLACK_APPROVALS_CHANNEL"
 )
 
 // EnvNotificationLevel - minimum level for notifications, defaults to info
