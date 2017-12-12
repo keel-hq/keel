@@ -213,8 +213,9 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 }
 
 func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *approvalResponse, ok bool) {
+
 	// only accepting approvals from approvals channel
-	if event.Channel != b.approvalsChannel {
+	if !b.isApprovalsChannel(event) {
 		return nil, false
 	}
 	if strings.HasPrefix(strings.ToLower(eventText), approvalResponseKeyword) {
@@ -234,6 +235,17 @@ func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *app
 	}
 
 	return nil, false
+}
+
+// TODO(k): cache results in a map or get this info on startup. Although
+// if channel was then recreated (unlikely), we would miss results
+func (b *Bot) isApprovalsChannel(event *slack.MessageEvent) bool {
+	for _, ch := range b.slackRTM.GetInfo().Channels {
+		if ch.ID == event.Channel && ch.Name == b.approvalsChannel {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *Bot) handleMessage(event *slack.MessageEvent) {
