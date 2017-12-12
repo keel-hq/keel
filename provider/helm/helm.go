@@ -297,7 +297,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 
 			p.sender.Send(types.EventNotification{
 				Name:      "update release",
-				Message:   fmt.Sprintf("Release update feailed %s/%s %s->%s (%s), error: %s", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "), err),
+				Message:   fmt.Sprintf("Release update failed %s/%s %s->%s (%s), error: %s", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "), err),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationReleaseUpdate,
 				Level:     types.LevelError,

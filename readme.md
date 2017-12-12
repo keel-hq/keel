@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/rusenask/keel/tree/master.svg?style=shield&circle-token=0239846a42cfa188de531058b9a2116a4b8600d8)](https://hub.docker.com/r/karolisr/keel/) [![Go Report Card](https://goreportcard.com/badge/github.com/keel-hq/keel)](https://goreportcard.com/report/github.com/keel-hq/keel) [![Pulls](https://img.shields.io/docker/pulls/karolisr/keel.svg)](https://img.shields.io/docker/pulls/karolisr/keel.svg)
+[![CircleCI](https://circleci.com/gh/keel-hq/keel/tree/master.svg?style=shield&circle-token=0239846a42cfa188de531058b9a2116a4b8600d8)](https://hub.docker.com/r/karolisr/keel/) [![Go Report Card](https://goreportcard.com/badge/github.com/keel-hq/keel)](https://goreportcard.com/report/github.com/keel-hq/keel) [![Pulls](https://img.shields.io/docker/pulls/karolisr/keel.svg)](https://img.shields.io/docker/pulls/karolisr/keel.svg)
 
 # Keel - automated Kubernetes deployments for the rest of us
 
@@ -24,6 +24,12 @@ Keel provides several key features:
 * __Notifications__ - out of the box Keel has Slack and standard webhook notifications, more info [here](https://keel.sh/user-guide/#notifications)
 
 <img src="https://keel.sh/images/keel-overview.png">
+
+### Support
+
+Support Keel's development with:
+* [Patreon](https://patreon.com/keel)
+* [Paypal](https://www.paypal.me/keelhq)
 
 ### Quick Start
 
