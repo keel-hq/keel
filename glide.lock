@@ -1,8 +1,8 @@
-hash: 476bff82bacd66b7bf9ea8e80ac8048daff4c26ef962e83fc96a30587f483ba9
-updated: 2017-10-02T17:09:52.291993337+01:00
+hash: b4faf989713037ee4eb401a0af5ea985065140cf7ffdcaab025c62969d5803ea
+updated: 2017-12-11T21:33:40.88196567Z
 imports:
 - name: cloud.google.com/go
-  version: f6de2c509ed9d2af648c3c147207eaaf97149aed
+  version: 050b16d2314d5fc3d4c9a51e4cd5c7468e77f162
   subpackages:
   - compute/metadata
   - iam
@@ -10,6 +10,12 @@ imports:
   - internal/version
   - pubsub
   - pubsub/apiv1
+- name: github.com/alecthomas/template
+  version: a0175ee3bccc567396460bf5acd36800cb10c49c
+  subpackages:
+  - parse
+- name: github.com/alecthomas/units
+  version: 2efee857e7cfd4f3d0138cc3cbb1b4966962b93a
 - name: github.com/BurntSushi/toml
   version: b26d9c308763d68093482582cea63d69be07a0f0
 - name: github.com/davecgh/go-spew
@@ -33,8 +39,6 @@ imports:
   subpackages:
   - log
   - swagger
-- name: github.com/facebookgo/symwalk
-  version: 42004b9f322246749dd73ad71008b1f3160c0052
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-openapi/jsonpointer
@@ -79,7 +83,7 @@ imports:
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
-  version: 24fca303ac6da784b9e8269f724ddeb0b2eea5e7
+  version: 7f08801859139f86dfafd1c296e2cba9a80d292e
 - name: github.com/howeyc/gopass
   version: 3ca23474a7c7203e0a0a070fd33508f6efdb9b3d
 - name: github.com/imdario/mergo
@@ -93,7 +97,7 @@ imports:
   - jlexer
   - jwriter
 - name: github.com/Masterminds/semver
-  version: 517734cc7d6470c0d07130e40fd40bdeb9bcd3fd
+  version: 15d8430ab86497c5c0da827b748823945e1cf1e1
 - name: github.com/nlopes/slack
   version: c86337c0ef2486a15edd804355d9c73d2f2caed1
 - name: github.com/opencontainers/go-digest
@@ -113,7 +117,7 @@ imports:
   subpackages:
   - kv
 - name: github.com/Sirupsen/logrus
-  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/ugorji/go
@@ -121,9 +125,9 @@ imports:
   subpackages:
   - codec
 - name: github.com/urfave/negroni
-  version: fde5e16d32adc7ad637e9cd9ad21d4ebc6192535
+  version: 5dbbc83f748fc3ad38585842b0aedab546d0ea1e
 - name: golang.org/x/crypto
-  version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
+  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -146,12 +150,12 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sync
-  version: 8e0aa688b654ef28caa72506fa5ec8dba9fc7690
+  version: fd80eb99c8f653c847d294a001bdf2a3a6f768f5
   subpackages:
   - errgroup
   - semaphore
 - name: golang.org/x/sys
-  version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
+  version: 07c182904dbd53199946ba614a412c61d3c548f5
   subpackages:
   - unix
   - windows
@@ -196,7 +200,7 @@ imports:
   - socket
   - urlfetch
 - name: google.golang.org/genproto
-  version: 1e559d0a00eef8a9a43151db4665280bd8dd5886
+  version: 73cb5d0be5af113b42057925bd6c93e3cd9f60fd
   subpackages:
   - googleapis/api/annotations
   - googleapis/iam/v1
@@ -220,6 +224,8 @@ imports:
   - status
   - tap
   - transport
+- name: gopkg.in/alecthomas/kingpin.v2
+  version: 1087e65c9441605df944fb12c33f0fe7072d18ca
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2
@@ -350,7 +356,7 @@ imports:
   - util/homedir
   - util/integer
 - name: k8s.io/helm
-  version: bbc1f71dc03afc5f00c6ac84b9308f8ecb4f39ac
+  version: 8478fb4fc723885b155c924d1c8c410b7a9444e6
   subpackages:
   - pkg/chartutil
   - pkg/helm
