@@ -44,7 +44,7 @@ tag on their plugin repositories.
 
 Tools layered on top of Helm or Tiller.
 
-- [Wheel](https://github.com/appscode/wheel) - Ajax friendly Helm Tiller Proxy using [grpc-gateway](https://github.com/grpc-ecosystem/grpc-gateway)
+- [AppsCode Swift](https://github.com/appscode/swift) - Ajax friendly Helm Tiller Proxy using [grpc-gateway](https://github.com/grpc-ecosystem/grpc-gateway)
 - [Quay App Registry](https://coreos.com/blog/quay-application-registry-for-kubernetes.html) - Open Kubernetes application registry, including a Helm access client
 - [Chartify](https://github.com/appscode/chartify) - Generate Helm charts from existing Kubernetes resources.
 - [VIM-Kubernetes](https://github.com/andrewstuart/vim-kubernetes) - VIM plugin for Kubernetes and Helm
@@ -57,6 +57,7 @@ Tools layered on top of Helm or Tiller.
 - [Monocular](https://github.com/helm/monocular) - Web UI for Helm Chart repositories
 - [Helm Chart Publisher](https://github.com/luizbafilho/helm-chart-publisher) - HTTP API for publishing Helm Charts in an easy way
 - [Armada](https://github.com/att-comdev/armada) - Manage prefixed releases throughout various Kubernetes namespaces, and removes completed jobs for complex deployments. Used by the [Openstack-Helm](https://github.com/openstack/openstack-helm) team.
+- [ChartMuseum](https://github.com/chartmuseum/chartmuseum) - Helm Chart Repository with support for Amazon S3 and Google Cloud Storage
 
 ## Helm Included
 

@@ -38,7 +38,7 @@ also be used to perform cryptographic verification of a chart without installing
 the chart.
 
 There are options for unpacking the chart after download. This will create a
-directory for the chart and uncomparess into that directory.
+directory for the chart and uncompress into that directory.
 
 If the --verify flag is specified, the requested chart MUST have a provenance
 file, and MUST pass the verification process. Failure in any part of this will
@@ -79,8 +79,8 @@ func newFetchCmd(out io.Writer) *cobra.Command {
 			}
 
 			if fch.version == "" && fch.devel {
-				debug("setting version to >0.0.0-a")
-				fch.version = ">0.0.0-a"
+				debug("setting version to >0.0.0-0")
+				fch.version = ">0.0.0-0"
 			}
 
 			for i := 0; i < len(args); i++ {
@@ -105,7 +105,7 @@ func newFetchCmd(out io.Writer) *cobra.Command {
 	f.StringVar(&fch.certFile, "cert-file", "", "identify HTTPS client using this SSL certificate file")
 	f.StringVar(&fch.keyFile, "key-file", "", "identify HTTPS client using this SSL key file")
 	f.StringVar(&fch.caFile, "ca-file", "", "verify certificates of HTTPS-enabled servers using this CA bundle")
-	f.BoolVar(&fch.devel, "devel", false, "use development versions, too. Equivalent to version '>0.0.0-a'. If --version is set, this is ignored.")
+	f.BoolVar(&fch.devel, "devel", false, "use development versions, too. Equivalent to version '>0.0.0-0'. If --version is set, this is ignored.")
 
 	return cmd
 }

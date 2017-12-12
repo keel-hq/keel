@@ -78,9 +78,9 @@ checkDesiredVersion() {
   # Use the GitHub releases webpage for the project to find the desired version for this project.
   local release_url="https://github.com/kubernetes/helm/releases/${DESIRED_VERSION:-latest}"
   if type "curl" > /dev/null; then
-    TAG=$(curl -SsL $release_url | awk '/\/tag\//' | head -n 1 | cut -d '"' -f 2 | awk '{n=split($NF,a,"/");print a[n]}')
+    TAG=$(curl -SsL $release_url | awk '/\/tag\//' | cut -d '"' -f 2 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}')
   elif type "wget" > /dev/null; then
-    TAG=$(wget -q -O - $release_url | awk '/\/tag\//' | head -n 1 | cut -d '"' -f 2 | awk '{n=split($NF,a,"/");print a[n]}')
+    TAG=$(wget -q -O - $release_url | awk '/\/tag\//' | cut -d '"' -f 2 | awk '{n=split($NF,a,"/");print a[n]}' | awk 'a !~ $0{print}; {a=$0}')
   fi
   if [ "x$TAG" == "x" ]; then
     echo "Cannot determine ${DESIRED_VERSION} tag."
@@ -130,7 +130,7 @@ downloadFile() {
 # installs it.
 installFile() {
   HELM_TMP="/tmp/$PROJECT_NAME"
-  local sum=$(openssl sha -sha256 ${HELM_TMP_FILE} | awk '{print $2}')
+  local sum=$(openssl sha1 -sha256 ${HELM_TMP_FILE} | awk '{print $2}')
   local expected_sum=$(cat ${HELM_SUM_FILE})
   if [ "$sum" != "$expected_sum" ]; then
     echo "SHA sum of $HELM_TMP does not match. Aborting."
@@ -191,9 +191,14 @@ export INPUT_ARGUMENTS="${@}"
 set -u
 while [[ $# -gt 0 ]]; do
   case $1 in
-    '--version'|-v) 
-       export DESIRED_VERSION="${2}" 
+    '--version'|-v)
        shift
+       if [[ $# -ne 0 ]]; then
+           export DESIRED_VERSION="${1}"
+       else
+           echo -e "Please provide the desired version. e.g. --version v2.4.0 or -v latest"
+           exit 0
+       fi
        ;;
     '--help'|-h) 
        help
