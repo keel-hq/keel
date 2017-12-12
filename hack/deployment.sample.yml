@@ -17,16 +17,14 @@ spec:
         app: keel      
     spec:
       containers:                    
-        - image: karolisr/keel:0.4.0
+        - image: karolisr/keel:0.5.0
           imagePullPolicy: Always
-          env:          
-            # - name: POLL
-            #   value: "1"               
+          env:            
             - name: PUBSUB
               value: "1"
             # Enable/disable Helm provider  
             # - name: HELM_PROVIDER
-            #   value: "1"
+            #   value: "1"            
             - name: PROJECT_ID
               value: "my-project-id"
             # - name: WEBHOOK_ENDPOINT
@@ -35,6 +33,8 @@ spec:
             #   value: your-token-here
             # - name: SLACK_CHANNELS
             #   value: general            
+            # - name: SLACK_APPROVALS_CHANNEL
+            #   value: approvals            
           name: keel
           command: ["/bin/keel"]
           ports:
