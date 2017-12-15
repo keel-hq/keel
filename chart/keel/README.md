@@ -106,6 +106,7 @@ The following table lists has the main configurable parameters (polling, trigger
 | `webhookRelay.key`                | WebhookRelay key                       |                                                           |
 | `webhookRelay.secret`             | WebhookRelay secret                    |                                                           |
 | `webhookRelay.bucket`             | WebhookRelay bucket                    |                                                           |
+| `rbac.enabled`                    | Enable/disable RBAC installation       | `false`                                                   |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 

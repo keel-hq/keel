@@ -73,6 +73,10 @@ keel:
    - repository: image.repository
      tag: image.tag
 
+# RBAC manifests management
+rbac:
+  enabled: false
+
 # Resources
 resources:
   limits:
