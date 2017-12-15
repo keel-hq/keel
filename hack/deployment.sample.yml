@@ -25,7 +25,7 @@ spec:
               value: "1"
             # Enable/disable Helm provider
             # - name: HELM_PROVIDER
-            #   value: "1"            
+            #   value: "1"
             - name: PROJECT_ID
               value: "my-project-id"
             # - name: WEBHOOK_ENDPOINT
@@ -36,6 +36,10 @@ spec:
             #   value: general
             # - name: SLACK_APPROVALS_CHANNEL
             #   value: approvals
+            # - name: HIPCHAT_TOKEN
+            #   value: your-token-here
+            # - name: HIPCHAT_CHANNELS
+            #   value: keel-bot
           name: keel
           command: ["/bin/keel"]
           ports:
