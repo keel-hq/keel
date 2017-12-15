@@ -1,13 +1,13 @@
-package bot
+package slack
 
 import (
 	"bytes"
 	"fmt"
 	"strings"
 
-	"github.com/nlopes/slack"
 	"github.com/keel-hq/keel/bot/formatter"
 	"github.com/keel-hq/keel/types"
+	"github.com/nlopes/slack"
 
 	log "github.com/Sirupsen/logrus"
 )
