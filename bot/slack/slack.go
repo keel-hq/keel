@@ -21,48 +21,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-const (
-	removeApprovalPrefix = "rm approval"
-)
-
-var (
-	botEventTextToResponse = map[string][]string{
-		"help": {
-			`Here's a list of supported commands`,
-			`- "get deployments" -> get a list of all deployments`,
-			`- "get approvals" -> get a list of approvals`,
-			`- "rm approval <approval identifier>" -> remove approval`,
-			`- "approve <approval identifier>" -> approve update request`,
-			`- "reject <approval identifier>" -> reject update request`,
-			// `- "get deployments all" -> get a list of all deployments`,
-			// `- "describe deployment <deployment>" -> get details for specified deployment`,
-		},
-	}
-
-	// static bot commands can be used straight away
-	staticBotCommands = map[string]bool{
-		"get deployments": true,
-		"get approvals":   true,
-	}
-
-	// dynamic bot command prefixes have to be matched
-	dynamicBotCommandPrefixes = []string{removeApprovalPrefix}
-
-	approvalResponseKeyword = "approve"
-	rejectResponseKeyword   = "reject"
-)
-
 // SlackImplementer - implementes slack HTTP functionality, used to
 // send messages with attachments
 type SlackImplementer interface {
 	PostMessage(channel, text string, params slack.PostMessageParameters) (string, string, error)
-}
-
-// approvalResponse - used to track approvals once vote begins
-type approvalResponse struct {
-	User   string
-	Status types.ApprovalStatus
-	Text   string
 }
 
 // Bot - main slack bot container
@@ -79,7 +41,7 @@ type Bot struct {
 
 	slackHTTPClient SlackImplementer
 
-	approvalsRespCh chan *approvalResponse
+	approvalsRespCh chan *bot.ApprovalResponse
 
 	approvalsManager approvals.Manager
 	approvalsChannel string // slack approvals channel name
@@ -140,7 +102,7 @@ func New(name, token, approvalsChannel string, k8sImplementer kubernetes.Impleme
 		name:             name,
 		approvalsManager: approvalsManager,
 		approvalsChannel: approvalsChannel,
-		approvalsRespCh:  make(chan *approvalResponse), // don't add buffer to make it blocking
+		approvalsRespCh:  make(chan *bot.ApprovalResponse), // don't add buffer to make it blocking
 	}
 
 	return bot
@@ -254,17 +216,17 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 	return err
 }
 
-func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *approvalResponse, ok bool) {
-	if strings.HasPrefix(strings.ToLower(eventText), approvalResponseKeyword) {
-		return &approvalResponse{
+func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *bot.ApprovalResponse, ok bool) {
+	if strings.HasPrefix(strings.ToLower(eventText), bot.ApprovalResponseKeyword) {
+		return &bot.ApprovalResponse{
 			User:   event.User,
 			Status: types.ApprovalStatusApproved,
 			Text:   eventText,
 		}, true
 	}
 
-	if strings.HasPrefix(strings.ToLower(eventText), rejectResponseKeyword) {
-		return &approvalResponse{
+	if strings.HasPrefix(strings.ToLower(eventText), bot.RejectResponseKeyword) {
+		return &bot.ApprovalResponse{
 			User:   event.User,
 			Status: types.ApprovalStatusRejected,
 			Text:   eventText,
@@ -313,7 +275,7 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 	}
 
 	// Responses that are just a canned string response
-	if responseLines, ok := botEventTextToResponse[eventText]; ok {
+	if responseLines, ok := bot.BotEventTextToResponse[eventText]; ok {
 		response := strings.Join(responseLines, "\n")
 		b.respond(event, formatAsSnippet(response))
 		return
@@ -333,11 +295,11 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 }
 
 func (b *Bot) isCommand(event *slack.MessageEvent, eventText string) bool {
-	if staticBotCommands[eventText] {
+	if bot.StaticBotCommands[eventText] {
 		return true
 	}
 
-	for _, prefix := range dynamicBotCommandPrefixes {
+	for _, prefix := range bot.DynamicBotCommandPrefixes {
 		if strings.HasPrefix(eventText, prefix) {
 			return true
 		}
@@ -360,8 +322,8 @@ func (b *Bot) handleCommand(event *slack.MessageEvent, eventText string) {
 	}
 
 	// handle dynamic commands
-	if strings.HasPrefix(eventText, removeApprovalPrefix) {
-		b.respond(event, formatAsSnippet(b.removeApprovalHandler(strings.TrimSpace(strings.TrimPrefix(eventText, removeApprovalPrefix)))))
+	if strings.HasPrefix(eventText, bot.RemoveApprovalPrefix) {
+		b.respond(event, formatAsSnippet(b.removeApprovalHandler(strings.TrimSpace(strings.TrimPrefix(eventText, bot.RemoveApprovalPrefix)))))
 		return
 	}
 

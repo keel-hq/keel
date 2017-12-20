@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/bot/formatter"
 	"github.com/keel-hq/keel/types"
 	"github.com/nlopes/slack"
@@ -99,8 +100,8 @@ func (b *Bot) processApprovalResponses() error {
 	}
 }
 
-func (b *Bot) processApprovedResponse(approvalResponse *approvalResponse) error {
-	trimmed := strings.TrimPrefix(approvalResponse.Text, approvalResponseKeyword)
+func (b *Bot) processApprovedResponse(approvalResponse *bot.ApprovalResponse) error {
+	trimmed := strings.TrimPrefix(approvalResponse.Text, bot.ApprovalResponseKeyword)
 	identifiers := strings.Split(trimmed, " ")
 	if len(identifiers) == 0 {
 		return nil
@@ -131,8 +132,8 @@ func (b *Bot) processApprovedResponse(approvalResponse *approvalResponse) error 
 	return nil
 }
 
-func (b *Bot) processRejectedResponse(approvalResponse *approvalResponse) error {
-	trimmed := strings.TrimPrefix(approvalResponse.Text, rejectResponseKeyword)
+func (b *Bot) processRejectedResponse(approvalResponse *bot.ApprovalResponse) error {
+	trimmed := strings.TrimPrefix(approvalResponse.Text, bot.RejectResponseKeyword)
 	identifiers := strings.Split(trimmed, " ")
 	if len(identifiers) == 0 {
 		return nil

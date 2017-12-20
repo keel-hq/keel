@@ -9,6 +9,7 @@ import (
 	"github.com/nlopes/slack"
 
 	"github.com/keel-hq/keel/approvals"
+	b "github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/approval"
@@ -209,10 +210,10 @@ func TestProcessApprovalReply(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// approval resp
-	bot.approvalsRespCh <- &approvalResponse{
+	bot.approvalsRespCh <- &b.ApprovalResponse{
 		User:   "123",
 		Status: types.ApprovalStatusApproved,
-		Text:   fmt.Sprintf("%s %s", approvalResponseKeyword, identifier),
+		Text:   fmt.Sprintf("%s %s", bot.ApprovalResponseKeyword, identifier),
 	}
 
 	time.Sleep(1 * time.Second)
@@ -284,10 +285,10 @@ func TestProcessRejectedReply(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// approval resp
-	bot.approvalsRespCh <- &approvalResponse{
+	bot.approvalsRespCh <- &b.ApprovalResponse{
 		User:   "123",
 		Status: types.ApprovalStatusRejected,
-		Text:   fmt.Sprintf("%s %s", rejectResponseKeyword, identifier),
+		Text:   fmt.Sprintf("%s %s", bot.RejectResponseKeyword, identifier),
 	}
 
 	time.Sleep(1 * time.Second)

@@ -5,8 +5,40 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/provider/kubernetes"
+	"github.com/keel-hq/keel/types"
 
 	log "github.com/Sirupsen/logrus"
+)
+
+const (
+	RemoveApprovalPrefix = "rm approval"
+)
+
+var (
+	BotEventTextToResponse = map[string][]string{
+		"help": {
+			`Here's a list of supported commands`,
+			`- "get deployments" -> get a list of all deployments`,
+			`- "get approvals" -> get a list of approvals`,
+			`- "rm approval <approval identifier>" -> remove approval`,
+			`- "approve <approval identifier>" -> approve update request`,
+			`- "reject <approval identifier>" -> reject update request`,
+			// `- "get deployments all" -> get a list of all deployments`,
+			// `- "describe deployment <deployment>" -> get details for specified deployment`,
+		},
+	}
+
+	// static bot commands can be used straight away
+	StaticBotCommands = map[string]bool{
+		"get deployments": true,
+		"get approvals":   true,
+	}
+
+	// dynamic bot command prefixes have to be matched
+	DynamicBotCommandPrefixes = []string{RemoveApprovalPrefix}
+
+	ApprovalResponseKeyword = "approve"
+	RejectResponseKeyword   = "reject"
 )
 
 type Bot interface {
@@ -22,6 +54,14 @@ var (
 	teardowns = make(map[string]teardown)
 )
 
+// ApprovalResponse - used to track approvals once vote begins
+type ApprovalResponse struct {
+	User   string
+	Status types.ApprovalStatus
+	Text   string
+}
+
+// RegisterBot makes a BotRunner available by the provided name.
 func RegisterBot(name string, b BotFactory) {
 	if name == "" {
 		panic("bot: could not register a BotFactory with an empty name")
