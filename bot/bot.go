@@ -93,6 +93,7 @@ func Run(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manag
 				"error": err,
 			}).Fatalf("main: failed to setup %s bot\n", botName)
 		} else {
+			log.Debugf(">>> Run [%s] bot", botName)
 			teardowns[botName] = teardownBot
 		}
 	}

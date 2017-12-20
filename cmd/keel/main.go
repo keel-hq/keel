@@ -35,6 +35,7 @@ import (
 	_ "github.com/keel-hq/keel/extension/notification/webhook"
 
 	// bots
+	_ "github.com/keel-hq/keel/bot/hipchat"
 	_ "github.com/keel-hq/keel/bot/slack"
 
 	log "github.com/Sirupsen/logrus"
