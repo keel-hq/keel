@@ -1,17 +1,17 @@
 language: go
 sudo: false
 go:
+         - 1.5
          - 1.6
          - 1.7
-         - 1.8
 
 install: go get -v ./hipchat
 script:
     - go get -u github.com/golang/lint/golint
     - golint ./...
     - test `gofmt -l . | wc -l` = 0
-    - make
+    - make all
 
 matrix:
     allow_failures:
-         go: tip
+        - go: tip

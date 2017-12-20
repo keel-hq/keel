@@ -54,7 +54,6 @@ func TestRoomList(t *testing.T) {
 		testFormValues(t, r, values{
 			"start-index":      "1",
 			"max-results":      "10",
-			"expand":           "expansion",
 			"include-private":  "true",
 			"include-archived": "true",
 		})
@@ -67,7 +66,7 @@ func TestRoomList(t *testing.T) {
 		}`)
 	})
 	want := &Rooms{Items: []Room{{ID: 1, Name: "n"}}, StartIndex: 1, MaxResults: 1, Links: PageLinks{Links: Links{Self: "s"}}}
-	opt := &RoomsListOptions{ListOptions{1, 10}, ExpandOptions{"expansion"}, true, true}
+	opt := &RoomsListOptions{ListOptions{1, 10}, true, true}
 	rooms, _, err := client.Room.List(opt)
 	if err != nil {
 		t.Fatalf("Room.List returns an error %v", err)
@@ -121,32 +120,6 @@ func TestRoomNotification(t *testing.T) {
 	})
 
 	_, err := client.Room.Notification("1", args)
-	if err != nil {
-		t.Fatalf("Room.Notification returns an error %v", err)
-	}
-}
-
-func TestRoomNotificationCardWithThumbnail(t *testing.T) {
-	setup()
-	defer teardown()
-
-	thumbnail := &Thumbnail{URL: "http://foo.com", URL2x: "http://foo2x.com", Width: 1, Height: 2}
-	description := CardDescription{Format: "format", Value: "value"}
-	card := &Card{Style: "style", Description: description, Title: "title", Thumbnail: thumbnail}
-	args := &NotificationRequest{Card: card}
-
-	mux.HandleFunc("/room/2/notification", func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "POST")
-		v := new(NotificationRequest)
-		json.NewDecoder(r.Body).Decode(v)
-
-		if !reflect.DeepEqual(v, args) {
-			t.Errorf("Request body %+v, want %+v", v, args)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	_, err := client.Room.Notification("2", args)
 	if err != nil {
 		t.Fatalf("Room.Notification returns an error %v", err)
 	}
@@ -282,14 +255,11 @@ func TestRoomHistory(t *testing.T) {
 	mux.HandleFunc("/room/1/history", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
 		testFormValues(t, r, values{
-			"start-index":     "1",
-			"max-results":     "100",
-			"expand":          "expansion",
-			"date":            "date",
-			"timezone":        "tz",
-			"reverse":         "true",
-			"end-date":        "end-date",
-			"include_deleted": "true",
+			"start-index": "1",
+			"max-results": "100",
+			"date":        "date",
+			"timezone":    "tz",
+			"reverse":     "true",
 		})
 		fmt.Fprintf(w, `
 		{
@@ -313,7 +283,7 @@ func TestRoomHistory(t *testing.T) {
 	})
 
 	opt := &HistoryOptions{
-		ListOptions{1, 100}, ExpandOptions{"expansion"}, "date", "tz", true, "end-date", true,
+		ListOptions{1, 100}, "date", "tz", true,
 	}
 	hist, _, err := client.Room.History("1", opt)
 	if err != nil {
@@ -424,7 +394,7 @@ func TestRoomGlanceUpdate(t *testing.T) {
 			&GlanceUpdate{
 				Key: "abc",
 				Content: GlanceContent{
-					Status: &GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
+					Status: GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
 					Label:  AttributeValue{Type: "html", Value: "hello"},
 				},
 			},
@@ -565,7 +535,7 @@ func TestGlanceUpdateRequestJSONEncodeWithString(t *testing.T) {
 			&GlanceUpdate{
 				Key: "abc",
 				Content: GlanceContent{
-					Status: &GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
+					Status: GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
 					Label:  AttributeValue{Type: "html", Value: "hello"},
 				},
 			},
@@ -590,7 +560,7 @@ func TestGlanceContentJSONEncodeWithString(t *testing.T) {
 	}{
 		{
 			GlanceContent{
-				Status: &GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
+				Status: GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
 				Label:  AttributeValue{Type: "html", Value: "hello"},
 			},
 			`{"status":{"type":"lozenge","value":{"type":"default","label":"something"}},"label":{"type":"html","value":"hello"}}`,
@@ -616,7 +586,7 @@ func TestGlanceContentJSONDecodeWithObject(t *testing.T) {
 	}{
 		{
 			GlanceContent{
-				Status: &GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
+				Status: GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
 				Label:  AttributeValue{Type: "html", Value: "hello"},
 			},
 			`{"status":{"type":"lozenge","value":{"type":"default","label":"something"}},"label":{"type":"html","value":"hello"}}`,
@@ -631,8 +601,8 @@ func TestGlanceContentJSONDecodeWithObject(t *testing.T) {
 			t.Errorf("Decoding of GlanceContent failed: %v", err)
 		}
 
-		if !reflect.DeepEqual(actual.Status, tt.gc.Status) {
-			t.Fatalf("Unexpected GlanceContent.Status: %+v, want %+v", actual.Status, tt.gc.Status)
+		if actual.Status != tt.gc.Status {
+			t.Fatalf("Unexpected GlanceContent.Status: %v", actual.Status)
 		}
 
 		if actual.Label != tt.gc.Label {
@@ -647,12 +617,12 @@ func TestGlanceContentJSONDecodeWithObject(t *testing.T) {
 
 func TestGlanceStatusJSONEncodeWithString(t *testing.T) {
 	gsTests := []struct {
-		gs       *GlanceStatus
+		gs       GlanceStatus
 		expected string
 	}{
-		{&GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
+		{GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
 			`{"type":"lozenge","value":{"type":"default","label":"something"}}`},
-		{&GlanceStatus{Type: "icon", Value: Icon{URL: "z", URL2x: "x"}},
+		{GlanceStatus{Type: "icon", Value: Icon{URL: "z", URL2x: "x"}},
 			`{"type":"icon","value":{"url":"z","url@2x":"x"}}`},
 	}
 
@@ -670,12 +640,12 @@ func TestGlanceStatusJSONEncodeWithString(t *testing.T) {
 
 func TestGlanceStatusJSONDecodeWithObject(t *testing.T) {
 	gsTests := []struct {
-		gs      *GlanceStatus
+		gs      GlanceStatus
 		encoded string
 	}{
-		{&GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
+		{GlanceStatus{Type: "lozenge", Value: AttributeValue{Type: "default", Label: "something"}},
 			`{"type":"lozenge","value":{"type":"default","label":"something"}}`},
-		{&GlanceStatus{Type: "icon", Value: Icon{URL: "z", URL2x: "x"}},
+		{GlanceStatus{Type: "icon", Value: Icon{URL: "z", URL2x: "x"}},
 			`{"type":"icon","value":{"url":"z","url@2x":"x"}}`},
 	}
 
@@ -694,41 +664,5 @@ func TestGlanceStatusJSONDecodeWithObject(t *testing.T) {
 		if actual.Value != tt.gs.Value {
 			t.Fatalf("Unexpected GlanceStatus.Value: %v", actual.Value)
 		}
-	}
-}
-
-func TestAddMember(t *testing.T) {
-	setup()
-	defer teardown()
-
-	args := &AddMemberRequest{Roles: []string{"room_member"}}
-
-	mux.HandleFunc("/room/1/member/user", func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "PUT")
-		v := new(AddMemberRequest)
-		json.NewDecoder(r.Body).Decode(v)
-
-		if !reflect.DeepEqual(v, args) {
-			t.Errorf("Request body %+v, want %+v", v, args)
-		}
-	})
-
-	_, err := client.Room.AddMember("1", "user", args)
-	if err != nil {
-		t.Fatalf("Room.AddMember returns an error %v", err)
-	}
-}
-
-func TestRemoveMember(t *testing.T) {
-	setup()
-	defer teardown()
-
-	mux.HandleFunc("/room/1/member/user", func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "DELETE")
-	})
-
-	_, err := client.Room.RemoveMember("1", "user")
-	if err != nil {
-		t.Fatalf("Room.RemoveMember returns an error %v", err)
 	}
 }

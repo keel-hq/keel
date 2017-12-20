@@ -40,6 +40,14 @@ spec:
             #   value: your-token-here
             # - name: HIPCHAT_CHANNELS
             #   value: keel-bot
+            # - name: HIPCHAT_APPROVALS_CHANNEL
+            #   value: "111111_keel-approvals@conf.hipchat.com"
+            # - name: HIPCHAT_APPROVALS_BOT_NAME
+            #   value: "Mr Bor"
+            # - name: HIPCHAT_APPROVALS_USER_NAME
+            #   value: "111111_2222222"
+            # - name: HIPCHAT_APPROVALS_PASSWORT
+            #   value: "pass"
           name: keel
           command: ["/bin/keel"]
           ports:

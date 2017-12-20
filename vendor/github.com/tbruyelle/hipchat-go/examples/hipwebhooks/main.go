@@ -35,7 +35,7 @@ func main() {
 	if *action == "" {
 		if *roomId == "" {
 			// If no room is given, look up all rooms and all of their webhooks
-			rooms, resp, err := c.Room.List(&hipchat.RoomsListOptions{})
+			rooms, resp, err := c.Room.List()
 			handleRequestError(resp, err)
 
 			for _, room := range rooms.Items {

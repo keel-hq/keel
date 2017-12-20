@@ -25,7 +25,7 @@ type Room struct {
 	ID                int            `json:"id"`
 	Links             RoomLinks      `json:"links"`
 	Name              string         `json:"name"`
-	XMPPJid           string         `json:"xmpp_jid"`
+	XmppJid           string         `json:"xmpp_jid"`
 	Statistics        RoomStatistics `json:"statistics"`
 	Created           string         `json:"created"`
 	IsArchived        bool           `json:"is_archived"`
@@ -93,7 +93,7 @@ type Card struct {
 	Format      string          `json:"format,omitempty"`
 	URL         string          `json:"url,omitempty"`
 	Title       string          `json:"title"`
-	Thumbnail   *Thumbnail      `json:"thumbnail,omitempty"`
+	Thumbnail   *Icon           `json:"thumbnail,omitempty"`
 	Activity    *Activity       `json:"activity,omitempty"`
 	Attributes  []Attribute     `json:"attributes,omitempty"`
 	ID          string          `json:"id,omitempty"`
@@ -182,7 +182,7 @@ type Thumbnail struct {
 	URL    string `json:"url"`
 	URL2x  string `json:"url@2x,omitempty"`
 	Width  uint   `json:"width,omitempty"`
-	Height uint   `json:"height,omitempty"`
+	Height uint   `json:"url,omitempty"`
 }
 
 // Attribute represents an attribute on a Card
@@ -243,17 +243,12 @@ type InviteRequest struct {
 	Reason string `json:"reason"`
 }
 
-// AddMemberRequest represents a HipChat add member request
-type AddMemberRequest struct {
-	Roles []string `json:"roles,omitempty"`
-}
-
 // GlanceRequest represents a HipChat room ui glance
 type GlanceRequest struct {
 	Key        string             `json:"key"`
 	Name       GlanceName         `json:"name"`
 	Target     string             `json:"target"`
-	QueryURL   string             `json:"queryUrl,omitempty"`
+	QueryURL   string             `json:"queryUrl"`
 	Icon       Icon               `json:"icon"`
 	Conditions []*GlanceCondition `json:"conditions,omitempty"`
 }
@@ -284,7 +279,7 @@ type GlanceUpdate struct {
 
 // GlanceContent is a component of a Glance
 type GlanceContent struct {
-	Status   *GlanceStatus  `json:"status,omitempty"`
+	Status   GlanceStatus   `json:"status"`
 	Metadata interface{}    `json:"metadata,omitempty"`
 	Label    AttributeValue `json:"label"` // AttributeValue{Type, Label}
 }
@@ -365,7 +360,6 @@ func (c *Card) AddAttribute(mainLabel, subLabel, url, iconURL string) {
 // method.
 type RoomsListOptions struct {
 	ListOptions
-	ExpandOptions
 
 	// Include private rooms in the result, API defaults to true
 	IncludePrivate bool `url:"include-private,omitempty"`
@@ -505,7 +499,6 @@ func (r *RoomService) Update(id string, roomReq *UpdateRoomRequest) (*http.Respo
 // HistoryOptions represents a HipChat room chat history request.
 type HistoryOptions struct {
 	ListOptions
-	ExpandOptions
 
 	// Either the latest date to fetch history for in ISO-8601 format, or 'recent' to fetch
 	// the latest 75 messages. Paging isn't supported for 'recent', however they are real-time
@@ -518,14 +511,6 @@ type HistoryOptions struct {
 	// Reverse the output such that the oldest message is first.
 	// For consistent paging, set to 'false'.
 	Reverse bool `url:"reverse,omitempty"`
-
-	// Either the earliest date to fetch history for the ISO-8601 format string,
-	// or leave blank to disable this filter.
-	// to be effective, the API call requires Date also be filled in with an ISO-8601 format string.
-	EndDate string `url:"end-date,omitempty"`
-
-	// Include records about deleted messages into results (body of a message isn't returned).  Set to 'true'.
-	IncludeDeleted bool `url:"include_deleted,omitempty"`
 }
 
 // History fetches a room's chat history.
@@ -627,30 +612,6 @@ func (r *RoomService) DeleteGlance(id string, glanceReq *GlanceRequest) (*http.R
 // HipChat API docs: https://www.hipchat.com/docs/apiv2/method/room_addon_ui_update
 func (r *RoomService) UpdateGlance(id string, glanceUpdateReq *GlanceUpdateRequest) (*http.Response, error) {
 	req, err := r.client.NewRequest("POST", fmt.Sprintf("addon/ui/room/%s", id), nil, glanceUpdateReq)
-	if err != nil {
-		return nil, err
-	}
-
-	return r.client.Do(req, nil)
-}
-
-// AddMember adds a member to a private room and sends member's unavailable presence to all room members asynchronously.
-//
-// HipChat API docs: https://www.hipchat.com/docs/apiv2/method/add_member
-func (r *RoomService) AddMember(roomID string, userID string, addMemberReq *AddMemberRequest) (*http.Response, error) {
-	req, err := r.client.NewRequest("PUT", fmt.Sprintf("room/%s/member/%s", roomID, userID), nil, addMemberReq)
-	if err != nil {
-		return nil, err
-	}
-
-	return r.client.Do(req, nil)
-}
-
-// RemoveMember removes a member from a private room
-//
-// HipChat API docs: https://www.hipchat.com/docs/apiv2/method/remove_member
-func (r *RoomService) RemoveMember(roomID string, userID string) (*http.Response, error) {
-	req, err := r.client.NewRequest("DELETE", fmt.Sprintf("room/%s/member/%s", roomID, userID), nil, nil)
 	if err != nil {
 		return nil, err
 	}

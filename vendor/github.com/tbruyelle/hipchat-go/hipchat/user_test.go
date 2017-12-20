@@ -111,7 +111,7 @@ func TestUserView(t *testing.T) {
 				"xmpp_jid": "1@chat.hipchat.com"
 			}`)
 	})
-	want := &User{XMPPJid: "1@chat.hipchat.com",
+	want := &User{XmppJid: "1@chat.hipchat.com",
 		IsDeleted:    false,
 		Name:         "First Last",
 		LastActive:   "1421029691",
@@ -145,7 +145,6 @@ func TestUserList(t *testing.T) {
 		testFormValues(t, r, values{
 			"start-index":     "1",
 			"max-results":     "100",
-			"expand":          "expansion",
 			"include-guests":  "true",
 			"include-deleted": "true",
 		})
@@ -179,7 +178,6 @@ func TestUserList(t *testing.T) {
 
 	opt := &UserListOptions{
 		ListOptions{StartIndex: 1, MaxResults: 100},
-		ExpandOptions{"expansion"},
 		true, true,
 	}
 

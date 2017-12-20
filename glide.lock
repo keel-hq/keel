@@ -1,5 +1,5 @@
-hash: b4faf989713037ee4eb401a0af5ea985065140cf7ffdcaab025c62969d5803ea
-updated: 2017-12-11T21:33:40.88196567Z
+hash: 2b3a6924fbd5b637b899b9bd08c66b36690f23b72ffe140eb14a2016f16770ae
+updated: 2017-12-20T20:08:27.365624741+01:00
 imports:
 - name: cloud.google.com/go
   version: 050b16d2314d5fc3d4c9a51e4cd5c7468e77f162
@@ -18,6 +18,10 @@ imports:
   version: 2efee857e7cfd4f3d0138cc3cbb1b4966962b93a
 - name: github.com/BurntSushi/toml
   version: b26d9c308763d68093482582cea63d69be07a0f0
+- name: github.com/daneharrigan/hipchat
+  version: 835dc879394a24080bf1c01e199c4cda001b6c46
+  subpackages:
+  - xmpp
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
@@ -76,6 +80,10 @@ imports:
   - ptypes/duration
   - ptypes/empty
   - ptypes/timestamp
+- name: github.com/google/go-querystring
+  version: 53e6ce116135b80d037921a7fdd5138cf32d7a8a
+  subpackages:
+  - query
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/googleapis/gax-go
@@ -120,6 +128,10 @@ imports:
   version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
+- name: github.com/tbruyelle/hipchat-go
+  version: 749fb9e14beb9995f677c101a754393cecb64b0f
+  subpackages:
+  - hipchat
 - name: github.com/ugorji/go
   version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
   subpackages:
@@ -127,7 +139,7 @@ imports:
 - name: github.com/urfave/negroni
   version: 5dbbc83f748fc3ad38585842b0aedab546d0ea1e
 - name: golang.org/x/crypto
-  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
+  version: d585fd2cc9195196078f516b69daff6744ef5e84
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -200,7 +212,7 @@ imports:
   - socket
   - urlfetch
 - name: google.golang.org/genproto
-  version: 73cb5d0be5af113b42057925bd6c93e3cd9f60fd
+  version: a8101f21cf983e773d0c1133ebc5424792003214
   subpackages:
   - googleapis/api/annotations
   - googleapis/iam/v1
@@ -225,7 +237,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/alecthomas/kingpin.v2
-  version: 1087e65c9441605df944fb12c33f0fe7072d18ca
+  version: 947dcec5ba9c011838740e680966fd7087a71d0d
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2
