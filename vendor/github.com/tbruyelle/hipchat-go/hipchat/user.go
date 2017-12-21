@@ -50,7 +50,7 @@ type UpdateUserPresenceRequest struct {
 
 // User represents the HipChat user.
 type User struct {
-	XMPPJid      string       `json:"xmpp_jid"`
+	XmppJid      string       `json:"xmpp_jid"`
 	IsDeleted    bool         `json:"is_deleted"`
 	Name         string       `json:"name"`
 	LastActive   string       `json:"last_active"`
@@ -121,7 +121,6 @@ func (u *UserService) Message(id string, msgReq *MessageRequest) (*http.Response
 // UserListOptions specified the parameters to the UserService.List method.
 type UserListOptions struct {
 	ListOptions
-	ExpandOptions
 	// Include active guest users in response.
 	IncludeGuests bool `url:"include-guests,omitempty"`
 	// Include deleted users in response.

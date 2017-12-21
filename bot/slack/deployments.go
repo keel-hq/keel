@@ -1,4 +1,4 @@
-package bot
+package slack
 
 import (
 	"bytes"

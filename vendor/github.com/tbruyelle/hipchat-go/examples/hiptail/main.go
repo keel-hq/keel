@@ -42,7 +42,7 @@ func main() {
 		}
 		msg := m.Message
 		if len(m.Message) > (maxMsgLen - len(moreString)) {
-			msg = fmt.Sprintf("%s%s", strings.Replace(m.Message[:len(m.Message)], "\n", " - ", -1), moreString)
+			msg = fmt.Sprintf("%s%s", strings.Replace(m.Message[:maxMsgLen], "\n", " - ", -1), moreString)
 		}
 		fmt.Printf("%s [%s]: %s\n", from, m.Date, msg)
 	}

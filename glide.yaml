@@ -1,9 +1,5 @@
 package: github.com/keel-hq/keel
 import:
-# - package: cloud.google.com/go
-#   version: ^0.10.0
-#   subpackages:
-#   - pubsub
 - package: cloud.google.com/go
   version: ^0.11.0
   subpackages:
@@ -14,7 +10,6 @@ import:
   version: ^1.3.1
 - package: github.com/Sirupsen/logrus
 - package: github.com/docker/distribution
-  # version: 5db89f0ca68677abc5eefce8f2a0a772c98ba52d
   subpackages:
   - digest
   - reference
@@ -42,14 +37,10 @@ import:
   version: 07c182904dbd53199946ba614a412c61d3c548f5
   subpackages:
   - unix
-  - windows  
-# - package: google.golang.org/api
-#   subpackages:
-#   - option
+  - windows
 - package: github.com/golang/protobuf
   version: 0a4f71a498b7c4812f64969510bcb4eca251e33a
 - package: google.golang.org/api
-  # version: 324744a33f1f37e63dd1695cfb3ec9a3e4a1cb05
   version: 295e4bb0ade057ae2cfb9876ab0b54635dbfcea4
   subpackages:
   - iterator
@@ -57,7 +48,7 @@ import:
   - support
   - transport
 - package: google.golang.org/grpc
-  version: v1.5.0  
+  version: v1.5.0
 - package: k8s.io/apimachinery
   subpackages:
   - status
@@ -78,3 +69,4 @@ import:
   - pkg/proto/hapi/chart
   - pkg/proto/hapi/services
   - pkg/strvals
+- package: github.com/daneharrigan/hipchat

@@ -1,11 +1,11 @@
-package bot
+package hipchat
 
 import (
 	"bytes"
 	"fmt"
 	"strings"
 
-	"github.com/nlopes/slack"
+	"github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/bot/formatter"
 	"github.com/keel-hq/keel/types"
 
@@ -13,8 +13,11 @@ import (
 )
 
 func (b *Bot) subscribeForApprovals() error {
+	log.Debugf(">>> hipchat.subscribeForApprovals()\n")
+
 	approvalsCh, err := b.approvalsManager.Subscribe(b.ctx)
 	if err != nil {
+		log.Debugf(">>> [ERROR] hipchat.subscribeForApprovals(): %s\n", err.Error())
 		return err
 	}
 
@@ -30,54 +33,32 @@ func (b *Bot) subscribeForApprovals() error {
 					"approval": a.Identifier,
 				}).Error("bot.subscribeForApprovals: approval request failed")
 			}
-
 		}
 	}
 }
 
 // Request - request approval
 func (b *Bot) requestApproval(req *types.Approval) error {
-	return b.postMessage(
-		"Approval required",
-		req.Message,
-		types.LevelSuccess.Color(),
-		[]slack.AttachmentField{
-			slack.AttachmentField{
-				Title: "Approval required!",
-				Value: req.Message + "\n" + fmt.Sprintf("To vote for change type '%s approve %s' to reject it: '%s reject %s'.", b.name, req.Identifier, b.name, req.Identifier),
-				Short: false,
-			},
-			slack.AttachmentField{
-				Title: "Votes",
-				Value: fmt.Sprintf("%d/%d", req.VotesReceived, req.VotesRequired),
-				Short: true,
-			},
-			slack.AttachmentField{
-				Title: "Delta",
-				Value: req.Delta(),
-				Short: true,
-			},
-			slack.AttachmentField{
-				Title: "Identifier",
-				Value: req.Identifier,
-				Short: true,
-			},
-			slack.AttachmentField{
-				Title: "Provider",
-				Value: req.Provider.String(),
-				Short: true,
-			},
-		})
-
+	msg := fmt.Sprintf(`Approval required!
+		%s
+		To vote for change type '%s approve %s'
+		To reject it: '%s reject %s'
+			Votes: %d/%d
+			Delta: %s
+			Identifier: %s
+			Provider: %s`,
+		req.Message, b.mentionName, req.Identifier, b.mentionName, req.Identifier,
+		req.VotesReceived, req.VotesRequired, req.Delta(), req.Identifier,
+		req.Provider.String())
+	return b.postMessage(msg)
 }
-func (b *Bot) processApprovalResponses() error {
 
+func (b *Bot) processApprovalResponses() error {
 	for {
 		select {
 		case <-b.ctx.Done():
 			return nil
 		case resp := <-b.approvalsRespCh:
-
 			switch resp.Status {
 			case types.ApprovalStatusApproved:
 				err := b.processApprovedResponse(resp)
@@ -99,8 +80,8 @@ func (b *Bot) processApprovalResponses() error {
 	}
 }
 
-func (b *Bot) processApprovedResponse(approvalResponse *approvalResponse) error {
-	trimmed := strings.TrimPrefix(approvalResponse.Text, approvalResponseKeyword)
+func (b *Bot) processApprovedResponse(approvalResponse *bot.ApprovalResponse) error {
+	trimmed := strings.TrimPrefix(approvalResponse.Text, bot.ApprovalResponseKeyword)
 	identifiers := strings.Split(trimmed, " ")
 	if len(identifiers) == 0 {
 		return nil
@@ -131,8 +112,8 @@ func (b *Bot) processApprovedResponse(approvalResponse *approvalResponse) error 
 	return nil
 }
 
-func (b *Bot) processRejectedResponse(approvalResponse *approvalResponse) error {
-	trimmed := strings.TrimPrefix(approvalResponse.Text, rejectResponseKeyword)
+func (b *Bot) processRejectedResponse(approvalResponse *bot.ApprovalResponse) error {
+	trimmed := strings.TrimPrefix(approvalResponse.Text, bot.RejectResponseKeyword)
 	identifiers := strings.Split(trimmed, " ")
 	if len(identifiers) == 0 {
 		return nil
@@ -163,91 +144,91 @@ func (b *Bot) processRejectedResponse(approvalResponse *approvalResponse) error 
 func (b *Bot) replyToApproval(approval *types.Approval) error {
 	switch approval.Status() {
 	case types.ApprovalStatusPending:
-		b.postMessage(
-			"Vote received",
-			"All approvals received, thanks for voting!",
-			types.LevelInfo.Color(),
-			[]slack.AttachmentField{
-				slack.AttachmentField{
-					Title: "vote received!",
-					Value: "Waiting for remaining votes.",
-					Short: false,
-				},
-				slack.AttachmentField{
-					Title: "Votes",
-					Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
-					Short: true,
-				},
-				slack.AttachmentField{
-					Title: "Delta",
-					Value: approval.Delta(),
-					Short: true,
-				},
-				slack.AttachmentField{
-					Title: "Identifier",
-					Value: approval.Identifier,
-					Short: true,
-				},
-			})
+		b.postMessage("Vote received")
+		// "Vote received",
+		// "All approvals received, thanks for voting!",
+		// types.LevelInfo.Color(),
+		// []slack.AttachmentField{
+		// 	slack.AttachmentField{
+		// 		Title: "vote received!",
+		// 		Value: "Waiting for remaining votes.",
+		// 		Short: false,
+		// 	},
+		// 	slack.AttachmentField{
+		// 		Title: "Votes",
+		// 		Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
+		// 		Short: true,
+		// 	},
+		// 	slack.AttachmentField{
+		// 		Title: "Delta",
+		// 		Value: approval.Delta(),
+		// 		Short: true,
+		// 	},
+		// 	slack.AttachmentField{
+		// 		Title: "Identifier",
+		// 		Value: approval.Identifier,
+		// 		Short: true,
+		// 	},
+		// })
 	case types.ApprovalStatusRejected:
-		b.postMessage(
-			"Change rejected",
-			"Change was rejected",
-			types.LevelWarn.Color(),
-			[]slack.AttachmentField{
-				slack.AttachmentField{
-					Title: "change rejected",
-					Value: "Change was rejected.",
-					Short: false,
-				},
-				slack.AttachmentField{
-					Title: "Status",
-					Value: approval.Status().String(),
-					Short: true,
-				},
-				slack.AttachmentField{
-					Title: "Votes",
-					Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
-					Short: true,
-				},
-				slack.AttachmentField{
-					Title: "Delta",
-					Value: approval.Delta(),
-					Short: true,
-				},
-				slack.AttachmentField{
-					Title: "Identifier",
-					Value: approval.Identifier,
-					Short: true,
-				},
-			})
+		b.postMessage("Change rejected")
+		// "Change rejected",
+		// "Change was rejected",
+		// types.LevelWarn.Color(),
+		// []slack.AttachmentField{
+		// 	slack.AttachmentField{
+		// 		Title: "change rejected",
+		// 		Value: "Change was rejected.",
+		// 		Short: false,
+		// 	},
+		// 	slack.AttachmentField{
+		// 		Title: "Status",
+		// 		Value: approval.Status().String(),
+		// 		Short: true,
+		// 	},
+		// 	slack.AttachmentField{
+		// 		Title: "Votes",
+		// 		Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
+		// 		Short: true,
+		// 	},
+		// 	slack.AttachmentField{
+		// 		Title: "Delta",
+		// 		Value: approval.Delta(),
+		// 		Short: true,
+		// 	},
+		// 	slack.AttachmentField{
+		// 		Title: "Identifier",
+		// 		Value: approval.Identifier,
+		// 		Short: true,
+		// 	},
+		// })
 	case types.ApprovalStatusApproved:
-		b.postMessage(
-			"approval received",
-			"All approvals received, thanks for voting!",
-			types.LevelSuccess.Color(),
-			[]slack.AttachmentField{
-				slack.AttachmentField{
-					Title: "update approved!",
-					Value: "All approvals received, thanks for voting!",
-					Short: false,
-				},
-				slack.AttachmentField{
-					Title: "Votes",
-					Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
-					Short: true,
-				},
-				slack.AttachmentField{
-					Title: "Delta",
-					Value: approval.Delta(),
-					Short: true,
-				},
-				slack.AttachmentField{
-					Title: "Identifier",
-					Value: approval.Identifier,
-					Short: true,
-				},
-			})
+		b.postMessage("approval received")
+		// "approval received",
+		// "All approvals received, thanks for voting!",
+		// types.LevelSuccess.Color(),
+		// []slack.AttachmentField{
+		// 	slack.AttachmentField{
+		// 		Title: "update approved!",
+		// 		Value: "All approvals received, thanks for voting!",
+		// 		Short: false,
+		// 	},
+		// 	slack.AttachmentField{
+		// 		Title: "Votes",
+		// 		Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
+		// 		Short: true,
+		// 	},
+		// 	slack.AttachmentField{
+		// 		Title: "Delta",
+		// 		Value: approval.Delta(),
+		// 		Short: true,
+		// 	},
+		// 	slack.AttachmentField{
+		// 		Title: "Identifier",
+		// 		Value: approval.Identifier,
+		// 		Short: true,
+		// 	},
+		// })
 	}
 	return nil
 }

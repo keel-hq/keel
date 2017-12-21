@@ -34,6 +34,10 @@ import (
 	_ "github.com/keel-hq/keel/extension/notification/slack"
 	_ "github.com/keel-hq/keel/extension/notification/webhook"
 
+	// bots
+	_ "github.com/keel-hq/keel/bot/hipchat"
+	_ "github.com/keel-hq/keel/bot/slack"
+
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -58,7 +62,6 @@ const (
 const EnvDebug = "DEBUG"
 
 func main() {
-
 	ver := version.GetKeelVersion()
 
 	inCluster := kingpin.Flag("incluster", "use in cluster configuration (defaults to 'true'), use '--no-incluster' if running outside of the cluster").Default("true").Bool()
@@ -155,12 +158,7 @@ func main() {
 
 	teardownTriggers := setupTriggers(ctx, providers, secretsGetter, approvalsManager)
 
-	teardownBot, err := setupBot(implementer, approvalsManager)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Fatal("main: failed to setup slack bot")
-	}
+	bot.Run(implementer, approvalsManager)
 
 	signalChan := make(chan os.Signal, 1)
 	cleanupDone := make(chan bool)
@@ -183,7 +181,7 @@ func main() {
 			// teardownProviders()
 			providers.Stop()
 			teardownTriggers()
-			teardownBot()
+			bot.Stop()
 
 			cleanupDone <- true
 		}
@@ -219,43 +217,6 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 	providers = provider.New(enabledProviders, approvalsManager)
 
 	return providers
-}
-
-func setupBot(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) (teardown func(), err error) {
-
-	if os.Getenv(constants.EnvSlackToken) != "" {
-		botName := "keel"
-
-		if os.Getenv(constants.EnvSlackBotName) != "" {
-			botName = os.Getenv(constants.EnvSlackBotName)
-		}
-
-		token := os.Getenv(constants.EnvSlackToken)
-
-		approvalsChannel := "general"
-		if os.Getenv(constants.EnvSlackApprovalsChannel) != "" {
-			approvalsChannel = os.Getenv(constants.EnvSlackApprovalsChannel)
-		}
-
-		slackBot := bot.New(botName, token, approvalsChannel, k8sImplementer, approvalsManager)
-
-		ctx, cancel := context.WithCancel(context.Background())
-
-		err := slackBot.Start(ctx)
-		if err != nil {
-			cancel()
-			return nil, err
-		}
-
-		teardown := func() {
-			// cancelling context
-			cancel()
-		}
-
-		return teardown, nil
-	}
-
-	return func() {}, nil
 }
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
