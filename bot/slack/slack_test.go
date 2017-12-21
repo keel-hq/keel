@@ -213,7 +213,7 @@ func TestProcessApprovalReply(t *testing.T) {
 	bot.approvalsRespCh <- &b.ApprovalResponse{
 		User:   "123",
 		Status: types.ApprovalStatusApproved,
-		Text:   fmt.Sprintf("%s %s", bot.ApprovalResponseKeyword, identifier),
+		Text:   fmt.Sprintf("%s %s", b.ApprovalResponseKeyword, identifier),
 	}
 
 	time.Sleep(1 * time.Second)
@@ -288,7 +288,7 @@ func TestProcessRejectedReply(t *testing.T) {
 	bot.approvalsRespCh <- &b.ApprovalResponse{
 		User:   "123",
 		Status: types.ApprovalStatusRejected,
-		Text:   fmt.Sprintf("%s %s", bot.RejectResponseKeyword, identifier),
+		Text:   fmt.Sprintf("%s %s", b.RejectResponseKeyword, identifier),
 	}
 
 	time.Sleep(1 * time.Second)
