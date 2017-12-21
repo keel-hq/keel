@@ -86,7 +86,7 @@ func Run(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manag
 
 		return teardown, nil
 	}
-
+	log.Info("bot.hipchat.Run(): HipChat approval bot ist not configured, ignore")
 	return func() {}, nil
 }
 
@@ -108,6 +108,7 @@ func connect(username, password string) *hipchat.Client {
 			return nil
 		}
 		if client != nil && err == nil {
+			log.Info("Successfully connected to hipchat server")
 			return client
 		}
 		log.Debugln("wait fo 30 seconds")
@@ -137,7 +138,6 @@ func new(name, username, pass, approvalsChannel string, k8sImplementer kubernete
 
 // Start the bot
 func (b *Bot) Start(ctx context.Context) error {
-	log.Debugln(">>> bot.hipchat.Start()")
 
 	if b.hipchatClient == nil {
 		return errors.New("could not conect to hipchat server")
@@ -159,16 +159,28 @@ func (b *Bot) Start(ctx context.Context) error {
 }
 
 func (b *Bot) startInternal() error {
+	log.Debug("bot.hipchat.startInternal()")
 	client := b.hipchatClient
-	log.Debugf("startInternal(): channel=%s, userName=%s\n", b.approvalsChannel, b.name)
-	client.Status("chat") // chat, away or idle
+	client.Status("chat")
 	client.Join(b.approvalsChannel, b.name)
+	b.postMessage("Keel bot started ...")
 	go client.KeepAlive()
 	go func() {
+		log.Debug("Starting hipchat main process loop")
 		for {
 			select {
+			case users := <-client.Users():
+				log.Debugf("hipchat.Users: %#v", users)
+
+			case rooms := <-client.Rooms():
+				log.Debugf("hipchat.Rooms: %#v", rooms)
+
 			case message := <-client.Messages():
+				log.Debug("hipchat.Messages: Incomming message")
 				b.handleMessage(message)
+
+			default:
+				continue
 			}
 		}
 	}()
@@ -178,28 +190,33 @@ func (b *Bot) startInternal() error {
 
 func (b *Bot) handleMessage(message *hipchat.Message) {
 	msg := b.trimXMPPMessage(message)
+	log.Debugf("hipchat.handleMessage(): %#v", message)
 	if msg.From == "" || msg.To == "" {
+		log.Debugln("hipchat.handleMessage(): fields 'From:' or 'To:' are empty, ignore")
 		return
 	}
 
 	if !b.isBotMessage(msg) {
-		log.Debugln("hipchat.handleMessage(): is not a bot message")
+		log.Debugf("hipchat.handleMessage(): [%s] is not a bot message", msg)
 		return
 	}
 
 	approval, ok := b.isApproval(msg)
 	if ok {
+		log.Debugf("hipchat.handleMessage(): [%s] is approval command", msg)
 		b.approvalsRespCh <- approval
 		return
 	}
 
 	if responseLines, ok := bot.BotEventTextToResponse[msg.Body]; ok {
+		log.Debugf("hipchat.handleMessage(): [%s] is a help command", msg)
 		response := strings.Join(responseLines, "\n")
 		b.respond(formatAsSnippet(response))
 		return
 	}
 
 	if b.isCommand(msg) {
+		log.Debugf("hipchat.handleMessage(): [%s] is a command", msg)
 		b.handleCommand(msg)
 		return
 	}
@@ -212,12 +229,10 @@ func (b *Bot) handleMessage(message *hipchat.Message) {
 	}).Debug("handleMessage: bot couldn't recognise command")
 }
 
-func (b *Bot) respond(response string) {
-	b.hipchatClient.Say(b.approvalsChannel, b.name, response)
-}
-
 func (b *Bot) handleCommand(message *hipchat.Message) {
-	switch message.Body {
+	eventText := message.Body
+	log.Debugf("hipchat.handleCommand(): %#v", message)
+	switch eventText {
 	case "get deployments":
 		log.Info("getting deployments")
 		response := bot.DeploymentsResponse(bot.Filter{}, b.k8sImplementer)
@@ -225,10 +240,20 @@ func (b *Bot) handleCommand(message *hipchat.Message) {
 		return
 	case "get approvals":
 		log.Info("getting approvals")
-		response := b.approvalsResponse()
+		response := bot.ApprovalsResponse(b.approvalsManager)
 		b.respond(formatAsSnippet(response))
 		return
 	}
+
+	// handle dynamic commands
+	if strings.HasPrefix(eventText, bot.RemoveApprovalPrefix) {
+		id := strings.TrimSpace(strings.TrimPrefix(eventText, bot.RemoveApprovalPrefix))
+		snippet := bot.RemoveApprovalHandler(id, b.approvalsManager)
+		b.respond(formatAsSnippet(snippet))
+		return
+	}
+
+	log.Info("hipchat.handleCommand(): command not found")
 }
 
 func formatAsSnippet(msg string) string {
@@ -262,12 +287,12 @@ func (b *Bot) trimXMPPMessage(message *hipchat.Message) *hipchat.Message {
 
 func trimMentionName(message string) string {
 	re := regexp.MustCompile(`^(@\w+)`)
-	match := re.FindStringSubmatch(message)
+	match := re.FindStringSubmatch(strings.TrimSpace(message))
 	if match == nil {
 		return ""
 	}
 	if len(match) != 0 {
-		return match[1]
+		return strings.TrimSpace(match[1])
 	}
 	return ""
 }
@@ -287,6 +312,10 @@ func (b *Bot) trimUser(user string) string {
 func (b *Bot) postMessage(msg string) error {
 	b.hipchatClient.Say(b.approvalsChannel, b.name, msg)
 	return nil
+}
+
+func (b *Bot) respond(response string) {
+	b.hipchatClient.Say(b.approvalsChannel, b.name, response)
 }
 
 func (b *Bot) trimBot(msg string) string {
@@ -318,8 +347,11 @@ func (b *Bot) isApproval(message *hipchat.Message) (resp *bot.ApprovalResponse, 
 }
 
 func (b *Bot) isBotMessage(message *hipchat.Message) bool {
+	log.Debugf("bot.hipchat.isBotMessage(): %#v", message)
 	if message.MentionName == b.mentionName {
 		return true
 	}
+	log.Debugf("bot.hipchat.isBotMessage(): bot MentionName is not correct: [%s] != [%s]",
+		message.MentionName, b.mentionName)
 	return false
 }
