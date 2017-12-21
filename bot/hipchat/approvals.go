@@ -13,11 +13,9 @@ import (
 )
 
 func (b *Bot) subscribeForApprovals() error {
-	log.Debugf(">>> hipchat.subscribeForApprovals()\n")
-
 	approvalsCh, err := b.approvalsManager.Subscribe(b.ctx)
 	if err != nil {
-		log.Debugf(">>> [ERROR] hipchat.subscribeForApprovals(): %s\n", err.Error())
+		log.Errorf("hipchat.subscribeForApprovals(): %s", err.Error())
 		return err
 	}
 
@@ -75,7 +73,6 @@ func (b *Bot) processApprovalResponses() error {
 					}).Error("bot.processApprovalResponses: failed to process approval reject response message")
 				}
 			}
-
 		}
 	}
 }
@@ -107,7 +104,6 @@ func (b *Bot) processApprovedResponse(approvalResponse *bot.ApprovalResponse) er
 				"identifier": identifier,
 			}).Error("bot.processApprovedResponse: got error while replying after processing approved approval")
 		}
-
 	}
 	return nil
 }
@@ -144,91 +140,31 @@ func (b *Bot) processRejectedResponse(approvalResponse *bot.ApprovalResponse) er
 func (b *Bot) replyToApproval(approval *types.Approval) error {
 	switch approval.Status() {
 	case types.ApprovalStatusPending:
-		b.postMessage("Vote received")
-		// "Vote received",
-		// "All approvals received, thanks for voting!",
-		// types.LevelInfo.Color(),
-		// []slack.AttachmentField{
-		// 	slack.AttachmentField{
-		// 		Title: "vote received!",
-		// 		Value: "Waiting for remaining votes.",
-		// 		Short: false,
-		// 	},
-		// 	slack.AttachmentField{
-		// 		Title: "Votes",
-		// 		Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
-		// 		Short: true,
-		// 	},
-		// 	slack.AttachmentField{
-		// 		Title: "Delta",
-		// 		Value: approval.Delta(),
-		// 		Short: true,
-		// 	},
-		// 	slack.AttachmentField{
-		// 		Title: "Identifier",
-		// 		Value: approval.Identifier,
-		// 		Short: true,
-		// 	},
-		// })
+		msg := fmt.Sprintf(`Vote received
+			Waiting for remaining votes!
+				Votes: %d/%d
+				Delta: %s
+				Identifier: %s`,
+			approval.VotesReceived, approval.VotesRequired, approval.Delta(), approval.Identifier)
+		b.postMessage(msg)
 	case types.ApprovalStatusRejected:
-		b.postMessage("Change rejected")
-		// "Change rejected",
-		// "Change was rejected",
-		// types.LevelWarn.Color(),
-		// []slack.AttachmentField{
-		// 	slack.AttachmentField{
-		// 		Title: "change rejected",
-		// 		Value: "Change was rejected.",
-		// 		Short: false,
-		// 	},
-		// 	slack.AttachmentField{
-		// 		Title: "Status",
-		// 		Value: approval.Status().String(),
-		// 		Short: true,
-		// 	},
-		// 	slack.AttachmentField{
-		// 		Title: "Votes",
-		// 		Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
-		// 		Short: true,
-		// 	},
-		// 	slack.AttachmentField{
-		// 		Title: "Delta",
-		// 		Value: approval.Delta(),
-		// 		Short: true,
-		// 	},
-		// 	slack.AttachmentField{
-		// 		Title: "Identifier",
-		// 		Value: approval.Identifier,
-		// 		Short: true,
-		// 	},
-		// })
+		msg := fmt.Sprintf(`change rejected
+			Change was rejected.
+				Status: %s
+				Votes: %d/%d
+				Delta: %s
+				Identifier: %s`,
+			approval.Status().String(), approval.VotesReceived, approval.VotesRequired,
+			approval.Delta(), approval.Identifier)
+		b.postMessage(msg)
 	case types.ApprovalStatusApproved:
-		b.postMessage("approval received")
-		// "approval received",
-		// "All approvals received, thanks for voting!",
-		// types.LevelSuccess.Color(),
-		// []slack.AttachmentField{
-		// 	slack.AttachmentField{
-		// 		Title: "update approved!",
-		// 		Value: "All approvals received, thanks for voting!",
-		// 		Short: false,
-		// 	},
-		// 	slack.AttachmentField{
-		// 		Title: "Votes",
-		// 		Value: fmt.Sprintf("%d/%d", approval.VotesReceived, approval.VotesRequired),
-		// 		Short: true,
-		// 	},
-		// 	slack.AttachmentField{
-		// 		Title: "Delta",
-		// 		Value: approval.Delta(),
-		// 		Short: true,
-		// 	},
-		// 	slack.AttachmentField{
-		// 		Title: "Identifier",
-		// 		Value: approval.Identifier,
-		// 		Short: true,
-		// 	},
-		// })
+		msg := fmt.Sprintf(`Update approved!
+			All approvals received, thanks for voting!
+				Votes: %d/%d
+				Delta: %s
+				Identifier: %s`,
+			approval.VotesReceived, approval.VotesRequired, approval.Delta(), approval.Identifier)
+		b.postMessage(msg)
 	}
 	return nil
 }

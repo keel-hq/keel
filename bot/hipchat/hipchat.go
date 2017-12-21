@@ -3,7 +3,6 @@ package hipchat
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -50,14 +49,16 @@ func init() {
 
 // Run ...
 func Run(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) (teardown func(), err error) {
-	if os.Getenv(constants.EnvHipchatApprovalsPasswort) != "" {
+
+	if os.Getenv(constants.EnvHipchatApprovalsPasswort) != "" &&
+		os.Getenv(constants.EnvHipchatApprovalsUserName) != "" {
 		botName := "keel"
 		if os.Getenv(constants.EnvHipchatApprovalsBotName) != "" {
 			botName = os.Getenv(constants.EnvHipchatApprovalsBotName)
 		}
 
 		botUserName := ""
-		if os.Getenv(constants.EnvHipchatApprovalsUserName) != "" { // need this!!!!
+		if os.Getenv(constants.EnvHipchatApprovalsUserName) != "" {
 			botUserName = os.Getenv(constants.EnvHipchatApprovalsUserName)
 		}
 
@@ -92,15 +93,13 @@ func Run(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manag
 //--------------------- <XMPP client> -------------------------------------
 
 func connect(username, password string) *hipchat.Client {
-	log.Debugf(">>> bot.hipchat.NewClient(): user=%s, pass=%s\n", username, password)
-
 	attempts := 10
 	for {
-		log.Debugf(">>> try to connect to hipchat")
+		log.Debug("try to connect to hipchat")
 		client, err := hipchat.NewClient(username, password, "bot", "plain")
 		// could not authenticate
 		if err != nil {
-			log.Errorf("bot.hipchat.connect: Error=%s\n", err)
+			log.Errorf("bot.hipchat.connect: Error=%s", err)
 			if err.Error() == "could not authenticate" {
 				return nil
 			}
@@ -111,7 +110,7 @@ func connect(username, password string) *hipchat.Client {
 		if client != nil && err == nil {
 			return client
 		}
-		log.Debugf("wait fo 30 seconds")
+		log.Debugln("wait fo 30 seconds")
 		time.Sleep(30 * time.Second)
 		attempts--
 	}
@@ -177,25 +176,14 @@ func (b *Bot) startInternal() error {
 	return nil
 }
 
-// // A Message represents a message received from HipChat.
-// type Message struct {
-// 	From        string
-// 	To          string
-// 	Body        string
-// 	MentionName string
-// }
-// Body:"@IgorKomlew release notification from keel"
-// hipchat.handleMessage(): &hipchat.Message{From:"701032_keel-bot@conf.hipchat.com", To:"701032_4966430@chat.hipchat.com/bot", Body:"release notification from keel", MentionName:""}
 func (b *Bot) handleMessage(message *hipchat.Message) {
 	msg := b.trimXMPPMessage(message)
-	log.Debugf("hipchat.handleMessage(): %#v // %#v\n", message, msg)
 	if msg.From == "" || msg.To == "" {
-		log.Debugf("hipchat.handleMessage(): ignore")
 		return
 	}
 
 	if !b.isBotMessage(msg) {
-		log.Debugf("hipchat.handleMessage(): is not a bot message")
+		log.Debugln("hipchat.handleMessage(): is not a bot message")
 		return
 	}
 
@@ -207,8 +195,7 @@ func (b *Bot) handleMessage(message *hipchat.Message) {
 
 	if responseLines, ok := bot.BotEventTextToResponse[msg.Body]; ok {
 		response := strings.Join(responseLines, "\n")
-		fmt.Println(">>> " + response)
-		b.respond(response)
+		b.respond(formatAsSnippet(response))
 		return
 	}
 
@@ -230,11 +217,25 @@ func (b *Bot) respond(response string) {
 }
 
 func (b *Bot) handleCommand(message *hipchat.Message) {
-	fmt.Printf("bot.hipchat.handleCommand() %v\n", message)
+	switch message.Body {
+	case "get deployments":
+		log.Info("getting deployments")
+		response := bot.DeploymentsResponse(bot.Filter{}, b.k8sImplementer)
+		b.respond(formatAsSnippet(response))
+		return
+	case "get approvals":
+		log.Info("getting approvals")
+		response := b.approvalsResponse()
+		b.respond(formatAsSnippet(response))
+		return
+	}
+}
+
+func formatAsSnippet(msg string) string {
+	return "/code " + msg
 }
 
 func (b *Bot) isCommand(message *hipchat.Message) bool {
-	fmt.Printf("bot.hipchat.isCommand=%s\n", message.Body)
 
 	if bot.StaticBotCommands[message.Body] {
 		return true
@@ -284,14 +285,11 @@ func (b *Bot) trimUser(user string) string {
 }
 
 func (b *Bot) postMessage(msg string) error {
-	log.Debugf(">>> bot.hipchat.postMessage: %s\n", msg)
 	b.hipchatClient.Say(b.approvalsChannel, b.name, msg)
-	// b.respond(msg)
 	return nil
 }
 
 func (b *Bot) trimBot(msg string) string {
-	// msg = strings.Replace(msg, strings.ToLower(b.msgPrefix), "", 1)
 	msg = strings.TrimPrefix(msg, b.mentionName)
 	msg = strings.Trim(msg, "\n")
 	msg = strings.TrimSpace(msg)

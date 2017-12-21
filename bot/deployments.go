@@ -1,10 +1,11 @@
-package slack
+package bot
 
 import (
 	"bytes"
 	"fmt"
 
 	"github.com/keel-hq/keel/bot/formatter"
+	"github.com/keel-hq/keel/provider/kubernetes"
 
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
@@ -18,16 +19,16 @@ type Filter struct {
 }
 
 // deployments - gets all deployments
-func (b *Bot) deployments() ([]v1beta1.Deployment, error) {
+func deployments(k8sImplementer kubernetes.Implementer) ([]v1beta1.Deployment, error) {
 	deploymentLists := []*v1beta1.DeploymentList{}
 
-	n, err := b.k8sImplementer.Namespaces()
+	n, err := k8sImplementer.Namespaces()
 	if err != nil {
 		return nil, err
 	}
 
 	for _, n := range n.Items {
-		l, err := b.k8sImplementer.Deployments(n.GetName())
+		l, err := k8sImplementer.Deployments(n.GetName())
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":     err,
@@ -49,8 +50,8 @@ func (b *Bot) deployments() ([]v1beta1.Deployment, error) {
 	return impacted, nil
 }
 
-func (b *Bot) deploymentsResponse(filter Filter) string {
-	deps, err := b.deployments()
+func DeploymentsResponse(filter Filter, k8sImplementer kubernetes.Implementer) string {
+	deps, err := deployments(k8sImplementer)
 	if err != nil {
 		return fmt.Sprintf("got error while fetching deployments: %s", err)
 	}

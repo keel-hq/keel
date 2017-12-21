@@ -312,7 +312,7 @@ func (b *Bot) handleCommand(event *slack.MessageEvent, eventText string) {
 	switch eventText {
 	case "get deployments":
 		log.Info("getting deployments")
-		response := b.deploymentsResponse(Filter{})
+		response := bot.DeploymentsResponse(bot.Filter{}, b.k8sImplementer)
 		b.respond(event, formatAsSnippet(response))
 		return
 	case "get approvals":
