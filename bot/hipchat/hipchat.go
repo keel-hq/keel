@@ -95,7 +95,7 @@ func Run(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manag
 func connect(username, password string) *hipchat.Client {
 	attempts := 10
 	for {
-		log.Debug("try to connect to hipchat")
+		log.Info("bot.hipchat.connect: try to connect to hipchat")
 		client, err := hipchat.NewClient(username, password, "bot", "plain")
 		// could not authenticate
 		if err != nil {
@@ -111,7 +111,7 @@ func connect(username, password string) *hipchat.Client {
 			log.Info("Successfully connected to hipchat server")
 			return client
 		}
-		log.Debugln("wait fo 30 seconds")
+		log.Debugln("Can not connect to hipcaht now, wait fo 30 seconds")
 		time.Sleep(30 * time.Second)
 		attempts--
 	}
@@ -159,28 +159,16 @@ func (b *Bot) Start(ctx context.Context) error {
 }
 
 func (b *Bot) startInternal() error {
-	log.Debug("bot.hipchat.startInternal()")
 	client := b.hipchatClient
 	client.Status("chat")
 	client.Join(b.approvalsChannel, b.name)
 	b.postMessage("Keel bot started ...")
 	go client.KeepAlive()
 	go func() {
-		log.Debug("Starting hipchat main process loop")
 		for {
 			select {
-			case users := <-client.Users():
-				log.Debugf("hipchat.Users: %#v", users)
-
-			case rooms := <-client.Rooms():
-				log.Debugf("hipchat.Rooms: %#v", rooms)
-
 			case message := <-client.Messages():
-				log.Debug("hipchat.Messages: Incomming message")
 				b.handleMessage(message)
-
-			default:
-				continue
 			}
 		}
 	}()
@@ -190,33 +178,28 @@ func (b *Bot) startInternal() error {
 
 func (b *Bot) handleMessage(message *hipchat.Message) {
 	msg := b.trimXMPPMessage(message)
-	log.Debugf("hipchat.handleMessage(): %#v", message)
 	if msg.From == "" || msg.To == "" {
 		log.Debugln("hipchat.handleMessage(): fields 'From:' or 'To:' are empty, ignore")
 		return
 	}
 
 	if !b.isBotMessage(msg) {
-		log.Debugf("hipchat.handleMessage(): [%s] is not a bot message", msg)
 		return
 	}
 
 	approval, ok := b.isApproval(msg)
 	if ok {
-		log.Debugf("hipchat.handleMessage(): [%s] is approval command", msg)
 		b.approvalsRespCh <- approval
 		return
 	}
 
 	if responseLines, ok := bot.BotEventTextToResponse[msg.Body]; ok {
-		log.Debugf("hipchat.handleMessage(): [%s] is a help command", msg)
 		response := strings.Join(responseLines, "\n")
 		b.respond(formatAsSnippet(response))
 		return
 	}
 
 	if b.isCommand(msg) {
-		log.Debugf("hipchat.handleMessage(): [%s] is a command", msg)
 		b.handleCommand(msg)
 		return
 	}
@@ -231,7 +214,6 @@ func (b *Bot) handleMessage(message *hipchat.Message) {
 
 func (b *Bot) handleCommand(message *hipchat.Message) {
 	eventText := message.Body
-	log.Debugf("hipchat.handleCommand(): %#v", message)
 	switch eventText {
 	case "get deployments":
 		log.Info("getting deployments")
@@ -347,11 +329,8 @@ func (b *Bot) isApproval(message *hipchat.Message) (resp *bot.ApprovalResponse, 
 }
 
 func (b *Bot) isBotMessage(message *hipchat.Message) bool {
-	log.Debugf("bot.hipchat.isBotMessage(): %#v", message)
 	if message.MentionName == b.mentionName {
 		return true
 	}
-	log.Debugf("bot.hipchat.isBotMessage(): bot MentionName is not correct: [%s] != [%s]",
-		message.MentionName, b.mentionName)
 	return false
 }

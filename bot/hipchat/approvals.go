@@ -35,19 +35,11 @@ func (b *Bot) subscribeForApprovals() error {
 
 // Request - request approval
 func (b *Bot) requestApproval(req *types.Approval) error {
-	tml := `Approval required!
-	%s
-	To vote for change type '%s approve %s'
-	To reject it: '%s reject %s'
-		Votes: %d/%d
-		Delta: %s
-		Identifier: %s
-		Provider: %s`
-	msg := fmt.Sprintf(tml,
+	msg := fmt.Sprintf(ApprovalRequiredTempl,
 		req.Message, b.mentionName, req.Identifier, b.mentionName, req.Identifier,
 		req.VotesReceived, req.VotesRequired, req.Delta(), req.Identifier,
 		req.Provider.String())
-	return b.postMessage(msg)
+	return b.postMessage(formatAsSnippet(msg))
 }
 
 func (b *Bot) processApprovalResponses() error {
@@ -131,7 +123,6 @@ func (b *Bot) processRejectedResponse(approvalResponse *bot.ApprovalResponse) er
 				"identifier": identifier,
 			}).Error("bot.processApprovedResponse: got error while replying after processing rejected approval")
 		}
-
 	}
 	return nil
 }
@@ -139,29 +130,16 @@ func (b *Bot) processRejectedResponse(approvalResponse *bot.ApprovalResponse) er
 func (b *Bot) replyToApproval(approval *types.Approval) error {
 	switch approval.Status() {
 	case types.ApprovalStatusPending:
-		msg := fmt.Sprintf(`Vote received
-	Waiting for remaining votes!
-		Votes: %d/%d
-		Delta: %s
-		Identifier: %s`,
+		msg := fmt.Sprintf(VoteReceivedTempl,
 			approval.VotesReceived, approval.VotesRequired, approval.Delta(), approval.Identifier)
 		b.postMessage(formatAsSnippet(msg))
 	case types.ApprovalStatusRejected:
-		msg := fmt.Sprintf(`change rejected
-	Change was rejected.
-		Status: %s
-		Votes: %d/%d
-		Delta: %s
-		Identifier: %s`,
+		msg := fmt.Sprintf(ChangeRejectedTempl,
 			approval.Status().String(), approval.VotesReceived, approval.VotesRequired,
 			approval.Delta(), approval.Identifier)
 		b.postMessage(formatAsSnippet(msg))
 	case types.ApprovalStatusApproved:
-		msg := fmt.Sprintf(`Update approved!
-	All approvals received, thanks for voting!
-		Votes: %d/%d
-		Delta: %s
-		Identifier: %s`,
+		msg := fmt.Sprintf(UpdateApprovedTempl,
 			approval.VotesReceived, approval.VotesRequired, approval.Delta(), approval.Identifier)
 		b.postMessage(formatAsSnippet(msg))
 	}
