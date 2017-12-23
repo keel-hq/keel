@@ -312,18 +312,20 @@ func (b *Bot) handleCommand(event *slack.MessageEvent, eventText string) {
 	switch eventText {
 	case "get deployments":
 		log.Info("getting deployments")
-		response := b.deploymentsResponse(Filter{})
+		response := bot.DeploymentsResponse(bot.Filter{}, b.k8sImplementer)
 		b.respond(event, formatAsSnippet(response))
 		return
 	case "get approvals":
-		response := b.approvalsResponse()
+		response := bot.ApprovalsResponse(b.approvalsManager)
 		b.respond(event, formatAsSnippet(response))
 		return
 	}
 
 	// handle dynamic commands
 	if strings.HasPrefix(eventText, bot.RemoveApprovalPrefix) {
-		b.respond(event, formatAsSnippet(b.removeApprovalHandler(strings.TrimSpace(strings.TrimPrefix(eventText, bot.RemoveApprovalPrefix)))))
+		id := strings.TrimSpace(strings.TrimPrefix(eventText, bot.RemoveApprovalPrefix))
+		snippet := bot.RemoveApprovalHandler(id, b.approvalsManager)
+		b.respond(event, formatAsSnippet(snippet))
 		return
 	}
 

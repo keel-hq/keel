@@ -1,12 +1,10 @@
 package slack
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
 	"github.com/keel-hq/keel/bot"
-	"github.com/keel-hq/keel/bot/formatter"
 	"github.com/keel-hq/keel/types"
 	"github.com/nlopes/slack"
 
@@ -251,37 +249,4 @@ func (b *Bot) replyToApproval(approval *types.Approval) error {
 			})
 	}
 	return nil
-}
-
-func (b *Bot) approvalsResponse() string {
-	approvals, err := b.approvalsManager.List()
-	if err != nil {
-		return fmt.Sprintf("got error while fetching approvals: %s", err)
-	}
-
-	if len(approvals) == 0 {
-		return fmt.Sprintf("there are currently no request waiting to be approved.")
-	}
-
-	buf := &bytes.Buffer{}
-
-	approvalCtx := formatter.Context{
-		Output: buf,
-		Format: formatter.NewApprovalsFormat(formatter.TableFormatKey, false),
-	}
-	err = formatter.ApprovalWrite(approvalCtx, approvals)
-
-	if err != nil {
-		return fmt.Sprintf("got error while formatting approvals: %s", err)
-	}
-
-	return buf.String()
-}
-
-func (b *Bot) removeApprovalHandler(identifier string) string {
-	err := b.approvalsManager.Delete(identifier)
-	if err != nil {
-		return fmt.Sprintf("failed to remove '%s' approval: %s.", identifier, err)
-	}
-	return fmt.Sprintf("approval '%s' removed.", identifier)
 }
