@@ -2,40 +2,13 @@ package slack
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/types"
 	"github.com/nlopes/slack"
-
-	log "github.com/Sirupsen/logrus"
 )
 
-func (b *Bot) subscribeForApprovals() error {
-	approvalsCh, err := b.approvalsManager.Subscribe(b.ctx)
-	if err != nil {
-		return err
-	}
-
-	for {
-		select {
-		case <-b.ctx.Done():
-			return nil
-		case a := <-approvalsCh:
-			err = b.requestApproval(a)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":    err,
-					"approval": a.Identifier,
-				}).Error("bot.subscribeForApprovals: approval request failed")
-			}
-
-		}
-	}
-}
-
 // Request - request approval
-func (b *Bot) requestApproval(req *types.Approval) error {
+func (b *Bot) RequestApproval(req *types.Approval) error {
 	return b.postMessage(
 		"Approval required",
 		req.Message,
@@ -67,99 +40,9 @@ func (b *Bot) requestApproval(req *types.Approval) error {
 				Short: true,
 			},
 		})
-
-}
-func (b *Bot) processApprovalResponses() error {
-
-	for {
-		select {
-		case <-b.ctx.Done():
-			return nil
-		case resp := <-b.approvalsRespCh:
-
-			switch resp.Status {
-			case types.ApprovalStatusApproved:
-				err := b.processApprovedResponse(resp)
-				if err != nil {
-					log.WithFields(log.Fields{
-						"error": err,
-					}).Error("bot.processApprovalResponses: failed to process approval response message")
-				}
-			case types.ApprovalStatusRejected:
-				err := b.processRejectedResponse(resp)
-				if err != nil {
-					log.WithFields(log.Fields{
-						"error": err,
-					}).Error("bot.processApprovalResponses: failed to process approval reject response message")
-				}
-			}
-
-		}
-	}
 }
 
-func (b *Bot) processApprovedResponse(approvalResponse *bot.ApprovalResponse) error {
-	trimmed := strings.TrimPrefix(approvalResponse.Text, bot.ApprovalResponseKeyword)
-	identifiers := strings.Split(trimmed, " ")
-	if len(identifiers) == 0 {
-		return nil
-	}
-
-	for _, identifier := range identifiers {
-		if identifier == "" {
-			continue
-		}
-		approval, err := b.approvalsManager.Approve(identifier, approvalResponse.User)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":      err,
-				"identifier": identifier,
-			}).Error("bot.processApprovedResponse: failed to approve")
-			continue
-		}
-
-		err = b.replyToApproval(approval)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":      err,
-				"identifier": identifier,
-			}).Error("bot.processApprovedResponse: got error while replying after processing approved approval")
-		}
-
-	}
-	return nil
-}
-
-func (b *Bot) processRejectedResponse(approvalResponse *bot.ApprovalResponse) error {
-	trimmed := strings.TrimPrefix(approvalResponse.Text, bot.RejectResponseKeyword)
-	identifiers := strings.Split(trimmed, " ")
-	if len(identifiers) == 0 {
-		return nil
-	}
-
-	for _, identifier := range identifiers {
-		approval, err := b.approvalsManager.Reject(identifier)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":      err,
-				"identifier": identifier,
-			}).Error("bot.processApprovedResponse: failed to reject")
-			continue
-		}
-
-		err = b.replyToApproval(approval)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":      err,
-				"identifier": identifier,
-			}).Error("bot.processApprovedResponse: got error while replying after processing rejected approval")
-		}
-
-	}
-	return nil
-}
-
-func (b *Bot) replyToApproval(approval *types.Approval) error {
+func (b *Bot) ReplyToApproval(approval *types.Approval) error {
 	switch approval.Status() {
 	case types.ApprovalStatusPending:
 		b.postMessage(

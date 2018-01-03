@@ -1,18 +1,18 @@
 package slack
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/glower/keel/extension/approval"
+	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/nlopes/slack"
 
 	"github.com/keel-hq/keel/approvals"
 	b "github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/constants"
-	"github.com/keel-hq/keel/extension/approval"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/codecs"
 
@@ -20,6 +20,23 @@ import (
 
 	testutil "github.com/keel-hq/keel/util/testing"
 )
+
+var botMessagesChannel chan *b.BotMessage
+var approvalsRespCh chan *b.ApprovalResponse
+
+func New(name, token, channel string,
+	k8sImplementer kubernetes.Implementer,
+	approvalsManager approvals.Manager, fi SlackImplementer) *Bot {
+
+	approvalsRespCh = make(chan *b.ApprovalResponse)
+	botMessagesChannel = make(chan *b.BotMessage)
+
+	slack := &Bot{}
+	b.RegisterBot(name, slack)
+	b.Run(k8sImplementer, approvalsManager)
+	slack.slackHTTPClient = fi
+	return slack
+}
 
 type fakeProvider struct {
 	submitted []types.Event
@@ -66,7 +83,6 @@ func (i *fakeSlackImplementer) PostMessage(channel, text string, params slack.Po
 
 func TestBotRequest(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
-
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
 
@@ -77,21 +93,12 @@ func TestBotRequest(t *testing.T) {
 
 	am := approvals.New(mem, codecs.DefaultSerializer())
 
-	bot := New("keel", token, "approvals", f8s, am)
-	// replacing slack client so we can receive webhooks
-	bot.slackHTTPClient = fi
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	err := bot.Start(ctx)
-	if err != nil {
-		t.Fatalf("failed to start bot: %s", err)
-	}
+	New("keel", token, "approvals", f8s, am, fi)
+	defer b.Stop()
 
 	time.Sleep(1 * time.Second)
 
-	err = am.Create(&types.Approval{
+	err := am.Create(&types.Approval{
 		Identifier:     "k8s/project/repo:1.2.3",
 		VotesRequired:  1,
 		CurrentVersion: "2.3.4",
@@ -127,21 +134,12 @@ func TestProcessApprovedResponse(t *testing.T) {
 
 	am := approvals.New(mem, codecs.DefaultSerializer())
 
-	bot := New("keel", token, "approvals", f8s, am)
-	// replacing slack client so we can receive webhooks
-	bot.slackHTTPClient = fi
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	err := bot.Start(ctx)
-	if err != nil {
-		t.Fatalf("failed to start bot: %s", err)
-	}
+	New("keel", token, "approvals", f8s, am, fi)
+	defer b.Stop()
 
 	time.Sleep(1 * time.Second)
 
-	err = am.Create(&types.Approval{
+	err := am.Create(&types.Approval{
 		Identifier:     "k8s/project/repo:1.2.3",
 		VotesRequired:  1,
 		CurrentVersion: "2.3.4",
@@ -197,15 +195,8 @@ func TestProcessApprovalReply(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
-	bot := New("keel", token, "approvals", f8s, am)
-	// replacing slack client so we can receive webhooks
-	bot.slackHTTPClient = fi
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	bot.ctx = ctx
-
-	go bot.processApprovalResponses()
+	bot := New("keel", token, "approvals", f8s, am, fi)
+	defer b.Stop()
 
 	time.Sleep(1 * time.Second)
 
@@ -242,11 +233,6 @@ func TestProcessRejectedReply(t *testing.T) {
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache(100*time.Hour, 100*time.Hour, 100*time.Hour)
 
-	// token := os.Getenv(constants.EnvSlackToken)
-	// if token == "" {
-	// 	t.Skip()
-	// }
-
 	identifier := "k8s/project/repo:1.2.3"
 
 	am := approvals.New(mem, codecs.DefaultSerializer())
@@ -268,19 +254,11 @@ func TestProcessRejectedReply(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
-	bot := New("keel", "random", "approvals", f8s, am)
+	bot := New("keel", "random", "approvals", f8s, am, fi)
+	defer b.Stop()
 
 	collector := approval.New()
 	collector.Configure(am)
-
-	// replacing slack client so we can receive webhooks
-	bot.slackHTTPClient = fi
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	bot.ctx = ctx
-
-	go bot.processApprovalResponses()
 
 	time.Sleep(1 * time.Second)
 
@@ -302,7 +280,6 @@ func TestProcessRejectedReply(t *testing.T) {
 		t.Errorf("expected to find 0 received vote, found %d", updated.VotesReceived)
 	}
 
-	// if updated.Status() != types.ApprovalStatusRejected {
 	if updated.Status() != types.ApprovalStatusRejected {
 		t.Errorf("expected approval to be in status rejected but got: %s", updated.Status())
 	}
@@ -316,38 +293,37 @@ func TestProcessRejectedReply(t *testing.T) {
 }
 
 func TestIsApproval(t *testing.T) {
-	f8s := &testutil.FakeK8sImplementer{}
-	mem := memory.NewMemoryCache(100*time.Hour, 100*time.Hour, 100*time.Hour)
-
-	identifier := "k8s/project/repo:1.2.3"
-
-	am := approvals.New(mem, codecs.DefaultSerializer())
-	// creating initial approve request
-	err := am.Create(&types.Approval{
-		Identifier:     identifier,
-		VotesRequired:  2,
-		CurrentVersion: "2.3.4",
-		NewVersion:     "3.4.5",
-		Event: &types.Event{
-			Repository: types.Repository{
-				Name: "project/repo",
-				Tag:  "2.3.4",
-			},
-		},
-	})
-
-	if err != nil {
-		t.Fatalf("unexpected error while creating : %s", err)
-	}
-
-	bot := New("keel", "random", "approvals", f8s, am)
-
-	_, isApproval := bot.isApproval(&slack.MessageEvent{
+	// f8s := &testutil.FakeK8sImplementer{}
+	// mem := memory.NewMemoryCache(100*time.Hour, 100*time.Hour, 100*time.Hour)
+	//
+	// identifier := "k8s/project/repo:1.2.3"
+	//
+	// am := approvals.New(mem, codecs.DefaultSerializer())
+	// // creating initial approve request
+	// err := am.Create(&types.Approval{
+	// 	Identifier:     identifier,
+	// 	VotesRequired:  2,
+	// 	CurrentVersion: "2.3.4",
+	// 	NewVersion:     "3.4.5",
+	// 	Event: &types.Event{
+	// 		Repository: types.Repository{
+	// 			Name: "project/repo",
+	// 			Tag:  "2.3.4",
+	// 		},
+	// 	},
+	// })
+	//
+	// if err != nil {
+	// 	t.Fatalf("unexpected error while creating : %s", err)
+	// }
+	// bot := New("keel", "random", "approvals", f8s, am, fi)
+	event := &slack.MessageEvent{
 		Msg: slack.Msg{
 			Channel: "approvals",
 			User:    "user-x",
 		},
-	}, "approve k8s/project/repo:1.2.3")
+	}
+	_, isApproval := b.IsApproval(event.User, "approve k8s/project/repo:1.2.3")
 
 	if !isApproval {
 		t.Errorf("event expected to be an approval")

@@ -12,11 +12,8 @@ import (
 
 	"github.com/nlopes/slack"
 
-	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/constants"
-	"github.com/keel-hq/keel/provider/kubernetes"
-	"github.com/keel-hq/keel/types"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -41,71 +38,42 @@ type Bot struct {
 
 	slackHTTPClient SlackImplementer
 
-	approvalsRespCh chan *bot.ApprovalResponse
-
-	approvalsManager approvals.Manager
 	approvalsChannel string // slack approvals channel name
 
-	k8sImplementer kubernetes.Implementer
-
-	ctx context.Context
+	ctx                context.Context
+	botMessagesChannel chan *bot.BotMessage
+	approvalsRespCh    chan *bot.ApprovalResponse
 }
 
 func init() {
-	bot.RegisterBot("slack", Run)
+	bot.RegisterBot("slack", &Bot{})
 }
 
-func Run(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) (teardown func(), err error) {
+func (b *Bot) Configure(approvalsRespCh chan *bot.ApprovalResponse, botMessagesChannel chan *bot.BotMessage) bool {
 	if os.Getenv(constants.EnvSlackToken) != "" {
-		botName := "keel"
 
+		b.name = "keel"
 		if os.Getenv(constants.EnvSlackBotName) != "" {
-			botName = os.Getenv(constants.EnvSlackBotName)
+			b.name = os.Getenv(constants.EnvSlackBotName)
 		}
 
 		token := os.Getenv(constants.EnvSlackToken)
+		client := slack.New(token)
 
-		approvalsChannel := "general"
+		b.approvalsChannel = "general"
 		if os.Getenv(constants.EnvSlackApprovalsChannel) != "" {
-			approvalsChannel = os.Getenv(constants.EnvSlackApprovalsChannel)
+			b.approvalsChannel = os.Getenv(constants.EnvSlackApprovalsChannel)
 		}
 
-		slackBot := New(botName, token, approvalsChannel, k8sImplementer, approvalsManager)
+		b.slackClient = client
+		b.slackHTTPClient = client
+		b.approvalsRespCh = approvalsRespCh
+		b.botMessagesChannel = botMessagesChannel
 
-		ctx, cancel := context.WithCancel(context.Background())
-
-		err := slackBot.Start(ctx)
-		if err != nil {
-			cancel()
-			return nil, err
-		}
-
-		teardown := func() {
-			// cancelling context
-			cancel()
-		}
-
-		return teardown, nil
+		return true
 	}
-
-	return func() {}, nil
-}
-
-// New - create new bot instance
-func New(name, token, approvalsChannel string, k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) *Bot {
-	client := slack.New(token)
-
-	bot := &Bot{
-		slackClient:      client,
-		slackHTTPClient:  client,
-		k8sImplementer:   k8sImplementer,
-		name:             name,
-		approvalsManager: approvalsManager,
-		approvalsChannel: approvalsChannel,
-		approvalsRespCh:  make(chan *bot.ApprovalResponse), // don't add buffer to make it blocking
-	}
-
-	return bot
+	log.Info("bot.slack.Configure(): Slack approval bot is not configured")
+	return false
 }
 
 // Start - start bot
@@ -136,14 +104,7 @@ func (b *Bot) Start(ctx context.Context) error {
 
 	b.msgPrefix = strings.ToLower("<@" + b.id + ">")
 
-	// processing messages coming from slack RTM client
 	go b.startInternal()
-
-	// processing slack approval responses
-	go b.processApprovalResponses()
-
-	// subscribing for approval requests
-	go b.subscribeForApprovals()
 
 	return nil
 }
@@ -152,7 +113,6 @@ func (b *Bot) startInternal() error {
 	b.slackRTM = b.slackClient.NewRTM()
 
 	go b.slackRTM.ManageConnection()
-
 	for {
 		select {
 		case <-b.ctx.Done():
@@ -216,26 +176,6 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 	return err
 }
 
-func (b *Bot) isApproval(event *slack.MessageEvent, eventText string) (resp *bot.ApprovalResponse, ok bool) {
-	if strings.HasPrefix(strings.ToLower(eventText), bot.ApprovalResponseKeyword) {
-		return &bot.ApprovalResponse{
-			User:   event.User,
-			Status: types.ApprovalStatusApproved,
-			Text:   eventText,
-		}, true
-	}
-
-	if strings.HasPrefix(strings.ToLower(eventText), bot.RejectResponseKeyword) {
-		return &bot.ApprovalResponse{
-			User:   event.User,
-			Status: types.ApprovalStatusRejected,
-			Text:   eventText,
-		}, true
-	}
-
-	return nil, false
-}
-
 // TODO(k): cache results in a map or get this info on startup. Although
 // if channel was then recreated (unlikely), we would miss results
 func (b *Bot) isApprovalsChannel(event *slack.MessageEvent) bool {
@@ -267,73 +207,24 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 
 	// only accepting approvals from approvals channel
 	if b.isApprovalsChannel(event) {
-		approval, ok := b.isApproval(event, eventText)
+		approval, ok := bot.IsApproval(event.User, eventText)
 		if ok {
 			b.approvalsRespCh <- approval
 			return
 		}
 	}
 
-	// Responses that are just a canned string response
-	if responseLines, ok := bot.BotEventTextToResponse[eventText]; ok {
-		response := strings.Join(responseLines, "\n")
-		b.respond(event, formatAsSnippet(response))
-		return
+	b.botMessagesChannel <- &bot.BotMessage{
+		Message: eventText,
+		User:    event.User,
+		Channel: event.Channel,
+		Name:    "slack",
 	}
-
-	if b.isCommand(event, eventText) {
-		b.handleCommand(event, eventText)
-		return
-	}
-
-	log.WithFields(log.Fields{
-		"name":      b.name,
-		"bot_id":    b.id,
-		"command":   eventText,
-		"untrimmed": strings.Trim(strings.ToLower(event.Text), " \n\r"),
-	}).Debug("handleMessage: bot couldn't recognise command")
+	return
 }
 
-func (b *Bot) isCommand(event *slack.MessageEvent, eventText string) bool {
-	if bot.StaticBotCommands[eventText] {
-		return true
-	}
-
-	for _, prefix := range bot.DynamicBotCommandPrefixes {
-		if strings.HasPrefix(eventText, prefix) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (b *Bot) handleCommand(event *slack.MessageEvent, eventText string) {
-	switch eventText {
-	case "get deployments":
-		log.Info("getting deployments")
-		response := bot.DeploymentsResponse(bot.Filter{}, b.k8sImplementer)
-		b.respond(event, formatAsSnippet(response))
-		return
-	case "get approvals":
-		response := bot.ApprovalsResponse(b.approvalsManager)
-		b.respond(event, formatAsSnippet(response))
-		return
-	}
-
-	// handle dynamic commands
-	if strings.HasPrefix(eventText, bot.RemoveApprovalPrefix) {
-		id := strings.TrimSpace(strings.TrimPrefix(eventText, bot.RemoveApprovalPrefix))
-		snippet := bot.RemoveApprovalHandler(id, b.approvalsManager)
-		b.respond(event, formatAsSnippet(snippet))
-		return
-	}
-
-	log.Info("command not found")
-}
-
-func (b *Bot) respond(event *slack.MessageEvent, response string) {
-	b.slackRTM.SendMessage(b.slackRTM.NewOutgoingMessage(response, event.Channel))
+func (b *Bot) Respond(text string, channel string) {
+	b.slackRTM.SendMessage(b.slackRTM.NewOutgoingMessage(formatAsSnippet(text), channel))
 }
 
 func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
