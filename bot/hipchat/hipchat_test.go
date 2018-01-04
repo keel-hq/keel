@@ -7,15 +7,18 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	h "github.com/daneharrigan/hipchat"
+
 	"github.com/keel-hq/keel/approvals"
 	b "github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/codecs"
+
 	testutil "github.com/keel-hq/keel/util/testing"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type fakeProvider struct {

@@ -5,9 +5,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/glower/keel/extension/approval"
-	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/nlopes/slack"
+
+	"github.com/keel-hq/keel/extension/approval"
+	"github.com/keel-hq/keel/provider/kubernetes"
 
 	"github.com/keel-hq/keel/approvals"
 	b "github.com/keel-hq/keel/bot"
@@ -232,6 +233,11 @@ func TestProcessRejectedReply(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache(100*time.Hour, 100*time.Hour, 100*time.Hour)
+
+	token := os.Getenv(constants.EnvSlackToken)
+	if token == "" {
+		t.Skip()
+	}
 
 	identifier := "k8s/project/repo:1.2.3"
 
