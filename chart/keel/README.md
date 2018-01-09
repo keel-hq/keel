@@ -107,6 +107,13 @@ The following table lists has the main configurable parameters (polling, trigger
 | `webhookRelay.secret`             | WebhookRelay secret                    |                                                           |
 | `webhookRelay.bucket`             | WebhookRelay bucket                    |                                                           |
 | `rbac.enabled`                    | Enable/disable RBAC installation       | `false`                                                   |
+| `hipchat.enabled`                 | Enable/disable hipchat integration     | `false`                                                   |
+| `hipchat.token`                   | Hipchat token                          |                                                           |
+| `hipchat.channel`                 | Hipchat channel                        |                                                           |
+| `hipchat.approvals_channel`       | Hipchat channel for approvals          |                                                           |
+| `hipchat.bot_name`                | Name of the Hipchat bot                |                                                           |
+| `hipchat.user_name`               | Hipchat username in Jabber format      |                                                           |
+| `hipchat.password`                | Hipchat password for approvals user    |                                                           |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 

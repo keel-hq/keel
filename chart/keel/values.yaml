@@ -36,6 +36,16 @@ slack:
   token: ""
   channel: ""
 
+# Hipchat notification and approvals
+hipchat:
+  enabled: false
+  token: ""
+  channel: ""
+  approvals_channel: ""
+  bot_name: ""
+  user_name: ""
+  password: ""
+
 # Keel service
 # Enable to receive webhooks from Docker registries
 service:
