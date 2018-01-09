@@ -53,6 +53,8 @@ spec:
               value: "{{ .Values.slack.token }}"
             - name: SLACK_CHANNELS
               value: "{{ .Values.slack.channel }}"
+            - name: SLACK_APPROVALS_CHANNEL
+              value: "{{ .Values.slack.approvals_channel }}"
 {{- end }}
 {{- if .Values.hipchat.enabled }}
             # Enable hipchat approvials and notification
