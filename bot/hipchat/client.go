@@ -20,14 +20,13 @@ type HipchatClient struct {
 }
 
 func connect(username, password string, connAttempts int) *HipchatClient {
-	// c := &Client{}
 	attempts := connAttempts
 	for {
 		if attempts == 0 {
 			log.Errorf("Can not reach hipchat server after %d attempts", connAttempts)
 			return nil
 		}
-		log.Info("bot.hipchat.connect: try to connect to hipchat")
+		// Room history is automatically sent when joining a room unless your JID resource is “bot”.
 		client, err := hipchat.NewClient(username, password, "bot", "plain")
 
 		if err != nil {
@@ -39,8 +38,6 @@ func connect(username, password string, connAttempts int) *HipchatClient {
 		if client != nil && err == nil {
 			log.Info("Successfully connected to hipchat server")
 			return &HipchatClient{client}
-			// c.cli = client
-			// return c
 		}
 		log.Debugln("Can not connect to hipcaht now, wait fo 30 seconds")
 		time.Sleep(30 * time.Second)

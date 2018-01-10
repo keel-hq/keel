@@ -19,9 +19,8 @@ const connectionAttemptsDefault = 5
 
 // Bot - main hipchat bot container
 type Bot struct {
-	id          string // bot id
-	name        string // bot name
-	mentionName string
+	id   string // bot id
+	name string // bot name
 
 	userName string // bot user name
 	password string // bot user password
@@ -55,7 +54,6 @@ func (b *Bot) Configure(approvalsRespCh chan *bot.ApprovalResponse, botMessagesC
 		if cli != nil {
 			b.hipchatClient = cli
 		}
-		b.mentionName = "@" + strings.Replace(b.name, " ", "", -1)
 		b.botMessagesChannel = botMessagesChannel
 		b.approvalsRespCh = approvalsRespCh
 
@@ -83,7 +81,6 @@ func (b *Bot) Start(ctx context.Context) error {
 	client.Status("chat")
 	client.Join(b.approvalsChannel, b.name)
 	b.postMessage("Keel bot was started")
-
 	go client.KeepAlive()
 	go func() {
 		for {
@@ -111,13 +108,12 @@ func (b *Bot) handleMessage(message *h.Message) {
 	}
 
 	if !b.isBotMessage(msg) {
-		log.Debugf("handleMessage(): is not a bot message [%v]", msg)
+		log.Debugf("handleMessage(): is not a bot message [%#v]", msg)
 		return
 	}
 
 	approval, ok := bot.IsApproval(msg.From, msg.Body)
 	if ok {
-		log.Debug("handleMessage(): approval=%v", approval)
 		b.approvalsRespCh <- approval
 		return
 	}
@@ -138,24 +134,11 @@ func formatAsSnippet(msg string) string {
 
 func (b *Bot) trimXMPPMessage(message *h.Message) *h.Message {
 	msg := h.Message{}
-	msg.MentionName = trimMentionName(message.Body)
 	msg.Body = b.trimBot(message.Body)
 	msg.From = b.trimUser(message.From)
 	msg.To = b.trimUser(message.To)
 
 	return &msg
-}
-
-func trimMentionName(message string) string {
-	re := regexp.MustCompile(`^(@\w+)`)
-	match := re.FindStringSubmatch(strings.TrimSpace(message))
-	if match == nil {
-		return ""
-	}
-	if len(match) != 0 {
-		return strings.TrimSpace(match[1])
-	}
-	return ""
 }
 
 func (b *Bot) trimUser(user string) string {
@@ -176,14 +159,15 @@ func (b *Bot) postMessage(msg string) error {
 }
 
 func (b *Bot) trimBot(msg string) string {
-	msg = strings.TrimPrefix(msg, b.mentionName)
+	var re = regexp.MustCompile(`(^@\w+)`)
+	msg = re.ReplaceAllString(msg, "")
 	msg = strings.Trim(msg, "\n")
 	msg = strings.TrimSpace(msg)
 	return strings.ToLower(msg)
 }
 
 func (b *Bot) isBotMessage(message *h.Message) bool {
-	if message.MentionName == b.mentionName {
+	if message.To == "bot" {
 		return true
 	}
 	return false
