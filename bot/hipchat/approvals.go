@@ -8,7 +8,7 @@ import (
 
 func (b *Bot) RequestApproval(req *types.Approval) error {
 	msg := fmt.Sprintf(ApprovalRequiredTempl,
-		req.Message, b.mentionName, req.Identifier, b.mentionName, req.Identifier,
+		req.Message, req.Identifier, req.Identifier,
 		req.VotesReceived, req.VotesRequired, req.Delta(), req.Identifier,
 		req.Provider.String())
 	return b.postMessage(formatAsSnippet(msg))

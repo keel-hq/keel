@@ -2,8 +2,8 @@ package hipchat
 
 var ApprovalRequiredTempl = `Approval required!
   %s
-  To vote for change type '%s approve %s'
-  To reject it: '%s reject %s'
+  To vote for change send 'approve %s' to me
+  To reject it: 'reject %s'
     Votes: %d/%d
     Delta: %s
     Identifier: %s
