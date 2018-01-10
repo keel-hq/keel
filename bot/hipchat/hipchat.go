@@ -50,7 +50,7 @@ func (b *Bot) Configure(approvalsRespCh chan *bot.ApprovalResponse, botMessagesC
 		b.password = os.Getenv(constants.EnvHipchatApprovalsPasswort)
 		connAttempts := getConnectionAttempts()
 
-		cli := connect(b.userName, b.password, b.name, connAttempts)
+		cli := connect(b.userName, b.password, connAttempts)
 		if cli != nil {
 			b.hipchatClient = cli
 		}
@@ -167,7 +167,7 @@ func (b *Bot) trimBot(msg string) string {
 }
 
 func (b *Bot) isBotMessage(message *h.Message) bool {
-	if message.To == b.name {
+	if message.To == "bot" {
 		return true
 	}
 	return false

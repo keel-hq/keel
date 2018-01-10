@@ -19,16 +19,15 @@ type HipchatClient struct {
 	XmppImplementer
 }
 
-func connect(username, password, botName string, connAttempts int) *HipchatClient {
-	// c := &Client{}
+func connect(username, password string, connAttempts int) *HipchatClient {
 	attempts := connAttempts
 	for {
 		if attempts == 0 {
 			log.Errorf("Can not reach hipchat server after %d attempts", connAttempts)
 			return nil
 		}
-		log.Infof("bot.hipchat.connect: try to connect to hipchat as [%s]", botName)
-		client, err := hipchat.NewClient(username, password, botName, "plain")
+		// Room history is automatically sent when joining a room unless your JID resource is “bot”.
+		client, err := hipchat.NewClient(username, password, "bot", "plain")
 
 		if err != nil {
 			log.Errorf("bot.hipchat.connect: Error=%s", err)

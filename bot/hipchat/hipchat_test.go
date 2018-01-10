@@ -62,7 +62,7 @@ func (i *fakeXmppImplementer) messageFromChat(message string) {
 	i.messages <- &h.Message{
 		Body: "@keel " + message,
 		From: "111111_approvals@conf.hipchat.com/test",
-		To:   "222222_333333@chat.hipchat.com/keel",
+		To:   "222222_333333@chat.hipchat.com/bot",
 	}
 }
 
