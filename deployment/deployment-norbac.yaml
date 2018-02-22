@@ -62,6 +62,8 @@ spec:
             #   value: "111111_2222222"
             # - name: HIPCHAT_APPROVALS_PASSWORT
             #   value: "pass"
+            # - name: MATTERMOST_ENDPOINT
+            #   value: "" 
           name: keel
           command: ["/bin/keel"]
           ports:

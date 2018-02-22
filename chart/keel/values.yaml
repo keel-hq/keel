@@ -47,6 +47,10 @@ hipchat:
   user_name: ""
   password: ""
 
+mattermost:
+  enabled: false
+  endpoint: ""
+
 # Keel service
 # Enable to receive webhooks from Docker registries
 service:
