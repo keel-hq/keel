@@ -21,7 +21,15 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/keel"]
+          volumeMounts:
+            - name: google
+              mountPath: "/google"
+              readOnly: true
           env:
+{{- if .Values.googleApplicationCredentials }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /google/google-application-credentials.json
+{{- end }}
 {{- if .Values.polling.enabled }}
             # Enable polling
             - name: POLL
@@ -104,3 +112,9 @@ spec:
 {{- end }}
       nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 8 }}
+{{- if .Values.googleApplicationCredentials }}
+      volumes:
+        - name: google
+          secret:
+            secretName: {{ template "name" . }}-google
+{{- end }}

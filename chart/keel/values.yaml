@@ -99,3 +99,6 @@ resources:
 
 # NodeSelector
 nodeSelector: {}
+
+# json of service account
+# googleApplicationCredentials:
