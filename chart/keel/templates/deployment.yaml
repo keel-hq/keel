@@ -48,6 +48,11 @@ spec:
             - name: WEBHOOK_ENDPOINT
               value: "{{ .Values.webhook.endpoint }}"
 {{- end }}
+{{- if .Values.mattermost.enabled }}
+            # Enable mattermost endpoint
+            - name: MATTERMOST_ENDPOINT
+              value: "{{ .Values.mattermost.endpoint }}"
+{{- end }}
 {{- if .Values.slack.enabled }}
             - name: SLACK_TOKEN
               value: "{{ .Values.slack.token }}"
