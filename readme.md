@@ -41,7 +41,7 @@ Keel provides several key features:
 * __Notifications__ - out of the box Keel has Slack and standard webhook notifications, more info [here](https://keel.sh/v1/guide/documentation.html#Notifications)
 
 <p align="center">
-  <a href="https://keel.sh" target="_blank"><img width="500"src="https://keel.sh/images/keel-overview.png"></a>
+  <a href="https://keel.sh" target="_blank"><img width="700"src="https://keel.sh/images/keel-overview.png"></a>
 </p>
 
 ### Support
