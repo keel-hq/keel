@@ -38,7 +38,7 @@ Keel provides several key features:
 
 *  __[Polling](https://keel.sh/v1/guide/documentation.html#Polling)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for new tags (if current tag is semver) or same tag SHA digest change (ie: `latest`).
 
-* __Notifications__ - out of the box Keel has Slack and standard webhook notifications, more info [here](https://keel.sh/v1/guide/documentation.html#Notifications)
+* __Notifications__ - out of the box Keel has Slack, Hipchat, Mattermost and standard webhook notifications, more info [here](https://keel.sh/v1/guide/documentation.html#Notifications)
 
 <p align="center">
   <a href="https://keel.sh" target="_blank"><img width="700"src="https://keel.sh/images/keel-overview.png"></a>
@@ -61,6 +61,16 @@ Support Keel's development by:
 A step-by-step guide to install Keel on your Kubernetes cluster is viewable on the Keel website:
 
 [https://keel.sh/v1/guide/quick-start.html](https://keel.sh/v1/guide/quick-start.html)
+
+### Configuration
+
+Once Keel is deployed, you only need to specify update policy on your deployment file or Helm chart:
+
+<p align="center">
+  <a href="https://keel.sh/v1/guide/" target="_blank"><img width="700"src="https://keel.sh/keel-minimal-configuration.png"></a>
+</p>
+
+No additional configuration is required. Enabling continuous delivery for your workloads has never been this easy!
 
 ### Documentation
 
