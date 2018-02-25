@@ -65,7 +65,12 @@ func (s *sender) Send(event types.EventNotification) error {
 		From:    s.botName,
 	}
 
-	for _, channel := range s.channels {
+	channels := s.channels
+	if len(event.Channels) > 0 {
+		channels = event.Channels
+	}
+
+	for _, channel := range channels {
 		_, err := s.hipchatClient.Room.Notification(channel, notification)
 		if err != nil {
 			log.WithFields(log.Fields{
