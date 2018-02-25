@@ -34,3 +34,6 @@ const (
 
 // EnvNotificationLevel - minimum level for notifications, defaults to info
 const EnvNotificationLevel = "NOTIFICATION_LEVEL"
+
+// KeelLogoURL - is a logo URL for bot icon
+const KeelLogoURL = "https://keel.sh/images/logo.png"
