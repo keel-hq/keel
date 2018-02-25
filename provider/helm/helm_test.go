@@ -409,11 +409,11 @@ image:
   repository: gcr.io/v2-namespace/hello-world
   tag: 1.1.0
 
-keel:  
-	policy: all  
-	notificationChannels:
-	  - chan1
-	  - chan2
+keel:
+  policy: all
+  notificationChannels:
+    - chan1
+    - chan2
   images:
     - repository: image.repository
       tag: image.tag
