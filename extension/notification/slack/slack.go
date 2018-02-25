@@ -62,6 +62,7 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 func (s *sender) Send(event types.EventNotification) error {
 	params := slack.NewPostMessageParameters()
 	params.Username = s.botName
+	params.IconURL = constants.KeelLogoURL
 
 	params.Attachments = []slack.Attachment{
 		slack.Attachment{
@@ -79,7 +80,12 @@ func (s *sender) Send(event types.EventNotification) error {
 		},
 	}
 
-	for _, channel := range s.channels {
+	chans := s.channels
+	if len(event.Channels) > 0 {
+		chans = event.Channels
+	}
+
+	for _, channel := range chans {
 		_, _, err := s.slackClient.PostMessage(channel, "", params)
 		if err != nil {
 			log.WithFields(log.Fields{
