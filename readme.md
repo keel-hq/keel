@@ -67,7 +67,7 @@ A step-by-step guide to install Keel on your Kubernetes cluster is viewable on t
 Once Keel is deployed, you only need to specify update policy on your deployment file or Helm chart:
 
 <p align="center">
-  <a href="https://keel.sh/v1/guide/" target="_blank"><img width="700"src="https://keel.sh/keel-minimal-configuration.png"></a>
+  <a href="https://keel.sh/v1/guide/" target="_blank"><img width="700"src="https://keel.sh/images/keel-minimal-configuration.png"></a>
 </p>
 
 No additional configuration is required. Enabling continuous delivery for your workloads has never been this easy!
