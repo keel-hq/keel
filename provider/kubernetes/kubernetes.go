@@ -204,6 +204,8 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 
 		deployment := plan.Deployment
 
+		notificationChannels := types.ParseEventNotificationChannels(deployment.Annotations)
+
 		reset, delta, err := checkForReset(deployment, p.implementer)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -244,13 +246,13 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 			}
 
 			deployment = refresh
-
 			p.sender.Send(types.EventNotification{
 				Name:      "preparing to update deployment after reset",
 				Message:   fmt.Sprintf("Preparing to update deployment %s/%s %s->%s (%s)", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&refresh), ", ")),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationPreDeploymentUpdate,
 				Level:     types.LevelDebug,
+				Channels:  notificationChannels,
 			})
 
 			err = p.implementer.Update(&refresh)
@@ -267,6 +269,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 					CreatedAt: time.Now(),
 					Type:      types.NotificationDeploymentUpdate,
 					Level:     types.LevelError,
+					Channels:  notificationChannels,
 				})
 				continue
 			}
@@ -277,6 +280,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 				CreatedAt: time.Now(),
 				Type:      types.NotificationDeploymentUpdate,
 				Level:     types.LevelSuccess,
+				Channels:  notificationChannels,
 			})
 
 			updated = append(updated, &refresh)
@@ -291,6 +295,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 			CreatedAt: time.Now(),
 			Type:      types.NotificationPreDeploymentUpdate,
 			Level:     types.LevelDebug,
+			Channels:  notificationChannels,
 		})
 
 		err = p.implementer.Update(&deployment)
@@ -307,6 +312,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 				CreatedAt: time.Now(),
 				Type:      types.NotificationDeploymentUpdate,
 				Level:     types.LevelError,
+				Channels:  notificationChannels,
 			})
 
 			continue
@@ -318,6 +324,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 			CreatedAt: time.Now(),
 			Type:      types.NotificationDeploymentUpdate,
 			Level:     types.LevelSuccess,
+			Channels:  notificationChannels,
 		})
 
 		log.WithFields(log.Fields{
