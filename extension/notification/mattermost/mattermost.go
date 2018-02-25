@@ -83,7 +83,6 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 }
 
 type notificationEnvelope struct {
-	Chanel   string `json:"channel"`
 	Username string `json:"username"`
 	IconURL  string `json:"icon_url"`
 	Text     string `json:"text"`
@@ -92,7 +91,7 @@ type notificationEnvelope struct {
 func (s *sender) Send(event types.EventNotification) error {
 	// Marshal notification.
 	jsonNotification, err := json.Marshal(notificationEnvelope{
-		IconURL:  "https://keel.sh/images/logo.png",
+		IconURL:  constants.KeelLogoURL,
 		Username: s.name,
 		Text:     fmt.Sprintf("#### %s \n %s", event.Type.String(), event.Message),
 	})

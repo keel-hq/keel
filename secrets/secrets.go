@@ -101,7 +101,7 @@ func (g *DefaultGetter) lookupSecrets(image *types.TrackedImage) ([]string, erro
 			"image":        image.Image.Repository(),
 			"pod_selector": selector,
 			"pods_checked": len(podList.Items),
-		}).Warn("secrets.defaultGetter.lookupSecrets: no secrets for image found")
+		}).Debug("secrets.defaultGetter.lookupSecrets: no secrets for image found")
 	}
 
 	return secrets, nil

@@ -400,6 +400,27 @@ keel:
 `
 	valuesBasic, _ := chartutil.ReadValues([]byte(valuesBasicStr))
 
+	var valuesChannelsStr = `
+name: al Rashid
+where:
+  city: Basrah
+  title: caliph
+image:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.1.0
+
+keel:
+  policy: all
+  notificationChannels:
+    - chan1
+    - chan2
+  images:
+    - repository: image.repository
+      tag: image.tag
+
+`
+	valuesChannels, _ := chartutil.ReadValues([]byte(valuesChannelsStr))
+
 	var valuesPollStr = `
 name: al Rashid
 where:
@@ -435,6 +456,18 @@ keel:
 			want: &KeelChartConfig{
 				Policy:  types.PolicyTypeAll,
 				Trigger: types.TriggerTypeDefault,
+				Images: []ImageDetails{
+					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+				},
+			},
+		},
+		{
+			name: "custom notification channels",
+			args: args{vals: valuesChannels},
+			want: &KeelChartConfig{
+				Policy:               types.PolicyTypeAll,
+				Trigger:              types.TriggerTypeDefault,
+				NotificationChannels: []string{"chan1", "chan2"},
 				Images: []ImageDetails{
 					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},

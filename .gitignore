@@ -3,3 +3,4 @@ deployment.yml
 .test_env.sh
 hack/deployment-norbac.yaml
 hack/deployment-rbac.yaml
+hack/deployment-norbac-helm.yaml

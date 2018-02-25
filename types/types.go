@@ -33,6 +33,10 @@ const KeelPollDefaultSchedule = "@every 1m"
 // KeelDigestAnnotation - digest annotation
 const KeelDigestAnnotation = "keel.sh/digest"
 
+// KeelNotificationChanAnnotation - optional notification to override
+// default notification channel(-s) per deployment/chart
+const KeelNotificationChanAnnotation = "keel.sh/notify"
+
 // KeelMinimumApprovalsLabel - min approvals
 const KeelMinimumApprovalsLabel = "keel.sh/approvals"
 
@@ -174,6 +178,27 @@ type EventNotification struct {
 	CreatedAt time.Time    `json:"createdAt"`
 	Type      Notification `json:"type"`
 	Level     Level        `json:"level"`
+	// Channels is an optional variable to override
+	// default channel(-s) when performing an update
+	Channels []string `json:"-"`
+}
+
+// ParseEventNotificationChannels - parses deployment annotations  or chart config
+// to get channel overrides
+func ParseEventNotificationChannels(annotations map[string]string) []string {
+	channels := []string{}
+	if annotations == nil {
+		return channels
+	}
+	chanStr, ok := annotations[KeelNotificationChanAnnotation]
+	if ok {
+		chans := strings.Split(chanStr, ",")
+		for _, c := range chans {
+			channels = append(channels, strings.TrimSpace(c))
+		}
+	}
+
+	return channels
 }
 
 // Notification - notification types used by notifier

@@ -70,12 +70,13 @@ type Root struct {
 
 // KeelChartConfig - keel related configuration taken from values.yaml
 type KeelChartConfig struct {
-	Policy           types.PolicyType  `json:"policy"`
-	Trigger          types.TriggerType `json:"trigger"`
-	PollSchedule     string            `json:"pollSchedule"`
-	Approvals        int               `json:"approvals"`        // Minimum required approvals
-	ApprovalDeadline int               `json:"approvalDeadline"` // Deadline in hours
-	Images           []ImageDetails    `json:"images"`
+	Policy               types.PolicyType  `json:"policy"`
+	Trigger              types.TriggerType `json:"trigger"`
+	PollSchedule         string            `json:"pollSchedule"`
+	Approvals            int               `json:"approvals"`        // Minimum required approvals
+	ApprovalDeadline     int               `json:"approvalDeadline"` // Deadline in hours
+	Images               []ImageDetails    `json:"images"`
+	NotificationChannels []string          `json:"notificationChannels"` // optional notification channels
 }
 
 // ImageDetails - image details
@@ -285,6 +286,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 			CreatedAt: time.Now(),
 			Type:      types.NotificationPreReleaseUpdate,
 			Level:     types.LevelDebug,
+			Channels:  plan.Config.NotificationChannels,
 		})
 
 		err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values)
@@ -301,6 +303,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 				CreatedAt: time.Now(),
 				Type:      types.NotificationReleaseUpdate,
 				Level:     types.LevelError,
+				Channels:  plan.Config.NotificationChannels,
 			})
 			continue
 		}
@@ -311,6 +314,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 			CreatedAt: time.Now(),
 			Type:      types.NotificationReleaseUpdate,
 			Level:     types.LevelSuccess,
+			Channels:  plan.Config.NotificationChannels,
 		})
 
 	}

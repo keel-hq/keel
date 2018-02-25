@@ -1,6 +1,7 @@
 package types
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
@@ -124,5 +125,44 @@ func TestNotExpired(t *testing.T) {
 	if aprv.Expired() {
 		t.Errorf("expected approval to be not expired")
 
+	}
+}
+
+func TestParseEventNotificationChannels(t *testing.T) {
+	type args struct {
+		annotations map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "no chans",
+			args: args{map[string]string{"foo": "bar"}},
+			want: []string{},
+		},
+		{
+			name: "one chan",
+			args: args{map[string]string{KeelNotificationChanAnnotation: "verychan"}},
+			want: []string{"verychan"},
+		},
+		{
+			name: "two chans with space",
+			args: args{map[string]string{KeelNotificationChanAnnotation: "verychan, corp"}},
+			want: []string{"verychan", "corp"},
+		},
+		{
+			name: "two chans no space",
+			args: args{map[string]string{KeelNotificationChanAnnotation: "verychan,corp"}},
+			want: []string{"verychan", "corp"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ParseEventNotificationChannels(tt.args.annotations); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseEventNotificationChannels() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
