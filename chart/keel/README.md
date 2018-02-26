@@ -24,20 +24,12 @@ Keel provides several key features:
 
 **Note**: For now Keel gets installed into `kube-system` _namespace_ by default as where Helm's `Tiller` is installed.
 
-## Installing the Chart with Kubernetes provider support
+## Installing
 
-Docker image _polling_ and _Kubernetes_ provider are set by default, then Kubernetes _deployments_ can be upgraded when new Docker image is available:
-
-```console
-helm upgrade --install keel keel"
-```
-
-## Installing the Chart with Helm provider support
-
-Docker image _polling_ is set by default, but we need to enable _Helm provider_ support, then Helm _releases_ can be upgraded when new Docker image is available:
+Docker image _polling_, _Kubernetes provider_ and _Helm provider_ support are set by default, then Kubernetes _deployments_ can be upgraded when new Docker image is available:
 
 ```console
-helm upgrade --install keel keel --set helmProvider.enabled="true"
+helm upgrade --install keel keel/
 ```
 
 ### Setting up Helm release to be automatically updated by Keel
@@ -78,7 +70,7 @@ idea how to set automatic updates.
 To uninstall/delete the `keel` deployment:
 
 ```console
-$ helm delete keel
+$ helm delete --purge keel
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
@@ -90,7 +82,7 @@ The following table lists has the main configurable parameters (polling, trigger
 | Parameter                         | Description                            | Default                                                   |
 | --------------------------------- | -------------------------------------- | --------------------------------------------------------- |
 | `polling.enabled`                 | Docker registries polling              | `true`                                                    |
-| `helmProvider.enabled`            | Enable/disable Helm provider           | `false`                                                   |
+| `helmProvider.enabled`            | Enable/disable Helm provider           | `true`                                                   |
 | `gcr.enabled`                     | Enable/disable GCR Registry            | `false`                                                   |
 | `gcr.projectID`                   | GCP Project ID GCR belongs to          |                                                           |
 | `gcr.pubsub.enabled`              | Enable/disable GCP Pub/Sub trigger     | `false`                                                   |
@@ -120,6 +112,6 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
 
 ```console
-$ helm install --name keel -f values.yaml keel
+$ helm install --name keel -f values.yaml keel/
 ```
 > **Tip**: You can use the default [values.yaml](values.yaml)

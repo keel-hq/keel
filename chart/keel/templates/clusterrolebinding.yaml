@@ -2,13 +2,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ template "name" . }}
+  name: {{ template "keel.name" . }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ template "name" . }}
+  name: {{ template "keel.name" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ template "name" . }}
+    name: {{ template "keel.name" . }}
     namespace: kube-system
 {{ end }}

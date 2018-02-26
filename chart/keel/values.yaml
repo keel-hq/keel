@@ -4,7 +4,7 @@
 
 image:
   repository: keelhq/keel
-  tag: 0.5.2
+  tag: 0.6.1
   pullPolicy: IfNotPresent
 
 # Polling is enabled by default,
@@ -14,7 +14,7 @@ polling:
 
 # Helm provider support
 helmProvider:
-  enabled: false
+  enabled: true
 
 # Google Container Registry
 # GCP Project ID
@@ -107,14 +107,14 @@ nodeSelector: {}
 # json of service account
 # googleApplicationCredentials: |-
 #   {
-#     "type": 
+#     "type":
 #     "project_id"
-#     "private_key_id": 
-#     "private_key": 
-#     "client_email": 
-#     "client_id": 
-#     "auth_uri": 
-#     "token_uri": 
-#     "auth_provider_x509_cert_url": 
-#     "client_x509_cert_url": 
+#     "private_key_id":
+#     "private_key":
+#     "client_email":
+#     "client_id":
+#     "auth_uri":
+#     "token_uri":
+#     "auth_provider_x509_cert_url":
+#     "client_x509_cert_url":
 #   }
