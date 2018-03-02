@@ -31,8 +31,10 @@ webhook:
   endpoint: ""
 
 # Slack Notification
+# bot name (default keel) must exist!
 slack:
   enabled: false
+  bot_name: ""
   token: ""
   channel: ""
   approvals_channel: ""
