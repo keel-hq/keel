@@ -13,6 +13,14 @@ rules:
       - list
   - apiGroups:
       - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - watch
+      - list
+  - apiGroups:
+      - ""
       - extensions
       - apps
     resources:
