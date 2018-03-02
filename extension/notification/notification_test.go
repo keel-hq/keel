@@ -127,3 +127,38 @@ func TestSendLevelNotificationB(t *testing.T) {
 		t.Errorf("unexpected level: %s", fs.sent.Level)
 	}
 }
+
+func TestSendLevelNotificationC(t *testing.T) {
+	sndr := New(context.Background())
+
+	sndr.Configure(&Config{
+		Level:    types.LevelDebug,
+		Attempts: 1,
+	})
+
+	fs := &fakeSender{
+		shouldConfigure: true,
+		shouldError:     nil,
+	}
+
+	RegisterSender("fakeSender", fs)
+	defer sndr.UnregisterSender("fakeSender")
+
+	err := sndr.Send(types.EventNotification{
+		Level:   types.LevelDebug,
+		Type:    types.NotificationPreDeploymentUpdate,
+		Message: "foo",
+	})
+
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if fs.sent.Message != "foo" {
+		t.Errorf("unexpected notification message: %s", fs.sent.Message)
+	}
+
+	if fs.sent.Level != types.LevelDebug {
+		t.Errorf("unexpected level: %s", fs.sent.Level)
+	}
+}
