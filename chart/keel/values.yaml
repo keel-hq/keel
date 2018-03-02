@@ -110,3 +110,6 @@ nodeSelector: {}
 # base64 encoded json of GCP service account
 # e.g. --set googleApplicationCredentials=$(cat <JSON_KEY_FIEL> | base64)
 # googleApplicationCredentials: ""
+
+# Enable DEBUG logging
+debug: false
