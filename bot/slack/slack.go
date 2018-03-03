@@ -15,7 +15,7 @@ import (
 	"github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/constants"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // SlackImplementer - implementes slack HTTP functionality, used to

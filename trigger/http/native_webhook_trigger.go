@@ -8,7 +8,7 @@ import (
 
 	"github.com/keel-hq/keel/types"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // nativeHandler - used to trigger event directly

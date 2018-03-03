@@ -9,7 +9,7 @@ import (
 	"github.com/keel-hq/keel/secrets"
 	"github.com/keel-hq/keel/types"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // DefaultManager - default manager is responsible for scanning deployments and identifying

@@ -18,7 +18,7 @@ import (
 	"github.com/keel-hq/keel/util/policies"
 	"github.com/keel-hq/keel/util/version"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // ProviderName - provider name
@@ -392,12 +392,13 @@ func getDesiredImage(delta map[string]string, currentImage string) (string, erro
 	return "", fmt.Errorf("image %s not found in deltas", currentImage)
 }
 
-// checkForReset returns delta to apply
+// checkForReset returns delta to apply after setting image
 func checkForReset(deployment v1beta1.Deployment, implementer Implementer) (bool, map[string]string, error) {
 	reset := false
 	annotations := deployment.GetAnnotations()
 	delta := make(map[string]string)
 	for idx, c := range deployment.Spec.Template.Spec.Containers {
+
 		if shouldPullImage(annotations, c.Image) {
 			ref, err := image.Parse(c.Image)
 			if err != nil {

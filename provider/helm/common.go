@@ -9,7 +9,7 @@ import (
 
 	"k8s.io/helm/pkg/chartutil"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // ErrKeelConfigNotFound - default error when keel configuration for chart is not defined

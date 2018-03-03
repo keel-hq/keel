@@ -9,7 +9,7 @@ import (
 
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Filter - deployment filter

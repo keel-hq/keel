@@ -6,7 +6,7 @@ import (
 
 	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func checkUnversionedRelease(repo *types.Repository, namespace, name string, chart *hapi_chart.Chart, config *hapi_chart.Config) (plan *UpdatePlan, shouldUpdateRelease bool, err error) {

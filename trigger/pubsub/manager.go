@@ -8,7 +8,7 @@ import (
 
 	"github.com/keel-hq/keel/provider"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // DefaultManager - subscription manager

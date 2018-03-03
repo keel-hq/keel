@@ -5,7 +5,7 @@ import (
 
 	"github.com/rusenask/docker-registry-client/registry"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // errors

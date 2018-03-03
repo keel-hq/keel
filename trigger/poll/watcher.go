@@ -11,7 +11,7 @@ import (
 	"github.com/keel-hq/keel/util/image"
 	"github.com/keel-hq/keel/util/version"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Watcher - generic watcher interface

@@ -124,7 +124,7 @@ imports:
   version: 5a87a1fe426104552279cfe8e8de6b48e537a2d9
   subpackages:
   - kv
-- name: github.com/Sirupsen/logrus
+- name: github.com/sirupsen/logrus
   version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7

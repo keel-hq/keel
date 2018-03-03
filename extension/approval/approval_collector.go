@@ -5,7 +5,7 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 var (

@@ -14,7 +14,7 @@ import (
 
 	"k8s.io/client-go/pkg/api/v1"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // const dockerConfigJSONKey = ".dockerconfigjson"

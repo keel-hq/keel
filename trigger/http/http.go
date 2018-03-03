@@ -15,7 +15,7 @@ import (
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/version"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Opts - http server options

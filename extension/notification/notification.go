@@ -10,7 +10,7 @@ import (
 	"github.com/keel-hq/keel/util/stopper"
 	"github.com/keel-hq/keel/util/timeutil"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
