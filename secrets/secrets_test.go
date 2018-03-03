@@ -8,7 +8,7 @@ import (
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 	testutil "github.com/keel-hq/keel/util/testing"
-	"k8s.io/client-go/pkg/api/v1"
+	"k8s.io/api/core/v1"
 )
 
 var secretDataPayload = `{"https://index.docker.io/v1/":{"username":"user-x","password":"pass-x","email":"karolis.rusenas@gmail.com","auth":"somethinghere"}}`

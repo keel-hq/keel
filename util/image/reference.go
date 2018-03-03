@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/distribution/digest"
+	// "github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
+	"github.com/opencontainers/go-digest"
 )
 
 const (

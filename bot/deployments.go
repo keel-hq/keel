@@ -7,7 +7,7 @@ import (
 	"github.com/keel-hq/keel/bot/formatter"
 	"github.com/keel-hq/keel/provider/kubernetes"
 
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -12,7 +12,7 @@ import (
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/types"
 
-	"k8s.io/client-go/pkg/api/v1"
+	"k8s.io/api/core/v1"
 
 	log "github.com/sirupsen/logrus"
 )
