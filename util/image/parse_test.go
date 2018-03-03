@@ -9,7 +9,7 @@ func TestShortParseWithTag(t *testing.T) {
 
 	reference, err := Parse("foo/bar:1.1")
 	if err != nil {
-		t.Errorf("error while parsing tag: %s", err)
+		t.Fatalf("error while parsing tag: %s", err)
 	}
 
 	if reference.Remote() != DefaultRegistryHostname+"/foo/bar:1.1" {
