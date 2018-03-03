@@ -6,8 +6,11 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	// "k8s.io/api/core/v1"
+
+	"k8s.io/api/core/v1"
+
+	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -81,7 +84,7 @@ func NewKubernetesImplementer(opts *Opts) (*KubernetesImplementer, error) {
 
 // Namespaces - get all namespaces
 func (i *KubernetesImplementer) Namespaces() (*v1.NamespaceList, error) {
-	namespaces := i.client.Namespaces()
+	namespaces := i.client.Core().Namespaces()
 	return namespaces.List(meta_v1.ListOptions{})
 }
 
@@ -107,15 +110,15 @@ func (i *KubernetesImplementer) Update(deployment *v1beta1.Deployment) error {
 // Secret - get secret
 func (i *KubernetesImplementer) Secret(namespace, name string) (*v1.Secret, error) {
 
-	return i.client.Secrets(namespace).Get(name, meta_v1.GetOptions{})
+	return i.client.Core().Secrets(namespace).Get(name, meta_v1.GetOptions{})
 }
 
 // Pods - get pods
 func (i *KubernetesImplementer) Pods(namespace, labelSelector string) (*v1.PodList, error) {
-	return i.client.Pods(namespace).List(meta_v1.ListOptions{LabelSelector: labelSelector})
+	return i.client.Core().Pods(namespace).List(meta_v1.ListOptions{LabelSelector: labelSelector})
 }
 
 // ConfigMaps - returns an interface to config maps for a specified namespace
 func (i *KubernetesImplementer) ConfigMaps(namespace string) core_v1.ConfigMapInterface {
-	return i.client.ConfigMaps(namespace)
+	return i.client.Core().ConfigMaps(namespace)
 }

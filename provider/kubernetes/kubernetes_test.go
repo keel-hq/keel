@@ -10,10 +10,10 @@ import (
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/codecs"
 
+	"k8s.io/api/core/v1"
+	"k8s.io/api/extensions/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
 type fakeProvider struct {
