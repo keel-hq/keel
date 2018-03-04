@@ -31,9 +31,6 @@ var versionreg = regexp.MustCompile(`:[^:]*$`)
 // annotation used to specify which image to force pull
 const forceUpdateImageAnnotation = "keel.sh/update-image"
 
-// forceUpdateResetTag - tag used to reset container to force pull image
-const forceUpdateResetTag = "0.0.0"
-
 // UpdatePlan - deployment update plan
 type UpdatePlan struct {
 	// Updated deployment version
@@ -203,93 +200,9 @@ func (p *Provider) processEvent(event *types.Event) (updated []*v1beta1.Deployme
 func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.Deployment, err error) {
 	// for _, deployment := range plans {
 	for _, plan := range plans {
-
 		deployment := plan.Deployment
-
 		notificationChannels := types.ParseEventNotificationChannels(deployment.Annotations)
-
-		reset, delta, err := checkForReset(deployment, p.implementer)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":       err,
-				"namespace":   deployment.Namespace,
-				"annotations": deployment.GetAnnotations(),
-				"deployment":  deployment.Name,
-			}).Error("provider.kubernetes: got error while checking deployment for reset")
-			continue
-		}
-
-		// need to get the new version in order to update
-		if reset {
-			// FIXME: giving some time for k8s to start updating as it
-			// throws an error if you try to modify deployment that's currently being updated
-			time.Sleep(5 * time.Second)
-
-			current, err := p.getDeployment(deployment.Namespace, deployment.Name)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":       err,
-					"namespace":   deployment.Namespace,
-					"annotations": deployment.GetAnnotations(),
-					"deployment":  deployment.Name,
-				}).Error("provider.kubernetes: got error while refreshing deployment after reset")
-				continue
-			}
-			// apply back our changes for images
-			refresh, err := applyChanges(*current, delta)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":       err,
-					"namespace":   deployment.Namespace,
-					"annotations": deployment.GetAnnotations(),
-					"deployment":  deployment.Name,
-				}).Error("provider.kubernetes: got error while applying deployment changes after reset")
-				continue
-			}
-
-			deployment = refresh
-			p.sender.Send(types.EventNotification{
-				Name:      "preparing to update deployment after reset",
-				Message:   fmt.Sprintf("Preparing to update deployment %s/%s %s->%s (%s)", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&refresh), ", ")),
-				CreatedAt: time.Now(),
-				Type:      types.NotificationPreDeploymentUpdate,
-				Level:     types.LevelDebug,
-				Channels:  notificationChannels,
-			})
-
-			err = p.implementer.Update(&refresh)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":      err,
-					"namespace":  deployment.Namespace,
-					"deployment": deployment.Name,
-				}).Error("provider.kubernetes: got error while update deployment")
-
-				p.sender.Send(types.EventNotification{
-					Name:      "update deployment after",
-					Message:   fmt.Sprintf("Deployment %s/%s update %s->%s failed, error: %s", refresh.Namespace, refresh.Name, plan.CurrentVersion, plan.NewVersion, err),
-					CreatedAt: time.Now(),
-					Type:      types.NotificationDeploymentUpdate,
-					Level:     types.LevelError,
-					Channels:  notificationChannels,
-				})
-				continue
-			}
-
-			p.sender.Send(types.EventNotification{
-				Name:      "update deployment after reset",
-				Message:   fmt.Sprintf("Successfully updated deployment %s/%s %s->%s (%s)", refresh.Namespace, refresh.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&refresh), ", ")),
-				CreatedAt: time.Now(),
-				Type:      types.NotificationDeploymentUpdate,
-				Level:     types.LevelSuccess,
-				Channels:  notificationChannels,
-			})
-
-			updated = append(updated, &refresh)
-
-			// success
-			continue
-		}
+		reset := checkForReset(deployment)
 
 		p.sender.Send(types.EventNotification{
 			Name:      "preparing to update deployment",
@@ -300,12 +213,21 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 			Channels:  notificationChannels,
 		})
 
-		err = p.implementer.Update(&deployment)
+		var err error
+
+		if reset {
+			// force update, terminating all pods
+			err = p.forceUpdate(&deployment)
+		} else {
+			// regular update
+			err = p.implementer.Update(&deployment)
+		}
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
 				"namespace":  deployment.Namespace,
 				"deployment": deployment.Name,
+				"update":     fmt.Sprintf("%s->%s", plan.CurrentVersion, plan.NewVersion),
 			}).Error("provider.kubernetes: got error while update deployment")
 
 			p.sender.Send(types.EventNotification{
@@ -356,22 +278,6 @@ func getImagePullSecrets(deployment *v1beta1.Deployment) []string {
 	return secrets
 }
 
-// applies required changes for deployment, looks for images with tag 0.0.0 and
-// updates
-func applyChanges(current v1beta1.Deployment, delta map[string]string) (v1beta1.Deployment, error) {
-	for idx, c := range current.Spec.Template.Spec.Containers {
-		if strings.HasSuffix(c.Image, forceUpdateResetTag) {
-			desiredImage, err := getDesiredImage(delta, c.Image)
-			if err != nil {
-				return v1beta1.Deployment{}, err
-			}
-			current.Spec.Template.Spec.Containers[idx].Image = desiredImage
-			log.Infof("provider.kubernetes: delta changed applied: %s", current.Spec.Template.Spec.Containers[idx].Image)
-		}
-	}
-	return current, nil
-}
-
 func getDesiredImage(delta map[string]string, currentImage string) (string, error) {
 	currentRef, err := image.Parse(currentImage)
 	if err != nil {
@@ -395,36 +301,15 @@ func getDesiredImage(delta map[string]string, currentImage string) (string, erro
 }
 
 // checkForReset returns delta to apply after setting image
-func checkForReset(deployment v1beta1.Deployment, implementer Implementer) (bool, map[string]string, error) {
+func checkForReset(deployment v1beta1.Deployment) bool {
 	reset := false
 	annotations := deployment.GetAnnotations()
-	delta := make(map[string]string)
-	for idx, c := range deployment.Spec.Template.Spec.Containers {
-
+	for _, c := range deployment.Spec.Template.Spec.Containers {
 		if shouldPullImage(annotations, c.Image) {
-			ref, err := image.Parse(c.Image)
-			if err != nil {
-				return false, nil, err
-			}
-
-			c = updateContainer(c, ref, forceUpdateResetTag)
-
-			// ensuring pull policy
-			c.ImagePullPolicy = v1.PullAlways
-			log.WithFields(log.Fields{
-				"image":      c.Image,
-				"namespace":  deployment.Namespace,
-				"deployment": deployment.Name,
-			}).Info("provider.kubernetes: reseting image for force pull...")
-			deployment.Spec.Template.Spec.Containers[idx] = c
 			reset = true
-			delta[ref.Repository()] = ref.Tag()
 		}
 	}
-	if reset {
-		return reset, delta, implementer.Update(&deployment)
-	}
-	return false, nil, nil
+	return reset
 }
 
 // getDeployment - helper function to get specific deployment
