@@ -95,6 +95,11 @@ spec:
             - name: HIPCHAT_APPROVALS_PASSWORT
               value: "{{ .Values.hipchat.password }}"
 {{- end }}
+{{- if .Values.debug }}
+            # Enable debug logging
+            - name: DEBUG
+              value: "1"
+{{- end }}
           ports:
             - containerPort: 9300
           livenessProbe:

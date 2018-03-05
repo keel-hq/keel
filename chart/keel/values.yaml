@@ -59,6 +59,7 @@ service:
   enabled: false
   type: LoadBalancer
   externalPort: 9300
+  clusterIP: ""
 
 # Webhook Relay service
 # If you don’t want to expose your Keel service, you can use https://webhookrelay.com/
@@ -109,3 +110,6 @@ nodeSelector: {}
 # base64 encoded json of GCP service account
 # e.g. --set googleApplicationCredentials=$(cat <JSON_KEY_FIEL> | base64)
 # googleApplicationCredentials: ""
+
+# Enable DEBUG logging
+debug: false

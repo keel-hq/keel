@@ -11,9 +11,14 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   type: {{ .Values.service.type }}
+  {{- if .Values.service.clusterIP }}
+  clusterIP: {{ .Values.service.clusterIP | quote  }}
+  {{- end }}
   ports:
     - port: {{ .Values.service.externalPort }}
+  {{- if or (ne .Values.service.type "ClusterIP") (ne .Values.service.clusterIP "None") }}
       targetPort: 9300
+  {{- end }}
       protocol: TCP
       name: keel
   selector:
