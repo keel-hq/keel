@@ -9,7 +9,7 @@ import (
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/types"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const (

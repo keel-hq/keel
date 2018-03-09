@@ -6,7 +6,7 @@ import (
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/types"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Provider - generic provider interface

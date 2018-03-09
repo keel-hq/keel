@@ -3,12 +3,12 @@ package kubernetes
 import (
 	"fmt"
 
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	"k8s.io/api/extensions/v1beta1"
 
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updated v1beta1.Deployment, shouldUpdateDeployment bool, err error) {

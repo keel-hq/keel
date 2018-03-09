@@ -39,7 +39,7 @@ import (
 	_ "github.com/keel-hq/keel/bot/hipchat"
 	_ "github.com/keel-hq/keel/bot/slack"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // gcloud pubsub related config

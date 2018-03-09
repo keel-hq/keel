@@ -15,17 +15,15 @@
 // Package transport/http supports network connections to HTTP servers.
 // This package is not intended for use by end developers. Use the
 // google.golang.org/api/option package to configure API clients.
-package transport
+package http
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	gtransport "google.golang.org/api/googleapi/transport"
+	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/internal"
 	"google.golang.org/api/option"
 )
@@ -38,6 +36,9 @@ func NewClient(ctx context.Context, opts ...option.ClientOption) (*http.Client, 
 	for _, opt := range opts {
 		opt.Apply(&o)
 	}
+	if err := o.Validate(); err != nil {
+		return nil, "", err
+	}
 	if o.GRPCConn != nil {
 		return nil, "", errors.New("unsupported gRPC connection specified")
 	}
@@ -45,40 +46,32 @@ func NewClient(ctx context.Context, opts ...option.ClientOption) (*http.Client, 
 	if o.HTTPClient != nil {
 		return o.HTTPClient, o.Endpoint, nil
 	}
-	if o.APIKey != "" {
-		hc := &http.Client{
-			Transport: &gtransport.APIKey{
-				Key: o.APIKey,
-				Transport: userAgentTransport{
-					base:      baseTransport(ctx),
-					userAgent: o.UserAgent,
-				},
+	uat := userAgentTransport{
+		base:      baseTransport(ctx),
+		userAgent: o.UserAgent,
+	}
+	var hc *http.Client
+	switch {
+	case o.NoAuth:
+		hc = &http.Client{Transport: uat}
+	case o.APIKey != "":
+		hc = &http.Client{
+			Transport: &transport.APIKey{
+				Key:       o.APIKey,
+				Transport: uat,
 			},
 		}
-		return hc, o.Endpoint, nil
-	}
-	if o.ServiceAccountJSONFilename != "" {
-		ts, err := internal.ServiceAcctTokenSource(ctx, o.ServiceAccountJSONFilename, o.Scopes...)
+	default:
+		creds, err := internal.Creds(ctx, &o)
 		if err != nil {
 			return nil, "", err
 		}
-		o.TokenSource = ts
-	}
-	if o.TokenSource == nil {
-		var err error
-		o.TokenSource, err = google.DefaultTokenSource(ctx, o.Scopes...)
-		if err != nil {
-			return nil, "", fmt.Errorf("google.DefaultTokenSource: %v", err)
-		}
-	}
-	hc := &http.Client{
-		Transport: &oauth2.Transport{
-			Source: o.TokenSource,
-			Base: userAgentTransport{
-				base:      baseTransport(ctx),
-				userAgent: o.UserAgent,
+		hc = &http.Client{
+			Transport: &oauth2.Transport{
+				Source: creds.TokenSource,
+				Base:   uat,
 			},
-		},
+		}
 	}
 	return hc, o.Endpoint, nil
 }

@@ -14,7 +14,7 @@ import (
 
 	"github.com/keel-hq/keel/extension/notification"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/ghodss/yaml"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/helm"

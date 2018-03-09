@@ -7,7 +7,7 @@ import (
 	"github.com/keel-hq/keel/cache"
 	"github.com/keel-hq/keel/types"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // namespace/release name/version

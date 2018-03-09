@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // MetadataEndpoint - default metadata server for gcloud pubsub

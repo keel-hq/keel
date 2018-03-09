@@ -1,0 +1,121 @@
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#   name = "github.com/x/y"
+#   version = "2.4.0"
+#
+# [prune]
+#   non-go = false
+#   go-tests = true
+#   unused-packages = true
+
+
+[[constraint]]
+  name = "cloud.google.com/go"
+  version = "0.17.0"
+
+[[constraint]]
+  name = "github.com/Masterminds/semver"
+  version = "1.3.1"
+
+[[constraint]]
+  name = "github.com/sirupsen/logrus"
+  version = "^1.0.4"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/daneharrigan/hipchat"
+
+[[constraint]]
+  name = "github.com/ghodss/yaml"
+  version = "1.0.0"
+
+[[constraint]]
+  name = "github.com/gorilla/mux"
+  version = "1.4.0"
+
+[[constraint]]
+  name = "github.com/nlopes/slack"
+  version = "0.1.0"
+
+[[constraint]]
+  name = "github.com/rusenask/cron"
+  version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/rusenask/docker-registry-client"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/docker/distribution"
+  # branch = "master"
+  revision = "6fca8d6e6713acbdf3f9ca40cf6370fc5ee5ee53"  
+
+[[constraint]]
+  name = "github.com/rusenask/k8s-kv"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/tbruyelle/hipchat-go"
+  version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/urfave/negroni"
+  version = "0.3.0"
+
+[[constraint]]
+  name = "google.golang.org/grpc"
+  version = "1.5.0"
+
+[[constraint]]
+  name = "gopkg.in/alecthomas/kingpin.v2"
+  version = "2.2.6"
+
+# [[constraint]]
+#   name = "k8s.io/client-go"
+#   version = "3.0.0-beta.0"
+
+
+[[constraint]]
+  name="k8s.io/client-go"
+  branch="release-6.0"
+
+[[constraint]]
+  name="k8s.io/api"
+  branch="release-1.9"
+
+[[constraint]]
+  name="k8s.io/apimachinery"
+  branch="release-1.9"
+
+# [[constraint]]
+#   name="k8s.io/client-go"
+#   branch="release-6.0"  
+
+# [[constraint]]
+#   name="k8s.io/api"
+#   branch="release-1.9"
+
+
+[[constraint]]
+  name = "k8s.io/helm"
+  version = "2.5.0"
+
+[prune]
+  go-tests = true
+  unused-packages = true

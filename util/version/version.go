@@ -9,7 +9,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/keel-hq/keel/types"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // ErrVersionTagMissing - tag missing error

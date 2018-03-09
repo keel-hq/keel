@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/distribution/digest"
+	// "github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
+	"github.com/opencontainers/go-digest"
 )
 
 const (
 	// DefaultTag defines the default tag used when performing images related actions and no tag or digest is specified
 	DefaultTag = "latest"
 	// DefaultRegistryHostname is the default built-in hostname
+	// DefaultRegistryHostname = "index.docker.io"
+	WrongRegistryHostname   = "docker.io"
 	DefaultRegistryHostname = "index.docker.io"
 
 	// DefaultScheme is default scheme for registries
@@ -65,10 +68,12 @@ type Canonical interface {
 // returned.
 // If an error was encountered it is returned, along with a nil Reference.
 func ParseNamed(s string) (Named, error) {
-	named, err := reference.ParseNamed(s)
+
+	named, err := reference.ParseNormalizedNamed(s)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing reference: %q is not a valid repository/tag", s)
+		return nil, fmt.Errorf("Error parsing reference: %q is not a valid repository/tag, error: %s", s, err)
 	}
+
 	r, err := WithName(named.Name())
 	if err != nil {
 		return nil, err
@@ -178,9 +183,9 @@ func splitHostname(name string) (hostname, remoteName string) {
 	} else {
 		hostname, remoteName = name[:i], name[i+1:]
 	}
-	// if hostname == LegacyDefaultHostname {
-	// 	hostname = DefaultHostname
-	// }
+	if hostname == WrongRegistryHostname {
+		hostname = DefaultRegistryHostname
+	}
 	if hostname == DefaultRegistryHostname && !strings.ContainsRune(remoteName, '/') {
 		remoteName = DefaultRepoPrefix + remoteName
 	}

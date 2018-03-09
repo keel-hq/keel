@@ -1,9 +1,10 @@
 package testing
 
 import (
+	"k8s.io/api/core/v1"
+	"k8s.io/api/extensions/v1beta1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
 // FakeK8sImplementer - fake implementer used for testing
@@ -18,6 +19,7 @@ type FakeK8sImplementer struct {
 	AvailableSecret *v1.Secret
 
 	AvailablePods *v1.PodList
+	DeletedPods   []*v1.Pod
 
 	// error to return
 	Error error
@@ -60,5 +62,18 @@ func (i *FakeK8sImplementer) Pods(namespace, labelSelector string) (*v1.PodList,
 // ConfigMaps - returns nothing (not implemented)
 func (i *FakeK8sImplementer) ConfigMaps(namespace string) core_v1.ConfigMapInterface {
 	panic("not implemented")
+}
+
+// DeletePod - adds pod to DeletedPods list
+func (i *FakeK8sImplementer) DeletePod(namespace, name string, opts *meta_v1.DeleteOptions) error {
+	i.DeletedPods = append(i.DeletedPods, &v1.Pod{
+		meta_v1.TypeMeta{},
+		meta_v1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		v1.PodSpec{},
+		v1.PodStatus{},
+	})
 	return nil
 }

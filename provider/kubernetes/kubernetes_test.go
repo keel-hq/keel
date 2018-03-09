@@ -10,10 +10,10 @@ import (
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/codecs"
 
+	"k8s.io/api/core/v1"
+	"k8s.io/api/extensions/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
 type fakeProvider struct {
@@ -44,7 +44,8 @@ type fakeImplementer struct {
 	deployment     *v1beta1.Deployment
 	deploymentList *v1beta1.DeploymentList
 
-	podList *v1.PodList
+	podList     *v1.PodList
+	deletedPods []*v1.Pod
 
 	// stores value of an updated deployment
 	updated *v1beta1.Deployment
@@ -75,6 +76,19 @@ func (i *fakeImplementer) Secret(namespace, name string) (*v1.Secret, error) {
 
 func (i *fakeImplementer) Pods(namespace, labelSelector string) (*v1.PodList, error) {
 	return i.podList, nil
+}
+
+func (i *fakeImplementer) DeletePod(namespace, name string, opts *meta_v1.DeleteOptions) error {
+	i.deletedPods = append(i.deletedPods, &v1.Pod{
+		meta_v1.TypeMeta{},
+		meta_v1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		v1.PodSpec{},
+		v1.PodStatus{},
+	})
+	return nil
 }
 
 func (i *fakeImplementer) ConfigMaps(namespace string) core_v1.ConfigMapInterface {

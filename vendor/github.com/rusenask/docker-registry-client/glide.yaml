@@ -1,9 +1,0 @@
-package: github.com/rusenask/docker-registry-client
-import:
-- package: github.com/docker/distribution
-  version: 5db89f0ca68677abc5eefce8f2a0a772c98ba52d
-  subpackages:
-  - manifest/schema1
-  - manifest/schema2
-- package: github.com/opencontainers/go-digest
-  version: ^1.0.0-rc0

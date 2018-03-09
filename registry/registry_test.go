@@ -41,6 +41,58 @@ func TestGet(t *testing.T) {
 	fmt.Println(repo.Tags)
 }
 
+// https://registry.opensource.zalan.do/v2/teapot/external-dns
+func TestGetNonDockerRegistryTags(t *testing.T) {
+	client := New()
+
+	repo, err := client.Get(Opts{
+		Registry: "https://registry.opensource.zalan.do",
+		Name:     "teapot/external-dns",
+	})
+
+	if err != nil {
+		t.Errorf("error while getting repo: %s", err)
+	}
+
+	fmt.Println(repo.Name)
+	fmt.Println(repo.Tags)
+}
+
+func TestGetNonDockerRegistryManifest(t *testing.T) {
+	client := New()
+
+	d, err := client.Digest(Opts{
+		Registry: "https://registry.opensource.zalan.do",
+		Name:     "teapot/external-dns",
+		Tag:      "v0.4.8",
+	})
+
+	if err != nil {
+		t.Errorf("error while getting repo manifest: %s", err)
+	}
+
+	if d != "sha256:7aa5175f39a7e8a4172972524302c9a8196f681e40d6ee5d2f6bf0ab7d600fee" {
+		t.Errorf("unexpected sha?")
+	}
+}
+func TestGetQuayRegistryManifest(t *testing.T) {
+	client := New()
+
+	d, err := client.Digest(Opts{
+		Registry: "https://quay.io",
+		Name:     "jetstack/cert-manager-controller",
+		Tag:      "v0.2.3",
+	})
+
+	if err != nil {
+		t.Fatalf("error while getting repo manifest: %s", err)
+	}
+
+	if d != "sha256:6bccc03f2e98e34f2b1782d29aed77763e93ea81de96f246ebeb81effd947085" {
+		t.Errorf("unexpected sha? %s", d)
+	}
+}
+
 var EnvArtifactoryUsername = "ARTIFACTORY_USERNAME"
 var EnvArtifactoryPassword = "ARTIFACTORY_PASSWORD"
 

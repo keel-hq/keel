@@ -11,7 +11,7 @@ import (
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/codecs"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Manager is used to manage updates

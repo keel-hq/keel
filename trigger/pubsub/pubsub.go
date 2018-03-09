@@ -16,7 +16,7 @@ import (
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // PubsubSubscriber is Google Cloud pubsub based subscriber

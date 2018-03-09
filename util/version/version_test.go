@@ -351,6 +351,17 @@ func TestGetVersion(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "not semver, long number",
+			args: args{version: "1234567"},
+			want: &types.Version{
+				Major:    1234567,
+				Minor:    0,
+				Patch:    0,
+				Original: "1234567",
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

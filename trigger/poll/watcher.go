@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rusenask/cron"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 	"github.com/keel-hq/keel/util/version"
+	"github.com/rusenask/cron"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Watcher - generic watcher interface

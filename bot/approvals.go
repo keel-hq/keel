@@ -10,7 +10,7 @@ import (
 	"github.com/keel-hq/keel/bot/formatter"
 	"github.com/keel-hq/keel/types"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type BotRequestApproval func(req *types.Approval) error

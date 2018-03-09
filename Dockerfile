@@ -1,4 +1,4 @@
-FROM golang:1.9.2
+FROM golang:1.9.3
 COPY . /go/src/github.com/keel-hq/keel
 WORKDIR /go/src/github.com/keel-hq/keel
 RUN make install
