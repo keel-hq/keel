@@ -75,6 +75,23 @@ func TestGetNonDockerRegistryManifest(t *testing.T) {
 		t.Errorf("unexpected sha?")
 	}
 }
+func TestGetQuayRegistryManifest(t *testing.T) {
+	client := New()
+
+	d, err := client.Digest(Opts{
+		Registry: "https://quay.io",
+		Name:     "jetstack/cert-manager-controller",
+		Tag:      "v0.2.3",
+	})
+
+	if err != nil {
+		t.Fatalf("error while getting repo manifest: %s", err)
+	}
+
+	if d != "sha256:6bccc03f2e98e34f2b1782d29aed77763e93ea81de96f246ebeb81effd947085" {
+		t.Errorf("unexpected sha? %s", d)
+	}
+}
 
 var EnvArtifactoryUsername = "ARTIFACTORY_USERNAME"
 var EnvArtifactoryPassword = "ARTIFACTORY_PASSWORD"

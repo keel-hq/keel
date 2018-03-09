@@ -294,10 +294,10 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/rusenask/docker-registry-client"
   packages = ["registry"]
-  revision = "96418f642c2a8eff58b338a7b62ed707adace7f0"
-  version = "0.1.3"
+  revision = "bf1d91b397917b39e5f0478dd679c8aa224ca91e"
 
 [[projects]]
   branch = "master"
@@ -654,6 +654,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7bc4d12391bc358499c5b2aa1fd941d61fb9464481a18b0e7b005f0166292edb"
+  inputs-digest = "f893b119565c976a04bfa20370a73bb3912bf09378acee6d0587d87f039e7b4d"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -20,9 +20,8 @@ install:
 	CGO_ENABLED=0 GOOS=linux go install -ldflags "$(LDFLAGS) -w -s" github.com/keel-hq/keel/cmd/keel
 
 image:
-	docker build -t karolisr/keel:alpha -f Dockerfile .
+	docker build -t keelhq/keel:alpha -f Dockerfile .
 
 alpha: image
 	@echo "++ Pushing keel alpha"	
-	docker push karolisr/keel:alpha
-		
+	docker push keelhq/keel:alpha

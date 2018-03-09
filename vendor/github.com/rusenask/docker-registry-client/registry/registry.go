@@ -93,10 +93,6 @@ func newFromTransport(registryUrl, username, password string, transport http.Rou
 		Logf: logf,
 	}
 
-	if err := registry.Ping(); err != nil {
-		registry.Logf("registry failed ping request, error: %s", err)
-	}
-
 	return registry, nil
 }
 
@@ -104,14 +100,4 @@ func (r *Registry) url(pathTemplate string, args ...interface{}) string {
 	pathSuffix := fmt.Sprintf(pathTemplate, args...)
 	url := fmt.Sprintf("%s%s", r.URL, pathSuffix)
 	return url
-}
-
-func (r *Registry) Ping() error {
-	url := r.url("/v2/")
-	resp, err := r.Client.Get(url)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	return nil
 }
