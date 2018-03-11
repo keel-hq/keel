@@ -86,8 +86,7 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	// approvals
 	mux.HandleFunc("/v1/approvals", s.approvalsHandler).Methods("GET", "OPTIONS")
 	// approving
-	mux.HandleFunc("/v1/approvals/{id}", s.approvalApproveHandler).Methods("PUT", "OPTIONS")
-	mux.HandleFunc("/v1/approvals/{id}", s.approvalDeleteHandler).Methods("DELETE", "OPTIONS")
+	mux.HandleFunc("/v1/approvals", s.approvalApproveHandler).Methods("POST", "OPTIONS")
 
 	// native webhooks handler
 	mux.HandleFunc("/v1/webhooks/native", s.nativeHandler).Methods("POST", "OPTIONS")

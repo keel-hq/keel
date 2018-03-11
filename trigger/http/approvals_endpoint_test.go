@@ -81,7 +81,7 @@ func TestDeleteApproval(t *testing.T) {
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
-		Identifier:     "12345",
+		Identifier:     "dev/whd-dev:0.0.15",
 		VotesRequired:  5,
 		NewVersion:     "2.0.0",
 		CurrentVersion: "1.0.0",
@@ -92,7 +92,7 @@ func TestDeleteApproval(t *testing.T) {
 	}
 
 	// listing
-	req, err := http.NewRequest("DELETE", "/v1/approvals/12345", nil)
+	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"action": "delete","identifier": "dev/whd-dev:0.0.15"}`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -106,7 +106,7 @@ func TestDeleteApproval(t *testing.T) {
 		t.Log(rec.Body.String())
 	}
 
-	_, err = am.Get("12345")
+	_, err = am.Get("dev/whd-dev:0.0.15")
 	if err == nil {
 		t.Errorf("expected approval to be deleted")
 	}
@@ -121,7 +121,7 @@ func TestApprove(t *testing.T) {
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
-		Identifier:     "12345",
+		Identifier:     "dev/whd-dev:0.0.15",
 		VotesRequired:  5,
 		NewVersion:     "2.0.0",
 		CurrentVersion: "1.0.0",
@@ -132,7 +132,7 @@ func TestApprove(t *testing.T) {
 	}
 
 	// listing
-	req, err := http.NewRequest("PUT", "/v1/approvals/12345", bytes.NewBufferString(`{"voter": "foo"}`))
+	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"voter": "foo","identifier": "dev/whd-dev:0.0.15"}`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -146,7 +146,7 @@ func TestApprove(t *testing.T) {
 		t.Log(rec.Body.String())
 	}
 
-	approved, err := am.Get("12345")
+	approved, err := am.Get("dev/whd-dev:0.0.15")
 	if err != nil {
 		t.Fatalf("failed to get approval: %s", err)
 	}
@@ -169,7 +169,7 @@ func TestApproveNotFound(t *testing.T) {
 	srv.registerRoutes(srv.router)
 
 	// listing
-	req, err := http.NewRequest("PUT", "/v1/approvals/random", bytes.NewBufferString(`{"voter": "foo"}`))
+	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"voter": "foo","identifier": "dev/whd-dev:0.0.15"}`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -193,7 +193,7 @@ func TestApproveGarbageRequest(t *testing.T) {
 	srv.registerRoutes(srv.router)
 
 	// listing
-	req, err := http.NewRequest("PUT", "/v1/approvals/111", bytes.NewBufferString(`<>`))
+	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`<>`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -217,7 +217,7 @@ func TestSameVoter(t *testing.T) {
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
-		Identifier:     "12345",
+		Identifier:     "dev/12345",
 		VotesRequired:  5,
 		NewVersion:     "2.0.0",
 		CurrentVersion: "1.0.0",
@@ -230,7 +230,7 @@ func TestSameVoter(t *testing.T) {
 	}
 
 	// listing
-	req, err := http.NewRequest("PUT", "/v1/approvals/12345", bytes.NewBufferString(`{"voter": "foo"}`))
+	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"voter": "foo", "identifier": "dev/12345"}`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -244,7 +244,7 @@ func TestSameVoter(t *testing.T) {
 		t.Log(rec.Body.String())
 	}
 
-	approved, err := am.Get("12345")
+	approved, err := am.Get("dev/12345")
 	if err != nil {
 		t.Fatalf("failed to get approval: %s", err)
 	}
@@ -266,7 +266,7 @@ func TestDifferentVoter(t *testing.T) {
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
-		Identifier:     "12345",
+		Identifier:     "dev/12345",
 		VotesRequired:  5,
 		NewVersion:     "2.0.0",
 		CurrentVersion: "1.0.0",
@@ -279,7 +279,7 @@ func TestDifferentVoter(t *testing.T) {
 	}
 
 	// listing
-	req, err := http.NewRequest("PUT", "/v1/approvals/12345", bytes.NewBufferString(`{"voter": "foo"}`))
+	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"voter": "foo", "identifier": "dev/12345"}`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -293,7 +293,7 @@ func TestDifferentVoter(t *testing.T) {
 		t.Log(rec.Body.String())
 	}
 
-	approved, err := am.Get("12345")
+	approved, err := am.Get("dev/12345")
 	if err != nil {
 		t.Fatalf("failed to get approval: %s", err)
 	}
@@ -319,7 +319,7 @@ func TestReject(t *testing.T) {
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
-		Identifier:     "12345",
+		Identifier:     "dev/12345",
 		VotesRequired:  5,
 		NewVersion:     "2.0.0",
 		CurrentVersion: "1.0.0",
@@ -330,7 +330,7 @@ func TestReject(t *testing.T) {
 	}
 
 	// listing
-	req, err := http.NewRequest("PUT", "/v1/approvals/12345", bytes.NewBufferString(`{"voter": "foo", "action": "reject"}`))
+	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"voter": "foo", "action": "reject", "identifier":"dev/12345"}`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -344,7 +344,7 @@ func TestReject(t *testing.T) {
 		t.Log(rec.Body.String())
 	}
 
-	approved, err := am.Get("12345")
+	approved, err := am.Get("dev/12345")
 	if err != nil {
 		t.Fatalf("failed to get approval: %s", err)
 	}
