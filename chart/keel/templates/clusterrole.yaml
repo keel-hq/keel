@@ -33,6 +33,7 @@ rules:
       - jobs
     verbs:
       - get
+      - delete # required to delete pods during force upgrade of the same tag
       - watch
       - list
       - update
