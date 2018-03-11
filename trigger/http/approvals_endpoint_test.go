@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -109,5 +110,100 @@ func TestDeleteApproval(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected approval to be deleted")
 	}
+}
 
+func TestApprove(t *testing.T) {
+	fp := &fakeProvider{}
+	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
+	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv.registerRoutes(srv.router)
+
+	err := am.Create(&types.Approval{
+		Identifier:     "12345",
+		VotesRequired:  5,
+		NewVersion:     "2.0.0",
+		CurrentVersion: "1.0.0",
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create approval: %s", err)
+	}
+
+	// listing
+	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"identifier":"12345", "voter": "foo"}`))
+	if err != nil {
+		t.Fatalf("failed to create req: %s", err)
+	}
+
+	rec := httptest.NewRecorder()
+
+	srv.router.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Errorf("unexpected status code: %d", rec.Code)
+
+		t.Log(rec.Body.String())
+	}
+
+	approved, err := am.Get("12345")
+	if err != nil {
+		t.Fatalf("failed to get approval: %s", err)
+	}
+
+	if approved.VotesReceived != 1 {
+		t.Errorf("expected to find one voter")
+	}
+
+	if approved.Voters[0] != "foo" {
+		t.Errorf("unexpected voter: %s", approved.Voters[0])
+	}
+}
+
+func TestApproveNotFound(t *testing.T) {
+	fp := &fakeProvider{}
+	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
+	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv.registerRoutes(srv.router)
+
+	// listing
+	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"identifier":"12345", "voter": "foo"}`))
+	if err != nil {
+		t.Fatalf("failed to create req: %s", err)
+	}
+
+	rec := httptest.NewRecorder()
+
+	srv.router.ServeHTTP(rec, req)
+	if rec.Code != 404 {
+		t.Errorf("unexpected status code: %d", rec.Code)
+
+		t.Log(rec.Body.String())
+	}
+}
+
+func TestApproveGarbageRequest(t *testing.T) {
+	fp := &fakeProvider{}
+	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
+	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv.registerRoutes(srv.router)
+
+	// listing
+	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"foo":"bar"}`))
+	if err != nil {
+		t.Fatalf("failed to create req: %s", err)
+	}
+
+	rec := httptest.NewRecorder()
+
+	srv.router.ServeHTTP(rec, req)
+	if rec.Code != 400 {
+		t.Errorf("unexpected status code: %d", rec.Code)
+
+		t.Log(rec.Body.String())
+	}
 }
