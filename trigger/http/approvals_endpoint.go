@@ -10,9 +10,15 @@ import (
 )
 
 type approveRequest struct {
-	Identifier string `json:"identifier"`
-	Voter      string `json:"voter"`
+	Voter  string `json:"voter"`
+	Action string `json:"action"` // defaults to approve
 }
+
+// available API actions
+const (
+	actionApprove = "approve"
+	actionReject  = "reject"
+)
 
 func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Request) {
 	// unknown lists all
@@ -45,32 +51,45 @@ func (s *TriggerServer) approvalApproveHandler(resp http.ResponseWriter, req *ht
 
 	err := dec.Decode(&ar)
 	if err != nil {
-		fmt.Fprintf(resp, "%s", err)
 		resp.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(resp, "%s", err)
 		return
 	}
 
-	if ar.Identifier == "" {
-		http.Error(resp, "identifier not supplied", http.StatusBadRequest)
-		return
-	}
+	var approval *types.Approval
 
-	approval, err := s.approvalsManager.Approve(ar.Identifier, ar.Voter)
-	if err != nil {
-		if err == cache.ErrNotFound {
-			http.Error(resp, fmt.Sprintf("approval '%s' not found", ar.Identifier), http.StatusNotFound)
+	// checking action
+	switch ar.Action {
+	case actionReject:
+		approval, err = s.approvalsManager.Reject(getID(req))
+		if err != nil {
+			if err == cache.ErrNotFound {
+				http.Error(resp, fmt.Sprintf("approval '%s' not found", getID(req)), http.StatusNotFound)
+				return
+			}
+			resp.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(resp, "%s", err)
 			return
 		}
 
-		fmt.Fprintf(resp, "%s", err)
-		resp.WriteHeader(http.StatusInternalServerError)
-		return
+	default:
+		// "" or "approve"
+		approval, err = s.approvalsManager.Approve(getID(req), ar.Voter)
+		if err != nil {
+			if err == cache.ErrNotFound {
+				http.Error(resp, fmt.Sprintf("approval '%s' not found", getID(req)), http.StatusNotFound)
+				return
+			}
+			resp.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(resp, "%s", err)
+			return
+		}
 	}
 
 	bts, err := json.Marshal(&approval)
 	if err != nil {
-		fmt.Fprintf(resp, "%s", err)
 		resp.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(resp, "%s", err)
 		return
 	}
 
