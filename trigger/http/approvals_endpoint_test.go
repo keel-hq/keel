@@ -132,7 +132,7 @@ func TestApprove(t *testing.T) {
 	}
 
 	// listing
-	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"identifier":"12345", "voter": "foo"}`))
+	req, err := http.NewRequest("PUT", "/v1/approvals/12345", bytes.NewBufferString(`{"voter": "foo"}`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -169,7 +169,7 @@ func TestApproveNotFound(t *testing.T) {
 	srv.registerRoutes(srv.router)
 
 	// listing
-	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"identifier":"12345", "voter": "foo"}`))
+	req, err := http.NewRequest("PUT", "/v1/approvals/random", bytes.NewBufferString(`{"voter": "foo"}`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -193,7 +193,7 @@ func TestApproveGarbageRequest(t *testing.T) {
 	srv.registerRoutes(srv.router)
 
 	// listing
-	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"foo":"bar"}`))
+	req, err := http.NewRequest("PUT", "/v1/approvals/111", bytes.NewBufferString(`<>`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -230,7 +230,7 @@ func TestSameVoter(t *testing.T) {
 	}
 
 	// listing
-	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"identifier":"12345", "voter": "foo"}`))
+	req, err := http.NewRequest("PUT", "/v1/approvals/12345", bytes.NewBufferString(`{"voter": "foo"}`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -279,7 +279,7 @@ func TestDifferentVoter(t *testing.T) {
 	}
 
 	// listing
-	req, err := http.NewRequest("POST", "/v1/approvals", bytes.NewBufferString(`{"identifier":"12345", "voter": "foo"}`))
+	req, err := http.NewRequest("PUT", "/v1/approvals/12345", bytes.NewBufferString(`{"voter": "foo"}`))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
@@ -308,4 +308,49 @@ func TestDifferentVoter(t *testing.T) {
 	if approved.Voters[1] != "foo" {
 		t.Errorf("unexpected voter: %s", approved.Voters[0])
 	}
+}
+
+func TestReject(t *testing.T) {
+	fp := &fakeProvider{}
+	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
+	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv.registerRoutes(srv.router)
+
+	err := am.Create(&types.Approval{
+		Identifier:     "12345",
+		VotesRequired:  5,
+		NewVersion:     "2.0.0",
+		CurrentVersion: "1.0.0",
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create approval: %s", err)
+	}
+
+	// listing
+	req, err := http.NewRequest("PUT", "/v1/approvals/12345", bytes.NewBufferString(`{"voter": "foo", "action": "reject"}`))
+	if err != nil {
+		t.Fatalf("failed to create req: %s", err)
+	}
+
+	rec := httptest.NewRecorder()
+
+	srv.router.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Errorf("unexpected status code: %d", rec.Code)
+
+		t.Log(rec.Body.String())
+	}
+
+	approved, err := am.Get("12345")
+	if err != nil {
+		t.Fatalf("failed to get approval: %s", err)
+	}
+
+	if approved.Rejected != true {
+		t.Errorf("expected to find approval rejected")
+	}
+
 }
