@@ -30,7 +30,7 @@ spec:
     spec:
       serviceAccountName: keel
       containers:
-        - image: karolisr/keel:0.5.3
+        - image: karolisr/keel:0.8.0
           imagePullPolicy: Always
           env:
             # - name: POLL
