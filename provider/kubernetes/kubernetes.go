@@ -220,6 +220,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 			err = p.forceUpdate(&deployment)
 		} else {
 			// regular update
+			deployment.Annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update version %s -> %s", plan.CurrentVersion, plan.NewVersion)
 			err = p.implementer.Update(&deployment)
 		}
 		if err != nil {
