@@ -11,10 +11,6 @@ import (
 // MetadataEndpoint - default metadata server for gcloud pubsub
 const MetadataEndpoint = "http://metadata/computeMetadata/v1/instance/attributes/cluster-name"
 
-func containerRegistryURI(projectID, registry string) string {
-	return registry + "%2F" + projectID
-}
-
 func containerRegistrySubName(projectID, topic string) string {
 	cluster := "unknown"
 	clusterName, err := clusterName(MetadataEndpoint)

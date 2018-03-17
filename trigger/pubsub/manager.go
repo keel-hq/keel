@@ -63,11 +63,14 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 		}).Error("trigger.pubsub.manager: scan failed")
 	}
 
-	for _ = range time.Tick(time.Duration(s.scanTick) * time.Second) {
+	ticker := time.NewTicker(time.Duration(s.scanTick) * time.Second)
+	defer ticker.Stop()
+
+	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		default:
+		case <-ticker.C:
 			log.Debug("performing scan")
 			err := s.scan(ctx)
 			if err != nil {
@@ -77,8 +80,6 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 			}
 		}
 	}
-
-	return nil
 }
 
 func (s *DefaultManager) scan(ctx context.Context) error {
@@ -94,8 +95,8 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 		}
 
 		// uri
-		gcrURI := containerRegistryURI(s.projectID, trackedImage.Image.Registry())
-		s.ensureSubscription(gcrURI)
+		// https://cloud.google.com/container-registry/docs/configuring-notifications
+		s.ensureSubscription("gcr")
 	}
 	return nil
 }
