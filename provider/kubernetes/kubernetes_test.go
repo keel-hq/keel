@@ -315,9 +315,10 @@ func TestProcessEvent(t *testing.T) {
 			v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "deployment-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "deployment-1",
+					Namespace:   "xxxx",
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					Annotations: map[string]string{},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -335,9 +336,10 @@ func TestProcessEvent(t *testing.T) {
 			v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "deployment-2",
-					Namespace: "xxxx",
-					Labels:    map[string]string{"whatever": "all"},
+					Name:        "deployment-2",
+					Namespace:   "xxxx",
+					Labels:      map[string]string{"whatever": "all"},
+					Annotations: map[string]string{},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -393,9 +395,10 @@ func TestProcessEventBuildNumber(t *testing.T) {
 			v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "deployment-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "deployment-1",
+					Namespace:   "xxxx",
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					Annotations: map[string]string{},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -452,9 +455,10 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 			v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					Annotations: map[string]string{},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -549,9 +553,10 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 			v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					Annotations: map[string]string{},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -572,9 +577,10 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 			v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-2",
-					Namespace: "xxxx",
-					Labels:    map[string]string{"whatever": "all"},
+					Name:        "dep-2",
+					Namespace:   "xxxx",
+					Labels:      map[string]string{"whatever": "all"},
+					Annotations: map[string]string{},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
