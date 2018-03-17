@@ -28,9 +28,10 @@ func TestCheckRequestedApproval(t *testing.T) {
 			v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all", types.KeelMinimumApprovalsLabel: "1"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Labels:      map[string]string{types.KeelPolicyLabel: "all", types.KeelMinimumApprovalsLabel: "1"},
+					Annotations: map[string]string{},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
@@ -95,9 +96,10 @@ func TestApprovedCheck(t *testing.T) {
 			v1beta1.Deployment{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all", types.KeelMinimumApprovalsLabel: "1"},
+					Name:        "dep-1",
+					Namespace:   "xxxx",
+					Labels:      map[string]string{types.KeelPolicyLabel: "all", types.KeelMinimumApprovalsLabel: "1"},
+					Annotations: map[string]string{},
 				},
 				v1beta1.DeploymentSpec{
 					Template: v1.PodTemplateSpec{
