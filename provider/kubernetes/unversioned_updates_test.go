@@ -213,6 +213,64 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,
 		},
+		{
+			name: "poll trigger, same tag",
+			args: args{
+				policy: types.PolicyTypeForce,
+				repo:   &types.Repository{Name: "karolisr/keel", Tag: "master"},
+				deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule},
+						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "karolisr/keel:master",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Annotations: map[string]string{
+							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
+							forceUpdateImageAnnotation:       "karolisr/keel:master",
+						},
+						Labels: map[string]string{types.KeelPolicyLabel: "force"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "karolisr/keel:master",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+				NewVersion:     "master",
+				CurrentVersion: "master",
+			},
+			wantShouldUpdateDeployment: true,
+			wantErr:                    false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

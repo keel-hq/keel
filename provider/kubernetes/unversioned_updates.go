@@ -64,7 +64,8 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 
 		// if poll trigger is used, also checking for matching versions
 		if _, ok := annotations[types.KeelPollScheduleAnnotation]; ok {
-			if eventRepoRef.Tag() != containerImageRef.Tag() {
+			if repo.Tag != containerImageRef.Tag() {
+				fmt.Printf("tags different, not updating (%s != %s) \n", eventRepoRef.Tag(), containerImageRef.Tag())
 				continue
 			}
 		}
