@@ -70,6 +70,12 @@ func (w *RepositoryWatcher) Start(ctx context.Context) {
 }
 
 func getImageIdentifier(ref *image.Reference) string {
+	_, err := version.GetVersion(ref.Tag())
+	// if failed to parse version, will need to watch digest
+	if err != nil {
+		return ref.Registry() + "/" + ref.ShortName() + ":" + ref.Tag()
+	}
+
 	return ref.Registry() + "/" + ref.ShortName()
 }
 

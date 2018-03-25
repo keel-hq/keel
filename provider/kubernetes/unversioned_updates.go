@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updated v1beta1.Deployment, shouldUpdateDeployment bool, err error) {
 func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
 	updatePlan = &UpdatePlan{}
 
@@ -27,6 +26,8 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		"namespace": deployment.Namespace,
 		"policy":    policy,
 	}).Info("provider.kubernetes.checkVersionedDeployment: keel policy found, checking deployment...")
+
+	annotations := deployment.GetAnnotations()
 
 	shouldUpdateDeployment = false
 
@@ -59,6 +60,14 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 				"target_image_name": repo.Name,
 			}).Info("provider.kubernetes: images do not match, ignoring")
 			continue
+		}
+
+		// if poll trigger is used, also checking for matching versions
+		if _, ok := annotations[types.KeelPollScheduleAnnotation]; ok {
+			if repo.Tag != containerImageRef.Tag() {
+				fmt.Printf("tags different, not updating (%s != %s) \n", eventRepoRef.Tag(), containerImageRef.Tag())
+				continue
+			}
 		}
 
 		// updating image
