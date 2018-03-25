@@ -122,6 +122,43 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			wantErr:                    false,
 		},
 		{
+			name: "different tag name for poll image",
+			args: args{
+				policy: types.PolicyTypeForce,
+				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "master"},
+				deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Annotations: map[string]string{
+							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
+						},
+						Labels: map[string]string{
+							types.KeelPolicyLabel: "all",
+						},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-world:alpha",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Deployment: v1beta1.Deployment{},
+			},
+			wantShouldUpdateDeployment: false,
+			wantErr:                    false,
+		},
+		{
 			name: "dockerhub short image name ",
 			args: args{
 				policy: types.PolicyTypeForce,
