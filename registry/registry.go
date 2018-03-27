@@ -2,11 +2,15 @@ package registry
 
 import (
 	"errors"
+	"os"
 
 	"github.com/rusenask/docker-registry-client/registry"
 
 	log "github.com/sirupsen/logrus"
 )
+
+// EnvInsecure - uses insecure registry client to skip cert verification
+const EnvInsecure = "INSECURE_REGISTRY"
 
 // errors
 var (
@@ -50,10 +54,22 @@ func LogFormatter(format string, args ...interface{}) {
 func (c *DefaultClient) Get(opts Opts) (*Repository, error) {
 
 	repo := &Repository{}
-	hub, err := registry.New(opts.Registry, opts.Username, opts.Password)
-	if err != nil {
-		return nil, err
+
+	var hub *registry.Registry
+	var err error
+
+	if os.Getenv(EnvInsecure) == "true" {
+		hub, err = registry.NewInsecure(opts.Registry, opts.Username, opts.Password)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		hub, err = registry.New(opts.Registry, opts.Username, opts.Password)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	hub.Logf = LogFormatter
 
 	tags, err := hub.Tags(opts.Name)
