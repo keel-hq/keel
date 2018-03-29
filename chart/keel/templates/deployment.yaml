@@ -100,6 +100,11 @@ spec:
             - name: DEBUG
               value: "1"
 {{- end }}
+{{- if .Values.insecure_registry }}
+            # Enable insecure registries
+            - name: INSECURE_REGISTRY
+              value: "true"
+ {{- end }}
           ports:
             - containerPort: 9300
           livenessProbe:
