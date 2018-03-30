@@ -26,7 +26,7 @@ type Repository struct {
 // Client - generic docker registry client
 type Client interface {
 	Get(opts Opts) (*Repository, error)
-	Digest(opts Opts) (digest string, err error)
+	Digest(opts Opts) (string, error)
 }
 
 // New - new registry client
@@ -82,7 +82,7 @@ func (c *DefaultClient) Get(opts Opts) (*Repository, error) {
 }
 
 // Digest - get digest for repo
-func (c *DefaultClient) Digest(opts Opts) (digest string, err error) {
+func (c *DefaultClient) Digest(opts Opts) (string, error) {
 	if opts.Tag == "" {
 		return "", ErrTagNotSupplied
 	}
