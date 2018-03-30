@@ -112,7 +112,7 @@ func (c *DefaultClient) Digest(opts Opts) (digest string, err error) {
 
 	manifestDigest, err := hub.ManifestDigest(opts.Name, opts.Tag)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	return manifestDigest.String(), nil
