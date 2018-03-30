@@ -99,12 +99,12 @@ func (c *DefaultClient) Digest(opts Opts) (digest string, err error) {
 	if os.Getenv(EnvInsecure) == "true" {
 		hub, err = registry.NewInsecure(opts.Registry, opts.Username, opts.Password)
 		if err != nil {
-			return nil, err
+			return
 		}
 	} else {
 		hub, err = registry.New(opts.Registry, opts.Username, opts.Password)
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
 
