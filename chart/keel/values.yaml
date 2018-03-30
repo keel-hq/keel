@@ -8,7 +8,7 @@ image:
   pullPolicy: IfNotPresent
 
 # Enable insecure registries
-insecure_registry: true
+insecure_registry: false
 
 # Polling is enabled by default,
 # you can disable it setting value below to false
