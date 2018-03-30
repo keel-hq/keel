@@ -89,6 +89,18 @@ func (registry *Registry) ManifestDigest(repository, reference string) (digest.D
 		return "", err
 	}
 
+	if hdr := resp.Header.Get("Docker-Content-Digest"); len(hdr) > 0 {
+		return digest.Parse(hdr)
+	} else {
+		// Try to get digest from body instead, should be equal to what would be presented
+		// in Docker-Content-Digest
+		body, err := registry.ManifestV2(repository, reference)
+		if err != nil {
+			return "", err
+		}
+		return digest.FromBytes(body.canonical)
+	}
+
 	return digest.Parse(resp.Header.Get("Docker-Content-Digest"))
 }
 
