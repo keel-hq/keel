@@ -7,6 +7,9 @@ image:
   tag: 0.8.0
   pullPolicy: IfNotPresent
 
+# Enable insecure registries
+insecure_registry: false
+
 # Polling is enabled by default,
 # you can disable it setting value below to false
 polling:
@@ -108,7 +111,7 @@ resources:
 nodeSelector: {}
 
 # base64 encoded json of GCP service account
-# more info available here: https://cloud.google.com/kubernetes-engine/docs/tutorials/authenticating-to-cloud-platform  
+# more info available here: https://cloud.google.com/kubernetes-engine/docs/tutorials/authenticating-to-cloud-platform
 # e.g. --set googleApplicationCredentials=$(cat <JSON_KEY_FIEL> | base64)
 # googleApplicationCredentials: ""
 
