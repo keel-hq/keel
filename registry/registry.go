@@ -93,10 +93,21 @@ func (c *DefaultClient) Digest(opts Opts) (digest string, err error) {
 		"tag":        opts.Tag,
 	}).Debug("registry client: getting digest")
 
-	hub, err := registry.New(opts.Registry, opts.Username, opts.Password)
-	if err != nil {
-		return
+	var hub *registry.Registry
+	var err error
+
+	if os.Getenv(EnvInsecure) == "true" {
+		hub, err = registry.NewInsecure(opts.Registry, opts.Username, opts.Password)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		hub, err = registry.New(opts.Registry, opts.Username, opts.Password)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	hub.Logf = LogFormatter
 
 	manifestDigest, err := hub.ManifestDigest(opts.Name, opts.Tag)
