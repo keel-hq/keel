@@ -297,7 +297,7 @@
   branch = "master"
   name = "github.com/rusenask/docker-registry-client"
   packages = ["registry"]
-  revision = "155e2f69df82a7d34b1645054447c3ec716e9e82"
+  revision = "436ed392ccd5672e03547025aef646a2eef90057"
 
 [[projects]]
   branch = "master"

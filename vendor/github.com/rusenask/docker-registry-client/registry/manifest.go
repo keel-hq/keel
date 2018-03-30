@@ -82,26 +82,23 @@ func (registry *Registry) ManifestDigest(repository, reference string) (digest.D
 
 	req.Header.Set("Accept", manifestV2.MediaTypeManifest)
 	resp, err := registry.Client.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
+	if err != nil {
+		return "", err
 	}
+	defer resp.Body.Close()
+
+	if hdr := resp.Header.Get("Docker-Content-Digest"); hdr != "" {
+		return digest.Parse(hdr)
+	}
+
+	// Try to get digest from body instead, should be equal to what would be presented
+	// in Docker-Content-Digest
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
 
-	if hdr := resp.Header.Get("Docker-Content-Digest"); len(hdr) > 0 {
-		return digest.Parse(hdr)
-	} else {
-		// Try to get digest from body instead, should be equal to what would be presented
-		// in Docker-Content-Digest
-		body, err := registry.ManifestV2(repository, reference)
-		if err != nil {
-			return "", err
-		}
-		return digest.FromBytes(body.canonical)
-	}
-
-	return digest.Parse(resp.Header.Get("Docker-Content-Digest"))
+	return digest.FromBytes(body), nil
 }
 
 func (registry *Registry) DeleteManifest(repository string, digest digest.Digest) error {
