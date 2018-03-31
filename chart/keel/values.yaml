@@ -4,7 +4,7 @@
 
 image:
   repository: keelhq/keel
-  tag: 0.6.1
+  tag: 0.8.3
   pullPolicy: IfNotPresent
 
 # Polling is enabled by default,
