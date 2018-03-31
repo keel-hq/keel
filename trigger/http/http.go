@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -78,6 +79,11 @@ func getID(req *http.Request) string {
 }
 
 func (s *TriggerServer) registerRoutes(mux *mux.Router) {
+
+	if os.Getenv("DEBUG") == "true" {
+		DebugHandler{}.AddRoutes(mux)
+	}
+
 	// health endpoint for k8s to be happy
 	mux.HandleFunc("/healthz", s.healthHandler).Methods("GET", "OPTIONS")
 	// version handler

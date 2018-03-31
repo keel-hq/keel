@@ -2,11 +2,15 @@ package registry
 
 import (
 	"errors"
+	"os"
 
 	"github.com/rusenask/docker-registry-client/registry"
 
 	log "github.com/sirupsen/logrus"
 )
+
+// EnvInsecure - uses insecure registry client to skip cert verification
+const EnvInsecure = "INSECURE_REGISTRY"
 
 // errors
 var (
@@ -22,7 +26,7 @@ type Repository struct {
 // Client - generic docker registry client
 type Client interface {
 	Get(opts Opts) (*Repository, error)
-	Digest(opts Opts) (digest string, err error)
+	Digest(opts Opts) (string, error)
 }
 
 // New - new registry client
@@ -50,10 +54,22 @@ func LogFormatter(format string, args ...interface{}) {
 func (c *DefaultClient) Get(opts Opts) (*Repository, error) {
 
 	repo := &Repository{}
-	hub, err := registry.New(opts.Registry, opts.Username, opts.Password)
-	if err != nil {
-		return nil, err
+
+	var hub *registry.Registry
+	var err error
+
+	if os.Getenv(EnvInsecure) == "true" {
+		hub, err = registry.NewInsecure(opts.Registry, opts.Username, opts.Password)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		hub, err = registry.New(opts.Registry, opts.Username, opts.Password)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	hub.Logf = LogFormatter
 
 	tags, err := hub.Tags(opts.Name)
@@ -66,7 +82,7 @@ func (c *DefaultClient) Get(opts Opts) (*Repository, error) {
 }
 
 // Digest - get digest for repo
-func (c *DefaultClient) Digest(opts Opts) (digest string, err error) {
+func (c *DefaultClient) Digest(opts Opts) (string, error) {
 	if opts.Tag == "" {
 		return "", ErrTagNotSupplied
 	}
@@ -77,15 +93,26 @@ func (c *DefaultClient) Digest(opts Opts) (digest string, err error) {
 		"tag":        opts.Tag,
 	}).Debug("registry client: getting digest")
 
-	hub, err := registry.New(opts.Registry, opts.Username, opts.Password)
-	if err != nil {
-		return
+	var hub *registry.Registry
+	var err error
+
+	if os.Getenv(EnvInsecure) == "true" {
+		hub, err = registry.NewInsecure(opts.Registry, opts.Username, opts.Password)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		hub, err = registry.New(opts.Registry, opts.Username, opts.Password)
+		if err != nil {
+			return "", err
+		}
 	}
+
 	hub.Logf = LogFormatter
 
 	manifestDigest, err := hub.ManifestDigest(opts.Name, opts.Tag)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	return manifestDigest.String(), nil

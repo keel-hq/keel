@@ -88,7 +88,7 @@ func New(cache cache.Cache, serializer codecs.Serializer) *DefaultManager {
 // that already reached their deadline
 func (m *DefaultManager) StartExpiryService(ctx context.Context) error {
 	ticker := time.NewTicker(60 * time.Minute)
-
+	defer ticker.Stop()
 	err := m.expireEntries()
 	if err != nil {
 		log.WithFields(log.Fields{

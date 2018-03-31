@@ -206,3 +206,84 @@ func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
 	}
 
 }
+
+func TestWatchMultipleTags(t *testing.T) {
+	// fake provider listening for events
+	imgA, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.1")
+	imgB, _ := image.Parse("gcr.io/v2-namespace/greetings-world:1.1.1")
+	imgC, _ := image.Parse("gcr.io/v2-namespace/greetings-world:alpha")
+	imgD, _ := image.Parse("gcr.io/v2-namespace/greetings-world:master")
+	fp := &fakeProvider{
+		images: []*types.TrackedImage{
+
+			&types.TrackedImage{
+				Image:        imgA,
+				Trigger:      types.TriggerTypePoll,
+				Provider:     "fp",
+				PollSchedule: types.KeelPollDefaultSchedule,
+			},
+
+			&types.TrackedImage{
+				Trigger:      types.TriggerTypePoll,
+				Image:        imgB,
+				Provider:     "fp",
+				PollSchedule: types.KeelPollDefaultSchedule,
+			},
+
+			&types.TrackedImage{
+				Trigger:      types.TriggerTypePoll,
+				Image:        imgC,
+				Provider:     "fp",
+				PollSchedule: types.KeelPollDefaultSchedule,
+			},
+
+			&types.TrackedImage{
+				Trigger:      types.TriggerTypePoll,
+				Image:        imgD,
+				Provider:     "fp",
+				PollSchedule: types.KeelPollDefaultSchedule,
+			},
+		},
+	}
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	// returning some sha
+	frc := &fakeRegistryClient{
+		digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
+		tagsToReturn:   []string{"5.0.0"},
+	}
+
+	watcher := NewRepositoryWatcher(providers, frc)
+
+	watcher.Watch("gcr.io/v2-namespace/hello-world:1.1.1", "@every 10m", "", "")
+	watcher.Watch("gcr.io/v2-namespace/greetings-world:1.1.1", "@every 10m", "", "")
+	watcher.Watch("gcr.io/v2-namespace/greetings-world:alpha", "@every 10m", "", "")
+	watcher.Watch("gcr.io/v2-namespace/greetings-world:master", "@every 10m", "", "")
+
+	if len(watcher.watched) != 4 {
+		t.Errorf("expected to find watching 4 entries, found: %d", len(watcher.watched))
+	}
+
+	if dig, ok := watcher.watched["gcr.io/v2-namespace/greetings-world:alpha"]; ok != true {
+		t.Errorf("alpha watcher not found")
+		if dig.digest != "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb" {
+			t.Errorf("digest not set for alpha")
+		}
+	}
+
+	if dig, ok := watcher.watched["gcr.io/v2-namespace/greetings-world:master"]; ok != true {
+		t.Errorf("alpha watcher not found")
+		if dig.digest != "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb" {
+			t.Errorf("digest not set for alpha")
+		}
+	}
+
+	if det, ok := watcher.watched["gcr.io/v2-namespace/greetings-world"]; ok != true {
+		t.Errorf("alpha watcher not found")
+		if det.latest != "5.0.0" {
+			t.Errorf("expected to find a tag set for multiple tags watch job")
+		}
+	}
+}

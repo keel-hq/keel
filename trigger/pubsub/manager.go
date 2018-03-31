@@ -95,8 +95,8 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 		}
 
 		// uri
-		gcrURI := containerRegistryURI(s.projectID, trackedImage.Image.Registry())
-		s.ensureSubscription(gcrURI)
+		// https://cloud.google.com/container-registry/docs/configuring-notifications
+		s.ensureSubscription("gcr")
 	}
 	return nil
 }
