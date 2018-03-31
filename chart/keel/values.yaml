@@ -4,11 +4,7 @@
 
 image:
   repository: keelhq/keel
-<<<<<<< HEAD
   tag: 0.8.3
-=======
-  tag: 0.8.0
->>>>>>> cf8d4d3cca5e99a3e4bea2845d71ac354fc730de
   pullPolicy: IfNotPresent
 
 # Enable insecure registries
