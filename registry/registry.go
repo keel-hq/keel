@@ -1,14 +1,11 @@
 package registry
 
 import (
-	"crypto/tls"
 	"errors"
 	"hash/fnv"
-	"net/http"
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/rusenask/docker-registry-client/registry"
 
@@ -82,38 +79,9 @@ func (c *DefaultClient) getRegistryClient(registryAddress, username, password st
 
 	url := strings.TrimSuffix(registryAddress, "/")
 	if os.Getenv(EnvInsecure) == "true" {
-		r = &registry.Registry{
-			URL: url,
-			Client: &http.Client{
-				Transport: &registry.BasicTransport{
-					Transport: &http.Transport{
-						Proxy: http.ProxyFromEnvironment,
-						TLSClientConfig: &tls.Config{
-							InsecureSkipVerify: true,
-						},
-						MaxIdleConns:          10,
-						IdleConnTimeout:       90 * time.Second,
-						TLSHandshakeTimeout:   10 * time.Second,
-						ExpectContinueTimeout: 1 * time.Second,
-					},
-					URL:      url,
-					Username: username,
-					Password: password,
-				},
-			},
-		}
+		r = registry.NewInsecure(url, username, password)
 	} else {
-		r = &registry.Registry{
-			URL: url,
-			Client: &http.Client{
-				Transport: &registry.BasicTransport{
-					Transport: http.DefaultTransport,
-					URL:       url,
-					Username:  username,
-					Password:  password,
-				},
-			},
-		}
+		r = registry.New(url, username, password)
 	}
 
 	r.Logf = LogFormatter

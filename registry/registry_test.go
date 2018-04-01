@@ -13,15 +13,15 @@ func TestDigest(t *testing.T) {
 	client := New()
 	digest, err := client.Digest(Opts{
 		Registry: "https://index.docker.io",
-		Name:     "karolisr/webhook-demo",
-		Tag:      "alpha",
+		Name:     "keelhq/keel",
+		Tag:      "0.8.0",
 	})
 
 	if err != nil {
 		t.Errorf("error while getting digest: %s", err)
 	}
 
-	if digest != "sha256:c76aa6ac847308941171a21ca87d611a8b7ec1511ed841f0a7646aa1eb3064b8" {
+	if digest != "sha256:671b6250a0793abdd9603d7f5c6f2fa1b4070661d6f56bcfc7ad5de86574ab48" {
 		t.Errorf("unexpected digest: %s", digest)
 	}
 }
