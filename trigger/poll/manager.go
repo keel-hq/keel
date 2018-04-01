@@ -9,8 +9,21 @@ import (
 	"github.com/keel-hq/keel/secrets"
 	"github.com/keel-hq/keel/types"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	log "github.com/sirupsen/logrus"
 )
+
+var pollTriggerTrackedImages = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Name: "poll_trigger_tracked_images",
+		Help: "How many images are tracked by poll trigger",
+	},
+)
+
+func init() {
+	prometheus.MustRegister(pollTriggerTrackedImages)
+}
 
 // DefaultManager - default manager is responsible for scanning deployments and identifying
 // deployments that have market
@@ -82,10 +95,14 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 		return err
 	}
 
+	var tracked float64
+
 	for _, trackedImage := range trackedImages {
 		if trackedImage.Trigger != types.TriggerTypePoll {
 			continue
 		}
+
+		tracked++
 
 		// anonymous credentials
 		creds := &types.Credentials{}
@@ -110,5 +127,8 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 			// continue processing other images
 		}
 	}
+
+	pollTriggerTrackedImages.Set(tracked)
+
 	return nil
 }
