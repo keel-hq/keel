@@ -12,14 +12,37 @@ import (
 
 	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/keel-hq/keel/extension/notification"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/ghodss/yaml"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/helm"
 	"k8s.io/helm/pkg/strvals"
 )
+
+var helmVersionedUpdatesCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "helm_versioned_updates_total",
+		Help: "How many versioned helm charts were updated, partitioned by chart name.",
+	},
+	[]string{"chart"},
+)
+
+var helmUnversionedUpdatesCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "helm_unversioned_updates_total",
+		Help: "How many unversioned helm charts were updated, partitioned by chart name.",
+	},
+	[]string{"chart"},
+)
+
+func init() {
+	prometheus.MustRegister(helmVersionedUpdatesCounter)
+	prometheus.MustRegister(helmUnversionedUpdatesCounter)
+}
 
 // Manager - high level interface into helm provider related data used by
 // triggers
@@ -250,6 +273,7 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 
 			if update {
 				plans = append(plans, plan)
+				helmUnversionedUpdatesCounter.With(prometheus.Labels{"chart": fmt.Sprintf("%s/%s", release.Namespace, release.Name)}).Inc()
 				continue
 			}
 
@@ -270,6 +294,7 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 			continue
 		}
 		if update {
+			helmVersionedUpdatesCounter.With(prometheus.Labels{"chart": fmt.Sprintf("%s/%s", release.Namespace, release.Name)}).Inc()
 			plans = append(plans, plan)
 		}
 	}

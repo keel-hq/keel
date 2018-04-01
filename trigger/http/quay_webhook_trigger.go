@@ -7,9 +7,22 @@ import (
 	"time"
 
 	"github.com/keel-hq/keel/types"
+	"github.com/prometheus/client_golang/prometheus"
 
 	log "github.com/sirupsen/logrus"
 )
+
+var newQuayWebhooksCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "quay_webhook_requests_total",
+		Help: "How many /v1/webhooks/quay requests processed, partitioned by image.",
+	},
+	[]string{"image"},
+)
+
+func init() {
+	prometheus.MustRegister(newQuayWebhooksCounter)
+}
 
 // Example of quay trigger
 // {
@@ -63,9 +76,9 @@ func (s *TriggerServer) quayHandler(resp http.ResponseWriter, req *http.Request)
 		event.Repository.Tag = tag
 
 		s.trigger(event)
-
-		resp.WriteHeader(http.StatusOK)
+		newQuayWebhooksCounter.With(prometheus.Labels{"image": event.Repository.Name}).Inc()
 	}
 
+	resp.WriteHeader(http.StatusOK)
 	return
 }
