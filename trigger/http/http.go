@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/negroni"
 
 	"github.com/keel-hq/keel/approvals"
@@ -100,6 +101,8 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	// dockerhub webhooks handler
 	mux.HandleFunc("/v1/webhooks/dockerhub", s.dockerHubHandler).Methods("POST", "OPTIONS")
 	mux.HandleFunc("/v1/webhooks/quay", s.quayHandler).Methods("POST", "OPTIONS")
+
+	mux.Handle("/metrics", promhttp.Handler())
 }
 
 func (s *TriggerServer) healthHandler(resp http.ResponseWriter, req *http.Request) {
