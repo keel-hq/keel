@@ -11,6 +11,7 @@ type TokenTransport struct {
 	Transport http.RoundTripper
 	Username  string
 	Password  string
+	Client    *http.Client
 }
 
 func (t *TokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -19,6 +20,7 @@ func (t *TokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return resp, err
 	}
 	if authService := isTokenDemand(resp); authService != nil {
+		resp.Body.Close()
 		resp, err = t.authAndRetry(authService, req)
 	}
 	return resp, err
@@ -44,19 +46,15 @@ func (t *TokenTransport) auth(authService *authService) (string, *http.Response,
 		return "", nil, err
 	}
 
-	client := http.Client{
-		Transport: t.Transport,
-	}
-
-	response, err := client.Do(authReq)
+	response, err := t.Client.Do(authReq)
 	if err != nil {
 		return "", nil, err
 	}
+	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
 		return "", response, err
 	}
-	defer response.Body.Close()
 
 	var authToken authToken
 	decoder := json.NewDecoder(response.Body)
