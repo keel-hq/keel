@@ -11,8 +11,22 @@ import (
 	"github.com/keel-hq/keel/util/version"
 	"github.com/rusenask/cron"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	log "github.com/sirupsen/logrus"
 )
+
+var registriesScannedCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "registries_scanned_total",
+		Help: "How many registries where checked for new images, partitioned by registry and image.",
+	},
+	[]string{"registry", "image"},
+)
+
+func init() {
+	prometheus.MustRegister(registriesScannedCounter)
+}
 
 // Watcher - generic watcher interface
 type Watcher interface {
@@ -255,6 +269,8 @@ func (j *WatchTagJob) Run() {
 		Username: j.details.registryUsername,
 		Password: j.details.registryPassword,
 	})
+
+	registriesScannedCounter.With(prometheus.Labels{"registry": j.details.imageRef.Registry(), "image": j.details.imageRef.Name()}).Inc()
 
 	if err != nil {
 		log.WithFields(log.Fields{

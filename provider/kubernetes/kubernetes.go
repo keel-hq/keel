@@ -8,10 +8,10 @@ import (
 
 	"github.com/rusenask/cron"
 
-	// "k8s.io/api/core/v1"
 	"k8s.io/api/core/v1"
-
 	"k8s.io/api/extensions/v1beta1"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/extension/notification"
@@ -22,6 +22,27 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+var kubernetesVersionedUpdatesCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "kubernetes_versioned_updates_total",
+		Help: "How many versioned deployments were updated, partitioned by deployment name.",
+	},
+	[]string{"deployment"},
+)
+
+var kubernetesUnversionedUpdatesCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "kubernetes_unversioned_updates_total",
+		Help: "How many unversioned deployments were updated, partitioned by deployment name.",
+	},
+	[]string{"deployment"},
+)
+
+func init() {
+	prometheus.MustRegister(kubernetesVersionedUpdatesCounter)
+	prometheus.MustRegister(kubernetesUnversionedUpdatesCounter)
+}
 
 // ProviderName - provider name
 const ProviderName = "kubernetes"
@@ -218,10 +239,12 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 		if reset {
 			// force update, terminating all pods
 			err = p.forceUpdate(&deployment)
+			kubernetesUnversionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name)}).Inc()
 		} else {
 			// regular update
 			deployment.Annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s", plan.CurrentVersion, plan.NewVersion)
 			err = p.implementer.Update(&deployment)
+			kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name)}).Inc()
 		}
 		if err != nil {
 			log.WithFields(log.Fields{

@@ -7,9 +7,22 @@ import (
 	"time"
 
 	"github.com/keel-hq/keel/types"
+	"github.com/prometheus/client_golang/prometheus"
 
 	log "github.com/sirupsen/logrus"
 )
+
+var newNativeWebhooksCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "native_webhook_requests_total",
+		Help: "How many /v1/webhooks/native requests processed, partitioned by image.",
+	},
+	[]string{"image"},
+)
+
+func init() {
+	prometheus.MustRegister(newNativeWebhooksCounter)
+}
 
 // nativeHandler - used to trigger event directly
 func (s *TriggerServer) nativeHandler(resp http.ResponseWriter, req *http.Request) {
@@ -42,5 +55,7 @@ func (s *TriggerServer) nativeHandler(resp http.ResponseWriter, req *http.Reques
 	s.trigger(event)
 
 	resp.WriteHeader(http.StatusOK)
+
+	newNativeWebhooksCounter.With(prometheus.Labels{"image": event.Repository.Name}).Inc()
 	return
 }

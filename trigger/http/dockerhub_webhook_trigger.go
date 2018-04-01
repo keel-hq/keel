@@ -8,8 +8,22 @@ import (
 
 	"github.com/keel-hq/keel/types"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	log "github.com/sirupsen/logrus"
 )
+
+var newDockerhubWebhooksCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "dockerhub_webhook_requests_total",
+		Help: "How many /v1/webhooks/dockerhub requests processed, partitioned by image.",
+	},
+	[]string{"image"},
+)
+
+func init() {
+	prometheus.MustRegister(newDockerhubWebhooksCounter)
+}
 
 // Example of dockerhub trigger
 // {
@@ -98,5 +112,7 @@ func (s *TriggerServer) dockerHubHandler(resp http.ResponseWriter, req *http.Req
 	s.trigger(event)
 
 	resp.WriteHeader(http.StatusOK)
+
+	newDockerhubWebhooksCounter.With(prometheus.Labels{"image": event.Repository.Name}).Inc()
 	return
 }
