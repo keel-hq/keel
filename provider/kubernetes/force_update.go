@@ -32,16 +32,25 @@ func (p *Provider) forceUpdate(deployment *v1beta1.Deployment) (err error) {
 
 	for index, pod := range podList.Items {
 
+		var gp int64
+
+		if pod.DeletionGracePeriodSeconds != nil {
+			gp = *pod.DeletionGracePeriodSeconds
+		}
+		if gracePeriod != 0 {
+			gp = gracePeriod
+		}
+
 		log.WithFields(log.Fields{
 			"selector":     selector,
 			"pod":          pod.Name,
 			"namespace":    deployment.Namespace,
 			"deployment":   deployment.Name,
-			"grace_period": fmt.Sprint(gracePeriod),
+			"grace_period": fmt.Sprint(gp),
 		}).Info("provider.kubernetes: deleting pod to force pull...")
 
 		err = p.implementer.DeletePod(deployment.Namespace, pod.Name, &meta_v1.DeleteOptions{
-			GracePeriodSeconds: &gracePeriod,
+			GracePeriodSeconds: &gp,
 		})
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -55,7 +64,7 @@ func (p *Provider) forceUpdate(deployment *v1beta1.Deployment) (err error) {
 
 		// sleep between pod restarts but not if there aren't more left
 		if index < len(podList.Items)-1 {
-			time.Sleep(time.Duration(podDeleteDelay))
+			time.Sleep(time.Duration(podDeleteDelay) * time.Second)
 		}
 	}
 
