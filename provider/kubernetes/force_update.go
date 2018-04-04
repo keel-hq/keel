@@ -30,7 +30,7 @@ func (p *Provider) forceUpdate(deployment *v1beta1.Deployment) (err error) {
 		return err
 	}
 
-	for _, pod := range podList.Items {
+	for index, pod := range podList.Items {
 
 		log.WithFields(log.Fields{
 			"selector":     selector,
@@ -53,7 +53,10 @@ func (p *Provider) forceUpdate(deployment *v1beta1.Deployment) (err error) {
 			}).Error("provider.kubernetes: got error while deleting a pod")
 		}
 
-		time.Sleep(time.Duration(podDeleteDelay))
+		// sleep between pod restarts but not if there aren't more left
+		if index < len(podList.Items)-1 {
+			time.Sleep(time.Duration(podDeleteDelay))
+		}
 	}
 
 	return nil
