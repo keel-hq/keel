@@ -193,6 +193,36 @@ func TestShouldUpdate(t *testing.T) {
 			want:    true,
 			wantErr: false,
 		},
+		{
+			name: "prerelease patch increase, policy minor, no prerelease",
+			args: args{
+				current: &types.Version{Major: 1, Minor: 4, Patch: 5},
+				new:     &types.Version{Major: 1, Minor: 4, Patch: 6, PreRelease: "xx"},
+				policy:  types.PolicyTypeMinor,
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name: "prerelease patch increase, policy minor",
+			args: args{
+				current: &types.Version{Major: 1, Minor: 4, Patch: 5, PreRelease: "xx"},
+				new:     &types.Version{Major: 1, Minor: 4, Patch: 6, PreRelease: "xx"},
+				policy:  types.PolicyTypeMinor,
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "patch increase, policy minor, wrong prerelease",
+			args: args{
+				current: &types.Version{Major: 1, Minor: 4, Patch: 5, PreRelease: "xx"},
+				new:     &types.Version{Major: 1, Minor: 4, Patch: 6, PreRelease: "yy"},
+				policy:  types.PolicyTypeMinor,
+			},
+			want:    false,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
