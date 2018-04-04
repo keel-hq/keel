@@ -53,7 +53,7 @@ func (p *Provider) forceUpdate(deployment *v1beta1.Deployment) (err error) {
 			}).Error("provider.kubernetes: got error while deleting a pod")
 		}
 
-		time.Sleep(podDeleteDelay)
+		time.Sleep(time.Duration(podDeleteDelay))
 	}
 
 	return nil
