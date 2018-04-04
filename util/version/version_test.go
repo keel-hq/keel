@@ -204,6 +204,26 @@ func TestShouldUpdate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "parsed prerelease patch increase, policy minor, no prerelease",
+			args: args{
+				current: MustParse("v1.0.0"),
+				new:     MustParse("v1.0.1-metadata"),
+				policy:  types.PolicyTypeMinor,
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name: "parsed prerelease minor increase, policy minor, both have metadata",
+			args: args{
+				current: MustParse("v1.0.0-metadata"),
+				new:     MustParse("v1.0.1-metadata"),
+				policy:  types.PolicyTypeMinor,
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
 			name: "prerelease patch increase, policy minor",
 			args: args{
 				current: &types.Version{Major: 1, Minor: 4, Patch: 5, PreRelease: "xx"},

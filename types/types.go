@@ -51,6 +51,9 @@ const KeelApprovalDeadlineDefault = 24
 // during force deploy
 const KeelPodDeleteDelay = "keel.sh/forceDelay"
 
+//KeelPodMaxDelay defines maximum delay in seconds between deleting pods
+const KeelPodMaxDelay int64 = 600
+
 // KeelPodTerminationGracePeriod - optional grace period during
 // pod termination
 const KeelPodTerminationGracePeriod = "keel.sh/gracePeriod"
@@ -218,19 +221,24 @@ func ParsePodDeleteDelay(annotations map[string]string) int64 {
 		return delay
 	}
 	delayStr, ok := annotations[KeelPodDeleteDelay]
-	if ok {
-
-		g, err := strconv.Atoi(delayStr)
-		if err != nil {
-			return delay
-		}
-
-		if g > 0 && g < 600 {
-			return int64(g)
-		}
+	if !ok {
+		return delay
 	}
 
-	return delay
+	g, err := strconv.Atoi(delayStr)
+	if err != nil {
+		return delay
+	}
+
+	if g < 1 {
+		return delay
+	}
+
+	if int64(g) > KeelPodMaxDelay {
+		return KeelPodMaxDelay
+	}
+	return int64(g)
+
 }
 
 // ParsePodTerminationGracePeriod - parses pod termination time in seconds
