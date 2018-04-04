@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"time"
 
 	"k8s.io/api/extensions/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +16,7 @@ func (p *Provider) forceUpdate(deployment *v1beta1.Deployment) (err error) {
 
 	gracePeriod := types.ParsePodTerminationGracePeriod(deployment.Annotations)
 	selector := meta_v1.FormatLabelSelector(deployment.Spec.Selector)
+	podDeleteDelay := types.ParsePodDeleteDelay(deployment.Annotations)
 
 	// image tag didn't change, need to terminate pods
 	podList, err := p.implementer.Pods(deployment.Namespace, selector)
@@ -28,7 +30,7 @@ func (p *Provider) forceUpdate(deployment *v1beta1.Deployment) (err error) {
 		return err
 	}
 
-	for _, pod := range podList.Items {
+	for index, pod := range podList.Items {
 
 		log.WithFields(log.Fields{
 			"selector":     selector,
@@ -49,9 +51,12 @@ func (p *Provider) forceUpdate(deployment *v1beta1.Deployment) (err error) {
 				"namespace":  deployment.Namespace,
 				"deployment": deployment.Name,
 			}).Error("provider.kubernetes: got error while deleting a pod")
-			continue
 		}
 
+		// sleep between pod restarts but not if there aren't more left
+		if index < len(podList.Items)-1 {
+			time.Sleep(time.Duration(podDeleteDelay))
+		}
 	}
 
 	return nil
