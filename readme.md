@@ -85,4 +85,12 @@ Before starting to work on some big or medium features - raise an issue [here](h
 
 ### Developing Keel
 
-If you wish to work on Keel itself, you will need Go 1.8+ installed. Make sure you put Keel into correct Gopath and `go build` (dependency management is done through [dep](https://github.com/golang/dep)). 
+If you wish to work on Keel itself, you will need Go 1.9+ installed. Make sure you put Keel into correct Gopath and `go build` (dependency management is done through [dep](https://github.com/golang/dep)). 
+
+To test Keel while developing:
+
+1. Launch a Kubernetes cluster like Minikube or Docker for Mac with Kubernetes.
+2. Change config to use it: `kubectl config use-context docker-for-desktop`
+3. Build Keel from `cmd/keel` directory. 
+4. Start Keel with: `keel --no-incluster`. This will use Kubeconfig from your home. 
+

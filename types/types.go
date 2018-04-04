@@ -47,6 +47,13 @@ const KeelApprovalDeadlineLabel = "keel.sh/approvalDeadline"
 // KeelApprovalDeadlineDefault - default deadline in hours
 const KeelApprovalDeadlineDefault = 24
 
+// KeelPodDeleteDelay - optional delay betwen killing pods
+// during force deploy
+const KeelPodDeleteDelay = "keel.sh/forceDelay"
+
+//KeelPodMaxDelay defines maximum delay in seconds between deleting pods
+const KeelPodMaxDelay int64 = 600
+
 // KeelPodTerminationGracePeriod - optional grace period during
 // pod termination
 const KeelPodTerminationGracePeriod = "keel.sh/gracePeriod"
@@ -204,6 +211,34 @@ func ParseEventNotificationChannels(annotations map[string]string) []string {
 	}
 
 	return channels
+}
+
+// ParsePodDeleteDelay - parses pod delete delay time in seconds
+// from a given map of annotations
+func ParsePodDeleteDelay(annotations map[string]string) int64 {
+	delay := int64(0)
+	if annotations == nil {
+		return delay
+	}
+	delayStr, ok := annotations[KeelPodDeleteDelay]
+	if !ok {
+		return delay
+	}
+
+	g, err := strconv.Atoi(delayStr)
+	if err != nil {
+		return delay
+	}
+
+	if g < 1 {
+		return delay
+	}
+
+	if int64(g) > KeelPodMaxDelay {
+		return KeelPodMaxDelay
+	}
+	return int64(g)
+
 }
 
 // ParsePodTerminationGracePeriod - parses pod termination time in seconds

@@ -130,6 +130,10 @@ func ShouldUpdate(current *types.Version, new *types.Version, policy types.Polic
 		return false, fmt.Errorf("failed to parse new version: %s", err)
 	}
 
+	if currentVersion.Prerelease() != newVersion.Prerelease() {
+		return false, nil
+	}
+
 	// new version is not higher than current - do nothing
 	if !currentVersion.LessThan(newVersion) {
 		return false, nil
