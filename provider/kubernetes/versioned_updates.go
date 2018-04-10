@@ -71,7 +71,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 
 		// if policy is force, don't bother with version checking
 		// same with `latest` images, update them to versioned ones
-		if policy == types.PolicyTypeForce || conatinerImageRef.Tag() == "latest" {
+		if policy == types.PolicyTypeForce || policy == types.PolicyTypeForceMatching || conatinerImageRef.Tag() == "latest" {
 			c = updateContainer(c, conatinerImageRef, newVersion.String())
 
 			deployment.Spec.Template.Spec.Containers[idx] = c

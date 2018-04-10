@@ -45,6 +45,11 @@ func TestParsePolicy(t *testing.T) {
 			args: args{policy: "force"},
 			want: PolicyTypeForce,
 		},
+		{
+			name: "force-matching",
+			args: args{policy: "force-matching"},
+			want: PolicyTypeForceMatching,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -9,21 +9,23 @@ import (
 
 var (
 	_PolicyTypeNameToValue = map[string]PolicyType{
-		"PolicyTypeNone":  PolicyTypeNone,
-		"PolicyTypeAll":   PolicyTypeAll,
-		"PolicyTypeMajor": PolicyTypeMajor,
-		"PolicyTypeMinor": PolicyTypeMinor,
-		"PolicyTypePatch": PolicyTypePatch,
-		"PolicyTypeForce": PolicyTypeForce,
+		"PolicyTypeNone":          PolicyTypeNone,
+		"PolicyTypeAll":           PolicyTypeAll,
+		"PolicyTypeMajor":         PolicyTypeMajor,
+		"PolicyTypeMinor":         PolicyTypeMinor,
+		"PolicyTypePatch":         PolicyTypePatch,
+		"PolicyTypeForce":         PolicyTypeForce,
+		"PolicyTypeForceMatching": PolicyTypeForceMatching,
 	}
 
 	_PolicyTypeValueToName = map[PolicyType]string{
-		PolicyTypeNone:  "PolicyTypeNone",
-		PolicyTypeAll:   "PolicyTypeAll",
-		PolicyTypeMajor: "PolicyTypeMajor",
-		PolicyTypeMinor: "PolicyTypeMinor",
-		PolicyTypePatch: "PolicyTypePatch",
-		PolicyTypeForce: "PolicyTypeForce",
+		PolicyTypeNone:          "PolicyTypeNone",
+		PolicyTypeAll:           "PolicyTypeAll",
+		PolicyTypeMajor:         "PolicyTypeMajor",
+		PolicyTypeMinor:         "PolicyTypeMinor",
+		PolicyTypePatch:         "PolicyTypePatch",
+		PolicyTypeForce:         "PolicyTypeForce",
+		PolicyTypeForceMatching: "PolicyTypeForceMatching",
 	}
 )
 
@@ -31,12 +33,13 @@ func init() {
 	var v PolicyType
 	if _, ok := interface{}(v).(fmt.Stringer); ok {
 		_PolicyTypeNameToValue = map[string]PolicyType{
-			interface{}(PolicyTypeNone).(fmt.Stringer).String():  PolicyTypeNone,
-			interface{}(PolicyTypeAll).(fmt.Stringer).String():   PolicyTypeAll,
-			interface{}(PolicyTypeMajor).(fmt.Stringer).String(): PolicyTypeMajor,
-			interface{}(PolicyTypeMinor).(fmt.Stringer).String(): PolicyTypeMinor,
-			interface{}(PolicyTypePatch).(fmt.Stringer).String(): PolicyTypePatch,
-			interface{}(PolicyTypeForce).(fmt.Stringer).String(): PolicyTypeForce,
+			interface{}(PolicyTypeNone).(fmt.Stringer).String():          PolicyTypeNone,
+			interface{}(PolicyTypeAll).(fmt.Stringer).String():           PolicyTypeAll,
+			interface{}(PolicyTypeMajor).(fmt.Stringer).String():         PolicyTypeMajor,
+			interface{}(PolicyTypeMinor).(fmt.Stringer).String():         PolicyTypeMinor,
+			interface{}(PolicyTypePatch).(fmt.Stringer).String():         PolicyTypePatch,
+			interface{}(PolicyTypeForce).(fmt.Stringer).String():         PolicyTypeForce,
+			interface{}(PolicyTypeForceMatching).(fmt.Stringer).String(): PolicyTypeForceMatching,
 		}
 	}
 }

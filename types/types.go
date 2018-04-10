@@ -149,6 +149,8 @@ func ParsePolicy(policy string) PolicyType {
 		return PolicyTypePatch
 	case "force":
 		return PolicyTypeForce
+	case "force-matching":
+		return PolicyTypeForceMatching
 	default:
 		return PolicyTypeNone
 	}
@@ -168,6 +170,8 @@ func (t PolicyType) String() string {
 		return "patch"
 	case PolicyTypeForce:
 		return "force"
+	case PolicyTypeForceMatching:
+		return "force-matching"
 	default:
 		return ""
 	}
@@ -180,7 +184,8 @@ const (
 	PolicyTypeMajor
 	PolicyTypeMinor
 	PolicyTypePatch
-	PolicyTypeForce // update always when a new image is available
+	PolicyTypeForce         // update always when a new image is available
+	PolicyTypeForceMatching // update always when a new image under same tag is pushed
 )
 
 // EventNotification notification used for sending

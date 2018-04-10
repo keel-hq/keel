@@ -23,6 +23,11 @@ func unsafeGetVersion(ver string) *types.Version {
 	return v
 }
 
+func safeGetVersion(ver string) *types.Version {
+	v, _ := version.GetVersion(ver)
+	return v
+}
+
 func TestProvider_checkVersionedDeployment(t *testing.T) {
 	type fields struct {
 		implementer     Implementer
@@ -257,6 +262,69 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 				},
 				NewVersion:     "1.1.2",
 				CurrentVersion: "latest",
+			},
+			wantShouldUpdateDeployment: true,
+			wantErr:                    false,
+		},
+
+		{
+			name: "match-force update untagged container",
+			args: args{
+				newVersion: safeGetVersion("latest-staging"),
+				policy:     types.PolicyTypeForceMatching,
+				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "latest-staging"},
+				deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "force-matching"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-world:latest-staging",
+									},
+									v1.Container{
+										Image: "yo-world:1.1.1",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{forceUpdateImageAnnotation: "gcr.io/v2-namespace/hello-world:latest-staging"},
+						Labels:      map[string]string{types.KeelPolicyLabel: "force-matching"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-world:latest-staging",
+									},
+									v1.Container{
+										Image: "yo-world:1.1.1",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+				NewVersion:     "latest-staging",
+				CurrentVersion: "latest-staging",
 			},
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,

@@ -34,9 +34,11 @@ func GetVersion(version string) (*types.Version, error) {
 	v, err := semver.NewVersion(version)
 	if err != nil {
 		if err == semver.ErrInvalidSemVer {
-			return nil, ErrInvalidSemVer
+			err = ErrInvalidSemVer
 		}
-		return nil, err
+		return &types.Version{
+			Original: version,
+		}, err
 	}
 
 	return &types.Version{
@@ -46,7 +48,7 @@ func GetVersion(version string) (*types.Version, error) {
 		PreRelease: string(v.Prerelease()),
 		Metadata:   v.Metadata(),
 		Original:   v.Original(),
-	}, nil
+	}, err
 }
 
 // GetVersionFromImageName - get version from image name
@@ -119,6 +121,8 @@ func NewAvailable(current string, tags []string) (newVersion string, newAvailabl
 func ShouldUpdate(current *types.Version, new *types.Version, policy types.PolicyType) (bool, error) {
 	if policy == types.PolicyTypeForce {
 		return true, nil
+	} else if policy == types.PolicyTypeForceMatching {
+		return new.String() == current.String(), nil
 	}
 
 	currentVersion, err := semver.NewVersion(current.String())
