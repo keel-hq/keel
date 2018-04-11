@@ -185,7 +185,7 @@ const (
 	PolicyTypeMinor
 	PolicyTypePatch
 	PolicyTypeForce         // update always when a new image is available
-	PolicyTypeForceMatching // update always when a new image under same tag is pushed
+	PolicyTypeForceMatching // update spec.template.metadata.labels.time when a new image under same tag is pushed
 )
 
 // EventNotification notification used for sending
