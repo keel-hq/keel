@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/extension/notification"
@@ -29,6 +30,10 @@ func safeGetVersion(ver string) *types.Version {
 }
 
 func TestProvider_checkVersionedDeployment(t *testing.T) {
+	now = func() time.Time {
+		return time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC)
+	}
+	defer func() { now = time.Now }()
 	type fields struct {
 		implementer     Implementer
 		sender          notification.Sender
@@ -220,6 +225,11 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -246,6 +256,12 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+									"time": now().String(),
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -283,6 +299,11 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -309,6 +330,12 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+									"time": now().String(),
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -341,14 +368,14 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 			}
 			gotUpdatePlan, gotShouldUpdateDeployment, err := p.checkVersionedDeployment(tt.args.newVersion, tt.args.policy, tt.args.repo, tt.args.deployment)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Provider.checkVersionedDeployment() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Provider.checkVersionedDeployment() error = %#v, wantErr %#v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(gotUpdatePlan, tt.wantUpdatePlan) {
-				t.Errorf("Provider.checkVersionedDeployment() gotUpdatePlan = %v, want %v", gotUpdatePlan, tt.wantUpdatePlan)
+				t.Errorf("Provider.checkVersionedDeployment() gotUpdatePlan = %#v, want %#v", gotUpdatePlan, tt.wantUpdatePlan)
 			}
 			if gotShouldUpdateDeployment != tt.wantShouldUpdateDeployment {
-				t.Errorf("Provider.checkVersionedDeployment() gotShouldUpdateDeployment = %v, want %v", gotShouldUpdateDeployment, tt.wantShouldUpdateDeployment)
+				t.Errorf("Provider.checkVersionedDeployment() gotShouldUpdateDeployment = %#v, want %#v", gotShouldUpdateDeployment, tt.wantShouldUpdateDeployment)
 			}
 		})
 	}
