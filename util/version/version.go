@@ -36,9 +36,7 @@ func GetVersion(version string) (*types.Version, error) {
 		if err == semver.ErrInvalidSemVer {
 			err = ErrInvalidSemVer
 		}
-		return &types.Version{
-			Original: version,
-		}, err
+		return nil, err
 	}
 
 	return &types.Version{
