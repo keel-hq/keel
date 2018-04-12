@@ -87,7 +87,12 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			annotations = addImageToPull(annotations, c.Image)
 
 			deployment.SetAnnotations(annotations)
-			deployment.Spec.Template.Annotations["time"] = now().String()
+			if policy == types.PolicyTypeForceMatching {
+				if deployment.Spec.Template.Annotations == nil {
+					deployment.Spec.Template.Annotations = map[string]string{}
+				}
+				deployment.Spec.Template.Annotations["time"] = now().String()
+			}
 			log.WithFields(log.Fields{
 				"parsed_image":     conatinerImageRef.Remote(),
 				"raw_image_name":   c.Image,
