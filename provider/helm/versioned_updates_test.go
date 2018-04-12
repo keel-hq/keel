@@ -11,9 +11,9 @@ import (
 )
 
 func unsafeGetVersion(ver string) *types.Version {
-	v, err := version.GetVersion(ver)
-	if err != nil {
-		panic(err)
+	v := version.GetVersion(ver)
+	if v.Invalid != nil {
+		panic(v.Invalid)
 	}
 	return v
 }

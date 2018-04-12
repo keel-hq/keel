@@ -30,9 +30,31 @@ func TestGetVersionFromImageName(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "image latest",
-			args:    args{name: "karolis/webhook-demo:latest"},
-			wantErr: true,
+			name: "image latest",
+			args: args{name: "karolis/webhook-demo:latest"},
+			want: &types.Version{
+				Original: "latest",
+				Invalid:  ErrInvalidSemVer,
+			},
+			wantErr: false,
+		},
+		{
+			name: "image latest-staging",
+			args: args{name: "karolis/webhook-demo:latest-staging"},
+			want: &types.Version{
+				Original: "latest-staging",
+				Invalid:  ErrInvalidSemVer,
+			},
+			wantErr: false,
+		},
+		{
+			name: "image sha",
+			args: args{name: "karolis/webhook-demo:ef34f"},
+			want: &types.Version{
+				Original: "ef34f",
+				Invalid:  ErrInvalidSemVer,
+			},
+			wantErr: false,
 		},
 		{
 			name:    "image no tag",
@@ -61,11 +83,11 @@ func TestGetVersionFromImageName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := GetVersionFromImageName(tt.args.name)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetVersionFromImageName() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetVersionFromImageName() error = %#v, wantErr %#v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetVersionFromImageName() = %v, want %v", got, tt.want)
+				t.Errorf("GetVersionFromImageName() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}
@@ -415,11 +437,7 @@ func TestGetVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetVersion(tt.args.version)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetVersion() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := GetVersion(tt.args.version)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetVersion() = %v, want %v", got, tt.want)
 			}

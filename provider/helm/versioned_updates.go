@@ -84,8 +84,8 @@ func checkVersionedRelease(newVersion *types.Version, repo *types.Repository, na
 		}
 
 		// checking current
-		currentVersion, err := version.GetVersion(imageRef.Tag())
-		if err != nil {
+		currentVersion := version.GetVersion(imageRef.Tag())
+		if currentVersion.Invalid != nil {
 			log.WithFields(log.Fields{
 				"error":               err,
 				"container_image":     imageRef.Repository(),

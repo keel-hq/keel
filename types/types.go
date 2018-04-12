@@ -84,6 +84,7 @@ type Version struct {
 	Metadata   string
 
 	Original string
+	Invalid  error
 }
 
 func (v Version) String() string {

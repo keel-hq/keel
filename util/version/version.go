@@ -21,22 +21,25 @@ var ErrInvalidSemVer = errors.New("invalid semantic version")
 
 // MustParse - must parse version, if fails - panics
 func MustParse(version string) *types.Version {
-	ver, err := GetVersion(version)
-	if err != nil {
-		panic(err)
+	ver := GetVersion(version)
+	if ver.Invalid != nil {
+		panic(ver.Invalid)
 	}
 	return ver
 }
 
 // GetVersion - parse version
-func GetVersion(version string) (*types.Version, error) {
+func GetVersion(version string) *types.Version {
 
 	v, err := semver.NewVersion(version)
 	if err != nil {
 		if err == semver.ErrInvalidSemVer {
 			err = ErrInvalidSemVer
 		}
-		return nil, err
+		return &types.Version{
+			Original: version,
+			Invalid:  err,
+		}
 	}
 
 	return &types.Version{
@@ -46,14 +49,14 @@ func GetVersion(version string) (*types.Version, error) {
 		PreRelease: string(v.Prerelease()),
 		Metadata:   v.Metadata(),
 		Original:   v.Original(),
-	}, err
+	}
 }
 
 // GetVersionFromImageName - get version from image name
 func GetVersionFromImageName(name string) (*types.Version, error) {
 	parts := strings.Split(name, ":")
 	if len(parts) > 1 {
-		return GetVersion(parts[1])
+		return GetVersion(parts[1]), nil
 	}
 
 	return nil, ErrVersionTagMissing
@@ -63,9 +66,9 @@ func GetVersionFromImageName(name string) (*types.Version, error) {
 func GetImageNameAndVersion(name string) (string, *types.Version, error) {
 	parts := strings.Split(name, ":")
 	if len(parts) > 0 {
-		v, err := GetVersion(parts[1])
-		if err != nil {
-			return "", nil, err
+		v := GetVersion(parts[1])
+		if v.Invalid != nil {
+			return "", nil, v.Invalid
 		}
 
 		return parts[0], v, nil

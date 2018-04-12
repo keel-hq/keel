@@ -17,15 +17,10 @@ import (
 )
 
 func unsafeGetVersion(ver string) *types.Version {
-	v, err := version.GetVersion(ver)
-	if err != nil {
-		panic(err)
+	v := version.GetVersion(ver)
+	if v.Invalid != nil {
+		panic(v.Invalid)
 	}
-	return v
-}
-
-func safeGetVersion(ver string) *types.Version {
-	v, _ := version.GetVersion(ver)
 	return v
 }
 
@@ -259,7 +254,6 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 							ObjectMeta: meta_v1.ObjectMeta{
 								Annotations: map[string]string{
 									"this": "that",
-									"time": now().String(),
 								},
 							},
 							Spec: v1.PodSpec{
@@ -286,7 +280,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 		{
 			name: "match-force update untagged container",
 			args: args{
-				newVersion: safeGetVersion("latest-staging"),
+				newVersion: version.GetVersion("latest-staging"),
 				policy:     types.PolicyTypeForceMatching,
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "latest-staging"},
 				deployment: v1beta1.Deployment{

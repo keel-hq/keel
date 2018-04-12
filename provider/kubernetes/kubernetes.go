@@ -372,8 +372,8 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 			delete(annotations, forceUpdateImageAnnotation)
 			deployment.SetAnnotations(annotations)
 
-			newVersion, err := version.GetVersion(repo.Tag)
-			if err != nil {
+			newVersion := version.GetVersion(repo.Tag)
+			if newVersion.Invalid != nil {
 				// failed to get new version tag
 				if policy == types.PolicyTypeForce || policy == types.PolicyTypeForceMatching {
 					updated, shouldUpdateDeployment, err := p.checkUnversionedDeployment(policy, repo, deployment)
