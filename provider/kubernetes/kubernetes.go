@@ -375,7 +375,7 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 			newVersion, err := version.GetVersion(repo.Tag)
 			if err != nil {
 				// failed to get new version tag
-				if policy == types.PolicyTypeForce {
+				if policy == types.PolicyTypeForce || policy == types.PolicyTypeForceMatching {
 					updated, shouldUpdateDeployment, err := p.checkUnversionedDeployment(policy, repo, deployment)
 					if err != nil {
 						log.WithFields(log.Fields{
