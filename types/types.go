@@ -75,6 +75,15 @@ type Event struct {
 	TriggerName string `json:"triggerName,omitempty"`
 }
 
+type VersionType int
+
+// Available version types
+const (
+	VersionTypeEmpty     VersionType = iota // nothing's in there
+	VersionTypeNonSemver                    // default type is invalid semver
+	VersionTypeSemver                       // a valid semver was parsed
+)
+
 // Version - version container
 type Version struct {
 	Major      int64
@@ -84,7 +93,7 @@ type Version struct {
 	Metadata   string
 
 	Original string
-	Invalid  error
+	Type     VersionType
 }
 
 func (v Version) String() string {

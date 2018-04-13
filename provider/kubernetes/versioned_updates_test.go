@@ -16,14 +16,6 @@ import (
 	"k8s.io/api/extensions/v1beta1"
 )
 
-func unsafeGetVersion(ver string) *types.Version {
-	v := version.GetVersion(ver)
-	if v.Invalid != nil {
-		panic(v.Invalid)
-	}
-	return v
-}
-
 func TestProvider_checkVersionedDeployment(t *testing.T) {
 	now = func() time.Time {
 		return time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC)
@@ -53,7 +45,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 		{
 			name: "standard version bump",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.2"),
+				newVersion: version.MustParse("1.1.2"),
 				policy:     types.PolicyTypeAll,
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
 				deployment: v1beta1.Deployment{
@@ -109,7 +101,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 		{
 			name: "standard ignore version bump",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.1"),
+				newVersion: version.MustParse("1.1.1"),
 				policy:     types.PolicyTypeAll,
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.1"},
 				deployment: v1beta1.Deployment{
@@ -145,7 +137,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 		{
 			name: "multiple containers, version bump one",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.2"),
+				newVersion: version.MustParse("1.1.2"),
 				policy:     types.PolicyTypeAll,
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
 				deployment: v1beta1.Deployment{
@@ -207,7 +199,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 		{
 			name: "force update untagged container",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.2"),
+				newVersion: version.MustParse("1.1.2"),
 				policy:     types.PolicyTypeForce,
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
 				deployment: v1beta1.Deployment{

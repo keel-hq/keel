@@ -15,30 +15,29 @@ import (
 // ErrVersionTagMissing - tag missing error
 var ErrVersionTagMissing = errors.New("version tag is missing")
 
-// ErrInvalidSemVer is returned a version is found to be invalid when
-// being parsed.
-var ErrInvalidSemVer = errors.New("invalid semantic version")
-
 // MustParse - must parse version, if fails - panics
 func MustParse(version string) *types.Version {
 	ver := GetVersion(version)
-	if ver.Invalid != nil {
-		panic(ver.Invalid)
+	if ver.Type != types.VersionTypeSemver {
+		panic("expected semver version")
 	}
 	return ver
 }
 
 // GetVersion - parse version
 func GetVersion(version string) *types.Version {
+	if version == "" {
+		return &types.Version{
+			Original: version,
+			Type:     types.VersionTypeEmpty,
+		}
+	}
 
 	v, err := semver.NewVersion(version)
 	if err != nil {
-		if err == semver.ErrInvalidSemVer {
-			err = ErrInvalidSemVer
-		}
 		return &types.Version{
 			Original: version,
-			Invalid:  err,
+			Type:     types.VersionTypeNonSemver,
 		}
 	}
 
@@ -49,6 +48,7 @@ func GetVersion(version string) *types.Version {
 		PreRelease: string(v.Prerelease()),
 		Metadata:   v.Metadata(),
 		Original:   v.Original(),
+		Type:       types.VersionTypeSemver,
 	}
 }
 
@@ -67,9 +67,6 @@ func GetImageNameAndVersion(name string) (string, *types.Version, error) {
 	parts := strings.Split(name, ":")
 	if len(parts) > 0 {
 		v := GetVersion(parts[1])
-		if v.Invalid != nil {
-			return "", nil, v.Invalid
-		}
 
 		return parts[0], v, nil
 	}

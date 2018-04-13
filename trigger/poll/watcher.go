@@ -86,7 +86,7 @@ func (w *RepositoryWatcher) Start(ctx context.Context) {
 func getImageIdentifier(ref *image.Reference) string {
 	v := version.GetVersion(ref.Tag())
 	// if failed to parse version, will need to watch digest
-	if v.Invalid != nil {
+	if v.Type == types.VersionTypeNonSemver {
 		return ref.Registry() + "/" + ref.ShortName() + ":" + ref.Tag()
 	}
 
@@ -218,7 +218,7 @@ func (w *RepositoryWatcher) addJob(ref *image.Reference, registryUsername, regis
 	// and for non-semver types we create a single tag watcher which
 	// checks digest
 	v := version.GetVersion(ref.Tag())
-	if v.Invalid != nil {
+	if v.Type != types.VersionTypeSemver {
 		// adding new job
 		job := NewWatchTagJob(w.providers, w.registryClient, details)
 		log.WithFields(log.Fields{

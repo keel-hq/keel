@@ -259,7 +259,7 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 	for _, release := range releaseList.Releases {
 
 		newVersion := version.GetVersion(event.Repository.Tag)
-		if newVersion.Invalid != nil {
+		if newVersion.Type == types.VersionTypeSemver {
 
 			plan, update, errCheck := checkUnversionedRelease(&event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
 			if errCheck != nil {

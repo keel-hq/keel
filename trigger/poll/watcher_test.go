@@ -267,22 +267,22 @@ func TestWatchMultipleTags(t *testing.T) {
 	}
 
 	if dig, ok := watcher.watched["gcr.io/v2-namespace/greetings-world:alpha"]; ok != true {
-		t.Errorf("alpha watcher not found")
+		t.Errorf("alpha watcher not found. %#v", watcher.watched)
 		if dig.digest != "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb" {
 			t.Errorf("digest not set for alpha")
 		}
 	}
 
 	if dig, ok := watcher.watched["gcr.io/v2-namespace/greetings-world:master"]; ok != true {
-		t.Errorf("alpha watcher not found")
+		t.Errorf("master watcher not found. %#v", watcher.watched)
 		if dig.digest != "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb" {
-			t.Errorf("digest not set for alpha")
+			t.Errorf("digest not set for master")
 		}
 	}
 
 	if det, ok := watcher.watched["gcr.io/v2-namespace/greetings-world"]; ok != true {
-		t.Errorf("alpha watcher not found")
-		if det.latest != "5.0.0" {
+		t.Errorf("watcher not found. %#v", watcher.watched)
+		if det != nil && det.latest != "5.0.0" {
 			t.Errorf("expected to find a tag set for multiple tags watch job")
 		}
 	}

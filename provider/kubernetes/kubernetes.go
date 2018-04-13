@@ -223,7 +223,6 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 	for _, plan := range plans {
 		deployment := plan.Deployment
 		notificationChannels := types.ParseEventNotificationChannels(deployment.Annotations)
-		reset := checkForReset(deployment)
 
 		p.sender.Send(types.EventNotification{
 			Name:      "preparing to update deployment",
@@ -236,16 +235,10 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 
 		var err error
 
-		if reset {
-			// force update, terminating all pods
-			err = p.forceUpdate(&deployment)
-			kubernetesUnversionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name)}).Inc()
-		} else {
-			// regular update
-			deployment.Annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s", plan.CurrentVersion, plan.NewVersion)
-			err = p.implementer.Update(&deployment)
-			kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name)}).Inc()
-		}
+		// regular update
+		deployment.Annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s", plan.CurrentVersion, plan.NewVersion)
+		err = p.implementer.Update(&deployment)
+		kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name)}).Inc()
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
@@ -324,18 +317,6 @@ func getDesiredImage(delta map[string]string, currentImage string) (string, erro
 	return "", fmt.Errorf("image %s not found in deltas", currentImage)
 }
 
-// checkForReset returns delta to apply after setting image
-func checkForReset(deployment v1beta1.Deployment) bool {
-	reset := false
-	annotations := deployment.GetAnnotations()
-	for _, c := range deployment.Spec.Template.Spec.Containers {
-		if shouldPullImage(annotations, c.Image) {
-			reset = true
-		}
-	}
-	return reset
-}
-
 // getDeployment - helper function to get specific deployment
 func (p *Provider) getDeployment(namespace, name string) (*v1beta1.Deployment, error) {
 	return p.implementer.Deployment(namespace, name)
@@ -373,7 +354,7 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 			deployment.SetAnnotations(annotations)
 
 			newVersion := version.GetVersion(repo.Tag)
-			if newVersion.Invalid != nil {
+			if newVersion.Type != types.VersionTypeSemver {
 				// failed to get new version tag
 				if policy == types.PolicyTypeForce || policy == types.PolicyTypeForceMatching {
 					updated, shouldUpdateDeployment, err := p.checkUnversionedDeployment(policy, repo, deployment)
