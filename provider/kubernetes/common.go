@@ -2,7 +2,11 @@ package kubernetes
 
 import (
 	"strings"
+	"time"
 )
+
+//to replace for testing
+var now = time.Now
 
 func addImageToPull(annotations map[string]string, image string) map[string]string {
 	existing, ok := annotations[forceUpdateImageAnnotation]

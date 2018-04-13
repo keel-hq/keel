@@ -75,6 +75,15 @@ type Event struct {
 	TriggerName string `json:"triggerName,omitempty"`
 }
 
+type VersionType int
+
+// Available version types
+const (
+	VersionTypeEmpty     VersionType = iota // nothing's in there
+	VersionTypeNonSemver                    // default type is invalid semver
+	VersionTypeSemver                       // a valid semver was parsed
+)
+
 // Version - version container
 type Version struct {
 	Major      int64
@@ -84,6 +93,7 @@ type Version struct {
 	Metadata   string
 
 	Original string
+	Type     VersionType
 }
 
 func (v Version) String() string {
@@ -149,6 +159,8 @@ func ParsePolicy(policy string) PolicyType {
 		return PolicyTypePatch
 	case "force":
 		return PolicyTypeForce
+	case "force-matching":
+		return PolicyTypeForceMatching
 	default:
 		return PolicyTypeNone
 	}
@@ -168,6 +180,8 @@ func (t PolicyType) String() string {
 		return "patch"
 	case PolicyTypeForce:
 		return "force"
+	case PolicyTypeForceMatching:
+		return "force-matching"
 	default:
 		return ""
 	}
@@ -180,7 +194,8 @@ const (
 	PolicyTypeMajor
 	PolicyTypeMinor
 	PolicyTypePatch
-	PolicyTypeForce // update always when a new image is available
+	PolicyTypeForce         // update always when a new image is available
+	PolicyTypeForceMatching // update spec.template.metadata.annotations.time when a new image under same tag is pushed
 )
 
 // EventNotification notification used for sending

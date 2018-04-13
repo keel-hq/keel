@@ -66,7 +66,7 @@ func checkVersionedRelease(newVersion *types.Version, repo *types.Repository, na
 		}
 
 		// checking policy and whether we should update
-		if keelCfg.Policy == types.PolicyTypeForce || imageRef.Tag() == "latest" {
+		if keelCfg.Policy == types.PolicyTypeForce || keelCfg.Policy == types.PolicyTypeForceMatching || imageRef.Tag() == "latest" {
 			path, value := getPlanValues(newVersion, imageRef, &imageDetails)
 			plan.Values[path] = value
 			plan.NewVersion = newVersion.String()
@@ -84,8 +84,8 @@ func checkVersionedRelease(newVersion *types.Version, repo *types.Repository, na
 		}
 
 		// checking current
-		currentVersion, err := version.GetVersion(imageRef.Tag())
-		if err != nil {
+		currentVersion := version.GetVersion(imageRef.Tag())
+		if currentVersion.Type != types.VersionTypeSemver {
 			log.WithFields(log.Fields{
 				"error":               err,
 				"container_image":     imageRef.Repository(),

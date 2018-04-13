@@ -10,14 +10,6 @@ import (
 	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
 )
 
-func unsafeGetVersion(ver string) *types.Version {
-	v, err := version.GetVersion(ver)
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
-
 func Test_checkVersionedRelease(t *testing.T) {
 	chartValuesA := `
 name: al Rashid
@@ -132,7 +124,7 @@ image:
 		{
 			name: "correct version bump",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.2"),
+				newVersion: version.MustParse("1.1.2"),
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
 				namespace:  "default",
 				name:       "release-1",
@@ -160,7 +152,7 @@ image:
 		{
 			name: "correct but same version",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.0"),
+				newVersion: version.MustParse("1.1.0"),
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.0"},
 				namespace:  "default",
 				name:       "release-1",
@@ -174,7 +166,7 @@ image:
 		{
 			name: "different image",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.5"),
+				newVersion: version.MustParse("1.1.5"),
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/bye-world", Tag: "1.1.5"},
 				namespace:  "default",
 				name:       "release-1",
@@ -188,7 +180,7 @@ image:
 		{
 			name: "non semver existing version",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.0"),
+				newVersion: version.MustParse("1.1.0"),
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.0"},
 				namespace:  "default",
 				name:       "release-1",
@@ -216,7 +208,7 @@ image:
 		{
 			name: "non semver no force, should not add to plan",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.0"),
+				newVersion: version.MustParse("1.1.0"),
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.0"},
 				namespace:  "default",
 				name:       "release-1",
@@ -230,7 +222,7 @@ image:
 		{
 			name: "semver no tag",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.0"),
+				newVersion: version.MustParse("1.1.0"),
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.0"},
 				namespace:  "default",
 				name:       "release-1-no-tag",
@@ -258,7 +250,7 @@ image:
 		{
 			name: "no keel config",
 			args: args{
-				newVersion: unsafeGetVersion("1.1.0"),
+				newVersion: version.MustParse("1.1.0"),
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.0"},
 				namespace:  "default",
 				name:       "release-1-no-tag",

@@ -45,7 +45,7 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 		return plan, false, nil
 	}
 
-	if keelCfg.Policy != types.PolicyTypeForce {
+	if keelCfg.Policy != types.PolicyTypeForce && keelCfg.Policy != types.PolicyTypeForceMatching {
 		// policy is not force, ignoring release
 		return plan, false, nil
 	}

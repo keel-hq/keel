@@ -15,28 +15,30 @@ import (
 // ErrVersionTagMissing - tag missing error
 var ErrVersionTagMissing = errors.New("version tag is missing")
 
-// ErrInvalidSemVer is returned a version is found to be invalid when
-// being parsed.
-var ErrInvalidSemVer = errors.New("invalid semantic version")
-
 // MustParse - must parse version, if fails - panics
 func MustParse(version string) *types.Version {
-	ver, err := GetVersion(version)
-	if err != nil {
-		panic(err)
+	ver := GetVersion(version)
+	if ver.Type != types.VersionTypeSemver {
+		panic("expected semver version")
 	}
 	return ver
 }
 
 // GetVersion - parse version
-func GetVersion(version string) (*types.Version, error) {
+func GetVersion(version string) *types.Version {
+	if version == "" {
+		return &types.Version{
+			Original: version,
+			Type:     types.VersionTypeEmpty,
+		}
+	}
 
 	v, err := semver.NewVersion(version)
 	if err != nil {
-		if err == semver.ErrInvalidSemVer {
-			return nil, ErrInvalidSemVer
+		return &types.Version{
+			Original: version,
+			Type:     types.VersionTypeNonSemver,
 		}
-		return nil, err
 	}
 
 	return &types.Version{
@@ -46,14 +48,15 @@ func GetVersion(version string) (*types.Version, error) {
 		PreRelease: string(v.Prerelease()),
 		Metadata:   v.Metadata(),
 		Original:   v.Original(),
-	}, nil
+		Type:       types.VersionTypeSemver,
+	}
 }
 
 // GetVersionFromImageName - get version from image name
 func GetVersionFromImageName(name string) (*types.Version, error) {
 	parts := strings.Split(name, ":")
 	if len(parts) > 1 {
-		return GetVersion(parts[1])
+		return GetVersion(parts[1]), nil
 	}
 
 	return nil, ErrVersionTagMissing
@@ -63,10 +66,7 @@ func GetVersionFromImageName(name string) (*types.Version, error) {
 func GetImageNameAndVersion(name string) (string, *types.Version, error) {
 	parts := strings.Split(name, ":")
 	if len(parts) > 0 {
-		v, err := GetVersion(parts[1])
-		if err != nil {
-			return "", nil, err
-		}
+		v := GetVersion(parts[1])
 
 		return parts[0], v, nil
 	}
@@ -119,6 +119,8 @@ func NewAvailable(current string, tags []string) (newVersion string, newAvailabl
 func ShouldUpdate(current *types.Version, new *types.Version, policy types.PolicyType) (bool, error) {
 	if policy == types.PolicyTypeForce {
 		return true, nil
+	} else if policy == types.PolicyTypeForceMatching {
+		return new.String() == current.String(), nil
 	}
 
 	currentVersion, err := semver.NewVersion(current.String())
