@@ -12,7 +12,6 @@ import (
 
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
-
 	"github.com/keel-hq/keel/util/version"
 
 	log "github.com/sirupsen/logrus"
@@ -69,9 +68,19 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			continue
 		}
 
+		if policy == types.PolicyTypeForceMatching {
+			v, _ := version.GetVersionFromImageName(c.Image)
+			if v.String() != newVersion.String() {
+				log.WithFields(log.Fields{
+					"current_tag": v.String(),
+					"new_tag":     newVersion.String(),
+				}).Info("provider.kubernetes: force-matching: tags do not match, ignoring")
+			}
+			continue
+		}
+
 		// if policy is force, don't bother with version checking
-		// same with `latest` images, update them to versioned ones
-		if policy == types.PolicyTypeForce || policy == types.PolicyTypeForceMatching || conatinerImageRef.Tag() == "latest" {
+		if policy == types.PolicyTypeForce || policy == types.PolicyTypeForceMatching {
 			c = updateContainer(c, conatinerImageRef, newVersion.String())
 
 			deployment.Spec.Template.Spec.Containers[idx] = c
