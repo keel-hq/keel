@@ -366,6 +366,11 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -395,6 +400,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Template: v1.PodTemplateSpec{
 							ObjectMeta: meta_v1.ObjectMeta{
 								Annotations: map[string]string{
+									"this": "that",
 									"time": timeutil.Now().String(),
 								},
 							},
