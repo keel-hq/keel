@@ -3,12 +3,11 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/keel-hq/keel/util/timeutil"
-
 	"k8s.io/api/extensions/v1beta1"
 
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
+	"github.com/keel-hq/keel/util/timeutil"
 
 	log "github.com/sirupsen/logrus"
 )
