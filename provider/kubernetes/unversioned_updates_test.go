@@ -3,16 +3,24 @@ package kubernetes
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/timeutil"
 	"k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestProvider_checkUnversionedDeployment(t *testing.T) {
+
+	timeutil.Now = func() time.Time {
+		return time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC)
+	}
+	defer func() { timeutil.Now = time.Now }()
+
 	type fields struct {
 		implementer     Implementer
 		sender          notification.Sender
@@ -317,7 +325,11 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 					},
 					v1beta1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
-							ObjectMeta: meta_v1.ObjectMeta{},
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"time": timeutil.Now().String(),
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{

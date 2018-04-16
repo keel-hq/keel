@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"fmt"
 
+	"github.com/keel-hq/keel/util/timeutil"
+
 	"k8s.io/api/extensions/v1beta1"
 
 	"github.com/keel-hq/keel/types"
@@ -76,6 +78,10 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 			if containerImageRef.Tag() != eventRepoRef.Tag() {
 				continue
 			}
+			if deployment.Spec.Template.Annotations == nil {
+				deployment.Spec.Template.Annotations = map[string]string{}
+			}
+			deployment.Spec.Template.Annotations["time"] = timeutil.Now().String()
 		}
 
 		// updating image
