@@ -25,6 +25,8 @@ const KeelPolicyLabel = "keel.sh/policy"
 // changes
 const KeelTriggerLabel = "keel.sh/trigger"
 
+const KeelForceTagMatchLabel = "keel.sh/match-tag"
+
 // KeelPollScheduleAnnotation - optional variable to setup custom schedule for polling, defaults to @every 10m
 const KeelPollScheduleAnnotation = "keel.sh/pollSchedule"
 
@@ -65,6 +67,14 @@ type Repository struct {
 	Name   string `json:"name"`
 	Tag    string `json:"tag"`
 	Digest string `json:"digest"` // optional digest field
+}
+
+// String gives you team/repo[:tag] identifier
+func (r *Repository) String() string {
+	if r.Tag != "" {
+		return r.Name + ":" + r.Tag
+	}
+	return r.Name
 }
 
 // Event - holds information about new event from trigger

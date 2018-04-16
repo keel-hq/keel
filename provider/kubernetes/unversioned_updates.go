@@ -14,7 +14,7 @@ import (
 func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
 	updatePlan = &UpdatePlan{}
 
-	eventRepoRef, err := image.Parse(repo.Name)
+	eventRepoRef, err := image.Parse(repo.String())
 	if err != nil {
 		return
 	}
@@ -70,6 +70,14 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 			}
 		}
 
+		// updating annotations
+		annotations := deployment.GetAnnotations()
+		if _, ok := annotations[types.KeelForceTagMatchLabel]; ok {
+			if containerImageRef.Tag() != eventRepoRef.Tag() {
+				continue
+			}
+		}
+
 		// updating image
 		if containerImageRef.Registry() == image.DefaultRegistryHostname {
 			c.Image = fmt.Sprintf("%s:%s", containerImageRef.ShortName(), repo.Tag)
@@ -81,8 +89,6 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		// marking this deployment for update
 		shouldUpdateDeployment = true
 
-		// updating annotations
-		annotations := deployment.GetAnnotations()
 		// updating digest if available
 		if repo.Digest != "" {
 

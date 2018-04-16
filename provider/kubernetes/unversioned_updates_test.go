@@ -271,6 +271,104 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,
 		},
+
+		{
+			name: "poll trigger, force-match, same tag",
+			args: args{
+				policy: types.PolicyTypeForce,
+				repo:   &types.Repository{Name: "karolisr/keel", Tag: "latest-staging"},
+				deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
+						Annotations: map[string]string{
+							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
+							types.KeelForceTagMatchLabel:     "yup",
+						},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "karolisr/keel:latest-staging",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Annotations: map[string]string{
+							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
+							types.KeelForceTagMatchLabel:     "yup",
+							forceUpdateImageAnnotation:       "karolisr/keel:latest-staging",
+						},
+						Labels: map[string]string{types.KeelPolicyLabel: "force"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "karolisr/keel:latest-staging",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+				NewVersion:     "latest-staging",
+				CurrentVersion: "latest-staging",
+			},
+			wantShouldUpdateDeployment: true,
+			wantErr:                    false,
+		},
+
+		{
+			name: "poll trigger, force-match, different tag",
+			args: args{
+				policy: types.PolicyTypeForce,
+				repo:   &types.Repository{Name: "karolisr/keel", Tag: "latest-staging"},
+				deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule},
+						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "karolisr/keel:latest-acceptance",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Deployment: v1beta1.Deployment{},
+			},
+			wantShouldUpdateDeployment: false,
+			wantErr:                    false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -283,14 +381,14 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			}
 			gotUpdatePlan, gotShouldUpdateDeployment, err := p.checkUnversionedDeployment(tt.args.policy, tt.args.repo, tt.args.deployment)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Provider.checkUnversionedDeployment() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Provider.checkUnversionedDeployment() error = %#v, wantErr %#v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(gotUpdatePlan, tt.wantUpdatePlan) {
-				t.Errorf("Provider.checkUnversionedDeployment() gotUpdatePlan = %v, want %v", gotUpdatePlan, tt.wantUpdatePlan)
+				t.Errorf("Provider.checkUnversionedDeployment() gotUpdatePlan = %#v, want %#v", gotUpdatePlan, tt.wantUpdatePlan)
 			}
 			if gotShouldUpdateDeployment != tt.wantShouldUpdateDeployment {
-				t.Errorf("Provider.checkUnversionedDeployment() gotShouldUpdateDeployment = %v, want %v", gotShouldUpdateDeployment, tt.wantShouldUpdateDeployment)
+				t.Errorf("Provider.checkUnversionedDeployment() gotShouldUpdateDeployment = %#v, want %#v", gotShouldUpdateDeployment, tt.wantShouldUpdateDeployment)
 			}
 		})
 	}
