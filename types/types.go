@@ -69,12 +69,18 @@ type Repository struct {
 	Digest string `json:"digest"` // optional digest field
 }
 
-// String gives you team/repo[:tag] identifier
+// String gives you [host/]team/repo[:tag] identifier
 func (r *Repository) String() string {
-	if r.Tag != "" {
-		return r.Name + ":" + r.Tag
+	b := bytes.NewBufferString(r.Host)
+	if b.Len() != 0 {
+		b.WriteRune('/')
 	}
-	return r.Name
+	b.WriteString(r.Name)
+	if r.Tag != "" {
+		b.WriteRune(':')
+		b.WriteString(r.Tag)
+	}
+	return b.String()
 }
 
 // Event - holds information about new event from trigger

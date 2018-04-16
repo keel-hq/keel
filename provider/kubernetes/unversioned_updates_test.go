@@ -349,6 +349,74 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 		},
 
 		{
+			name: "poll trigger, force-match, same tag on eu.gcr.io",
+			args: args{
+				policy: types.PolicyTypeForce,
+				repo:   &types.Repository{Host: "eu.gcr.io", Name: "karolisr/keel", Tag: "latest-staging"},
+				deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
+						Annotations: map[string]string{
+							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
+							types.KeelForceTagMatchLabel:     "yup",
+						},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "eu.gcr.io/karolisr/keel:latest-staging",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Deployment: v1beta1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Annotations: map[string]string{
+							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
+							types.KeelForceTagMatchLabel:     "yup",
+							forceUpdateImageAnnotation:       "eu.gcr.io/karolisr/keel:latest-staging",
+						},
+						Labels: map[string]string{types.KeelPolicyLabel: "force"},
+					},
+					v1beta1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"time": timeutil.Now().String(),
+								},
+							},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "eu.gcr.io/karolisr/keel:latest-staging",
+									},
+								},
+							},
+						},
+					},
+					v1beta1.DeploymentStatus{},
+				},
+				NewVersion:     "latest-staging",
+				CurrentVersion: "latest-staging",
+			},
+			wantShouldUpdateDeployment: true,
+			wantErr:                    false,
+		},
+
+		{
 			name: "poll trigger, force-match, different tag",
 			args: args{
 				policy: types.PolicyTypeForce,
