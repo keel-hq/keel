@@ -1,0 +1,115 @@
+package k8s
+
+import (
+	"fmt"
+	"sort"
+	"sync"
+)
+
+type genericResourceCache struct {
+	sync.Mutex
+	values []*GenericResource
+}
+
+// GenericResourceCache - storage for generic resources with a rendezvous point for goroutines
+// waiting for or announcing the occurence of a cache events.
+type GenericResourceCache struct {
+	genericResourceCache
+	Cond
+}
+
+// Values returns a copy of the contents of the cache.
+func (cc *genericResourceCache) Values() []*GenericResource {
+	cc.Lock()
+	r := append([]*GenericResource{}, cc.values...)
+	cc.Unlock()
+	return r
+}
+
+// Add adds an entry to the cache. If a GenericResource with the same
+// name exists, it is replaced.
+func (cc *genericResourceCache) Add(grs ...*GenericResource) {
+	if len(grs) == 0 {
+		return
+	}
+	cc.Lock()
+	sort.Sort(genericResource(cc.values))
+	for _, c := range grs {
+		cc.add(c)
+	}
+	cc.Unlock()
+}
+
+// add adds c to the cache. If c is already present, the cached value of c is overwritten.
+// invariant: cc.values should be sorted on entry.
+func (cc *genericResourceCache) add(c *GenericResource) {
+	i := sort.Search(len(cc.values), func(i int) bool { return cc.values[i].Name >= c.Name })
+	if i < len(cc.values) && cc.values[i].Name == c.Name {
+		// c is already present, replace
+		fmt.Println("object added: ", c.Name)
+		cc.values[i] = c
+	} else {
+		// c is not present, append
+		cc.values = append(cc.values, c)
+		// restort to convert append into insert
+		sort.Sort(genericResource(cc.values))
+	}
+}
+
+// Remove removes the named entry from the cache. If the entry
+// is not present in the cache, the operation is a no-op.
+func (cc *genericResourceCache) Remove(names ...string) {
+	if len(names) == 0 {
+		return
+	}
+	cc.Lock()
+	sort.Sort(genericResource(cc.values))
+	for _, n := range names {
+		cc.remove(n)
+		fmt.Println("object removed: ", n)
+	}
+	cc.Unlock()
+}
+
+// remove removes the named entry from the cache.
+// invariant: cc.values should be sorted on entry.
+func (cc *genericResourceCache) remove(name string) {
+	i := sort.Search(len(cc.values), func(i int) bool { return cc.values[i].Name >= name })
+	if i < len(cc.values) && cc.values[i].Name == name {
+		// c is present, remove
+		cc.values = append(cc.values[:i], cc.values[i+1:]...)
+	}
+}
+
+// Cond implements a condition variable, a rendezvous point for goroutines
+// waiting for or announcing the occurence of an event.
+type Cond struct {
+	mu      sync.Mutex
+	waiters []chan int
+	last    int
+}
+
+// Register registers ch to receive a value when Notify is called.
+func (c *Cond) Register(ch chan int, last int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if last < c.last {
+		// notify this channel immediately
+		ch <- c.last
+		return
+	}
+	c.waiters = append(c.waiters, ch)
+}
+
+// Notify notifies all registered waiters that an event has occured.
+func (c *Cond) Notify() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.last++
+
+	for _, ch := range c.waiters {
+		ch <- c.last
+	}
+	c.waiters = c.waiters[:0]
+}
