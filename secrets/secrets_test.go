@@ -25,6 +25,8 @@ func mustEncode(data string) string {
 	return base64.StdEncoding.EncodeToString([]byte(data))
 }
 
+var secretDockerConfigJSONPayloadWithUsernamePassword = `{"auths":{"https://index.docker.io/v1/":{"username":"login","password":"somepass","email":"email@email.com","auth":"longbase64secret"}}}`
+
 func TestGetSecret(t *testing.T) {
 	imgRef, _ := image.Parse("karolisr/webhook-demo:0.0.11")
 
@@ -89,6 +91,39 @@ func TestGetDockerConfigJSONSecret(t *testing.T) {
 	}
 
 	if creds.Password != "SNMGIHVTGRDKI6P17ONEVPPCAJN7X9JMWP8682KX05D7TANRX4W08HPL9BWQL01J" {
+		t.Errorf("unexpected pass: %s", creds.Password)
+	}
+}
+func TestGetDockerConfigJSONSecretUsernmePassword(t *testing.T) {
+	imgRef, _ := image.Parse("karolisr/webhook-demo:0.0.11")
+
+	impl := &testutil.FakeK8sImplementer{
+		AvailableSecret: &v1.Secret{
+			Data: map[string][]byte{
+				dockerConfigJSONKey: []byte(secretDockerConfigJSONPayloadWithUsernamePassword),
+			},
+			Type: v1.SecretTypeDockerConfigJson,
+		},
+	}
+
+	getter := NewGetter(impl)
+
+	trackedImage := &types.TrackedImage{
+		Image:     imgRef,
+		Namespace: "default",
+		Secrets:   []string{"myregistrysecret"},
+	}
+
+	creds, err := getter.Get(trackedImage)
+	if err != nil {
+		t.Errorf("failed to get creds: %s", err)
+	}
+
+	if creds.Username != "login" {
+		t.Errorf("unexpected username: %s", creds.Username)
+	}
+
+	if creds.Password != "somepass" {
 		t.Errorf("unexpected pass: %s", creds.Password)
 	}
 }

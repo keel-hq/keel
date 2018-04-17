@@ -2,14 +2,13 @@ package kubernetes
 
 import (
 	"fmt"
+	"time"
 
 	// "k8s.io/api/core/v1"
 
-	"k8s.io/api/core/v1"
-
 	// "k8s.io/api/extensions/v1beta1"
-	"k8s.io/api/extensions/v1beta1"
 
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
@@ -19,7 +18,7 @@ import (
 )
 
 // func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updated v1beta1.Deployment, shouldUpdateDeployment bool, err error) {
-func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
+func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy types.PolicyType, repo *types.Repository, resource *k8s.GenericResource) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
 	updatePlan = &UpdatePlan{}
 
 	eventRepoRef, err := image.Parse(repo.Name)
@@ -27,22 +26,24 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		return
 	}
 
-	labels := deployment.GetLabels()
+	labels := resource.GetLabels()
 
 	log.WithFields(log.Fields{
 		"labels":    labels,
-		"name":      deployment.Name,
-		"namespace": deployment.Namespace,
+		"name":      resource.Name,
+		"namespace": resource.Namespace,
+		"kind":      resource.Kind(),
 		"policy":    policy,
-	}).Info("provider.kubernetes.checkVersionedDeployment: keel policy found, checking deployment...")
+	}).Info("provider.kubernetes.checkVersionedDeployment: keel policy found, checking resource...")
 
 	shouldUpdateDeployment = false
 
-	for idx, c := range deployment.Spec.Template.Spec.Containers {
+	// for idx, c := range deployment.Spec.Template.Spec.Containers {
+	for idx, c := range resource.Containers() {
 		// Remove version if any
 		// containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
-		conatinerImageRef, err := image.Parse(c.Image)
+		containerImageRef, err := image.Parse(c.Image)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
@@ -52,18 +53,19 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		}
 
 		log.WithFields(log.Fields{
-			"name":              deployment.Name,
-			"namespace":         deployment.Namespace,
-			"parsed_image_name": conatinerImageRef.Remote(),
+			"name":              resource.Name,
+			"namespace":         resource.Namespace,
+			"parsed_image_name": containerImageRef.Remote(),
+			"kind":              resource.Kind(),
 			"target_image_name": repo.Name,
 			"target_tag":        repo.Tag,
 			"policy":            policy,
 			"image":             c.Image,
 		}).Info("provider.kubernetes: checking image")
 
-		if conatinerImageRef.Repository() != eventRepoRef.Repository() {
+		if containerImageRef.Repository() != eventRepoRef.Repository() {
 			log.WithFields(log.Fields{
-				"parsed_image_name": conatinerImageRef.Remote(),
+				"parsed_image_name": containerImageRef.Remote(),
 				"target_image_name": repo.Name,
 			}).Info("provider.kubernetes: images do not match, ignoring")
 			continue
@@ -71,33 +73,45 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 
 		// if policy is force, don't bother with version checking
 		// same with `latest` images, update them to versioned ones
-		if policy == types.PolicyTypeForce || conatinerImageRef.Tag() == "latest" {
-			c = updateContainer(c, conatinerImageRef, newVersion.String())
+		if policy == types.PolicyTypeForce || containerImageRef.Tag() == "latest" {
+			// c = updateContainer(c, conatinerImageRef, newVersion.String())
 
-			deployment.Spec.Template.Spec.Containers[idx] = c
+			if containerImageRef.Registry() == image.DefaultRegistryHostname {
+				// container.Image = fmt.Sprintf("%s:%s", ref.ShortName(), version)
+
+				resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.ShortName(), newVersion.String()))
+
+			} else {
+				// container.Image = fmt.Sprintf("%s:%s", ref.Repository(), version)
+
+				resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.Repository(), newVersion.String()))
+			}
+
+			// deployment.Spec.Template.Spec.Containers[idx] = c
 
 			// marking this deployment for update
 			shouldUpdateDeployment = true
 			// updating digest if available
-			annotations := deployment.GetAnnotations()
+			annotations := resource.GetAnnotations()
 
-			if repo.Digest != "" {
-				// annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
-			}
-			annotations = addImageToPull(annotations, c.Image)
+			annotations["keel.sh/update-time"] = time.Now().String()
+			// if repo.Digest != "" {
+			// annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
+			// }
+			// annotations = addImageToPull(annotations, c.Image)
 
-			deployment.SetAnnotations(annotations)
+			resource.SetAnnotations(annotations)
 			log.WithFields(log.Fields{
-				"parsed_image":     conatinerImageRef.Remote(),
+				"parsed_image":     containerImageRef.Remote(),
 				"raw_image_name":   c.Image,
 				"target_image":     repo.Name,
 				"target_image_tag": repo.Tag,
 				"policy":           policy,
 			}).Info("provider.kubernetes: impacted deployment container found")
 
-			updatePlan.CurrentVersion = conatinerImageRef.Tag()
+			updatePlan.CurrentVersion = containerImageRef.Tag()
 			updatePlan.NewVersion = newVersion.Original
-			updatePlan.Deployment = deployment
+			updatePlan.Resource = resource
 
 			// success, moving to next container
 			continue
@@ -108,7 +122,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			log.WithFields(log.Fields{
 				"error":               err,
 				"container_image":     c.Image,
-				"container_image_tag": conatinerImageRef.Tag(),
+				"container_image_tag": containerImageRef.Tag(),
 				"keel_policy":         policy,
 			}).Error("provider.kubernetes: failed to get image version, is it tagged as semver?")
 			continue
@@ -116,8 +130,8 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 
 		log.WithFields(log.Fields{
 			"labels":          labels,
-			"name":            deployment.Name,
-			"namespace":       deployment.Namespace,
+			"name":            resource.Name,
+			"namespace":       resource.Namespace,
 			"image":           c.Image,
 			"current_version": currentVersion.String(),
 			"policy":          policy,
@@ -136,8 +150,8 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 
 		log.WithFields(log.Fields{
 			"labels":          labels,
-			"name":            deployment.Name,
-			"namespace":       deployment.Namespace,
+			"name":            resource.Name,
+			"namespace":       resource.Namespace,
 			"image":           c.Image,
 			"current_version": currentVersion.String(),
 			"new_version":     newVersion.String(),
@@ -146,25 +160,34 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		}).Info("provider.kubernetes: checked version, deciding whether to update")
 
 		if shouldUpdateContainer {
-			c = updateContainer(c, conatinerImageRef, newVersion.String())
-			deployment.Spec.Template.Spec.Containers[idx] = c
+
+			// c = updateContainer(c, conatinerImageRef, newVersion.String())
+
+			if containerImageRef.Registry() == image.DefaultRegistryHostname {
+				resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.ShortName(), newVersion.String()))
+			} else {
+				resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.Repository(), newVersion.String()))
+			}
+
+			// deployment.Spec.Template.Spec.Containers[idx] = c
 			// marking this deployment for update
 			shouldUpdateDeployment = true
 
 			// updating annotations
-			annotations := deployment.GetAnnotations()
+			annotations := resource.GetAnnotations()
 			// updating digest if available
-			if repo.Digest != "" {
-				// annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
-			}
-			deployment.SetAnnotations(annotations)
+			// if repo.Digest != "" {
+			// annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
+			// }
+			annotations["keel.sh/update-time"] = time.Now().String()
+			resource.SetAnnotations(annotations)
 
 			updatePlan.CurrentVersion = currentVersion.Original
 			updatePlan.NewVersion = newVersion.Original
-			updatePlan.Deployment = deployment
+			updatePlan.Resource = resource
 
 			log.WithFields(log.Fields{
-				"parsed_image":     conatinerImageRef.Remote(),
+				"parsed_image":     containerImageRef.Remote(),
 				"raw_image_name":   c.Image,
 				"target_image":     repo.Name,
 				"target_image_tag": repo.Tag,
@@ -176,13 +199,13 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 	return updatePlan, shouldUpdateDeployment, nil
 }
 
-func updateContainer(container v1.Container, ref *image.Reference, version string) v1.Container {
-	// updating image
-	if ref.Registry() == image.DefaultRegistryHostname {
-		container.Image = fmt.Sprintf("%s:%s", ref.ShortName(), version)
-	} else {
-		container.Image = fmt.Sprintf("%s:%s", ref.Repository(), version)
-	}
+// func updateContainer(container v1.Container, ref *image.Reference, version string) v1.Container {
+// 	// updating image
+// 	if ref.Registry() == image.DefaultRegistryHostname {
+// 		container.Image = fmt.Sprintf("%s:%s", ref.ShortName(), version)
+// 	} else {
+// 		container.Image = fmt.Sprintf("%s:%s", ref.Repository(), version)
+// 	}
 
-	return container
-}
+// 	return container
+// }

@@ -2,16 +2,16 @@ package kubernetes
 
 import (
 	"fmt"
+	"time"
 
-	"k8s.io/api/extensions/v1beta1"
-
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, deployment v1beta1.Deployment) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
+func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, resource *k8s.GenericResource) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
 	updatePlan = &UpdatePlan{}
 
 	eventRepoRef, err := image.Parse(repo.Name)
@@ -19,22 +19,21 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		return
 	}
 
-	labels := deployment.GetLabels()
+	labels := resource.GetLabels()
 	log.WithFields(log.Fields{
 		"labels":    labels,
-		"name":      deployment.Name,
-		"namespace": deployment.Namespace,
+		"name":      resource.Name,
+		"namespace": resource.Namespace,
+		"kind":      resource.Kind(),
 		"policy":    policy,
-	}).Info("provider.kubernetes.checkVersionedDeployment: keel policy found, checking deployment...")
+	}).Info("provider.kubernetes.checkVersionedDeployment: keel policy found, checking resource...")
 
-	annotations := deployment.GetAnnotations()
+	annotations := resource.GetAnnotations()
 
 	shouldUpdateDeployment = false
 
-	for idx, c := range deployment.Spec.Template.Spec.Containers {
-		// Remove version if any
-		// containerImageName := versionreg.ReplaceAllString(c.Image, "")
-
+	// for idx, c := range deployment.Spec.Template.Spec.Containers {
+	for idx, c := range resource.Containers() {
 		containerImageRef, err := image.Parse(c.Image)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -45,8 +44,9 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		}
 
 		log.WithFields(log.Fields{
-			"name":              deployment.Name,
-			"namespace":         deployment.Namespace,
+			"name":              resource.Name,
+			"namespace":         resource.Namespace,
+			"kind":              resource.Kind(),
 			"parsed_image_name": containerImageRef.Remote(),
 			"target_image_name": repo.Name,
 			"target_tag":        repo.Tag,
@@ -72,31 +72,35 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 
 		// updating image
 		if containerImageRef.Registry() == image.DefaultRegistryHostname {
-			c.Image = fmt.Sprintf("%s:%s", containerImageRef.ShortName(), repo.Tag)
+			// c.Image = fmt.Sprintf("%s:%s", containerImageRef.ShortName(), repo.Tag)
+			resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.ShortName(), repo.Tag))
 		} else {
-			c.Image = fmt.Sprintf("%s:%s", containerImageRef.Repository(), repo.Tag)
+			// c.Image = fmt.Sprintf("%s:%s", containerImageRef.Repository(), repo.Tag)
+			resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.Repository(), repo.Tag))
 		}
 
-		deployment.Spec.Template.Spec.Containers[idx] = c
+		// deployment.Spec.Template.Spec.Containers[idx] = c
 		// marking this deployment for update
 		shouldUpdateDeployment = true
 
 		// updating annotations
-		annotations := deployment.GetAnnotations()
+		annotations := resource.GetAnnotations()
 		// updating digest if available
-		if repo.Digest != "" {
+		// if repo.Digest != "" {
 
-			// annotations[types.KeelDigestAnnotation+"/"+containerImageRef.Remote()] = repo.Digest
-		}
+		// annotations[types.KeelDigestAnnotation+"/"+containerImageRef.Remote()] = repo.Digest
+		// }
 
 		// adding image for updates
-		annotations = addImageToPull(annotations, c.Image)
+		// annotations = addImageToPull(annotations, c.Image)
 
-		deployment.SetAnnotations(annotations)
+		annotations["keel.sh/update-time"] = time.Now().String()
+
+		resource.SetAnnotations(annotations)
 
 		updatePlan.CurrentVersion = containerImageRef.Tag()
 		updatePlan.NewVersion = repo.Tag
-		updatePlan.Deployment = deployment
+		updatePlan.Resource = resource
 
 		log.WithFields(log.Fields{
 			"parsed_image":     containerImageRef.Remote(),
