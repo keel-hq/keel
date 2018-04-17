@@ -18,7 +18,7 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 		Values:    make(map[string]string),
 	}
 
-	eventRepoRef, err := image.Parse(repo.Name)
+	eventRepoRef, err := image.Parse(repo.String())
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error":           err,
