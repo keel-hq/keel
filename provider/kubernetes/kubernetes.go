@@ -15,6 +15,7 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/extension/notification"
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 	"github.com/keel-hq/keel/util/policies"
@@ -52,10 +53,22 @@ var versionreg = regexp.MustCompile(`:[^:]*$`)
 // annotation used to specify which image to force pull
 const forceUpdateImageAnnotation = "keel.sh/update-image"
 
+// GenericResourceCache an interface for generic resource cache.
+type GenericResourceCache interface {
+	// Values returns a copy of the contents of the cache.
+	// The slice and its contents should be treated as read-only.
+	Values() []*k8s.GenericResource
+
+	// Register registers ch to receive a value when Notify is called.
+	Register(chan int, int)
+}
+
 // UpdatePlan - deployment update plan
 type UpdatePlan struct {
 	// Updated deployment version
-	Deployment v1beta1.Deployment
+	// Deployment v1beta1.Deployment
+	Resource *k8s.GenericResource
+
 	// Current (last seen cluster version)
 	CurrentVersion string
 	// New version that's already in the deployment
@@ -70,14 +83,17 @@ type Provider struct {
 
 	approvalManager approvals.Manager
 
+	cache GenericResourceCache
+
 	events chan *types.Event
 	stop   chan struct{}
 }
 
 // NewProvider - create new kubernetes based provider
-func NewProvider(implementer Implementer, sender notification.Sender, approvalManager approvals.Manager) (*Provider, error) {
+func NewProvider(implementer Implementer, sender notification.Sender, approvalManager approvals.Manager, cache GenericResourceCache) (*Provider, error) {
 	return &Provider{
 		implementer:     implementer,
+		cache:           cache,
 		approvalManager: approvalManager,
 		events:          make(chan *types.Event, 100),
 		stop:            make(chan struct{}),
@@ -106,73 +122,137 @@ func (p *Provider) Stop() {
 	close(p.stop)
 }
 
-// TrackedImages - get tracked images
+// TrackedImages returns a list of tracked images.
 func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 	var trackedImages []*types.TrackedImage
 
-	deploymentLists, err := p.deployments()
-	if err != nil {
-		return nil, err
-	}
+	for _, gr := range p.cache.Values() {
+		labels := gr.GetLabels()
 
-	for _, deploymentList := range deploymentLists {
-		for _, deployment := range deploymentList.Items {
-			labels := deployment.GetLabels()
+		// ignoring unlabelled deployments
+		policy := policies.GetPolicy(labels)
+		if policy == types.PolicyTypeNone {
+			continue
+		}
 
-			// ignoring unlabelled deployments
-			policy := policies.GetPolicy(labels)
-			if policy == types.PolicyTypeNone {
-				continue
-			}
-
-			annotations := deployment.GetAnnotations()
-			schedule, ok := annotations[types.KeelPollScheduleAnnotation]
-			if ok {
-				_, err := cron.Parse(schedule)
-				if err != nil {
-					log.WithFields(log.Fields{
-						"error":      err,
-						"schedule":   schedule,
-						"deployment": deployment.Name,
-						"namespace":  deployment.Namespace,
-					}).Error("provider.kubernetes: failed to parse poll schedule, setting default schedule")
-					schedule = types.KeelPollDefaultSchedule
-				}
-			} else {
+		annotations := gr.GetAnnotations()
+		schedule, ok := annotations[types.KeelPollScheduleAnnotation]
+		if ok {
+			_, err := cron.Parse(schedule)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":     err,
+					"schedule":  schedule,
+					"name":      gr.Name,
+					"namespace": gr.Namespace,
+				}).Error("provider.kubernetes: failed to parse poll schedule, setting default schedule")
 				schedule = types.KeelPollDefaultSchedule
 			}
+		} else {
+			schedule = types.KeelPollDefaultSchedule
+		}
 
-			// trigger type, we only care for "poll" type triggers
-			trigger := policies.GetTriggerPolicy(labels)
+		// trigger type, we only care for "poll" type triggers
+		trigger := policies.GetTriggerPolicy(labels)
 
-			secrets := getImagePullSecrets(&deployment)
+		// secrets := getImagePullSecrets(&deployment)
 
-			images := getImages(&deployment)
-			for _, img := range images {
-				ref, err := image.Parse(img)
-				if err != nil {
-					log.WithFields(log.Fields{
-						"error":     err,
-						"image":     img,
-						"namespace": deployment.Namespace,
-						"name":      deployment.Name,
-					}).Error("provider.kubernetes: failed to parse image")
-					continue
-				}
-				trackedImages = append(trackedImages, &types.TrackedImage{
-					Image:        ref,
-					PollSchedule: schedule,
-					Trigger:      trigger,
-					Provider:     ProviderName,
-					Namespace:    deployment.Namespace,
-					Secrets:      secrets,
-				})
+		secrets := gr.GetImagePullSecrets()
+
+		// images := getImages(&deployment)
+		images := gr.GetImages()
+		for _, img := range images {
+			ref, err := image.Parse(img)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":     err,
+					"image":     img,
+					"namespace": gr.Namespace,
+					"name":      gr.Name,
+				}).Error("provider.kubernetes: failed to parse image")
+				continue
 			}
+			trackedImages = append(trackedImages, &types.TrackedImage{
+				Image:        ref,
+				PollSchedule: schedule,
+				Trigger:      trigger,
+				Provider:     ProviderName,
+				Namespace:    gr.Namespace,
+				Secrets:      secrets,
+			})
 		}
 	}
 
 	return trackedImages, nil
 }
+
+// TrackedImages - get tracked images
+// func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
+// 	var trackedImages []*types.TrackedImage
+
+// 	deploymentLists, err := p.deployments()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	for _, deploymentList := range deploymentLists {
+// 		for _, deployment := range deploymentList.Items {
+// 			labels := deployment.GetLabels()
+
+// 			// ignoring unlabelled deployments
+// 			policy := policies.GetPolicy(labels)
+// 			if policy == types.PolicyTypeNone {
+// 				continue
+// 			}
+
+// 			annotations := deployment.GetAnnotations()
+// 			schedule, ok := annotations[types.KeelPollScheduleAnnotation]
+// 			if ok {
+// 				_, err := cron.Parse(schedule)
+// 				if err != nil {
+// 					log.WithFields(log.Fields{
+// 						"error":      err,
+// 						"schedule":   schedule,
+// 						"deployment": deployment.Name,
+// 						"namespace":  deployment.Namespace,
+// 					}).Error("provider.kubernetes: failed to parse poll schedule, setting default schedule")
+// 					schedule = types.KeelPollDefaultSchedule
+// 				}
+// 			} else {
+// 				schedule = types.KeelPollDefaultSchedule
+// 			}
+
+// 			// trigger type, we only care for "poll" type triggers
+// 			trigger := policies.GetTriggerPolicy(labels)
+
+// 			secrets := getImagePullSecrets(&deployment)
+
+// 			images := getImages(&deployment)
+// 			for _, img := range images {
+// 				ref, err := image.Parse(img)
+// 				if err != nil {
+// 					log.WithFields(log.Fields{
+// 						"error":     err,
+// 						"image":     img,
+// 						"namespace": deployment.Namespace,
+// 						"name":      deployment.Name,
+// 					}).Error("provider.kubernetes: failed to parse image")
+// 					continue
+// 				}
+// 				trackedImages = append(trackedImages, &types.TrackedImage{
+// 					Image:        ref,
+// 					PollSchedule: schedule,
+// 					Trigger:      trigger,
+// 					Provider:     ProviderName,
+// 					Namespace:    deployment.Namespace,
+// 					Secrets:      secrets,
+// 				})
+// 			}
+// 		}
+// 	}
+
+// 	return trackedImages, nil
+// }
 
 func (p *Provider) startInternal() error {
 	for {
@@ -198,7 +278,8 @@ func (p *Provider) startInternal() error {
 	}
 }
 
-func (p *Provider) processEvent(event *types.Event) (updated []*v1beta1.Deployment, err error) {
+// func (p *Provider) processEvent(event *types.Event) (updated []*v1beta1.Deployment, err error) {
+func (p *Provider) processEvent(event *types.Event) (updated []*k8s.GenericResource, err error) {
 	plans, err := p.createUpdatePlans(&event.Repository)
 	if err != nil {
 		return nil, err
@@ -218,16 +299,18 @@ func (p *Provider) processEvent(event *types.Event) (updated []*v1beta1.Deployme
 }
 
 // func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated []*v1beta1.Deployment, err error) {
-func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.Deployment, err error) {
-	// for _, deployment := range plans {
+func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.GenericResource, err error) {
 	for _, plan := range plans {
-		deployment := plan.Deployment
-		notificationChannels := types.ParseEventNotificationChannels(deployment.Annotations)
-		reset := checkForReset(deployment)
+		resource := plan.Resource
+
+		annotations := resource.GetAnnotations()
+
+		notificationChannels := types.ParseEventNotificationChannels(annotations)
+		// reset := checkForReset(deployment)
 
 		p.sender.Send(types.EventNotification{
-			Name:      "preparing to update deployment",
-			Message:   fmt.Sprintf("Preparing to update deployment %s/%s %s->%s (%s)", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&deployment), ", ")),
+			Name:      "preparing to update resource",
+			Message:   fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", ")),
 			CreatedAt: time.Now(),
 			Type:      types.NotificationPreDeploymentUpdate,
 			Level:     types.LevelDebug,
@@ -236,27 +319,33 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 
 		var err error
 
-		if reset {
-			// force update, terminating all pods
-			err = p.forceUpdate(&deployment)
-			kubernetesUnversionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name)}).Inc()
-		} else {
-			// regular update
-			deployment.Annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s", plan.CurrentVersion, plan.NewVersion)
-			err = p.implementer.Update(&deployment)
-			kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name)}).Inc()
-		}
+		// if reset {
+		// annotations["keel.sh/update-time"] = time.Now().String()
+		// }
+		// force update, terminating all pods
+		// err = p.forceUpdate(&deployment)
+		// kubernetesUnversionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name)}).Inc()
+		// } else {
+		// regular update
+		// deployment.Annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s", plan.CurrentVersion, plan.NewVersion)
+		annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s", plan.CurrentVersion, plan.NewVersion)
+
+		resource.SetAnnotations(annotations)
+
+		err = p.implementer.Update(resource)
+		kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", resource.Namespace, resource.Name)}).Inc()
+		// }
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
-				"namespace":  deployment.Namespace,
-				"deployment": deployment.Name,
+				"namespace":  resource.Namespace,
+				"deployment": resource.Name,
 				"update":     fmt.Sprintf("%s->%s", plan.CurrentVersion, plan.NewVersion),
 			}).Error("provider.kubernetes: got error while update deployment")
 
 			p.sender.Send(types.EventNotification{
-				Name:      "update deployment",
-				Message:   fmt.Sprintf("Deployment %s/%s update %s->%s failed, error: %s", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, err),
+				Name:      "update resource",
+				Message:   fmt.Sprintf("%s %s/%s update %s->%s failed, error: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, err),
 				CreatedAt: time.Now(),
 				Type:      types.NotificationDeploymentUpdate,
 				Level:     types.LevelError,
@@ -267,8 +356,8 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 		}
 
 		p.sender.Send(types.EventNotification{
-			Name:      "update deployment",
-			Message:   fmt.Sprintf("Successfully updated deployment %s/%s %s->%s (%s)", deployment.Namespace, deployment.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(getImages(&deployment), ", ")),
+			Name:      "update resource",
+			Message:   fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", ")),
 			CreatedAt: time.Now(),
 			Type:      types.NotificationDeploymentUpdate,
 			Level:     types.LevelSuccess,
@@ -276,10 +365,10 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*v1beta1.De
 		})
 
 		log.WithFields(log.Fields{
-			"name":      deployment.Name,
-			"namespace": deployment.Namespace,
+			"name":      resource.Name,
+			"namespace": resource.Namespace,
 		}).Info("provider.kubernetes: deployment updated")
-		updated = append(updated, &deployment)
+		updated = append(updated, resource)
 	}
 
 	return
@@ -337,88 +426,89 @@ func checkForReset(deployment v1beta1.Deployment) bool {
 }
 
 // getDeployment - helper function to get specific deployment
-func (p *Provider) getDeployment(namespace, name string) (*v1beta1.Deployment, error) {
-	return p.implementer.Deployment(namespace, name)
-}
+// func (p *Provider) getDeployment(namespace, name string) (*v1beta1.Deployment, error) {
+// 	return p.implementer.Deployment(namespace, name)
+// }
 
 // createUpdatePlans - impacted deployments by changed repository
-// func (p *Provider) impactedDeployments(repo *types.Repository) ([]v1beta1.Deployment, error) {
 func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, error) {
 
-	deploymentLists, err := p.deployments()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("provider.kubernetes: failed to get deployment lists")
-		return nil, err
-	}
+	// deploymentLists, err := p.deployments()
+	// if err != nil {
+	// 	log.WithFields(log.Fields{
+	// 		"error": err,
+	// 	}).Error("provider.kubernetes: failed to get deployment lists")
+	// 	return nil, err
+	// }
 
-	// impacted := []v1beta1.Deployment{}
 	impacted := []*UpdatePlan{}
 
-	for _, deploymentList := range deploymentLists {
-		for _, deployment := range deploymentList.Items {
+	// for _, deploymentList := range deploymentLists {
+	for _, resource := range p.cache.Values() {
 
-			labels := deployment.GetLabels()
+		labels := resource.GetLabels()
 
-			policy := policies.GetPolicy(labels)
-			if policy == types.PolicyTypeNone {
-				// skip
-				continue
-			}
+		policy := policies.GetPolicy(labels)
+		if policy == types.PolicyTypeNone {
+			// skip
+			continue
+		}
 
-			// annotation cleanup
-			annotations := deployment.GetAnnotations()
-			delete(annotations, forceUpdateImageAnnotation)
-			deployment.SetAnnotations(annotations)
+		// annotation cleanup
+		// annotations := gr.GetAnnotations()
+		// delete(annotations, forceUpdateImageAnnotation)
+		// deployment.SetAnnotations(annotations)
 
-			newVersion, err := version.GetVersion(repo.Tag)
-			if err != nil {
-				// failed to get new version tag
-				if policy == types.PolicyTypeForce {
-					updated, shouldUpdateDeployment, err := p.checkUnversionedDeployment(policy, repo, deployment)
-					if err != nil {
-						log.WithFields(log.Fields{
-							"error":      err,
-							"deployment": deployment.Name,
-							"namespace":  deployment.Namespace,
-						}).Error("provider.kubernetes: got error while checking unversioned deployment")
-						continue
-					}
-
-					if shouldUpdateDeployment {
-						impacted = append(impacted, updated)
-					}
-
-					// success, unversioned deployment marked for update
+		newVersion, err := version.GetVersion(repo.Tag)
+		if err != nil {
+			// failed to get new version tag
+			if policy == types.PolicyTypeForce {
+				updated, shouldUpdateDeployment, err := p.checkUnversionedDeployment(policy, repo, resource)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"error":     err,
+						"name":      resource.Name,
+						"namespace": resource.Namespace,
+						"kind":      resource.Kind(),
+					}).Error("provider.kubernetes: got error while checking unversioned resource")
 					continue
 				}
 
-				log.WithFields(log.Fields{
-					"error":          err,
-					"repository_tag": repo.Tag,
-					"deployment":     deployment.Name,
-					"namespace":      deployment.Namespace,
-					"policy":         policy,
-				}).Warn("provider.kubernetes: got error while parsing repository tag")
+				if shouldUpdateDeployment {
+					impacted = append(impacted, updated)
+				}
+
+				// success, unversioned deployment marked for update
 				continue
 			}
 
-			updated, shouldUpdateDeployment, err := p.checkVersionedDeployment(newVersion, policy, repo, deployment)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":      err,
-					"deployment": deployment.Name,
-					"namespace":  deployment.Namespace,
-				}).Error("provider.kubernetes: got error while checking versioned deployment")
-				continue
-			}
+			log.WithFields(log.Fields{
+				"error":          err,
+				"repository_tag": repo.Tag,
+				"deployment":     resource.Name,
+				"namespace":      resource.Namespace,
+				"kind":           resource.Kind(),
+				"policy":         policy,
+			}).Warn("provider.kubernetes: got error while parsing repository tag")
+			continue
+		}
 
-			if shouldUpdateDeployment {
-				impacted = append(impacted, updated)
-			}
+		updated, shouldUpdateDeployment, err := p.checkVersionedDeployment(newVersion, policy, repo, resource)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":      err,
+				"deployment": resource.Name,
+				"kind":       resource.Kind(),
+				"namespace":  resource.Namespace,
+			}).Error("provider.kubernetes: got error while checking versioned resource")
+			continue
+		}
+
+		if shouldUpdateDeployment {
+			impacted = append(impacted, updated)
 		}
 	}
+	// }
 
 	return impacted, nil
 }
@@ -428,25 +518,25 @@ func (p *Provider) namespaces() (*v1.NamespaceList, error) {
 }
 
 // deployments - gets all deployments
-func (p *Provider) deployments() ([]*v1beta1.DeploymentList, error) {
-	deployments := []*v1beta1.DeploymentList{}
+// func (p *Provider) deployments() ([]*v1beta1.DeploymentList, error) {
+// 	deployments := []*v1beta1.DeploymentList{}
 
-	n, err := p.namespaces()
-	if err != nil {
-		return nil, err
-	}
+// 	n, err := p.namespaces()
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	for _, n := range n.Items {
-		l, err := p.implementer.Deployments(n.GetName())
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":     err,
-				"namespace": n.GetName(),
-			}).Error("provider.kubernetes: failed to list deployments")
-			continue
-		}
-		deployments = append(deployments, l)
-	}
+// 	for _, n := range n.Items {
+// 		l, err := p.implementer.Deployments(n.GetName())
+// 		if err != nil {
+// 			log.WithFields(log.Fields{
+// 				"error":     err,
+// 				"namespace": n.GetName(),
+// 			}).Error("provider.kubernetes: failed to list deployments")
+// 			continue
+// 		}
+// 		deployments = append(deployments, l)
+// 	}
 
-	return deployments, nil
-}
+// 	return deployments, nil
+// }
