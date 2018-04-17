@@ -17,6 +17,8 @@ import (
 
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
+	"github.com/keel-hq/keel/internal/k8s"
+	"github.com/keel-hq/keel/internal/workgroup"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/provider/helm"
 	"github.com/keel-hq/keel/provider/kubernetes"
@@ -133,6 +135,18 @@ func main() {
 		}).Fatal("main: failed to create kubernetes implementer")
 	}
 
+	var g workgroup.Group
+
+	t := &k8s.Translator{
+		FieldLogger: log.WithField("context", "translator"),
+	}
+
+	buf := k8s.NewBuffer(&g, t, log.StandardLogger(), 128)
+	wl := log.WithField("context", "watch")
+	k8s.WatchDeployments(&g, implementer.Client(), wl, buf)
+	k8s.WatchStatefulSets(&g, implementer.Client(), wl, buf)
+	k8s.WatchDaemonSets(&g, implementer.Client(), wl, buf)
+
 	keelsNamespace := constants.DefaultNamespace
 	if os.Getenv(EnvNamespace) != "" {
 		keelsNamespace = os.Getenv(EnvNamespace)
@@ -147,16 +161,13 @@ func main() {
 	}
 
 	serializer := codecs.DefaultSerializer()
-	// mem := memory.NewMemoryCache(24*time.Hour, 24*time.Hour, 1*time.Minute)
 	approvalsManager := approvals.New(kkv, serializer)
 
 	go approvalsManager.StartExpiryService(ctx)
 
 	// setting up providers
-	providers := setupProviders(implementer, sender, approvalsManager)
-
+	providers := setupProviders(implementer, sender, approvalsManager, &t.GenericResourceCache)
 	secretsGetter := secrets.NewGetter(implementer)
-
 	teardownTriggers := setupTriggers(ctx, providers, secretsGetter, approvalsManager)
 
 	bot.Run(implementer, approvalsManager)
@@ -164,40 +175,38 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	cleanupDone := make(chan bool)
 	signal.Notify(signalChan, os.Interrupt)
-	go func() {
-		for _ = range signalChan {
-			log.Info("received an interrupt, closing connection...")
+	g.Add(func(stop <-chan struct{}) {
+		go func() {
+			for range signalChan {
+				log.Info("received an interrupt, shutting down...")
+				go func() {
+					select {
+					case <-time.After(10 * time.Second):
+						log.Info("connection shutdown took too long, exiting... ")
+						close(cleanupDone)
+						return
+					case <-cleanupDone:
+						return
+					}
+				}()
+				providers.Stop()
+				teardownTriggers()
+				bot.Stop()
 
-			go func() {
-				select {
-				case <-time.After(10 * time.Second):
-					log.Info("connection shutdown took too long, exiting... ")
-					close(cleanupDone)
-					return
-				case <-cleanupDone:
-					return
-				}
-			}()
-
-			// teardownProviders()
-			providers.Stop()
-			teardownTriggers()
-			bot.Stop()
-
-			cleanupDone <- true
-		}
-	}()
-
-	<-cleanupDone
-
+				cleanupDone <- true
+			}
+		}()
+		<-cleanupDone
+	})
+	g.Run()
 }
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
 // provider map
-func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.Sender, approvalsManager approvals.Manager) (providers provider.Providers) {
+func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.Sender, approvalsManager approvals.Manager, grc *k8s.GenericResourceCache) (providers provider.Providers) {
 	var enabledProviders []provider.Provider
 
-	k8sProvider, err := kubernetes.NewProvider(k8sImplementer, sender, approvalsManager)
+	k8sProvider, err := kubernetes.NewProvider(k8sImplementer, sender, approvalsManager, grc)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
