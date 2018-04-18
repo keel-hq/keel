@@ -34,7 +34,7 @@ Keel provides several key features:
 
 * __Automatic [Google Container Registry](https://cloud.google.com/container-registry/) configuration__ - Keel automatically sets up topic and subscriptions for your deployment images by periodically scanning your environment.
 
-* __[Native, DockerHub and Quay webhooks](https://keel.sh/v1/guide/documentation.html#Triggers) support__ -  once webhook is received impacted deployments will be identified and updated.
+* __[Native, DockerHub, Quay and Azure container registry webhooks](https://keel.sh/v1/guide/documentation.html#Triggers) support__ -  once webhook is received impacted deployments will be identified and updated.
 
 *  __[Polling](https://keel.sh/v1/guide/documentation.html#Polling)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for new tags (if current tag is semver) or same tag SHA digest change (ie: `latest`).
 
