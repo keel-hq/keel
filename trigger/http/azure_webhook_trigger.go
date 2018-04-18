@@ -65,12 +65,6 @@ func (s *TriggerServer) azureHandler(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	//if qw.DockerURL == "" {
-	//	resp.WriteHeader(http.StatusBadRequest)
-	//	fmt.Fprintf(resp, "docker_url cannot be empty")
-	//	return
-	//}
-
 	if qw.Target.Tag == "" {
 		resp.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(resp, "tag cannot be empty")
