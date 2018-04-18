@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
 
+	apps_v1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -23,33 +24,36 @@ func TestCheckRequestedApproval(t *testing.T) {
 			},
 		},
 	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-1",
-					Namespace:   "xxxx",
-					Labels:      map[string]string{types.KeelPolicyLabel: "all", types.KeelMinimumApprovalsLabel: "1"},
-					Annotations: map[string]string{},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
+	deployments := []apps_v1.Deployment{
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all", types.KeelMinimumApprovalsLabel: "1"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
+			apps_v1.DeploymentStatus{},
 		},
 	}
+
+	grs := MustParseGRS(deployments)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
 	approver := approver()
-	provider, err := NewProvider(fp, &fakeSender{}, approver)
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -91,33 +95,35 @@ func TestApprovedCheck(t *testing.T) {
 			},
 		},
 	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-1",
-					Namespace:   "xxxx",
-					Labels:      map[string]string{types.KeelPolicyLabel: "all", types.KeelMinimumApprovalsLabel: "1"},
-					Annotations: map[string]string{},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
+	deployments := []apps_v1.Deployment{
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all", types.KeelMinimumApprovalsLabel: "1"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
+			apps_v1.DeploymentStatus{},
 		},
 	}
+	grs := MustParseGRS(deployments)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
 	approver := approver()
-	provider, err := NewProvider(fp, &fakeSender{}, approver)
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}

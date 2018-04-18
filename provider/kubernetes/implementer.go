@@ -14,7 +14,6 @@ import (
 
 	"k8s.io/api/core/v1"
 
-	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -26,7 +25,7 @@ type Implementer interface {
 	Namespaces() (*v1.NamespaceList, error)
 
 	// Deployment(namespace, name string) (*v1beta1.Deployment, error)
-	Deployments(namespace string) (*v1beta1.DeploymentList, error)
+	Deployments(namespace string) (*apps_v1.DeploymentList, error)
 	// Update(deployment *v1beta1.Deployment) error
 	Update(obj *k8s.GenericResource) error
 
@@ -103,31 +102,17 @@ func (i *KubernetesImplementer) Namespaces() (*v1.NamespaceList, error) {
 }
 
 // Deployment - get specific deployment for namespace/name
-func (i *KubernetesImplementer) Deployment(namespace, name string) (*v1beta1.Deployment, error) {
-	dep := i.client.Extensions().Deployments(namespace)
+func (i *KubernetesImplementer) Deployment(namespace, name string) (*apps_v1.Deployment, error) {
+	dep := i.client.Apps().Deployments(namespace)
 	return dep.Get(name, meta_v1.GetOptions{})
 }
 
 // Deployments - get all deployments for namespace
-func (i *KubernetesImplementer) Deployments(namespace string) (*v1beta1.DeploymentList, error) {
-	dep := i.client.Extensions().Deployments(namespace)
+func (i *KubernetesImplementer) Deployments(namespace string) (*apps_v1.DeploymentList, error) {
+	dep := i.client.Apps().Deployments(namespace)
 	l, err := dep.List(meta_v1.ListOptions{})
 	return l, err
 }
-
-// Update - update deployment
-// func (i *KubernetesImplementer) Update(deployment *v1beta1.Deployment) error {
-// 	// retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-// 	// 	// Retrieve the latest version of Deployment before attempting update
-// 	// 	// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
-// 	// 	_, updateErr := i.client.Extensions().Deployments(deployment.Namespace).Update(deployment)
-// 	// 	return updateErr
-// 	// })
-// 	// return retryErr
-
-// 	_, err := i.client.Extensions().Deployments(deployment.Namespace).Update(deployment)
-// 	return err
-// }
 
 // Update converts generic resource into specific kubernetes type and updates it
 func (i *KubernetesImplementer) Update(obj *k8s.GenericResource) error {
@@ -155,10 +140,10 @@ func (i *KubernetesImplementer) Update(obj *k8s.GenericResource) error {
 		if err != nil {
 			return err
 		}
+	default:
+		return fmt.Errorf("unsupported object type")
 	}
-
-	// _, err := i.client.Extensions().Deployments(deployment.Namespace).Update(deployment)
-	return fmt.Errorf("unsupported object type")
+	return nil
 }
 
 // Secret - get secret

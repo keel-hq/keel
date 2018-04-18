@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
 	"k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -25,6 +26,7 @@ func TestForceUpdate(t *testing.T) {
 		v1beta1.DeploymentStatus{},
 	}
 
+	grc := &k8s.GenericResourceCache{}
 	fp.podList = &v1.PodList{
 		Items: []v1.Pod{
 			v1.Pod{
@@ -42,7 +44,7 @@ func TestForceUpdate(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -104,7 +106,8 @@ func TestForceUpdateDelay(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+	grc := &k8s.GenericResourceCache{}
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}

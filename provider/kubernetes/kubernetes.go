@@ -9,7 +9,6 @@ import (
 	"github.com/rusenask/cron"
 
 	"k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -374,22 +373,22 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 	return
 }
 
-func getImages(deployment *v1beta1.Deployment) []string {
-	var images []string
-	for _, c := range deployment.Spec.Template.Spec.Containers {
-		images = append(images, c.Image)
-	}
+// func getImages(deployment *v1beta1.Deployment) []string {
+// 	var images []string
+// 	for _, c := range deployment.Spec.Template.Spec.Containers {
+// 		images = append(images, c.Image)
+// 	}
 
-	return images
-}
+// 	return images
+// }
 
-func getImagePullSecrets(deployment *v1beta1.Deployment) []string {
-	var secrets []string
-	for _, s := range deployment.Spec.Template.Spec.ImagePullSecrets {
-		secrets = append(secrets, s.Name)
-	}
-	return secrets
-}
+// func getImagePullSecrets(deployment *v1beta1.Deployment) []string {
+// 	var secrets []string
+// 	for _, s := range deployment.Spec.Template.Spec.ImagePullSecrets {
+// 		secrets = append(secrets, s.Name)
+// 	}
+// 	return secrets
+// }
 
 func getDesiredImage(delta map[string]string, currentImage string) (string, error) {
 	currentRef, err := image.Parse(currentImage)
@@ -413,37 +412,10 @@ func getDesiredImage(delta map[string]string, currentImage string) (string, erro
 	return "", fmt.Errorf("image %s not found in deltas", currentImage)
 }
 
-// checkForReset returns delta to apply after setting image
-func checkForReset(deployment v1beta1.Deployment) bool {
-	reset := false
-	annotations := deployment.GetAnnotations()
-	for _, c := range deployment.Spec.Template.Spec.Containers {
-		if shouldPullImage(annotations, c.Image) {
-			reset = true
-		}
-	}
-	return reset
-}
-
-// getDeployment - helper function to get specific deployment
-// func (p *Provider) getDeployment(namespace, name string) (*v1beta1.Deployment, error) {
-// 	return p.implementer.Deployment(namespace, name)
-// }
-
 // createUpdatePlans - impacted deployments by changed repository
 func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, error) {
-
-	// deploymentLists, err := p.deployments()
-	// if err != nil {
-	// 	log.WithFields(log.Fields{
-	// 		"error": err,
-	// 	}).Error("provider.kubernetes: failed to get deployment lists")
-	// 	return nil, err
-	// }
-
 	impacted := []*UpdatePlan{}
 
-	// for _, deploymentList := range deploymentLists {
 	for _, resource := range p.cache.Values() {
 
 		labels := resource.GetLabels()
@@ -516,27 +488,3 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 func (p *Provider) namespaces() (*v1.NamespaceList, error) {
 	return p.implementer.Namespaces()
 }
-
-// deployments - gets all deployments
-// func (p *Provider) deployments() ([]*v1beta1.DeploymentList, error) {
-// 	deployments := []*v1beta1.DeploymentList{}
-
-// 	n, err := p.namespaces()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	for _, n := range n.Items {
-// 		l, err := p.implementer.Deployments(n.GetName())
-// 		if err != nil {
-// 			log.WithFields(log.Fields{
-// 				"error":     err,
-// 				"namespace": n.GetName(),
-// 			}).Error("provider.kubernetes: failed to list deployments")
-// 			continue
-// 		}
-// 		deployments = append(deployments, l)
-// 	}
-
-// 	return deployments, nil
-// }

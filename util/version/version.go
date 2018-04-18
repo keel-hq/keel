@@ -99,7 +99,9 @@ func NewAvailable(current string, tags []string) (newVersion string, newAvailabl
 
 		}
 
-		vs = append(vs, v)
+		if currentVersion.Prerelease() == v.Prerelease() {
+			vs = append(vs, v)
+		}
 	}
 
 	if len(vs) == 0 {

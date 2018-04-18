@@ -7,11 +7,13 @@ import (
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/extension/notification"
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/codecs"
 
+	apps_v1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
+	// "k8s.io/api/extensions/apps_v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
@@ -41,14 +43,14 @@ func (p *fakeProvider) GetName() string {
 
 type fakeImplementer struct {
 	namespaces     *v1.NamespaceList
-	deployment     *v1beta1.Deployment
-	deploymentList *v1beta1.DeploymentList
+	deployment     *apps_v1.Deployment
+	deploymentList *apps_v1.DeploymentList
 
 	podList     *v1.PodList
 	deletedPods []*v1.Pod
 
 	// stores value of an updated deployment
-	updated *v1beta1.Deployment
+	updated *k8s.GenericResource
 
 	availableSecret *v1.Secret
 }
@@ -57,16 +59,16 @@ func (i *fakeImplementer) Namespaces() (*v1.NamespaceList, error) {
 	return i.namespaces, nil
 }
 
-func (i *fakeImplementer) Deployment(namespace, name string) (*v1beta1.Deployment, error) {
+func (i *fakeImplementer) Deployment(namespace, name string) (*apps_v1.Deployment, error) {
 	return i.deployment, nil
 }
 
-func (i *fakeImplementer) Deployments(namespace string) (*v1beta1.DeploymentList, error) {
+func (i *fakeImplementer) Deployments(namespace string) (*apps_v1.DeploymentList, error) {
 	return i.deploymentList, nil
 }
 
-func (i *fakeImplementer) Update(deployment *v1beta1.Deployment) error {
-	i.updated = deployment
+func (i *fakeImplementer) Update(obj *k8s.GenericResource) error {
+	i.updated = obj
 	return nil
 }
 
@@ -128,7 +130,9 @@ func TestGetNamespaces(t *testing.T) {
 		},
 	}
 
-	provider, err := NewProvider(fi, &fakeSender{}, approver())
+	grc := &k8s.GenericResourceCache{}
+
+	provider, err := NewProvider(fi, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -150,59 +154,79 @@ func TestGetImageName(t *testing.T) {
 	}
 }
 
-func TestGetDeployments(t *testing.T) {
-	fp := &fakeImplementer{}
-	fp.namespaces = &v1.NamespaceList{
-		Items: []v1.Namespace{
-			v1.Namespace{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{Name: "xxxx"},
-				v1.NamespaceSpec{},
-				v1.NamespaceStatus{},
-			},
-		},
-	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1",
-								},
-							},
-						},
-					},
-				},
-				v1beta1.DeploymentStatus{},
-			},
-		},
-	}
+// func TestGetDeployments(t *testing.T) {
+// 	fp := &fakeImplementer{}
+// 	fp.namespaces = &v1.NamespaceList{
+// 		Items: []v1.Namespace{
+// 			v1.Namespace{
+// 				meta_v1.TypeMeta{},
+// 				meta_v1.ObjectMeta{Name: "xxxx"},
+// 				v1.NamespaceSpec{},
+// 				v1.NamespaceStatus{},
+// 			},
+// 		},
+// 	}
+// 	fp.deploymentList = &apps_v1.DeploymentList{
+// 		Items: []apps_v1.Deployment{
+// 			apps_v1.Deployment{
+// 				meta_v1.TypeMeta{},
+// 				meta_v1.ObjectMeta{
+// 					Name:      "dep-1",
+// 					Namespace: "xxxx",
+// 					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+// 				},
+// 				apps_v1.DeploymentSpec{
+// 					Template: v1.PodTemplateSpec{
+// 						Spec: v1.PodSpec{
+// 							Containers: []v1.Container{
+// 								v1.Container{
+// 									Image: "gcr.io/v2-namespace/hello-world:1.1",
+// 								},
+// 							},
+// 						},
+// 					},
+// 				},
+// 				apps_v1.DeploymentStatus{},
+// 			},
+// 		},
+// 	}
+// 	grc := &k8s.GenericResourceCache{}
+// 	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+// 	if err != nil {
+// 		t.Fatalf("failed to get provider: %s", err)
+// 	}
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+// 	deps, err := provider.deployments()
+// 	if err != nil {
+// 		t.Errorf("failed to get deployments: %s", err)
+// 	}
+// 	if len(deps) != 1 {
+// 		t.Errorf("expected to find 1 deployment, got: %d", len(deps))
+// 	}
+
+// 	if deps[0].Items[0].GetName() != "dep-1" {
+// 		t.Errorf("expected name %s, got %s", "dep-1", deps[0].Items[0].GetName())
+// 	}
+// }
+
+func MustParseGR(obj interface{}) *k8s.GenericResource {
+	gr, err := k8s.NewGenericResource(obj)
 	if err != nil {
-		t.Fatalf("failed to get provider: %s", err)
+		panic(err)
 	}
+	return gr
+}
 
-	deps, err := provider.deployments()
-	if err != nil {
-		t.Errorf("failed to get deployments: %s", err)
+func MustParseGRS(objs ...interface{}) []*k8s.GenericResource {
+	grs := []*k8s.GenericResource{}
+	for obj := range objs {
+		gr, err := k8s.NewGenericResource(obj)
+		if err != nil {
+			panic(err)
+		}
+		grs = append(grs, gr)
 	}
-	if len(deps) != 1 {
-		t.Errorf("expected to find 1 deployment, got: %d", len(deps))
-	}
-
-	if deps[0].Items[0].GetName() != "dep-1" {
-		t.Errorf("expected name %s, got %s", "dep-1", deps[0].Items[0].GetName())
-	}
+	return grs
 }
 
 func TestGetImpacted(t *testing.T) {
@@ -217,52 +241,55 @@ func TestGetImpacted(t *testing.T) {
 			},
 		},
 	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
+
+	deps := []apps_v1.Deployment{
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-1",
+				Namespace: "xxxx",
+				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:      "dep-2",
-					Namespace: "xxxx",
-					Labels:    map[string]string{"whatever": "all"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
+			apps_v1.DeploymentStatus{},
+		},
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-2",
+				Namespace: "xxxx",
+				Labels:    map[string]string{"whatever": "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
+			apps_v1.DeploymentStatus{},
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -283,7 +310,7 @@ func TestGetImpacted(t *testing.T) {
 	}
 
 	found := false
-	for _, c := range plans[0].Deployment.Spec.Template.Spec.Containers {
+	for _, c := range plans[0].Resource.Containers() {
 
 		containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
@@ -310,54 +337,56 @@ func TestProcessEvent(t *testing.T) {
 			},
 		},
 	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "deployment-1",
-					Namespace:   "xxxx",
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-					Annotations: map[string]string{},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
+	deps := []apps_v1.Deployment{
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "deployment-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "deployment-2",
-					Namespace:   "xxxx",
-					Labels:      map[string]string{"whatever": "all"},
-					Annotations: map[string]string{},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/bye-world:1.1.1",
-								},
+			apps_v1.DeploymentStatus{},
+		},
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "deployment-2",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{"whatever": "all"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/bye-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
+			apps_v1.DeploymentStatus{},
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -373,8 +402,8 @@ func TestProcessEvent(t *testing.T) {
 		t.Errorf("got error while processing event: %s", err)
 	}
 
-	if fp.updated.Spec.Template.Spec.Containers[0].Image != repo.Name+":"+repo.Tag {
-		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Spec.Template.Spec.Containers[0].Image)
+	if fp.updated.Containers()[0].Image != repo.Name+":"+repo.Tag {
+		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Containers()[0].Image)
 	}
 }
 
@@ -390,33 +419,35 @@ func TestProcessEventBuildNumber(t *testing.T) {
 			},
 		},
 	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "deployment-1",
-					Namespace:   "xxxx",
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-					Annotations: map[string]string{},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:10",
-								},
+	deps := []apps_v1.Deployment{
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "deployment-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:10",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
+			apps_v1.DeploymentStatus{},
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -432,8 +463,8 @@ func TestProcessEventBuildNumber(t *testing.T) {
 		t.Errorf("got error while processing event: %s", err)
 	}
 
-	if fp.updated.Spec.Template.Spec.Containers[0].Image != repo.Name+":"+repo.Tag {
-		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Spec.Template.Spec.Containers[0].Image)
+	if fp.updated.Containers()[0].Image != repo.Name+":"+repo.Tag {
+		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Containers()[0].Image)
 	}
 }
 
@@ -450,56 +481,57 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 			},
 		},
 	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-1",
-					Namespace:   "xxxx",
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-					Annotations: map[string]string{},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
-								v1.Container{
-									Image: "gcr.io/v2-namespace/greetings-world:1.1.1",
-								},
+	deps := []apps_v1.Deployment{
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+							},
+							v1.Container{
+								Image: "gcr.io/v2-namespace/greetings-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:      "dep-2",
-					Namespace: "xxxx",
-					Labels:    map[string]string{"whatever": "all"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
+			apps_v1.DeploymentStatus{},
+		},
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-2",
+				Namespace: "xxxx",
+				Labels:    map[string]string{"whatever": "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
+			apps_v1.DeploymentStatus{},
 		},
 	}
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -520,7 +552,7 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 	}
 
 	found := false
-	for _, c := range plans[0].Deployment.Spec.Template.Spec.Containers {
+	for _, c := range plans[0].Resource.Containers() {
 
 		containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
@@ -548,57 +580,59 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 			},
 		},
 	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-1",
-					Namespace:   "xxxx",
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-					Annotations: map[string]string{},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
+	deps := []apps_v1.Deployment{
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+							},
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-2",
-					Namespace:   "xxxx",
-					Labels:      map[string]string{"whatever": "all"},
-					Annotations: map[string]string{},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
+			apps_v1.DeploymentStatus{},
+		},
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-2",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{"whatever": "all"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
+			apps_v1.DeploymentStatus{},
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -619,7 +653,7 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 	}
 
 	found := false
-	for _, c := range plans[0].Deployment.Spec.Template.Spec.Containers {
+	for _, c := range plans[0].Resource.Containers() {
 
 		containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
@@ -646,54 +680,55 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 			},
 		},
 	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-1",
-					Namespace:   "xxxx",
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-					Annotations: map[string]string{},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/foo-world",
-								},
+	deps := []apps_v1.Deployment{
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/foo-world",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-2",
-					Namespace:   "xxxx",
-					Annotations: map[string]string{},
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
+			apps_v1.DeploymentStatus{},
+		},
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-2",
+				Namespace:   "xxxx",
+				Annotations: map[string]string{},
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
+			apps_v1.DeploymentStatus{},
 		},
 	}
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -714,7 +749,7 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 	}
 
 	found := false
-	for _, c := range plans[0].Deployment.Spec.Template.Spec.Containers {
+	for _, c := range plans[0].Resource.Containers() {
 
 		containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
@@ -742,54 +777,55 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 			},
 		},
 	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-1",
-					Namespace:   "xxxx",
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-					Annotations: map[string]string{},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world",
-								},
+	deps := []apps_v1.Deployment{
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:        "dep-2",
-					Namespace:   "xxxx",
-					Annotations: map[string]string{},
-					Labels:      map[string]string{types.KeelPolicyLabel: "all"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1.1",
-								},
+			apps_v1.DeploymentStatus{},
+		},
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-2",
+				Namespace:   "xxxx",
+				Annotations: map[string]string{},
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
+			apps_v1.DeploymentStatus{},
 		},
 	}
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -811,7 +847,7 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 
 	found := false
 	for _, plan := range plans {
-		for _, c := range plan.Deployment.Spec.Template.Spec.Containers {
+		for _, c := range plan.Resource.Containers() {
 
 			containerImageName := versionreg.ReplaceAllString(c.Image, "")
 
@@ -839,37 +875,39 @@ func TestTrackedImages(t *testing.T) {
 			},
 		},
 	}
-	fp.deploymentList = &v1beta1.DeploymentList{
-		Items: []v1beta1.Deployment{
-			v1beta1.Deployment{
-				meta_v1.TypeMeta{},
-				meta_v1.ObjectMeta{
-					Name:      "dep-1",
-					Namespace: "xxxx",
-					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
-				},
-				v1beta1.DeploymentSpec{
-					Template: v1.PodTemplateSpec{
-						Spec: v1.PodSpec{
-							Containers: []v1.Container{
-								v1.Container{
-									Image: "gcr.io/v2-namespace/hello-world:1.1",
-								},
+	deps := []apps_v1.Deployment{
+		apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-1",
+				Namespace: "xxxx",
+				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1",
 							},
-							ImagePullSecrets: []v1.LocalObjectReference{
-								v1.LocalObjectReference{
-									Name: "very-secret",
-								},
+						},
+						ImagePullSecrets: []v1.LocalObjectReference{
+							v1.LocalObjectReference{
+								Name: "very-secret",
 							},
 						},
 					},
 				},
-				v1beta1.DeploymentStatus{},
 			},
+			apps_v1.DeploymentStatus{},
 		},
 	}
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver())
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
