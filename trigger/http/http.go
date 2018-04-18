@@ -100,7 +100,11 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 
 	// dockerhub webhooks handler
 	mux.HandleFunc("/v1/webhooks/dockerhub", s.dockerHubHandler).Methods("POST", "OPTIONS")
+
+	// quay webhooks handler
 	mux.HandleFunc("/v1/webhooks/quay", s.quayHandler).Methods("POST", "OPTIONS")
+
+	mux.HandleFunc("/v1/webhooks/azure", s.azureHandler).Methods("POST", "OPTIONS")
 
 	mux.Handle("/metrics", promhttp.Handler())
 }
