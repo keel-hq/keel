@@ -14,7 +14,7 @@ import (
 func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, resource *k8s.GenericResource) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
 	updatePlan = &UpdatePlan{}
 
-	eventRepoRef, err := image.Parse(repo.Name)
+	eventRepoRef, err := image.Parse(repo.String())
 	if err != nil {
 		return
 	}
@@ -70,6 +70,20 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 			}
 		}
 
+		// updating annotations
+		// annotations := resource.GetAnnotations()
+		matchTag, ok := annotations[types.KeelForceTagMatchLabel]
+		if ok {
+			if matchTag == "true" && containerImageRef.Tag() != eventRepoRef.Tag() {
+				continue
+			}
+			// if deployment.Spec.Template.Annotations == nil {
+			// 	deployment.Spec.Template.Annotations = map[string]string{}
+			// }
+
+			// deployment.Spec.Template.Annotations["time"] = timeutil.Now().String()
+		}
+
 		// updating image
 		if containerImageRef.Registry() == image.DefaultRegistryHostname {
 			// c.Image = fmt.Sprintf("%s:%s", containerImageRef.ShortName(), repo.Tag)
@@ -84,7 +98,7 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		shouldUpdateDeployment = true
 
 		// updating annotations
-		annotations := resource.GetAnnotations()
+		// annotations := resource.GetAnnotations()
 		// updating digest if available
 		// if repo.Digest != "" {
 
