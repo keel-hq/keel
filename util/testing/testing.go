@@ -1,8 +1,10 @@
 package testing
 
 import (
+	"github.com/keel-hq/keel/internal/k8s"
+
+	apps_v1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
@@ -10,11 +12,11 @@ import (
 // FakeK8sImplementer - fake implementer used for testing
 type FakeK8sImplementer struct {
 	NamespacesList   *v1.NamespaceList
-	DeploymentSingle *v1beta1.Deployment
-	DeploymentList   *v1beta1.DeploymentList
+	DeploymentSingle *apps_v1.Deployment
+	DeploymentList   *apps_v1.DeploymentList
 
 	// stores value of an updated deployment
-	Updated *v1beta1.Deployment
+	Updated *k8s.GenericResource
 
 	AvailableSecret *v1.Secret
 
@@ -31,18 +33,18 @@ func (i *FakeK8sImplementer) Namespaces() (*v1.NamespaceList, error) {
 }
 
 // Deployment - available deployment, doesn't filter anything
-func (i *FakeK8sImplementer) Deployment(namespace, name string) (*v1beta1.Deployment, error) {
+func (i *FakeK8sImplementer) Deployment(namespace, name string) (*apps_v1.Deployment, error) {
 	return i.DeploymentSingle, nil
 }
 
 // Deployments - available deployments
-func (i *FakeK8sImplementer) Deployments(namespace string) (*v1beta1.DeploymentList, error) {
+func (i *FakeK8sImplementer) Deployments(namespace string) (*apps_v1.DeploymentList, error) {
 	return i.DeploymentList, nil
 }
 
 // Update - update deployment
-func (i *FakeK8sImplementer) Update(deployment *v1beta1.Deployment) error {
-	i.Updated = deployment
+func (i *FakeK8sImplementer) Update(obj *k8s.GenericResource) error {
+	i.Updated = obj
 	return nil
 }
 

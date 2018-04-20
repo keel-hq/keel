@@ -25,6 +25,7 @@ const KeelPolicyLabel = "keel.sh/policy"
 // changes
 const KeelTriggerLabel = "keel.sh/trigger"
 
+// KeelForceTagMatchLabel - label that checks whether tags match before force updating
 const KeelForceTagMatchLabel = "keel.sh/match-tag"
 
 // KeelPollScheduleAnnotation - optional variable to setup custom schedule for polling, defaults to @every 10m
@@ -42,6 +43,9 @@ const KeelNotificationChanAnnotation = "keel.sh/notify"
 
 // KeelMinimumApprovalsLabel - min approvals
 const KeelMinimumApprovalsLabel = "keel.sh/approvals"
+
+// KeelUpdateTimeAnnotation - update time
+const KeelUpdateTimeAnnotation = "keel.sh/update-time"
 
 // KeelApprovalDeadlineLabel - approval deadline
 const KeelApprovalDeadlineLabel = "keel.sh/approvalDeadline"

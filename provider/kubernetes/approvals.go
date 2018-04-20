@@ -22,9 +22,9 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 		approved, err := p.isApproved(event, plan)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"error":      err,
-				"deployment": plan.Deployment.Name,
-				"namespace":  plan.Deployment.Namespace,
+				"error":     err,
+				"name":      plan.Resource.Name,
+				"namespace": plan.Resource.Namespace,
 			}).Error("provider.kubernetes: failed to check approval status for deployment")
 			continue
 		}
@@ -36,7 +36,7 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 }
 
 func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error) {
-	labels := plan.Deployment.GetLabels()
+	labels := plan.Resource.GetLabels()
 
 	minApprovalsStr, ok := labels[types.KeelMinimumApprovalsLabel]
 	if !ok {
@@ -64,7 +64,7 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 		}
 	}
 
-	identifier := getIdentifier(plan.Deployment.Namespace, plan.Deployment.Name, plan.NewVersion)
+	identifier := getIdentifier(plan.Resource.Namespace, plan.Resource.Name, plan.NewVersion)
 
 	// checking for existing approval
 	existing, err := p.approvalManager.Get(identifier)
@@ -84,13 +84,13 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 				Deadline:       time.Now().Add(time.Duration(deadline) * time.Hour),
 			}
 
-			approval.Message = fmt.Sprintf("New image is available for deployment %s/%s (%s).",
-				plan.Deployment.Namespace,
-				plan.Deployment.Name,
+			approval.Message = fmt.Sprintf("New image is available for resource %s/%s (%s).",
+				plan.Resource.Namespace,
+				plan.Resource.Name,
 				approval.Delta(),
 			)
 
-			fmt.Println("requesting approval, ns: ", plan.Deployment.Namespace)
+			fmt.Println("requesting approval, ns: ", plan.Resource.Namespace)
 
 			return false, p.approvalManager.Create(approval)
 		}

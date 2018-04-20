@@ -7,10 +7,13 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/extension/notification"
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/timeutil"
+
 	"k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
+	// "k8s.io/api/extensions/apps_v1"
+	apps_v1 "k8s.io/api/apps/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,9 +32,9 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 		stop            chan struct{}
 	}
 	type args struct {
-		policy     types.PolicyType
-		repo       *types.Repository
-		deployment v1beta1.Deployment
+		policy   types.PolicyType
+		repo     *types.Repository
+		resource *k8s.GenericResource
 	}
 	tests := []struct {
 		name                       string
@@ -46,7 +49,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "latest"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -54,8 +57,13 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -65,20 +73,25 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{
+				Resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
 						Namespace:   "xxxx",
-						Annotations: map[string]string{forceUpdateImageAnnotation: "gcr.io/v2-namespace/hello-world:latest"},
+						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -88,8 +101,8 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 				NewVersion:     "latest",
 				CurrentVersion: "latest",
 			},
@@ -101,7 +114,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "latest"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -109,7 +122,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
@@ -120,11 +133,12 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{},
+				// Resource: &k8s.GenericResource{},
+				Resource: nil,
 			},
 			wantShouldUpdateDeployment: false,
 			wantErr:                    false,
@@ -134,7 +148,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "master"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:      "dep-1",
@@ -146,7 +160,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							types.KeelPolicyLabel: "all",
 						},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
@@ -157,11 +171,11 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{},
+				Resource: nil,
 			},
 			wantShouldUpdateDeployment: false,
 			wantErr:                    false,
@@ -171,7 +185,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Name: "karolisr/keel", Tag: "0.2.0"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -179,8 +193,13 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -190,20 +209,25 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{
+				Resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
 						Namespace:   "xxxx",
-						Annotations: map[string]string{forceUpdateImageAnnotation: "karolisr/keel:0.2.0"},
+						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -213,8 +237,8 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 				NewVersion:     "0.2.0",
 				CurrentVersion: "latest",
 			},
@@ -226,7 +250,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Name: "karolisr/keel", Tag: "master"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -234,8 +258,13 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Annotations: map[string]string{types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule},
 						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -245,23 +274,27 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{
+				Resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:      "dep-1",
 						Namespace: "xxxx",
 						Annotations: map[string]string{
 							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							forceUpdateImageAnnotation:       "karolisr/keel:master",
 						},
 						Labels: map[string]string{types.KeelPolicyLabel: "force"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -271,8 +304,8 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 				NewVersion:     "master",
 				CurrentVersion: "master",
 			},
@@ -285,7 +318,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Name: "karolisr/keel", Tag: "latest-staging"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:      "dep-1",
@@ -296,8 +329,13 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							types.KeelForceTagMatchLabel:     "yup",
 						},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -307,11 +345,11 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{
+				Resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:      "dep-1",
@@ -319,15 +357,14 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Annotations: map[string]string{
 							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
 							types.KeelForceTagMatchLabel:     "yup",
-							forceUpdateImageAnnotation:       "karolisr/keel:latest-staging",
 						},
 						Labels: map[string]string{types.KeelPolicyLabel: "force"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
 							ObjectMeta: meta_v1.ObjectMeta{
 								Annotations: map[string]string{
-									"time": timeutil.Now().String(),
+									"this": "that",
 								},
 							},
 							Spec: v1.PodSpec{
@@ -339,8 +376,8 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 				NewVersion:     "latest-staging",
 				CurrentVersion: "latest-staging",
 			},
@@ -353,7 +390,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Host: "eu.gcr.io", Name: "karolisr/keel", Tag: "latest-staging"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:      "dep-1",
@@ -364,7 +401,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							types.KeelForceTagMatchLabel:     "yup",
 						},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
 							ObjectMeta: meta_v1.ObjectMeta{
 								Annotations: map[string]string{
@@ -380,11 +417,11 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{
+				Resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:      "dep-1",
@@ -392,16 +429,15 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Annotations: map[string]string{
 							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
 							types.KeelForceTagMatchLabel:     "yup",
-							forceUpdateImageAnnotation:       "eu.gcr.io/karolisr/keel:latest-staging",
 						},
 						Labels: map[string]string{types.KeelPolicyLabel: "force"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
 							ObjectMeta: meta_v1.ObjectMeta{
 								Annotations: map[string]string{
 									"this": "that",
-									"time": timeutil.Now().String(),
+									// "time": timeutil.Now().String(),
 								},
 							},
 							Spec: v1.PodSpec{
@@ -413,21 +449,20 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 				NewVersion:     "latest-staging",
 				CurrentVersion: "latest-staging",
 			},
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,
 		},
-
 		{
 			name: "poll trigger, force-match, different tag",
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Name: "karolisr/keel", Tag: "latest-staging"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -435,8 +470,9 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Annotations: map[string]string{types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule},
 						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -446,11 +482,11 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{},
+				Resource: nil,
 			},
 			wantShouldUpdateDeployment: false,
 			wantErr:                    false,
@@ -465,11 +501,23 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 				events:          tt.fields.events,
 				stop:            tt.fields.stop,
 			}
-			gotUpdatePlan, gotShouldUpdateDeployment, err := p.checkUnversionedDeployment(tt.args.policy, tt.args.repo, tt.args.deployment)
+			gotUpdatePlan, gotShouldUpdateDeployment, err := p.checkUnversionedDeployment(tt.args.policy, tt.args.repo, tt.args.resource)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Provider.checkUnversionedDeployment() error = %#v, wantErr %#v", err, tt.wantErr)
 				return
 			}
+
+			if gotShouldUpdateDeployment {
+				ann := gotUpdatePlan.Resource.GetSpecAnnotations()
+
+				if ann[types.KeelUpdateTimeAnnotation] != "" {
+					delete(ann, types.KeelUpdateTimeAnnotation)
+					gotUpdatePlan.Resource.SetSpecAnnotations(ann)
+				} else {
+					t.Errorf("Provider.checkUnversionedDeployment() missing types.KeelUpdateTimeAnnotation annotation")
+				}
+			}
+
 			if !reflect.DeepEqual(gotUpdatePlan, tt.wantUpdatePlan) {
 				t.Errorf("Provider.checkUnversionedDeployment() gotUpdatePlan = %#v, want %#v", gotUpdatePlan, tt.wantUpdatePlan)
 			}

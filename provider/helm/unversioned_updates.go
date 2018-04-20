@@ -52,7 +52,6 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 
 	// checking for impacted images
 	for _, imageDetails := range keelCfg.Images {
-
 		imageRef, err := parseImage(vals, &imageDetails)
 		if err != nil {
 			log.WithFields(log.Fields{
