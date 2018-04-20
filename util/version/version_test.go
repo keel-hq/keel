@@ -340,13 +340,6 @@ func TestNewAvailable(t *testing.T) {
 			wantNewAvailable: true,
 			wantErr:          false,
 		},
-		{
-			name:             "new non pre-release available",
-			args:             args{current: "8.1.1", tags: []string{"8.2.0", "8.3.0-staging", "8.4.0-develop"}},
-			wantNewVersion:   "8.2.0",
-			wantNewAvailable: true,
-			wantErr:          false,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

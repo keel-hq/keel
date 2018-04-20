@@ -7,7 +7,7 @@ import (
 	"github.com/keel-hq/keel/bot/formatter"
 	"github.com/keel-hq/keel/provider/kubernetes"
 
-	"k8s.io/api/extensions/v1beta1"
+	apps_v1 "k8s.io/api/apps/v1"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,8 +19,8 @@ type Filter struct {
 }
 
 // deployments - gets all deployments
-func deployments(k8sImplementer kubernetes.Implementer) ([]v1beta1.Deployment, error) {
-	deploymentLists := []*v1beta1.DeploymentList{}
+func deployments(k8sImplementer kubernetes.Implementer) ([]apps_v1.Deployment, error) {
+	deploymentLists := []*apps_v1.DeploymentList{}
 
 	n, err := k8sImplementer.Namespaces()
 	if err != nil {
@@ -39,7 +39,7 @@ func deployments(k8sImplementer kubernetes.Implementer) ([]v1beta1.Deployment, e
 		deploymentLists = append(deploymentLists, l)
 	}
 
-	impacted := []v1beta1.Deployment{}
+	impacted := []apps_v1.Deployment{}
 
 	for _, deploymentList := range deploymentLists {
 		for _, deployment := range deploymentList.Items {
@@ -71,7 +71,7 @@ func DeploymentsResponse(filter Filter, k8sImplementer kubernetes.Implementer) s
 	return buf.String()
 }
 
-func convertToInternal(deployments []v1beta1.Deployment) []formatter.Deployment {
+func convertToInternal(deployments []apps_v1.Deployment) []formatter.Deployment {
 	formatted := []formatter.Deployment{}
 	for _, d := range deployments {
 
@@ -86,7 +86,7 @@ func convertToInternal(deployments []v1beta1.Deployment) []formatter.Deployment 
 	return formatted
 }
 
-func getImages(deployment *v1beta1.Deployment) []string {
+func getImages(deployment *apps_v1.Deployment) []string {
 	var images []string
 	for _, c := range deployment.Spec.Template.Spec.Containers {
 		images = append(images, c.Image)
