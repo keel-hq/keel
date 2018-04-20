@@ -260,7 +260,6 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 
 		newVersion, err := version.GetVersion(event.Repository.Tag)
 		if err != nil {
-
 			plan, update, errCheck := checkUnversionedRelease(&event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
 			if errCheck != nil {
 				log.WithFields(log.Fields{

@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"fmt"
 	"sort"
 	"sync"
 )
@@ -34,8 +33,8 @@ func (cc *genericResourceCache) Add(grs ...*GenericResource) {
 	}
 	cc.Lock()
 	sort.Sort(genericResource(cc.values))
-	for _, c := range grs {
-		cc.add(c)
+	for _, gr := range grs {
+		cc.add(gr)
 	}
 	cc.Unlock()
 }
@@ -43,10 +42,9 @@ func (cc *genericResourceCache) Add(grs ...*GenericResource) {
 // add adds c to the cache. If c is already present, the cached value of c is overwritten.
 // invariant: cc.values should be sorted on entry.
 func (cc *genericResourceCache) add(c *GenericResource) {
-	i := sort.Search(len(cc.values), func(i int) bool { return cc.values[i].Name >= c.Name })
-	if i < len(cc.values) && cc.values[i].Name == c.Name {
+	i := sort.Search(len(cc.values), func(i int) bool { return cc.values[i].Identifier >= c.Identifier })
+	if i < len(cc.values) && cc.values[i].Identifier == c.Identifier {
 		// c is already present, replace
-		fmt.Println("object added: ", c.Name)
 		cc.values[i] = c
 	} else {
 		// c is not present, append
@@ -58,24 +56,23 @@ func (cc *genericResourceCache) add(c *GenericResource) {
 
 // Remove removes the named entry from the cache. If the entry
 // is not present in the cache, the operation is a no-op.
-func (cc *genericResourceCache) Remove(names ...string) {
-	if len(names) == 0 {
+func (cc *genericResourceCache) Remove(identifiers ...string) {
+	if len(identifiers) == 0 {
 		return
 	}
 	cc.Lock()
 	sort.Sort(genericResource(cc.values))
-	for _, n := range names {
+	for _, n := range identifiers {
 		cc.remove(n)
-		fmt.Println("object removed: ", n)
 	}
 	cc.Unlock()
 }
 
 // remove removes the named entry from the cache.
 // invariant: cc.values should be sorted on entry.
-func (cc *genericResourceCache) remove(name string) {
-	i := sort.Search(len(cc.values), func(i int) bool { return cc.values[i].Name >= name })
-	if i < len(cc.values) && cc.values[i].Name == name {
+func (cc *genericResourceCache) remove(identifier string) {
+	i := sort.Search(len(cc.values), func(i int) bool { return cc.values[i].Identifier >= identifier })
+	if i < len(cc.values) && cc.values[i].Identifier == identifier {
 		// c is present, remove
 		cc.values = append(cc.values[:i], cc.values[i+1:]...)
 	}

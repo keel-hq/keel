@@ -2,6 +2,8 @@ package k8s
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 
 	apps_v1 "k8s.io/api/apps/v1"
 	core_v1 "k8s.io/api/core/v1"
@@ -29,7 +31,7 @@ func (c genericResource) Swap(i, j int) {
 }
 
 func (c genericResource) Less(i, j int) bool {
-	return c[i].Name < c[j].Name
+	return c[i].Identifier < c[j].Identifier
 }
 
 // NewGenericResource - create new generic k8s resource
@@ -39,7 +41,7 @@ func NewGenericResource(obj interface{}) (*GenericResource, error) {
 	case *apps_v1.Deployment, *apps_v1.StatefulSet, *apps_v1.DaemonSet:
 		// ok
 	default:
-		return nil, fmt.Errorf("unsupported resource")
+		return nil, fmt.Errorf("unsupported resource type: %v", reflect.TypeOf(obj).Kind())
 	}
 
 	gr := &GenericResource{
@@ -51,6 +53,10 @@ func NewGenericResource(obj interface{}) (*GenericResource, error) {
 	gr.Name = gr.GetName()
 
 	return gr, nil
+}
+
+func (r *GenericResource) String() string {
+	return fmt.Sprintf("%s/%s/%s images: %s", r.Kind(), r.Namespace, r.Name, strings.Join(r.GetImages(), ", "))
 }
 
 // GetIdentifier returns resource identifier
@@ -132,6 +138,36 @@ func (r *GenericResource) SetLabels(labels map[string]string) {
 		obj.SetLabels(labels)
 	case *apps_v1.DaemonSet:
 		obj.SetLabels(labels)
+	}
+	return
+}
+
+// GetSpecAnnotations - get resource spec template annotations
+func (r *GenericResource) GetSpecAnnotations() (annotations map[string]string) {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		a := obj.Spec.Template.GetAnnotations()
+		if a == nil {
+			return make(map[string]string)
+		}
+		return a
+	case *apps_v1.StatefulSet:
+		return obj.Spec.Template.GetAnnotations()
+	case *apps_v1.DaemonSet:
+		return obj.Spec.Template.GetAnnotations()
+	}
+	return
+}
+
+// SetSpecAnnotations - set resource spec template annotations
+func (r *GenericResource) SetSpecAnnotations(annotations map[string]string) {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		obj.Spec.Template.SetAnnotations(annotations)
+	case *apps_v1.StatefulSet:
+		obj.Spec.Template.SetAnnotations(annotations)
+	case *apps_v1.DaemonSet:
+		obj.Spec.Template.SetAnnotations(annotations)
 	}
 	return
 }

@@ -13,11 +13,8 @@ import (
 
 	apps_v1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
-	// "k8s.io/api/extensions/apps_v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type fakeProvider struct {
@@ -225,7 +222,6 @@ func MustParseGRS(objs []*apps_v1.Deployment) []*k8s.GenericResource {
 		var err error
 		var gr *k8s.GenericResource
 		gr, err = k8s.NewGenericResource(obj)
-		log.Infof("step 1: new gr parsed: %s, %s", gr.Identifier, gr.GetLabels())
 		if err != nil {
 			panic(err)
 		}
@@ -292,11 +288,6 @@ func TestGetImpacted(t *testing.T) {
 
 	grs := MustParseGRS(deps)
 	grc := &k8s.GenericResourceCache{}
-
-	for _, gr := range grs {
-		log.Infof("step 2:current resrouce: %s labels: %s", gr.Identifier, gr.GetLabels())
-	}
-
 	grc.Add(grs...)
 
 	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
