@@ -24,8 +24,8 @@ func TestCheckRequestedApproval(t *testing.T) {
 			},
 		},
 	}
-	deployments := []apps_v1.Deployment{
-		apps_v1.Deployment{
+	deployments := []*apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "dep-1",
@@ -95,8 +95,8 @@ func TestApprovedCheck(t *testing.T) {
 			},
 		},
 	}
-	deployments := []apps_v1.Deployment{
-		apps_v1.Deployment{
+	deployments := []*apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "dep-1",

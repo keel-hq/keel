@@ -74,33 +74,14 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		// if policy is force, don't bother with version checking
 		// same with `latest` images, update them to versioned ones
 		if policy == types.PolicyTypeForce || containerImageRef.Tag() == "latest" {
-			// c = updateContainer(c, conatinerImageRef, newVersion.String())
-
 			if containerImageRef.Registry() == image.DefaultRegistryHostname {
-				// container.Image = fmt.Sprintf("%s:%s", ref.ShortName(), version)
-
 				resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.ShortName(), newVersion.String()))
-
 			} else {
-				// container.Image = fmt.Sprintf("%s:%s", ref.Repository(), version)
-
 				resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.Repository(), newVersion.String()))
 			}
-
-			// deployment.Spec.Template.Spec.Containers[idx] = c
-
-			// marking this deployment for update
 			shouldUpdateDeployment = true
-			// updating digest if available
-			annotations := resource.GetAnnotations()
+			setUpdateTime(resource)
 
-			annotations["keel.sh/update-time"] = time.Now().String()
-			// if repo.Digest != "" {
-			// annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
-			// }
-			// annotations = addImageToPull(annotations, c.Image)
-
-			resource.SetAnnotations(annotations)
 			log.WithFields(log.Fields{
 				"parsed_image":     containerImageRef.Remote(),
 				"raw_image_name":   c.Image,
@@ -173,14 +154,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 			// marking this deployment for update
 			shouldUpdateDeployment = true
 
-			// updating annotations
-			annotations := resource.GetAnnotations()
-			// updating digest if available
-			// if repo.Digest != "" {
-			// annotations[types.KeelDigestAnnotation+"/"+conatinerImageRef.Remote()] = repo.Digest
-			// }
-			annotations["keel.sh/update-time"] = time.Now().String()
-			resource.SetAnnotations(annotations)
+			setUpdateTime(resource)
 
 			updatePlan.CurrentVersion = currentVersion.Original
 			updatePlan.NewVersion = newVersion.Original
@@ -199,13 +173,8 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 	return updatePlan, shouldUpdateDeployment, nil
 }
 
-// func updateContainer(container v1.Container, ref *image.Reference, version string) v1.Container {
-// 	// updating image
-// 	if ref.Registry() == image.DefaultRegistryHostname {
-// 		container.Image = fmt.Sprintf("%s:%s", ref.ShortName(), version)
-// 	} else {
-// 		container.Image = fmt.Sprintf("%s:%s", ref.Repository(), version)
-// 	}
-
-// 	return container
-// }
+func setUpdateTime(resource *k8s.GenericResource) {
+	specAnnotations := resource.GetSpecAnnotations()
+	specAnnotations[types.KeelUpdateTimeAnnotation] = time.Now().String()
+	resource.SetSpecAnnotations(specAnnotations)
+}

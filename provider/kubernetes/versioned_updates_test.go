@@ -6,13 +6,14 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/extension/notification"
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/version"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apps_v1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
 )
 
 func unsafeGetVersion(ver string) *types.Version {
@@ -35,7 +36,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 		newVersion *types.Version
 		policy     types.PolicyType
 		repo       *types.Repository
-		deployment v1beta1.Deployment
+		resource   *k8s.GenericResource
 	}
 	tests := []struct {
 		name                       string
@@ -51,7 +52,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 				newVersion: unsafeGetVersion("1.1.2"),
 				policy:     types.PolicyTypeAll,
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -59,8 +60,13 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -70,11 +76,11 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{
+				Resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -82,8 +88,13 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -93,8 +104,8 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 				NewVersion:     "1.1.2",
 				CurrentVersion: "1.1.1",
 			},
@@ -107,7 +118,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 				newVersion: unsafeGetVersion("1.1.1"),
 				policy:     types.PolicyTypeAll,
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.1"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -115,7 +126,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
@@ -126,11 +137,11 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment:     v1beta1.Deployment{},
+				Resource:       nil,
 				NewVersion:     "",
 				CurrentVersion: "",
 			},
@@ -143,7 +154,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 				newVersion: unsafeGetVersion("1.1.2"),
 				policy:     types.PolicyTypeAll,
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -151,8 +162,13 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -165,11 +181,11 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{
+				Resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -177,8 +193,13 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -191,8 +212,8 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 				NewVersion:     "1.1.2",
 				CurrentVersion: "1.1.1",
 			},
@@ -205,7 +226,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 				newVersion: unsafeGetVersion("1.1.2"),
 				policy:     types.PolicyTypeForce,
 				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
-				deployment: v1beta1.Deployment{
+				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
@@ -213,8 +234,13 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -227,20 +253,25 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 			},
 			wantUpdatePlan: &UpdatePlan{
-				Deployment: v1beta1.Deployment{
+				Resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
 						Name:        "dep-1",
 						Namespace:   "xxxx",
-						Annotations: map[string]string{forceUpdateImageAnnotation: "gcr.io/v2-namespace/hello-world:1.1.2"},
+						Annotations: map[string]string{},
 						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
 					},
-					v1beta1.DeploymentSpec{
+					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -253,8 +284,8 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 							},
 						},
 					},
-					v1beta1.DeploymentStatus{},
-				},
+					apps_v1.DeploymentStatus{},
+				}),
 				NewVersion:     "1.1.2",
 				CurrentVersion: "latest",
 			},
@@ -262,6 +293,7 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 			wantErr:                    false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Provider{
@@ -271,11 +303,23 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 				events:          tt.fields.events,
 				stop:            tt.fields.stop,
 			}
-			gotUpdatePlan, gotShouldUpdateDeployment, err := p.checkVersionedDeployment(tt.args.newVersion, tt.args.policy, tt.args.repo, tt.args.deployment)
+			gotUpdatePlan, gotShouldUpdateDeployment, err := p.checkVersionedDeployment(tt.args.newVersion, tt.args.policy, tt.args.repo, tt.args.resource)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Provider.checkVersionedDeployment() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
+			if gotShouldUpdateDeployment {
+				ann := gotUpdatePlan.Resource.GetSpecAnnotations()
+				_, ok := ann[types.KeelUpdateTimeAnnotation]
+				if ok {
+					delete(ann, types.KeelUpdateTimeAnnotation)
+					gotUpdatePlan.Resource.SetSpecAnnotations(ann)
+				} else {
+					t.Errorf("Provider.checkVersionedDeployment() missing types.KeelUpdateTimeAnnotation annotation")
+				}
+			}
+
 			if !reflect.DeepEqual(gotUpdatePlan, tt.wantUpdatePlan) {
 				t.Errorf("Provider.checkVersionedDeployment() gotUpdatePlan = %v, want %v", gotUpdatePlan, tt.wantUpdatePlan)
 			}

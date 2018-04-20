@@ -49,9 +49,6 @@ const ProviderName = "kubernetes"
 
 var versionreg = regexp.MustCompile(`:[^:]*$`)
 
-// annotation used to specify which image to force pull
-const forceUpdateImageAnnotation = "keel.sh/update-image"
-
 // GenericResourceCache an interface for generic resource cache.
 type GenericResourceCache interface {
 	// Values returns a copy of the contents of the cache.
@@ -185,74 +182,6 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 	return trackedImages, nil
 }
 
-// TrackedImages - get tracked images
-// func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
-// 	var trackedImages []*types.TrackedImage
-
-// 	deploymentLists, err := p.deployments()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	for _, deploymentList := range deploymentLists {
-// 		for _, deployment := range deploymentList.Items {
-// 			labels := deployment.GetLabels()
-
-// 			// ignoring unlabelled deployments
-// 			policy := policies.GetPolicy(labels)
-// 			if policy == types.PolicyTypeNone {
-// 				continue
-// 			}
-
-// 			annotations := deployment.GetAnnotations()
-// 			schedule, ok := annotations[types.KeelPollScheduleAnnotation]
-// 			if ok {
-// 				_, err := cron.Parse(schedule)
-// 				if err != nil {
-// 					log.WithFields(log.Fields{
-// 						"error":      err,
-// 						"schedule":   schedule,
-// 						"deployment": deployment.Name,
-// 						"namespace":  deployment.Namespace,
-// 					}).Error("provider.kubernetes: failed to parse poll schedule, setting default schedule")
-// 					schedule = types.KeelPollDefaultSchedule
-// 				}
-// 			} else {
-// 				schedule = types.KeelPollDefaultSchedule
-// 			}
-
-// 			// trigger type, we only care for "poll" type triggers
-// 			trigger := policies.GetTriggerPolicy(labels)
-
-// 			secrets := getImagePullSecrets(&deployment)
-
-// 			images := getImages(&deployment)
-// 			for _, img := range images {
-// 				ref, err := image.Parse(img)
-// 				if err != nil {
-// 					log.WithFields(log.Fields{
-// 						"error":     err,
-// 						"image":     img,
-// 						"namespace": deployment.Namespace,
-// 						"name":      deployment.Name,
-// 					}).Error("provider.kubernetes: failed to parse image")
-// 					continue
-// 				}
-// 				trackedImages = append(trackedImages, &types.TrackedImage{
-// 					Image:        ref,
-// 					PollSchedule: schedule,
-// 					Trigger:      trigger,
-// 					Provider:     ProviderName,
-// 					Namespace:    deployment.Namespace,
-// 					Secrets:      secrets,
-// 				})
-// 			}
-// 		}
-// 	}
-
-// 	return trackedImages, nil
-// }
-
 func (p *Provider) startInternal() error {
 	for {
 		select {
@@ -332,7 +261,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		resource.SetAnnotations(annotations)
 
 		err = p.implementer.Update(resource)
-		kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", resource.Namespace, resource.Name)}).Inc()
+		kubernetesVersionedUpdatesCounter.With(prometheus.Labels{resource.Kind(): fmt.Sprintf("%s/%s", resource.Namespace, resource.Name)}).Inc()
 		// }
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -423,6 +352,7 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 		policy := policies.GetPolicy(labels)
 		if policy == types.PolicyTypeNone {
 			// skip
+			log.Infof("no policy defined, skipping: %s, labels: %s", resource.Identifier, labels)
 			continue
 		}
 

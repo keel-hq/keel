@@ -74,43 +74,24 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		// annotations := resource.GetAnnotations()
 		matchTag, ok := annotations[types.KeelForceTagMatchLabel]
 		if ok {
-			if matchTag == "true" && containerImageRef.Tag() != eventRepoRef.Tag() {
+			if matchTag != "" && containerImageRef.Tag() != eventRepoRef.Tag() {
 				continue
 			}
-			// if deployment.Spec.Template.Annotations == nil {
-			// 	deployment.Spec.Template.Annotations = map[string]string{}
-			// }
-
-			// deployment.Spec.Template.Annotations["time"] = timeutil.Now().String()
 		}
+
+		// updating spec template annotations
+		specAnnotations := resource.GetSpecAnnotations()
+		specAnnotations[types.KeelUpdateTimeAnnotation] = time.Now().String()
+		resource.SetSpecAnnotations(specAnnotations)
 
 		// updating image
 		if containerImageRef.Registry() == image.DefaultRegistryHostname {
-			// c.Image = fmt.Sprintf("%s:%s", containerImageRef.ShortName(), repo.Tag)
 			resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.ShortName(), repo.Tag))
 		} else {
-			// c.Image = fmt.Sprintf("%s:%s", containerImageRef.Repository(), repo.Tag)
 			resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.Repository(), repo.Tag))
 		}
 
-		// deployment.Spec.Template.Spec.Containers[idx] = c
-		// marking this deployment for update
 		shouldUpdateDeployment = true
-
-		// updating annotations
-		// annotations := resource.GetAnnotations()
-		// updating digest if available
-		// if repo.Digest != "" {
-
-		// annotations[types.KeelDigestAnnotation+"/"+containerImageRef.Remote()] = repo.Digest
-		// }
-
-		// adding image for updates
-		// annotations = addImageToPull(annotations, c.Image)
-
-		annotations["keel.sh/update-time"] = time.Now().String()
-
-		resource.SetAnnotations(annotations)
 
 		updatePlan.CurrentVersion = containerImageRef.Tag()
 		updatePlan.NewVersion = repo.Tag

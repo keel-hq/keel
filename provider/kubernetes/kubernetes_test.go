@@ -16,6 +16,8 @@ import (
 	// "k8s.io/api/extensions/apps_v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type fakeProvider struct {
@@ -217,14 +219,17 @@ func MustParseGR(obj interface{}) *k8s.GenericResource {
 	return gr
 }
 
-func MustParseGRS(objs ...interface{}) []*k8s.GenericResource {
-	grs := []*k8s.GenericResource{}
-	for obj := range objs {
-		gr, err := k8s.NewGenericResource(obj)
+func MustParseGRS(objs []*apps_v1.Deployment) []*k8s.GenericResource {
+	grs := make([]*k8s.GenericResource, len(objs))
+	for idx, obj := range objs {
+		var err error
+		var gr *k8s.GenericResource
+		gr, err = k8s.NewGenericResource(obj)
+		log.Infof("step 1: new gr parsed: %s, %s", gr.Identifier, gr.GetLabels())
 		if err != nil {
 			panic(err)
 		}
-		grs = append(grs, gr)
+		grs[idx] = gr
 	}
 	return grs
 }
@@ -242,8 +247,8 @@ func TestGetImpacted(t *testing.T) {
 		},
 	}
 
-	deps := []apps_v1.Deployment{
-		apps_v1.Deployment{
+	deps := []*apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:      "dep-1",
@@ -263,7 +268,7 @@ func TestGetImpacted(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		},
-		apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:      "dep-2",
@@ -287,6 +292,11 @@ func TestGetImpacted(t *testing.T) {
 
 	grs := MustParseGRS(deps)
 	grc := &k8s.GenericResourceCache{}
+
+	for _, gr := range grs {
+		log.Infof("step 2:current resrouce: %s labels: %s", gr.Identifier, gr.GetLabels())
+	}
+
 	grc.Add(grs...)
 
 	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
@@ -306,7 +316,7 @@ func TestGetImpacted(t *testing.T) {
 	}
 
 	if len(plans) != 1 {
-		t.Errorf("expected to find 1 deployment update plan but found %d", len(plans))
+		t.Fatalf("expected to find 1 deployment update plan but found %d", len(plans))
 	}
 
 	found := false
@@ -337,17 +347,22 @@ func TestProcessEvent(t *testing.T) {
 			},
 		},
 	}
-	deps := []apps_v1.Deployment{
-		apps_v1.Deployment{
+	deps := []*apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "deployment-1",
-				Namespace:   "xxxx",
+				Namespace:   "ns-1",
 				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 				Annotations: map[string]string{},
 			},
 			apps_v1.DeploymentSpec{
 				Template: v1.PodTemplateSpec{
+					ObjectMeta: meta_v1.ObjectMeta{
+						Annotations: map[string]string{
+							"this": "that",
+						},
+					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
 							v1.Container{
@@ -359,16 +374,52 @@ func TestProcessEvent(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		},
-		apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "deployment-2",
-				Namespace:   "xxxx",
+				Namespace:   "ns-2",
 				Labels:      map[string]string{"whatever": "all"},
 				Annotations: map[string]string{},
 			},
 			apps_v1.DeploymentSpec{
 				Template: v1.PodTemplateSpec{
+					ObjectMeta: meta_v1.ObjectMeta{
+						Annotations: map[string]string{
+							"this": "that",
+						},
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/bye-world:1.1.1",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "deployment-3",
+				Namespace: "ns-3",
+				Labels: map[string]string{
+					"whatever": "all",
+					"foo":      "bar",
+				},
+				Annotations: map[string]string{
+					"ann": "1",
+				},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					ObjectMeta: meta_v1.ObjectMeta{
+						Annotations: map[string]string{
+							"this": "that",
+						},
+					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
 							v1.Container{
@@ -402,6 +453,10 @@ func TestProcessEvent(t *testing.T) {
 		t.Errorf("got error while processing event: %s", err)
 	}
 
+	if fp.updated == nil {
+		t.Fatalf("resource was not updated")
+	}
+
 	if fp.updated.Containers()[0].Image != repo.Name+":"+repo.Tag {
 		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Containers()[0].Image)
 	}
@@ -419,8 +474,8 @@ func TestProcessEventBuildNumber(t *testing.T) {
 			},
 		},
 	}
-	deps := []apps_v1.Deployment{
-		apps_v1.Deployment{
+	deps := []*apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "deployment-1",
@@ -481,8 +536,8 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 			},
 		},
 	}
-	deps := []apps_v1.Deployment{
-		apps_v1.Deployment{
+	deps := []*apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "dep-1",
@@ -506,7 +561,7 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		},
-		apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:      "dep-2",
@@ -580,8 +635,8 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 			},
 		},
 	}
-	deps := []apps_v1.Deployment{
-		apps_v1.Deployment{
+	deps := []*apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "dep-1",
@@ -605,7 +660,7 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		},
-		apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "dep-2",
@@ -680,8 +735,8 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 			},
 		},
 	}
-	deps := []apps_v1.Deployment{
-		apps_v1.Deployment{
+	deps := []*apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "dep-1",
@@ -702,7 +757,7 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		},
-		apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "dep-2",
@@ -777,8 +832,8 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 			},
 		},
 	}
-	deps := []apps_v1.Deployment{
-		apps_v1.Deployment{
+	deps := []*apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "dep-1",
@@ -799,7 +854,7 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		},
-		apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:        "dep-2",
@@ -875,8 +930,8 @@ func TestTrackedImages(t *testing.T) {
 			},
 		},
 	}
-	deps := []apps_v1.Deployment{
-		apps_v1.Deployment{
+	deps := []*apps_v1.Deployment{
+		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
 				Name:      "dep-1",
