@@ -28,7 +28,7 @@ var kubernetesVersionedUpdatesCounter = prometheus.NewCounterVec(
 		Name: "kubernetes_versioned_updates_total",
 		Help: "How many versioned deployments were updated, partitioned by deployment name.",
 	},
-	[]string{"deployment"},
+	[]string{"kubernetes"},
 )
 
 var kubernetesUnversionedUpdatesCounter = prometheus.NewCounterVec(
@@ -36,7 +36,7 @@ var kubernetesUnversionedUpdatesCounter = prometheus.NewCounterVec(
 		Name: "kubernetes_unversioned_updates_total",
 		Help: "How many unversioned deployments were updated, partitioned by deployment name.",
 	},
-	[]string{"deployment"},
+	[]string{"kubernetes"},
 )
 
 func init() {
@@ -261,15 +261,16 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		resource.SetAnnotations(annotations)
 
 		err = p.implementer.Update(resource)
-		kubernetesVersionedUpdatesCounter.With(prometheus.Labels{resource.Kind(): fmt.Sprintf("%s/%s", resource.Namespace, resource.Name)}).Inc()
+		kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"kubernetes": fmt.Sprintf("%s/%s", resource.Namespace, resource.Name)}).Inc()
 		// }
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
 				"namespace":  resource.Namespace,
 				"deployment": resource.Name,
+				"kind":       resource.Kind(),
 				"update":     fmt.Sprintf("%s->%s", plan.CurrentVersion, plan.NewVersion),
-			}).Error("provider.kubernetes: got error while update deployment")
+			}).Error("provider.kubernetes: got error while updating resource")
 
 			p.sender.Send(types.EventNotification{
 				Name:      "update resource",
@@ -294,8 +295,9 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 
 		log.WithFields(log.Fields{
 			"name":      resource.Name,
+			"kind":      resource.Kind(),
 			"namespace": resource.Namespace,
-		}).Info("provider.kubernetes: deployment updated")
+		}).Info("provider.kubernetes: resource updated")
 		updated = append(updated, resource)
 	}
 

@@ -491,6 +491,78 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			wantShouldUpdateDeployment: false,
 			wantErr:                    false,
 		},
+		{
+			name: "poll trigger, force-match, same tag on eu.gcr.io, daemonset",
+			args: args{
+				policy: types.PolicyTypeForce,
+				repo:   &types.Repository{Host: "eu.gcr.io", Name: "karolisr/keel", Tag: "latest-staging"},
+				resource: MustParseGR(&apps_v1.DaemonSet{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
+						Annotations: map[string]string{
+							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
+							types.KeelForceTagMatchLabel:     "yup",
+						},
+					},
+					apps_v1.DaemonSetSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "eu.gcr.io/karolisr/keel:latest-staging",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DaemonSetStatus{},
+				}),
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Resource: MustParseGR(&apps_v1.DaemonSet{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Annotations: map[string]string{
+							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
+							types.KeelForceTagMatchLabel:     "yup",
+						},
+						Labels: map[string]string{types.KeelPolicyLabel: "force"},
+					},
+					apps_v1.DaemonSetSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+									// "time": timeutil.Now().String(),
+								},
+							},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "eu.gcr.io/karolisr/keel:latest-staging",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DaemonSetStatus{},
+				}),
+				NewVersion:     "latest-staging",
+				CurrentVersion: "latest-staging",
+			},
+			wantShouldUpdateDeployment: true,
+			wantErr:                    false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

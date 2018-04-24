@@ -120,11 +120,11 @@ func (r *GenericResource) GetResource() interface{} {
 func (r *GenericResource) GetLabels() (labels map[string]string) {
 	switch obj := r.obj.(type) {
 	case *apps_v1.Deployment:
-		return obj.GetLabels()
+		return getOrInitialise(obj.GetLabels())
 	case *apps_v1.StatefulSet:
-		return obj.GetLabels()
+		return getOrInitialise(obj.GetLabels())
 	case *apps_v1.DaemonSet:
-		return obj.GetLabels()
+		return getOrInitialise(obj.GetLabels())
 	}
 	return
 }
@@ -152,9 +152,17 @@ func (r *GenericResource) GetSpecAnnotations() (annotations map[string]string) {
 		}
 		return a
 	case *apps_v1.StatefulSet:
-		return obj.Spec.Template.GetAnnotations()
+		a := obj.Spec.Template.GetAnnotations()
+		if a == nil {
+			return make(map[string]string)
+		}
+		return a
 	case *apps_v1.DaemonSet:
-		return obj.Spec.Template.GetAnnotations()
+		a := obj.Spec.Template.GetAnnotations()
+		if a == nil {
+			return make(map[string]string)
+		}
+		return a
 	}
 	return
 }
@@ -172,15 +180,22 @@ func (r *GenericResource) SetSpecAnnotations(annotations map[string]string) {
 	return
 }
 
+func getOrInitialise(a map[string]string) map[string]string {
+	if a == nil {
+		return make(map[string]string)
+	}
+	return a
+}
+
 // GetAnnotations - get resource annotations
 func (r *GenericResource) GetAnnotations() (annotations map[string]string) {
 	switch obj := r.obj.(type) {
 	case *apps_v1.Deployment:
-		return obj.GetAnnotations()
+		return getOrInitialise(obj.GetAnnotations())
 	case *apps_v1.StatefulSet:
-		return obj.GetAnnotations()
+		return getOrInitialise(obj.GetAnnotations())
 	case *apps_v1.DaemonSet:
-		return obj.GetAnnotations()
+		return getOrInitialise(obj.GetAnnotations())
 	}
 	return
 }
