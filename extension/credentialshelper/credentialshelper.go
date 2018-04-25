@@ -19,6 +19,7 @@ type CredentialsHelper interface {
 // Common errors
 var (
 	ErrCredentialsNotAvailable = errors.New("no credentials available for this registry")
+	ErrUnsupportedRegistry     = errors.New("unsupported registry")
 )
 
 var (
@@ -26,6 +27,7 @@ var (
 	credHelpers  = make(map[string]CredentialsHelper)
 )
 
+// RegisterCredentialsHelper - registering new credentials helper
 func RegisterCredentialsHelper(name string, ch CredentialsHelper) {
 	if name == "" {
 		panic("credentialshelper: could not register a Credentials Helper with an empty name")
@@ -49,7 +51,7 @@ func RegisterCredentialsHelper(name string, ch CredentialsHelper) {
 	credHelpers[name] = ch
 }
 
-// CredentialsHelpers
+// CredentialsHelpers is a combined list of credential helpers
 type CredentialsHelpers struct {
 }
 
@@ -58,25 +60,28 @@ func New() *CredentialsHelpers {
 	return &CredentialsHelpers{}
 }
 
+// IsEnabled returns if cred helper is enabled
+func (ch *CredentialsHelpers) IsEnabled() bool {
+	return true
+}
+
+// GetCredentials - generic function for getting credentials
 func (ch *CredentialsHelpers) GetCredentials(registry string) (*types.Credentials, error) {
 	credHelpersM.RLock()
 	defer credHelpersM.RUnlock()
 
 	for name, credHelper := range credHelpers {
 		if credHelper.IsEnabled() {
-			creds, err := ch.GetCredentials(registry)
+			creds, err := credHelper.GetCredentials(registry)
 			if err != nil {
-				if err == ErrCredentialsNotAvailable {
-					continue
-				}
 				log.WithFields(log.Fields{
 					"helper":   name,
 					"error":    err,
 					"registry": registry,
 				}).Error("extension.credentialshelper: credentials not found")
-				continue
+			} else {
+				return creds, nil
 			}
-			return creds, nil
 		}
 	}
 
