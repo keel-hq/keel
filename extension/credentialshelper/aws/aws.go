@@ -3,16 +3,20 @@ package aws
 import (
 	"encoding/base64"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
 	// "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/types"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -27,13 +31,16 @@ func init() {
 // more on auth: https://stackoverflow.com/questions/41544554/how-to-run-aws-sdk-with-credentials-from-variables
 type CredentialsHelper struct {
 	enabled bool
+	region  string
 }
 
 // New creates a new instance of aws credentials helper
 func New() *CredentialsHelper {
 	ch := &CredentialsHelper{}
-	if os.Getenv("AWS_ACCESS_KEY_ID") != "" && os.Getenv("AWS_ACCESS_KEY") != "" {
+	if os.Getenv("AWS_ACCESS_KEY_ID") != "" && os.Getenv("AWS_ACCESS_KEY") != "" && os.Getenv("AWS_REGION") != "" {
 		ch.enabled = true
+		log.Infof("extension.credentialshelper.aws: enabled")
+		ch.region = os.Getenv("AWS_REGION")
 	}
 
 	return ch
@@ -47,7 +54,13 @@ func (h *CredentialsHelper) IsEnabled() bool {
 // GetCredentials - finds credentials
 func (h *CredentialsHelper) GetCredentials(registry string) (*types.Credentials, error) {
 
-	svc := ecr.New(session.New())
+	if !strings.Contains(registry, "amazonaws.com") {
+		return nil, credentialshelper.ErrUnsupportedRegistry
+	}
+
+	svc := ecr.New(session.New(), &aws.Config{
+		Region: aws.String(h.region),
+	})
 
 	input := &ecr.GetAuthorizationTokenInput{}
 
@@ -65,15 +78,27 @@ func (h *CredentialsHelper) GetCredentials(registry string) (*types.Credentials,
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Error("credentialshelper.aws: failed to get authorization token")
 		}
 		return nil, err
 	}
 
-	fmt.Println(result)
-
 	for _, ad := range result.AuthorizationData {
-		if *ad.ProxyEndpoint == registry {
+
+		u, err := url.Parse(*ad.ProxyEndpoint)
+		if err != nil {
+			log.WithError(err).Errorf("credentialshelper.aws: failed to parse registry endpoint: %s", *ad.ProxyEndpoint)
+			continue
+		}
+
+		log.WithFields(log.Fields{
+			"current_registry": u.Host,
+			"token":            *ad.AuthorizationToken,
+			"registry":         registry,
+		}).Debug("checking registry")
+		if u.Host == registry {
 			username, password, err := decodeBase64Secret(*ad.AuthorizationToken)
 			if err != nil {
 				return nil, fmt.Errorf("failed to decode authentication token: %s, error: %s", *ad.AuthorizationToken, err)
