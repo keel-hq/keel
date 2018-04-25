@@ -153,61 +153,6 @@ func TestGetImageName(t *testing.T) {
 	}
 }
 
-// func TestGetDeployments(t *testing.T) {
-// 	fp := &fakeImplementer{}
-// 	fp.namespaces = &v1.NamespaceList{
-// 		Items: []v1.Namespace{
-// 			v1.Namespace{
-// 				meta_v1.TypeMeta{},
-// 				meta_v1.ObjectMeta{Name: "xxxx"},
-// 				v1.NamespaceSpec{},
-// 				v1.NamespaceStatus{},
-// 			},
-// 		},
-// 	}
-// 	fp.deploymentList = &apps_v1.DeploymentList{
-// 		Items: []apps_v1.Deployment{
-// 			apps_v1.Deployment{
-// 				meta_v1.TypeMeta{},
-// 				meta_v1.ObjectMeta{
-// 					Name:      "dep-1",
-// 					Namespace: "xxxx",
-// 					Labels:    map[string]string{types.KeelPolicyLabel: "all"},
-// 				},
-// 				apps_v1.DeploymentSpec{
-// 					Template: v1.PodTemplateSpec{
-// 						Spec: v1.PodSpec{
-// 							Containers: []v1.Container{
-// 								v1.Container{
-// 									Image: "gcr.io/v2-namespace/hello-world:1.1",
-// 								},
-// 							},
-// 						},
-// 					},
-// 				},
-// 				apps_v1.DeploymentStatus{},
-// 			},
-// 		},
-// 	}
-// 	grc := &k8s.GenericResourceCache{}
-// 	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
-// 	if err != nil {
-// 		t.Fatalf("failed to get provider: %s", err)
-// 	}
-
-// 	deps, err := provider.deployments()
-// 	if err != nil {
-// 		t.Errorf("failed to get deployments: %s", err)
-// 	}
-// 	if len(deps) != 1 {
-// 		t.Errorf("expected to find 1 deployment, got: %d", len(deps))
-// 	}
-
-// 	if deps[0].Items[0].GetName() != "dep-1" {
-// 		t.Errorf("expected name %s, got %s", "dep-1", deps[0].Items[0].GetName())
-// 	}
-// }
-
 func MustParseGR(obj interface{}) *k8s.GenericResource {
 	gr, err := k8s.NewGenericResource(obj)
 	if err != nil {
