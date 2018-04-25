@@ -150,12 +150,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 
 		// trigger type, we only care for "poll" type triggers
 		trigger := policies.GetTriggerPolicy(labels)
-
-		// secrets := getImagePullSecrets(&deployment)
-
 		secrets := gr.GetImagePullSecrets()
-
-		// images := getImages(&deployment)
 		images := gr.GetImages()
 		for _, img := range images {
 			ref, err := image.Parse(img)
@@ -206,7 +201,6 @@ func (p *Provider) startInternal() error {
 	}
 }
 
-// func (p *Provider) processEvent(event *types.Event) (updated []*v1beta1.Deployment, err error) {
 func (p *Provider) processEvent(event *types.Event) (updated []*k8s.GenericResource, err error) {
 	plans, err := p.createUpdatePlans(&event.Repository)
 	if err != nil {
@@ -226,7 +220,6 @@ func (p *Provider) processEvent(event *types.Event) (updated []*k8s.GenericResou
 	return p.updateDeployments(approvedPlans)
 }
 
-// func (p *Provider) updateDeployments(deployments []v1beta1.Deployment) (updated []*v1beta1.Deployment, err error) {
 func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.GenericResource, err error) {
 	for _, plan := range plans {
 		resource := plan.Resource
@@ -234,7 +227,6 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		annotations := resource.GetAnnotations()
 
 		notificationChannels := types.ParseEventNotificationChannels(annotations)
-		// reset := checkForReset(deployment)
 
 		p.sender.Send(types.EventNotification{
 			Name:      "preparing to update resource",
@@ -247,22 +239,12 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 
 		var err error
 
-		// if reset {
-		// annotations["keel.sh/update-time"] = time.Now().String()
-		// }
-		// force update, terminating all pods
-		// err = p.forceUpdate(&deployment)
-		// kubernetesUnversionedUpdatesCounter.With(prometheus.Labels{"deployment": fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name)}).Inc()
-		// } else {
-		// regular update
-		// deployment.Annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s", plan.CurrentVersion, plan.NewVersion)
 		annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s", plan.CurrentVersion, plan.NewVersion)
 
 		resource.SetAnnotations(annotations)
 
 		err = p.implementer.Update(resource)
 		kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"kubernetes": fmt.Sprintf("%s/%s", resource.Namespace, resource.Name)}).Inc()
-		// }
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
@@ -304,23 +286,6 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 	return
 }
 
-// func getImages(deployment *v1beta1.Deployment) []string {
-// 	var images []string
-// 	for _, c := range deployment.Spec.Template.Spec.Containers {
-// 		images = append(images, c.Image)
-// 	}
-
-// 	return images
-// }
-
-// func getImagePullSecrets(deployment *v1beta1.Deployment) []string {
-// 	var secrets []string
-// 	for _, s := range deployment.Spec.Template.Spec.ImagePullSecrets {
-// 		secrets = append(secrets, s.Name)
-// 	}
-// 	return secrets
-// }
-
 func getDesiredImage(delta map[string]string, currentImage string) (string, error) {
 	currentRef, err := image.Parse(currentImage)
 	if err != nil {
@@ -357,11 +322,6 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 			log.Infof("no policy defined, skipping: %s, labels: %s", resource.Identifier, labels)
 			continue
 		}
-
-		// annotation cleanup
-		// annotations := gr.GetAnnotations()
-		// delete(annotations, forceUpdateImageAnnotation)
-		// deployment.SetAnnotations(annotations)
 
 		newVersion, err := version.GetVersion(repo.Tag)
 		if err != nil {
