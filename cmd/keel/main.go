@@ -16,6 +16,7 @@ import (
 	"github.com/keel-hq/keel/cache/kubekv"
 
 	"github.com/keel-hq/keel/constants"
+	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/workgroup"
@@ -269,7 +270,7 @@ func setupTriggers(ctx context.Context, providers provider.Providers, secretsGet
 
 		registryClient := registry.New()
 		watcher := poll.NewRepositoryWatcher(providers, registryClient)
-		pollManager := poll.NewPollManager(providers, watcher, secretsGetter)
+		pollManager := poll.NewPollManager(providers, watcher, secretsGetter, credentialshelper.New())
 
 		// start poll manager, will finish with ctx
 		go watcher.Start(ctx)
