@@ -55,7 +55,7 @@ func NewPollManager(providers provider.Providers, watcher Watcher, secretsGetter
 		credentialsHelper: credentialsHelper,
 		watcher:           watcher,
 		mu:                &sync.Mutex{},
-		scanTick:          55,
+		scanTick:          1,
 	}
 }
 
@@ -82,7 +82,6 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			log.Debug("performing scan")
 			err := s.scan(ctx)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -94,6 +93,7 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 }
 
 func (s *DefaultManager) scan(ctx context.Context) error {
+	log.Info("performing scan")
 	trackedImages, err := s.providers.TrackedImages()
 	if err != nil {
 		return err
