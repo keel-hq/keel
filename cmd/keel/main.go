@@ -38,6 +38,9 @@ import (
 	_ "github.com/keel-hq/keel/extension/notification/slack"
 	_ "github.com/keel-hq/keel/extension/notification/webhook"
 
+	// credentials helpers
+	_ "github.com/keel-hq/keel/extension/credentialshelper/aws"
+
 	// bots
 	_ "github.com/keel-hq/keel/bot/hipchat"
 	_ "github.com/keel-hq/keel/bot/slack"
