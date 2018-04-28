@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/keel-hq/keel/registry"
+	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 )
 
@@ -19,7 +20,9 @@ func TestAWS(t *testing.T) {
 	// image
 	imgRef, _ := image.Parse("528670773427.dkr.ecr.us-east-2.amazonaws.com/webhook-demo:master")
 
-	creds, err := ch.GetCredentials(imgRef.Registry())
+	creds, err := ch.GetCredentials(&types.TrackedImage{
+		Image: imgRef,
+	})
 	if err != nil {
 		t.Fatalf("cred helper got error: %s", err)
 	}

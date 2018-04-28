@@ -37,11 +37,21 @@ type CredentialsHelper struct {
 // New creates a new instance of aws credentials helper
 func New() *CredentialsHelper {
 	ch := &CredentialsHelper{}
-	if os.Getenv("AWS_ACCESS_KEY_ID") != "" && os.Getenv("AWS_ACCESS_KEY") != "" && os.Getenv("AWS_REGION") != "" {
+
+	region := os.Getenv("AWS_REGION")
+	svc := ecr.New(session.New(), &aws.Config{
+		Region: aws.String(region),
+	})
+
+	_, err := svc.ListImages(&ecr.ListImagesInput{})
+	if err == nil {
 		ch.enabled = true
 		log.Infof("extension.credentialshelper.aws: enabled")
-		ch.region = os.Getenv("AWS_REGION")
+		ch.region = region
 	}
+
+	// if os.Getenv("AWS_ACCESS_KEY_ID") != "" && os.Getenv("AWS_SECRET_ACCESS_KEY") != "" && os.Getenv("AWS_REGION") != "" {
+	// }
 
 	return ch
 }
@@ -52,7 +62,9 @@ func (h *CredentialsHelper) IsEnabled() bool {
 }
 
 // GetCredentials - finds credentials
-func (h *CredentialsHelper) GetCredentials(registry string) (*types.Credentials, error) {
+func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
+
+	registry := image.Image.Registry()
 
 	if !strings.Contains(registry, "amazonaws.com") {
 		return nil, credentialshelper.ErrUnsupportedRegistry
