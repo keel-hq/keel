@@ -12,7 +12,7 @@ import (
 // CredentialsHelper is a generic interface for implementing cloud vendor specific
 // authorization code
 type CredentialsHelper interface {
-	GetCredentials(registry string) (*types.Credentials, error)
+	GetCredentials(image *types.TrackedImage) (*types.Credentials, error)
 	IsEnabled() bool
 }
 
@@ -51,39 +51,48 @@ func RegisterCredentialsHelper(name string, ch CredentialsHelper) {
 	credHelpers[name] = ch
 }
 
-// CredentialsHelpers is a combined list of credential helpers
-type CredentialsHelpers struct {
-}
+// UnregisterCredentialsHelper - unregister existing credentials helper, used for testing
+func UnregisterCredentialsHelper(name string) {
+	if name == "" {
+		panic("credentialshelper: could not unregister a Credentials Helper with an empty name")
+	}
 
-// New returns a combined list of credential helpers
-func New() *CredentialsHelpers {
-	return &CredentialsHelpers{}
-}
+	credHelpersM.Lock()
+	defer credHelpersM.Unlock()
 
-// IsEnabled returns if cred helper is enabled
-func (ch *CredentialsHelpers) IsEnabled() bool {
-	return true
+	delete(credHelpers, name)
 }
 
 // GetCredentials - generic function for getting credentials
-func (ch *CredentialsHelpers) GetCredentials(registry string) (*types.Credentials, error) {
+// func (ch *CredentialsHelpers) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
+func GetCredentials(image *types.TrackedImage) (creds *types.Credentials) {
 	credHelpersM.RLock()
 	defer credHelpersM.RUnlock()
 
+	creds = &types.Credentials{}
+
 	for name, credHelper := range credHelpers {
 		if credHelper.IsEnabled() {
-			creds, err := credHelper.GetCredentials(registry)
+			creds, err := credHelper.GetCredentials(image)
 			if err != nil {
-				log.WithFields(log.Fields{
-					"helper":   name,
-					"error":    err,
-					"registry": registry,
-				}).Error("extension.credentialshelper: credentials not found")
+				if err == ErrUnsupportedRegistry {
+					log.WithFields(log.Fields{
+						"helper":        name,
+						"error":         err,
+						"tracked_image": image,
+					}).Debug("extension.credentialshelper: helper doesn't support this registry")
+				} else {
+					log.WithFields(log.Fields{
+						"helper":        name,
+						"error":         err,
+						"tracked_image": image,
+					}).Error("extension.credentialshelper: credentials not found")
+				}
 			} else {
-				return creds, nil
+				return creds
 			}
 		}
 	}
 
-	return nil, ErrCredentialsNotAvailable
+	return creds
 }
