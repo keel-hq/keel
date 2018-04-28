@@ -13,7 +13,7 @@ import (
 	"github.com/keel-hq/keel/util/codecs"
 	"github.com/keel-hq/keel/util/image"
 
-	"github.com/keel-hq/keel/extension/credentialshelper"
+	// "github.com/keel-hq/keel/extension/credentialshelper"
 	_ "github.com/keel-hq/keel/extension/credentialshelper/aws"
 
 	"testing"
@@ -59,7 +59,7 @@ func TestCheckDeployment(t *testing.T) {
 
 	watcher := NewRepositoryWatcher(providers, frc)
 
-	pm := NewPollManager(providers, watcher, &FakeSecretsGetter{}, credentialshelper.New())
+	pm := NewPollManager(providers, watcher)
 
 	imageA := "gcr.io/v2-namespace/hello-world:1.1.1"
 	imageB := "gcr.io/v2-namespace/greetings-world:1.1.1"
@@ -80,11 +80,11 @@ func TestCheckDeployment(t *testing.T) {
 	if watcher.watched[keyA].schedule != types.KeelPollDefaultSchedule {
 		t.Errorf("unexpected schedule: %s", watcher.watched[keyA].schedule)
 	}
-	if watcher.watched[keyA].imageRef.Remote() != ref.Remote() {
-		t.Errorf("unexpected remote remote: %s", watcher.watched[keyA].imageRef.Remote())
+	if watcher.watched[keyA].trackedImage.Image.Remote() != ref.Remote() {
+		t.Errorf("unexpected remote remote: %s", watcher.watched[keyA].trackedImage.Image.Remote())
 	}
-	if watcher.watched[keyA].imageRef.Tag() != ref.Tag() {
-		t.Errorf("unexpected tag: %s", watcher.watched[keyA].imageRef.Tag())
+	if watcher.watched[keyA].trackedImage.Image.Tag() != ref.Tag() {
+		t.Errorf("unexpected tag: %s", watcher.watched[keyA].trackedImage.Image.Tag())
 	}
 
 	refB, _ := image.Parse(imageB)
@@ -95,11 +95,11 @@ func TestCheckDeployment(t *testing.T) {
 	if watcher.watched[keyB].schedule != types.KeelPollDefaultSchedule {
 		t.Errorf("unexpected schedule: %s", watcher.watched[keyB].schedule)
 	}
-	if watcher.watched[keyB].imageRef.Remote() != refB.Remote() {
-		t.Errorf("unexpected remote remote: %s", watcher.watched[keyB].imageRef.Remote())
+	if watcher.watched[keyB].trackedImage.Image.Remote() != refB.Remote() {
+		t.Errorf("unexpected remote remote: %s", watcher.watched[keyB].trackedImage.Image.Remote())
 	}
-	if watcher.watched[keyB].imageRef.Tag() != refB.Tag() {
-		t.Errorf("unexpected tag: %s", watcher.watched[keyB].imageRef.Tag())
+	if watcher.watched[keyB].trackedImage.Image.Tag() != refB.Tag() {
+		t.Errorf("unexpected tag: %s", watcher.watched[keyB].trackedImage.Image.Tag())
 	}
 }
 
@@ -132,7 +132,7 @@ func TestCheckECRDeployment(t *testing.T) {
 
 	watcher := NewRepositoryWatcher(providers, rc)
 
-	pm := NewPollManager(providers, watcher, &FakeSecretsGetter{}, credentialshelper.New())
+	pm := NewPollManager(providers, watcher)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -157,10 +157,10 @@ func TestCheckECRDeployment(t *testing.T) {
 	if watcher.watched[keyA].schedule != types.KeelPollDefaultSchedule {
 		t.Errorf("unexpected schedule: %s", watcher.watched[keyA].schedule)
 	}
-	if watcher.watched[keyA].imageRef.Remote() != imgA.Remote() {
-		t.Errorf("unexpected remote remote: %s", watcher.watched[keyA].imageRef.Remote())
+	if watcher.watched[keyA].trackedImage.Image.Remote() != imgA.Remote() {
+		t.Errorf("unexpected remote remote: %s", watcher.watched[keyA].trackedImage.Image.Remote())
 	}
-	if watcher.watched[keyA].imageRef.Tag() != imgA.Tag() {
-		t.Errorf("unexpected tag: %s", watcher.watched[keyA].imageRef.Tag())
+	if watcher.watched[keyA].trackedImage.Image.Tag() != imgA.Tag() {
+		t.Errorf("unexpected tag: %s", watcher.watched[keyA].trackedImage.Image.Tag())
 	}
 }

@@ -5,9 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/provider"
-	"github.com/keel-hq/keel/secrets"
 	"github.com/keel-hq/keel/types"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -31,10 +29,6 @@ func init() {
 type DefaultManager struct {
 	providers provider.Providers
 
-	secretsGetter secrets.Getter
-
-	credentialsHelper credentialshelper.CredentialsHelper
-
 	// repository watcher
 	watcher Watcher
 
@@ -48,14 +42,12 @@ type DefaultManager struct {
 }
 
 // NewPollManager - new default poller
-func NewPollManager(providers provider.Providers, watcher Watcher, secretsGetter secrets.Getter, credentialsHelper credentialshelper.CredentialsHelper) *DefaultManager {
+func NewPollManager(providers provider.Providers, watcher Watcher) *DefaultManager {
 	return &DefaultManager{
-		providers:         providers,
-		secretsGetter:     secretsGetter,
-		credentialsHelper: credentialsHelper,
-		watcher:           watcher,
-		mu:                &sync.Mutex{},
-		scanTick:          1,
+		providers: providers,
+		watcher:   watcher,
+		mu:        &sync.Mutex{},
+		scanTick:  1,
 	}
 }
 
@@ -93,59 +85,25 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 }
 
 func (s *DefaultManager) scan(ctx context.Context) error {
-	log.Info("performing scan")
+	log.Debug("trigger.poll.manager: performing scan")
 	trackedImages, err := s.providers.TrackedImages()
 	if err != nil {
 		return err
 	}
 
 	var tracked float64
-
 	for _, trackedImage := range trackedImages {
 		if trackedImage.Trigger != types.TriggerTypePoll {
 			continue
 		}
-
 		tracked++
-
-		var imageCreds *types.Credentials
-
-		// anonymous credentials
-		creds := &types.Credentials{}
-		imageCreds, err = s.secretsGetter.Get(trackedImage)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":   err,
-				"secrets": trackedImage.Secrets,
-				"image":   trackedImage.Image.Remote(),
-			}).Error("trigger.poll.manager: failed to get authentication credentials")
-		} else {
-			creds = imageCreds
-		}
-
-		// TODO: refactor to either recreate it every 10 hours (12 hours expiration) or better to retrieve creds
-		// just before quering the registry
-		if imageCreds.Username == "" && imageCreds.Password == "" {
-			registryCreds, err := s.credentialsHelper.GetCredentials(trackedImage.Image.Registry())
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error":    err,
-					"registry": trackedImage.Image.Registry(),
-					"image":    trackedImage.Image.Remote(),
-				}).Error("trigger.poll.manager: failed to get registry credentials")
-			} else {
-				creds = registryCreds
-			}
-		}
-
-		err = s.watcher.Watch(trackedImage.Image.Remote(), trackedImage.PollSchedule, creds.Username, creds.Password)
+		err = s.watcher.Watch(trackedImage, trackedImage.PollSchedule)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":    err,
 				"schedule": trackedImage.PollSchedule,
 				"image":    trackedImage.Image.Remote(),
 			}).Error("trigger.poll.manager: failed to start watching repository")
-			// continue processing other images
 		}
 	}
 
