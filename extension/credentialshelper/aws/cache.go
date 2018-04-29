@@ -22,15 +22,15 @@ type Cache struct {
 }
 
 // NewCache - new credentials cache
-func NewCache(ttl time.Duration) (c *Cache) {
-	c = &Cache{
+func NewCache(ttl time.Duration) *Cache {
+	c := &Cache{
 		creds: make(map[string]*item),
-		mu:    &sync.RWMutex{},
 		ttl:   ttl,
 		tick:  30 * time.Second,
+		mu:    &sync.RWMutex{},
 	}
 	go c.expiryService()
-	return
+	return c
 }
 
 func (c *Cache) expiryService() {
@@ -46,13 +46,13 @@ func (c *Cache) expiryService() {
 
 func (c *Cache) expire() {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	t := time.Now()
 	for k, v := range c.creds {
 		if t.Sub(v.created) > c.ttl {
 			delete(c.creds, k)
 		}
 	}
-	c.mu.Unlock()
 }
 
 // Put - saves new creds
