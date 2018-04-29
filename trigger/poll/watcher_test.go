@@ -6,12 +6,23 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/codecs"
 	"github.com/keel-hq/keel/util/image"
 )
+
+func mustParse(img string) *types.TrackedImage {
+	ref, err := image.Parse(img)
+	if err != nil {
+		panic(err)
+	}
+	return &types.TrackedImage{
+		Image: ref,
+	}
+}
 
 // ======== fake registry client for testing =======
 type fakeRegistryClient struct {
@@ -23,6 +34,7 @@ type fakeRegistryClient struct {
 }
 
 func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, error) {
+	c.opts = opts
 	return &registry.Repository{
 		Name: opts.Name,
 		Tags: c.tagsToReturn,
@@ -30,6 +42,7 @@ func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, erro
 }
 
 func (c *fakeRegistryClient) Digest(opts registry.Opts) (digest string, err error) {
+	c.opts = opts
 	return c.digestToReturn, nil
 }
 
@@ -68,8 +81,10 @@ func TestWatchTagJob(t *testing.T) {
 	reference, _ := image.Parse("foo/bar:1.1")
 
 	details := &watchDetails{
-		imageRef: reference,
-		digest:   "sha256:123123123",
+		trackedImage: &types.TrackedImage{
+			Image: reference,
+		},
+		digest: "sha256:123123123",
 	}
 
 	job := NewWatchTagJob(providers, frc, details)
@@ -113,8 +128,10 @@ func TestWatchTagJobLatest(t *testing.T) {
 	reference, _ := image.Parse("foo/bar:latest")
 
 	details := &watchDetails{
-		imageRef: reference,
-		digest:   "sha256:123123123",
+		trackedImage: &types.TrackedImage{
+			Image: reference,
+		},
+		digest: "sha256:123123123",
 	}
 
 	job := NewWatchTagJob(providers, frc, details)
@@ -158,7 +175,9 @@ func TestWatchAllTagsJob(t *testing.T) {
 	reference, _ := image.Parse("foo/bar:1.1.0")
 
 	details := &watchDetails{
-		imageRef: reference,
+		trackedImage: &types.TrackedImage{
+			Image: reference,
+		},
 	}
 
 	job := NewWatchRepositoryTagsJob(providers, frc, details)
@@ -192,7 +211,9 @@ func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
 	reference, _ := image.Parse("foo/bar:latest")
 
 	details := &watchDetails{
-		imageRef: reference,
+		trackedImage: &types.TrackedImage{
+			Image: reference,
+		},
 	}
 
 	job := NewWatchRepositoryTagsJob(providers, frc, details)
@@ -257,10 +278,10 @@ func TestWatchMultipleTags(t *testing.T) {
 
 	watcher := NewRepositoryWatcher(providers, frc)
 
-	watcher.Watch("gcr.io/v2-namespace/hello-world:1.1.1", "@every 10m", "", "")
-	watcher.Watch("gcr.io/v2-namespace/greetings-world:1.1.1", "@every 10m", "", "")
-	watcher.Watch("gcr.io/v2-namespace/greetings-world:alpha", "@every 10m", "", "")
-	watcher.Watch("gcr.io/v2-namespace/greetings-world:master", "@every 10m", "", "")
+	watcher.Watch(mustParse("gcr.io/v2-namespace/hello-world:1.1.1"), "@every 10m")
+	watcher.Watch(mustParse("gcr.io/v2-namespace/greetings-world:1.1.1"), "@every 10m")
+	watcher.Watch(mustParse("gcr.io/v2-namespace/greetings-world:alpha"), "@every 10m")
+	watcher.Watch(mustParse("gcr.io/v2-namespace/greetings-world:master"), "@every 10m")
 
 	if len(watcher.watched) != 4 {
 		t.Errorf("expected to find watching 4 entries, found: %d", len(watcher.watched))
@@ -285,5 +306,66 @@ func TestWatchMultipleTags(t *testing.T) {
 		if det.latest != "5.0.0" {
 			t.Errorf("expected to find a tag set for multiple tags watch job")
 		}
+	}
+}
+
+type fakeCredentialsHelper struct {
+
+	// set by the caller
+	getImageRequest *types.TrackedImage
+
+	// credentials to return
+	creds *types.Credentials
+}
+
+func (fch *fakeCredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
+	fch.getImageRequest = image
+	return fch.creds, nil
+}
+
+func (fch *fakeCredentialsHelper) IsEnabled() bool { return true }
+
+func TestWatchTagJobCheckCredentials(t *testing.T) {
+
+	fakeHelper := &fakeCredentialsHelper{
+		creds: &types.Credentials{
+			Username: "user-xx",
+			Password: "pass-xx",
+		},
+	}
+
+	credentialshelper.RegisterCredentialsHelper("fake", fakeHelper)
+	defer credentialshelper.UnregisterCredentialsHelper("fake")
+
+	fp := &fakeProvider{}
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	frc := &fakeRegistryClient{
+		digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
+	}
+
+	reference, _ := image.Parse("foo/bar:1.1")
+
+	details := &watchDetails{
+		trackedImage: &types.TrackedImage{
+			Image: reference,
+		},
+		digest: "sha256:123123123",
+	}
+
+	job := NewWatchTagJob(providers, frc, details)
+
+	job.Run()
+
+	// checking whether new job was submitted
+
+	if frc.opts.Password != "pass-xx" {
+		t.Errorf("unexpected password for registry: %s", frc.opts.Password)
+	}
+
+	if frc.opts.Username != "user-xx" {
+		t.Errorf("unexpected username for registry: %s", frc.opts.Username)
 	}
 }

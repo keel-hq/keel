@@ -16,6 +16,7 @@ import (
 	"github.com/keel-hq/keel/cache/kubekv"
 
 	"github.com/keel-hq/keel/constants"
+	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/workgroup"
@@ -36,6 +37,10 @@ import (
 	_ "github.com/keel-hq/keel/extension/notification/mattermost"
 	_ "github.com/keel-hq/keel/extension/notification/slack"
 	_ "github.com/keel-hq/keel/extension/notification/webhook"
+
+	// credentials helpers
+	_ "github.com/keel-hq/keel/extension/credentialshelper/aws"
+	secretsCredentialsHelper "github.com/keel-hq/keel/extension/credentialshelper/secrets"
 
 	// bots
 	_ "github.com/keel-hq/keel/bot/hipchat"
@@ -167,8 +172,14 @@ func main() {
 
 	// setting up providers
 	providers := setupProviders(implementer, sender, approvalsManager, &t.GenericResourceCache)
+
+	// registering secrets based credentials helper
 	secretsGetter := secrets.NewGetter(implementer)
-	teardownTriggers := setupTriggers(ctx, providers, secretsGetter, approvalsManager)
+	ch := secretsCredentialsHelper.New(secretsGetter)
+	credentialshelper.RegisterCredentialsHelper("secrets", ch)
+
+	// trigger setup
+	teardownTriggers := setupTriggers(ctx, providers, approvalsManager)
 
 	bot.Run(implementer, approvalsManager)
 
@@ -231,7 +242,7 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
 // should go through all providers (or not if there is a reason) and submit events)
-func setupTriggers(ctx context.Context, providers provider.Providers, secretsGetter secrets.Getter, approvalsManager approvals.Manager) (teardown func()) {
+func setupTriggers(ctx context.Context, providers provider.Providers, approvalsManager approvals.Manager) (teardown func()) {
 
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{
@@ -269,7 +280,7 @@ func setupTriggers(ctx context.Context, providers provider.Providers, secretsGet
 
 		registryClient := registry.New()
 		watcher := poll.NewRepositoryWatcher(providers, registryClient)
-		pollManager := poll.NewPollManager(providers, watcher, secretsGetter)
+		pollManager := poll.NewPollManager(providers, watcher)
 
 		// start poll manager, will finish with ctx
 		go watcher.Start(ctx)

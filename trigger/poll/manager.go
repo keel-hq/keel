@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/keel-hq/keel/provider"
-	"github.com/keel-hq/keel/secrets"
 	"github.com/keel-hq/keel/types"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -30,8 +29,6 @@ func init() {
 type DefaultManager struct {
 	providers provider.Providers
 
-	secretsGetter secrets.Getter
-
 	// repository watcher
 	watcher Watcher
 
@@ -45,13 +42,12 @@ type DefaultManager struct {
 }
 
 // NewPollManager - new default poller
-func NewPollManager(providers provider.Providers, watcher Watcher, secretsGetter secrets.Getter) *DefaultManager {
+func NewPollManager(providers provider.Providers, watcher Watcher) *DefaultManager {
 	return &DefaultManager{
-		providers:     providers,
-		secretsGetter: secretsGetter,
-		watcher:       watcher,
-		mu:            &sync.Mutex{},
-		scanTick:      55,
+		providers: providers,
+		watcher:   watcher,
+		mu:        &sync.Mutex{},
+		scanTick:  1,
 	}
 }
 
@@ -78,7 +74,6 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			log.Debug("performing scan")
 			err := s.scan(ctx)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -90,41 +85,25 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 }
 
 func (s *DefaultManager) scan(ctx context.Context) error {
+	log.Debug("trigger.poll.manager: performing scan")
 	trackedImages, err := s.providers.TrackedImages()
 	if err != nil {
 		return err
 	}
 
 	var tracked float64
-
 	for _, trackedImage := range trackedImages {
 		if trackedImage.Trigger != types.TriggerTypePoll {
 			continue
 		}
-
 		tracked++
-
-		// anonymous credentials
-		creds := &types.Credentials{}
-		imageCreds, err := s.secretsGetter.Get(trackedImage)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":   err,
-				"secrets": trackedImage.Secrets,
-				"image":   trackedImage.Image.Remote(),
-			}).Error("trigger.poll.manager: failed to get authentication credentials")
-		} else {
-			creds = imageCreds
-		}
-
-		err = s.watcher.Watch(trackedImage.Image.Remote(), trackedImage.PollSchedule, creds.Username, creds.Password)
+		err = s.watcher.Watch(trackedImage, trackedImage.PollSchedule)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":    err,
 				"schedule": trackedImage.PollSchedule,
 				"image":    trackedImage.Image.Remote(),
 			}).Error("trigger.poll.manager: failed to start watching repository")
-			// continue processing other images
 		}
 	}
 

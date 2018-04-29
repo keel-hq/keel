@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
 	"github.com/keel-hq/keel/types"
@@ -30,17 +31,15 @@ func init() {
 
 // Watcher - generic watcher interface
 type Watcher interface {
-	Watch(imageName, registryUsername, registryPassword, schedule string) error
+	Watch(image *types.TrackedImage, schedule string) error
 	Unwatch(image string) error
 }
 
 type watchDetails struct {
-	imageRef         *image.Reference
-	registryUsername string // "" for anonymous
-	registryPassword string // "" for anonymous
-	digest           string // image digest
-	latest           string // latest tag
-	schedule         string
+	trackedImage *types.TrackedImage
+	digest       string // image digest
+	latest       string // latest tag
+	schedule     string
 }
 
 // RepositoryWatcher - repository watcher cron
@@ -115,7 +114,7 @@ func (w *RepositoryWatcher) Unwatch(imageName string) error {
 
 // Watch - starts watching repository for changes, if it's already watching - ignores,
 // if details changed - updates details
-func (w *RepositoryWatcher) Watch(imageName, schedule, registryUsername, registryPassword string) error {
+func (w *RepositoryWatcher) Watch(image *types.TrackedImage, schedule string) error {
 
 	if schedule == "" {
 		return fmt.Errorf("cron schedule cannot be empty")
@@ -125,32 +124,23 @@ func (w *RepositoryWatcher) Watch(imageName, schedule, registryUsername, registr
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error":    err,
-			"image":    imageName,
+			"image":    image.String(),
 			"schedule": schedule,
 		}).Error("trigger.poll.RepositoryWatcher.addJob: invalid cron schedule")
 		return fmt.Errorf("invalid cron schedule: %s", err)
 	}
 
-	imageRef, err := image.Parse(imageName)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error":      err,
-			"image_name": imageName,
-		}).Error("trigger.poll.RepositoryWatcher.Watch: failed to parse image")
-		return err
-	}
-
-	key := getImageIdentifier(imageRef)
+	key := getImageIdentifier(image.Image)
 
 	// checking whether it's already being watched
 	details, ok := w.watched[key]
 	if !ok {
-		err = w.addJob(imageRef, registryUsername, registryPassword, schedule)
+		// err = w.addJob(imageRef, registryUsername, registryPassword, schedule)
+		err = w.addJob(image, schedule)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"error":             err,
-				"image_name":        imageName,
-				"registry_username": registryUsername,
+				"error": err,
+				"image": image.String(),
 			}).Error("trigger.poll.RepositoryWatcher.Watch: failed to add image watch job")
 
 		}
@@ -162,53 +152,38 @@ func (w *RepositoryWatcher) Watch(imageName, schedule, registryUsername, registr
 		w.cron.UpdateJob(key, schedule)
 	}
 
-	// checking auth details, if changed - need to update
-	if details.registryPassword != registryPassword || details.registryUsername != registryUsername {
-		// recreating job
-		w.cron.DeleteJob(key)
-		err = w.addJob(imageRef, registryUsername, registryPassword, schedule)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":             err,
-				"image_name":        imageName,
-				"registry_username": registryUsername,
-			}).Error("trigger.poll.RepositoryWatcher.Watch: failed to add image watch job")
-		}
-		return err
-	}
-
 	// nothing to do
 
 	return nil
 }
 
-func (w *RepositoryWatcher) addJob(ref *image.Reference, registryUsername, registryPassword, schedule string) error {
+func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) error {
 	// getting initial digest
-	reg := ref.Scheme() + "://" + ref.Registry()
+	reg := ti.Image.Scheme() + "://" + ti.Image.Registry()
+
+	creds := credentialshelper.GetCredentials(ti)
 
 	digest, err := w.registryClient.Digest(registry.Opts{
 		Registry: reg,
-		Name:     ref.ShortName(),
-		Tag:      ref.Tag(),
-		Username: registryUsername,
-		Password: registryPassword,
+		Name:     ti.Image.ShortName(),
+		Tag:      ti.Image.Tag(),
+		Username: creds.Username,
+		Password: creds.Password,
 	})
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-			"image": ref.Remote(),
+			"image": ti.Image.String(),
 		}).Error("trigger.poll.RepositoryWatcher.addJob: failed to get image digest")
 		return err
 	}
 
-	key := getImageIdentifier(ref)
+	key := getImageIdentifier(ti.Image)
 	details := &watchDetails{
-		imageRef:         ref,
-		digest:           digest, // current image digest
-		latest:           ref.Tag(),
-		registryUsername: registryUsername,
-		registryPassword: registryPassword,
-		schedule:         schedule,
+		trackedImage: ti,
+		digest:       digest, // current image digest
+		latest:       ti.Image.Tag(),
+		schedule:     schedule,
 	}
 
 	// adding job to internal map
@@ -217,13 +192,13 @@ func (w *RepositoryWatcher) addJob(ref *image.Reference, registryUsername, regis
 	// checking tag type, for versioned (semver) tags we setup a watch all tags job
 	// and for non-semver types we create a single tag watcher which
 	// checks digest
-	_, err = version.GetVersion(ref.Tag())
+	_, err = version.GetVersion(ti.Image.Tag())
 	if err != nil {
 		// adding new job
 		job := NewWatchTagJob(w.providers, w.registryClient, details)
 		log.WithFields(log.Fields{
 			"job_name": key,
-			"image":    ref.Remote(),
+			"image":    ti.Image.String(),
 			"digest":   digest,
 			"schedule": schedule,
 		}).Info("trigger.poll.RepositoryWatcher: new watch tag digest job added")
@@ -234,7 +209,7 @@ func (w *RepositoryWatcher) addJob(ref *image.Reference, registryUsername, regis
 	job := NewWatchRepositoryTagsJob(w.providers, w.registryClient, details)
 	log.WithFields(log.Fields{
 		"job_name": key,
-		"image":    ref.Remote(),
+		"image":    ti.Image.String(),
 		"digest":   digest,
 		"schedule": schedule,
 	}).Info("trigger.poll.RepositoryWatcher: new watch repository tags job added")
@@ -261,21 +236,22 @@ func NewWatchTagJob(providers provider.Providers, registryClient registry.Client
 
 // Run - main function to check schedule
 func (j *WatchTagJob) Run() {
-	reg := j.details.imageRef.Scheme() + "://" + j.details.imageRef.Registry()
+	creds := credentialshelper.GetCredentials(j.details.trackedImage)
+	reg := j.details.trackedImage.Image.Scheme() + "://" + j.details.trackedImage.Image.Registry()
 	currentDigest, err := j.registryClient.Digest(registry.Opts{
 		Registry: reg,
-		Name:     j.details.imageRef.ShortName(),
-		Tag:      j.details.imageRef.Tag(),
-		Username: j.details.registryUsername,
-		Password: j.details.registryPassword,
+		Name:     j.details.trackedImage.Image.ShortName(),
+		Tag:      j.details.trackedImage.Image.Tag(),
+		Username: creds.Username,
+		Password: creds.Password,
 	})
 
-	registriesScannedCounter.With(prometheus.Labels{"registry": j.details.imageRef.Registry(), "image": j.details.imageRef.Name()}).Inc()
+	registriesScannedCounter.With(prometheus.Labels{"registry": j.details.trackedImage.Image.Registry(), "image": j.details.trackedImage.Image.Name()}).Inc()
 
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-			"image": j.details.imageRef.Remote(),
+			"image": j.details.trackedImage.Image.String(),
 		}).Error("trigger.poll.WatchTagJob: failed to check digest")
 		return
 	}
@@ -283,7 +259,7 @@ func (j *WatchTagJob) Run() {
 	log.WithFields(log.Fields{
 		"current_digest": j.details.digest,
 		"new_digest":     currentDigest,
-		"image_name":     j.details.imageRef.Remote(),
+		"image":          j.details.trackedImage.Image.String(),
 	}).Debug("trigger.poll.WatchTagJob: checking digest")
 
 	// checking whether image digest has changed
@@ -293,14 +269,14 @@ func (j *WatchTagJob) Run() {
 
 		event := types.Event{
 			Repository: types.Repository{
-				Name:   j.details.imageRef.Repository(),
-				Tag:    j.details.imageRef.Tag(),
+				Name:   j.details.trackedImage.Image.Repository(),
+				Tag:    j.details.trackedImage.Image.Tag(),
 				Digest: currentDigest,
 			},
 			TriggerName: types.TriggerTypePoll.String(),
 		}
 		log.WithFields(log.Fields{
-			"repository": j.details.imageRef.Repository(),
+			"image":      j.details.trackedImage.Image.String(),
 			"new_digest": currentDigest,
 		}).Info("trigger.poll.WatchTagJob: digest change detected, submiting event to providers")
 
@@ -327,32 +303,35 @@ func NewWatchRepositoryTagsJob(providers provider.Providers, registryClient regi
 
 // Run - main function to check schedule
 func (j *WatchRepositoryTagsJob) Run() {
-	reg := j.details.imageRef.Scheme() + "://" + j.details.imageRef.Registry()
 
+	creds := credentialshelper.GetCredentials(j.details.trackedImage)
+
+	// reg := j.details.imageRef.Scheme() + "://" + j.details.imageRef.Registry()
+	reg := j.details.trackedImage.Image.Scheme() + "://" + j.details.trackedImage.Image.Registry()
 	if j.details.latest == "" {
-		j.details.latest = j.details.imageRef.Tag()
+		j.details.latest = j.details.trackedImage.Image.Tag()
 	}
 
 	repository, err := j.registryClient.Get(registry.Opts{
 		Registry: reg,
-		Name:     j.details.imageRef.ShortName(),
+		Name:     j.details.trackedImage.Image.ShortName(),
 		Tag:      j.details.latest,
-		Username: j.details.registryUsername,
-		Password: j.details.registryPassword,
+		Username: creds.Username,
+		Password: creds.Password,
 	})
 
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-			"image": j.details.imageRef.Remote(),
+			"image": j.details.trackedImage.Image.String(),
 		}).Error("trigger.poll.WatchRepositoryTagsJob: failed to get repository")
 		return
 	}
 
 	log.WithFields(log.Fields{
-		"current_tag":     j.details.imageRef.Tag(),
+		"current_tag":     j.details.trackedImage.Image.Tag(),
 		"repository_tags": repository.Tags,
-		"image_name":      j.details.imageRef.Remote(),
+		"image_name":      j.details.trackedImage.Image.Remote(),
 	}).Debug("trigger.poll.WatchRepositoryTagsJob: checking tags")
 
 	latestVersion, newAvailable, err := version.NewAvailable(j.details.latest, repository.Tags)
@@ -360,7 +339,8 @@ func (j *WatchRepositoryTagsJob) Run() {
 		log.WithFields(log.Fields{
 			"error":           err,
 			"repository_tags": repository.Tags,
-			"image":           j.details.imageRef.Remote(),
+			// "image":           j.details.imageRef.Remote(),
+			"image": j.details.trackedImage.Image.String(),
 		}).Error("trigger.poll.WatchRepositoryTagsJob: failed to get latest version from tags")
 		return
 	}
@@ -372,13 +352,13 @@ func (j *WatchRepositoryTagsJob) Run() {
 		j.details.latest = latestVersion
 		event := types.Event{
 			Repository: types.Repository{
-				Name: j.details.imageRef.Repository(),
+				Name: j.details.trackedImage.Image.Repository(),
 				Tag:  latestVersion,
 			},
 			TriggerName: types.TriggerTypePoll.String(),
 		}
 		log.WithFields(log.Fields{
-			"repository": j.details.imageRef.Repository(),
+			"repository": j.details.trackedImage.Image.Repository(),
 			"new_tag":    latestVersion,
 		}).Info("trigger.poll.WatchRepositoryTagsJob: submiting event to providers")
 		j.providers.Submit(event)
