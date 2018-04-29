@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	// "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,6 +19,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+// AWSCredentialsExpiry specifies how long can we keep cached AWS credentials.
+// This is required to reduce chance of hiting rate limits,
+// more info here: https://docs.aws.amazon.com/AmazonECR/latest/userguide/service_limits.html
+const AWSCredentialsExpiry = 2 * time.Hour
 
 func init() {
 	credentialshelper.RegisterCredentialsHelper("aws", New())
@@ -32,6 +38,7 @@ func init() {
 type CredentialsHelper struct {
 	enabled bool
 	region  string
+	cache   *Cache
 }
 
 // New creates a new instance of aws credentials helper
@@ -43,15 +50,17 @@ func New() *CredentialsHelper {
 		Region: aws.String(region),
 	})
 
-	_, err := svc.ListImages(&ecr.ListImagesInput{})
-	if err == nil {
+	_, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
+	if err != nil {
+		if os.Getenv("AWS_ACCESS_KEY_ID") != "" && os.Getenv("AWS_SECRET_ACCESS_KEY") != "" {
+			log.WithError(err).Error("extension.credentialshelper.aws: environment variables are set but initiliasation failed")
+		}
+	} else {
 		ch.enabled = true
 		log.Infof("extension.credentialshelper.aws: enabled")
 		ch.region = region
+		ch.cache = NewCache(AWSCredentialsExpiry)
 	}
-
-	// if os.Getenv("AWS_ACCESS_KEY_ID") != "" && os.Getenv("AWS_SECRET_ACCESS_KEY") != "" && os.Getenv("AWS_REGION") != "" {
-	// }
 
 	return ch
 }
@@ -64,10 +73,19 @@ func (h *CredentialsHelper) IsEnabled() bool {
 // GetCredentials - finds credentials
 func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
 
+	if !h.enabled {
+		return nil, fmt.Errorf("not initialised")
+	}
+
 	registry := image.Image.Registry()
 
 	if !strings.Contains(registry, "amazonaws.com") {
 		return nil, credentialshelper.ErrUnsupportedRegistry
+	}
+
+	cached, err := h.cache.Get(registry)
+	if err == nil {
+		return cached, nil
 	}
 
 	svc := ecr.New(session.New(), &aws.Config{
@@ -116,10 +134,14 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 				return nil, fmt.Errorf("failed to decode authentication token: %s, error: %s", *ad.AuthorizationToken, err)
 			}
 
-			return &types.Credentials{
+			creds := &types.Credentials{
 				Username: username,
 				Password: password,
-			}, nil
+			}
+
+			h.cache.Put(registry, creds)
+
+			return creds, nil
 		}
 	}
 
