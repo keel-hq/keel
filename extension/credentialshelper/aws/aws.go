@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	// "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws"
@@ -32,6 +33,7 @@ func init() {
 type CredentialsHelper struct {
 	enabled bool
 	region  string
+	cache   *Cache
 }
 
 // New creates a new instance of aws credentials helper
@@ -48,6 +50,7 @@ func New() *CredentialsHelper {
 		ch.enabled = true
 		log.Infof("extension.credentialshelper.aws: enabled")
 		ch.region = region
+		ch.cache = NewCache(2 * time.Hour)
 	}
 
 	// if os.Getenv("AWS_ACCESS_KEY_ID") != "" && os.Getenv("AWS_SECRET_ACCESS_KEY") != "" && os.Getenv("AWS_REGION") != "" {
@@ -68,6 +71,11 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 
 	if !strings.Contains(registry, "amazonaws.com") {
 		return nil, credentialshelper.ErrUnsupportedRegistry
+	}
+
+	cached, err := h.cache.Get(registry)
+	if err == nil {
+		return cached, nil
 	}
 
 	svc := ecr.New(session.New(), &aws.Config{
@@ -116,10 +124,14 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 				return nil, fmt.Errorf("failed to decode authentication token: %s, error: %s", *ad.AuthorizationToken, err)
 			}
 
-			return &types.Credentials{
+			creds := &types.Credentials{
 				Username: username,
 				Password: password,
-			}, nil
+			}
+
+			h.cache.Put(registry, creds)
+
+			return creds, nil
 		}
 	}
 
