@@ -11,8 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func getIdentifier(namespace, name, version string) string {
-	return namespace + "/" + name + ":" + version
+func getApprovalIdentifier(resourceIdentifier, version string) string {
+	return resourceIdentifier + ":" + version
 }
 
 // checkForApprovals - filters out deployments and only passes forward approved ones
@@ -64,7 +64,8 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 		}
 	}
 
-	identifier := getIdentifier(plan.Resource.Namespace, plan.Resource.Name, plan.NewVersion)
+	// identifier := getIdentifier(plan.Resource.Namespace, plan.Resource.Name, plan.NewVersion)
+	identifier := getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion)
 
 	// checking for existing approval
 	existing, err := p.approvalManager.Get(identifier)
@@ -90,7 +91,8 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 				approval.Delta(),
 			)
 
-			fmt.Println("requesting approval, ns: ", plan.Resource.Namespace)
+			// fmt.Println("requesting approval, identifier: ", plan.Resource.Namespace)
+			fmt.Println("requesting approval, identifier: ", identifier)
 
 			return false, p.approvalManager.Create(approval)
 		}

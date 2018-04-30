@@ -18,7 +18,7 @@ func (t *Translator) OnAdd(obj interface{}) {
 		t.Errorf("OnAdd failed to add resource %T: %#v", obj, obj)
 		return
 	}
-	t.Infof("added %s %s", gr.Kind(), gr.Name)
+	t.Debugf("added %s %s", gr.Kind(), gr.Name)
 	t.GenericResourceCache.Add(gr)
 }
 
@@ -28,7 +28,7 @@ func (t *Translator) OnUpdate(oldObj, newObj interface{}) {
 		t.Errorf("OnUpdate failed to update resource %T: %#v", newObj, newObj)
 		return
 	}
-	t.Infof("updated %s %s", gr.Kind(), gr.Name)
+	t.Debugf("updated %s %s", gr.Kind(), gr.Name)
 	t.GenericResourceCache.Add(gr)
 }
 
@@ -38,6 +38,6 @@ func (t *Translator) OnDelete(obj interface{}) {
 		t.Errorf("OnDelete failed to delete resource %T: %#v", obj, obj)
 		return
 	}
-	t.Infof("deleted %s %s", gr.Kind(), gr.Name)
+	t.Debugf("deleted %s %s", gr.Kind(), gr.Name)
 	t.GenericResourceCache.Remove(gr.GetIdentifier())
 }

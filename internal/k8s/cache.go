@@ -20,7 +20,10 @@ type GenericResourceCache struct {
 // Values returns a copy of the contents of the cache.
 func (cc *genericResourceCache) Values() []*GenericResource {
 	cc.Lock()
-	r := append([]*GenericResource{}, cc.values...)
+	r := []*GenericResource{}
+	for _, v := range cc.values {
+		r = append(r, v.DeepCopy())
+	}
 	cc.Unlock()
 	return r
 }

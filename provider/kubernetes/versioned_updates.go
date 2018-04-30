@@ -38,11 +38,7 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 
 	shouldUpdateDeployment = false
 
-	// for idx, c := range deployment.Spec.Template.Spec.Containers {
 	for idx, c := range resource.Containers() {
-		// Remove version if any
-		// containerImageName := versionreg.ReplaceAllString(c.Image, "")
-
 		containerImageRef, err := image.Parse(c.Image)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -141,16 +137,11 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		}).Info("provider.kubernetes: checked version, deciding whether to update")
 
 		if shouldUpdateContainer {
-
-			// c = updateContainer(c, conatinerImageRef, newVersion.String())
-
 			if containerImageRef.Registry() == image.DefaultRegistryHostname {
 				resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.ShortName(), newVersion.String()))
 			} else {
 				resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.Repository(), newVersion.String()))
 			}
-
-			// deployment.Spec.Template.Spec.Containers[idx] = c
 			// marking this deployment for update
 			shouldUpdateDeployment = true
 
