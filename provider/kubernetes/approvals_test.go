@@ -73,7 +73,7 @@ func TestCheckRequestedApproval(t *testing.T) {
 	}
 
 	// checking approvals
-	approval, err := provider.approvalManager.Get("xxxx/dep-1:1.1.2")
+	approval, err := provider.approvalManager.Get("deployment/xxxx/dep-1:1.1.2")
 	if err != nil {
 		t.Fatalf("failed to find approval, err: %s", err)
 	}
@@ -130,7 +130,7 @@ func TestApprovedCheck(t *testing.T) {
 
 	// approving event
 	err = provider.approvalManager.Create(&types.Approval{
-		Identifier:    "xxxx/dep-1:1.1.2",
+		Identifier:    "deployment/xxxx/dep-1:1.1.2",
 		VotesReceived: 2,
 		VotesRequired: 2,
 		Deadline:      time.Now().Add(10 * time.Second),
@@ -139,7 +139,10 @@ func TestApprovedCheck(t *testing.T) {
 		t.Fatalf("failed to create approval: %s", err)
 	}
 
-	appr, _ := provider.approvalManager.Get("xxxx/dep-1:1.1.2")
+	appr, err := provider.approvalManager.Get("deployment/xxxx/dep-1:1.1.2")
+	if err != nil {
+		t.Fatalf("failed to get approval: %s", err)
+	}
 	if appr.Status() != types.ApprovalStatusApproved {
 		t.Fatalf("approval not approved")
 	}

@@ -11,9 +11,8 @@ import (
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/timeutil"
 
-	"k8s.io/api/core/v1"
-	// "k8s.io/api/extensions/apps_v1"
 	apps_v1 "k8s.io/api/apps/v1"
+	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
