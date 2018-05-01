@@ -325,7 +325,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
 						Annotations: map[string]string{
 							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "yup",
+							types.KeelForceTagMatchLabel:     "true",
 						},
 					},
 					apps_v1.DeploymentSpec{
@@ -355,7 +355,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Namespace: "xxxx",
 						Annotations: map[string]string{
 							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "yup",
+							types.KeelForceTagMatchLabel:     "true",
 						},
 						Labels: map[string]string{types.KeelPolicyLabel: "force"},
 					},
@@ -397,7 +397,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
 						Annotations: map[string]string{
 							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "yup",
+							types.KeelForceTagMatchLabel:     "true",
 						},
 					},
 					apps_v1.DeploymentSpec{
@@ -427,7 +427,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Namespace: "xxxx",
 						Annotations: map[string]string{
 							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "yup",
+							types.KeelForceTagMatchLabel:     "true",
 						},
 						Labels: map[string]string{types.KeelPolicyLabel: "force"},
 					},
@@ -503,7 +503,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
 						Annotations: map[string]string{
 							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "yup",
+							types.KeelForceTagMatchLabel:     "true",
 						},
 					},
 					apps_v1.DaemonSetSpec{
@@ -533,7 +533,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Namespace: "xxxx",
 						Annotations: map[string]string{
 							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "yup",
+							types.KeelForceTagMatchLabel:     "true",
 						},
 						Labels: map[string]string{types.KeelPolicyLabel: "force"},
 					},
