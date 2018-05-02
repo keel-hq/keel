@@ -313,7 +313,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 		},
 
 		{
-			name: "poll trigger, force-match, same tag",
+			name: "pubsub trigger, force-match, same tag",
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Name: "karolisr/keel", Tag: "latest-staging"},
@@ -324,8 +324,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Namespace: "xxxx",
 						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
 						Annotations: map[string]string{
-							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "true",
+							types.KeelForceTagMatchLabel: "true",
 						},
 					},
 					apps_v1.DeploymentSpec{
@@ -354,8 +353,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Name:      "dep-1",
 						Namespace: "xxxx",
 						Annotations: map[string]string{
-							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "true",
+							types.KeelForceTagMatchLabel: "true",
 						},
 						Labels: map[string]string{types.KeelPolicyLabel: "force"},
 					},
@@ -385,7 +383,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 		},
 
 		{
-			name: "poll trigger, force-match, same tag on eu.gcr.io",
+			name: "pubsub trigger, force-match, same tag on eu.gcr.io",
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Host: "eu.gcr.io", Name: "karolisr/keel", Tag: "latest-staging"},
@@ -394,10 +392,9 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 					meta_v1.ObjectMeta{
 						Name:      "dep-1",
 						Namespace: "xxxx",
-						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
-						Annotations: map[string]string{
-							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "true",
+						Labels: map[string]string{
+							types.KeelPolicyLabel:        "force",
+							types.KeelForceTagMatchLabel: "true",
 						},
 					},
 					apps_v1.DeploymentSpec{
@@ -425,11 +422,10 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 					meta_v1.ObjectMeta{
 						Name:      "dep-1",
 						Namespace: "xxxx",
-						Annotations: map[string]string{
-							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "true",
+						Labels: map[string]string{
+							types.KeelForceTagMatchLabel: "true",
+							types.KeelPolicyLabel:        "force",
 						},
-						Labels: map[string]string{types.KeelPolicyLabel: "force"},
 					},
 					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
@@ -457,21 +453,22 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			wantErr:                    false,
 		},
 		{
-			name: "poll trigger, force-match, different tag",
+			name: "pubsub trigger, force-match, different tag",
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Name: "karolisr/keel", Tag: "latest-staging"},
 				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{
-						Name:        "dep-1",
-						Namespace:   "xxxx",
-						Annotations: map[string]string{types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule},
-						Labels:      map[string]string{types.KeelPolicyLabel: "force"},
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Labels: map[string]string{
+							types.KeelPolicyLabel:        "force",
+							types.KeelForceTagMatchLabel: "true",
+						},
 					},
 					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
-
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
 									v1.Container{
@@ -491,7 +488,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 			wantErr:                    false,
 		},
 		{
-			name: "poll trigger, force-match, same tag on eu.gcr.io, daemonset",
+			name: "pubsub trigger, force-match, same tag on eu.gcr.io, daemonset",
 			args: args{
 				policy: types.PolicyTypeForce,
 				repo:   &types.Repository{Host: "eu.gcr.io", Name: "karolisr/keel", Tag: "latest-staging"},
@@ -502,8 +499,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Namespace: "xxxx",
 						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
 						Annotations: map[string]string{
-							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "true",
+							types.KeelForceTagMatchLabel: "true",
 						},
 					},
 					apps_v1.DaemonSetSpec{
@@ -532,8 +528,7 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 						Name:      "dep-1",
 						Namespace: "xxxx",
 						Annotations: map[string]string{
-							types.KeelPollScheduleAnnotation: types.KeelPollDefaultSchedule,
-							types.KeelForceTagMatchLabel:     "true",
+							types.KeelForceTagMatchLabel: "true",
 						},
 						Labels: map[string]string{types.KeelPolicyLabel: "force"},
 					},
