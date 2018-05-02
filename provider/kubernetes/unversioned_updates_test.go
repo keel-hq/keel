@@ -322,8 +322,8 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 					meta_v1.ObjectMeta{
 						Name:      "dep-1",
 						Namespace: "xxxx",
-						Labels:    map[string]string{types.KeelPolicyLabel: "force"},
-						Annotations: map[string]string{
+						Labels: map[string]string{
+							types.KeelPolicyLabel:        "force",
 							types.KeelForceTagMatchLabel: "true",
 						},
 					},
@@ -352,10 +352,10 @@ func TestProvider_checkUnversionedDeployment(t *testing.T) {
 					meta_v1.ObjectMeta{
 						Name:      "dep-1",
 						Namespace: "xxxx",
-						Annotations: map[string]string{
+						Labels: map[string]string{
 							types.KeelForceTagMatchLabel: "true",
+							types.KeelPolicyLabel:        "force",
 						},
-						Labels: map[string]string{types.KeelPolicyLabel: "force"},
 					},
 					apps_v1.DeploymentSpec{
 						Template: v1.PodTemplateSpec{
