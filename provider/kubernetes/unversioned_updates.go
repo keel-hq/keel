@@ -71,10 +71,8 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		}
 
 		// updating annotations
-		// annotations := resource.GetAnnotations()
-		matchTag, ok := annotations[types.KeelForceTagMatchLabel]
-		if ok {
-			if matchTag != "" && containerImageRef.Tag() != eventRepoRef.Tag() {
+		if matchTag, _ := labels[types.KeelForceTagMatchLabel]; matchTag == "true" {
+			if containerImageRef.Tag() != eventRepoRef.Tag() {
 				continue
 			}
 		}
