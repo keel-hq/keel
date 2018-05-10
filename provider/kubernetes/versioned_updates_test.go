@@ -113,6 +113,80 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 			wantErr:                    false,
 		},
 		{
+			name: "staging pre-release",
+			args: args{
+				newVersion: unsafeGetVersion("v1.1.2-staging"),
+				policy:     types.PolicyTypeMinor,
+				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-prerelease", Tag: "v1.1.2-staging"},
+				resource: MustParseGR(&apps_v1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "minor"},
+					},
+					apps_v1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-prerelease:v1.1.1",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DeploymentStatus{},
+				}),
+			},
+			wantUpdatePlan:             &UpdatePlan{},
+			wantShouldUpdateDeployment: false,
+			wantErr:                    false,
+		},
+		{
+			name: "normal new tag while there's pre-release",
+			args: args{
+				newVersion: unsafeGetVersion("v1.1.2"),
+				policy:     types.PolicyTypeMinor,
+				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-prerelease", Tag: "v1.1.2"},
+				resource: MustParseGR(&apps_v1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "minor"},
+					},
+					apps_v1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-prerelease:v1.1.1-staging",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DeploymentStatus{},
+				}),
+			},
+			wantUpdatePlan:             &UpdatePlan{},
+			wantShouldUpdateDeployment: false,
+			wantErr:                    false,
+		},
+		{
 			name: "standard ignore version bump",
 			args: args{
 				newVersion: unsafeGetVersion("1.1.1"),

@@ -1,6 +1,7 @@
 package poll
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -367,5 +368,63 @@ func TestWatchTagJobCheckCredentials(t *testing.T) {
 
 	if frc.opts.Username != "user-xx" {
 		t.Errorf("unexpected username for registry: %s", frc.opts.Username)
+	}
+}
+
+func TestWatchTagJobLatestECR(t *testing.T) {
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
+		t.Skip()
+	}
+
+	imgA, _ := image.Parse("528670773427.dkr.ecr.us-east-2.amazonaws.com/webhook-demo:master")
+	fp := &fakeProvider{
+		images: []*types.TrackedImage{
+			&types.TrackedImage{
+				Image:        imgA,
+				Trigger:      types.TriggerTypePoll,
+				Provider:     "fp",
+				PollSchedule: types.KeelPollDefaultSchedule,
+			},
+		},
+	}
+
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
+	rc := registry.New()
+
+	details := &watchDetails{
+		trackedImage: &types.TrackedImage{
+			Image: imgA,
+		},
+		digest: "sha256:123123123",
+	}
+
+	job := NewWatchTagJob(providers, rc, details)
+
+	for i := 0; i < 5; i++ {
+		job.Run()
+	}
+
+	// checking whether new job was submitted
+
+	submitted := fp.submitted[0]
+
+	if submitted.Repository.Name != "528670773427.dkr.ecr.us-east-2.amazonaws.com/webhook-demo" {
+		t.Errorf("unexpected event repository name: %s", submitted.Repository.Name)
+	}
+
+	if submitted.Repository.Tag != "master" {
+		t.Errorf("unexpected event repository tag: %s", submitted.Repository.Tag)
+	}
+
+	if submitted.Repository.Digest != "sha256:7712aa425c17c2e413e5f4d64e2761eda009509d05d0e45a26e389d715aebe23" {
+		t.Errorf("unexpected event repository digest: %s", submitted.Repository.Digest)
+	}
+
+	// digest should be updated
+
+	if job.details.digest != "sha256:7712aa425c17c2e413e5f4d64e2761eda009509d05d0e45a26e389d715aebe23" {
+		t.Errorf("job details digest wasn't updated")
 	}
 }
