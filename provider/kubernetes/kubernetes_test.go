@@ -270,6 +270,185 @@ func TestGetImpacted(t *testing.T) {
 	}
 
 }
+func TestPrereleaseGetImpactedA(t *testing.T) {
+	// test scenario when we have two deployments, one with pre-release tag
+	// and one without. New image comes without the prerelease tag. Expected scenario
+	// is to get one update plan for the second deployment. Deployment with prerelease tag
+	// should be ignored
+
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+
+	deps := []*apps_v1.Deployment{
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-1",
+				Namespace: "xxxx",
+				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1-staging",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-2",
+				Namespace: "xxxx",
+				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+	}
+
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	// creating "new version" event
+	repo := &types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "1.1.2",
+	}
+
+	plans, err := provider.createUpdatePlans(repo)
+	if err != nil {
+		t.Errorf("failed to get deployments: %s", err)
+	}
+
+	if len(plans) != 1 {
+		t.Fatalf("expected to find 1 deployment update plan but found %d", len(plans))
+	}
+
+	if plans[0].Resource.Identifier != "deployment/xxxx/dep-2" {
+		t.Errorf("expected to get 'deployment/xxxx/dep-2', but got: %s", plans[0].Resource.Identifier)
+	}
+}
+
+func TestPrereleaseGetImpactedB(t *testing.T) {
+	// test scenario when we have two deployments, one with pre-release tag
+	// and one without. New image comes without the prerelease tag. Expected scenario
+	// is to get one update plan for the second deployment. Deployment with prerelease tag
+	// should be ignored
+
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+
+	deps := []*apps_v1.Deployment{
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-1",
+				Namespace: "xxxx",
+				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1-staging",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-2",
+				Namespace: "xxxx",
+				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+	}
+
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	// creating "new version" event
+	repo := &types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "1.1.2-staging",
+	}
+
+	plans, err := provider.createUpdatePlans(repo)
+	if err != nil {
+		t.Errorf("failed to get deployments: %s", err)
+	}
+
+	if len(plans) != 1 {
+		t.Fatalf("expected to find 1 deployment update plan but found %d", len(plans))
+	}
+
+	if plans[0].Resource.Identifier != "deployment/xxxx/dep-1" {
+		t.Errorf("expected to get 'deployment/xxxx/dep-1', but got: %s", plans[0].Resource.Identifier)
+	}
+}
 
 func TestProcessEvent(t *testing.T) {
 	fp := &fakeImplementer{}

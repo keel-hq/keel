@@ -71,6 +71,13 @@ type UpdatePlan struct {
 	NewVersion string
 }
 
+func (p *UpdatePlan) String() string {
+	if p.Resource != nil {
+		return fmt.Sprintf("%s %s->%s", p.Resource.Identifier, p.CurrentVersion, p.NewVersion)
+	}
+	return "empty plan"
+}
+
 // Provider - kubernetes provider for auto update
 type Provider struct {
 	implementer Implementer
