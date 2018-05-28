@@ -18,6 +18,7 @@ polling:
 # Helm provider support
 helmProvider:
   enabled: true
+  tillerAddress: tiller-deploy.kube-system.svc.cluster.local.:44134
 
 # Google Container Registry
 # GCP Project ID
