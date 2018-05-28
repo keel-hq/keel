@@ -53,7 +53,7 @@ spec:
             - name: HELM_PROVIDER
               value: "1"
             - name: TILLER_ADDRESS
-              value: "1"
+              value: "{{ .Values.helmProvider.tillerAddress }}"
 {{- end }}
 {{- if .Values.gcr.enabled }}
             # Enable GCR with pub/sub support
