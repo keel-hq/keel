@@ -106,6 +106,7 @@ type KeelChartConfig struct {
 type ImageDetails struct {
 	RepositoryPath string `json:"repository"`
 	TagPath        string `json:"tag"`
+	DigestPath     string `json:"digest"`
 }
 
 // Provider - helm provider, responsible for managing release updates
