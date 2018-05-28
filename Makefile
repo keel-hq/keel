@@ -22,6 +22,9 @@ install:
 image:
 	docker build -t keelhq/keel:alpha -f Dockerfile .
 
+image-debian:
+	docker build -t keelhq/keel:alpha -f Dockerfile.debian .
+
 alpha: image
 	@echo "++ Pushing keel alpha"	
 	docker push keelhq/keel:alpha
