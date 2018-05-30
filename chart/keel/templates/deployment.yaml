@@ -2,7 +2,7 @@ apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
   name: {{ template "keel.fullname" . }}
-  namespace: kube-system
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ template "keel.name" . }}
     chart: {{ template "keel.chart" . }}
@@ -33,6 +33,8 @@ spec:
               readOnly: true
 {{- end }}
           env:
+            - name: NAMESPACE
+              value: {{ .Release.Namespace }}
 {{- if .Values.googleApplicationCredentials }}
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /google/google-application-credentials.json
@@ -50,6 +52,8 @@ spec:
             # Enable/disable Helm provider
             - name: HELM_PROVIDER
               value: "1"
+            - name: TILLER_ADDRESS
+              value: "{{ .Values.helmProvider.tillerAddress }}"
 {{- end }}
 {{- if .Values.gcr.enabled }}
             # Enable GCR with pub/sub support

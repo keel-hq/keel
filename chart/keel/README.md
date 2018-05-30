@@ -22,8 +22,6 @@ Keel provides several key features:
 * __Notifications__ - out of the box Keel has Slack and standard webhook notifications, more info [here](https://keel.sh/user-guide/#notifications)
 
 
-**Note**: For now Keel gets installed into `kube-system` _namespace_ by default as where Helm's `Tiller` is installed.
-
 ## Installing
 
 Docker image _polling_, _Kubernetes provider_ and _Helm provider_ support are set by default, then Kubernetes _deployments_ can be upgraded when new Docker image is available:
