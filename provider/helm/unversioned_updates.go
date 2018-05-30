@@ -70,6 +70,14 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 			continue
 		}
 
+		if imageDetails.DigestPath != "" {
+			plan.Values[imageDetails.DigestPath] = repo.Digest
+			log.WithFields(log.Fields{
+				"image_details_digestPath": imageDetails.DigestPath,
+				"target_image_digest":      repo.Digest,
+			}).Debug("provider.helm: setting image Digest")
+		}
+
 		path, value := getUnversionedPlanValues(repo.Tag, imageRef, &imageDetails)
 		plan.Values[path] = value
 		plan.NewVersion = repo.Tag
