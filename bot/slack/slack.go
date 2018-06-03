@@ -179,11 +179,22 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 // TODO(k): cache results in a map or get this info on startup. Although
 // if channel was then recreated (unlikely), we would miss results
 func (b *Bot) isApprovalsChannel(event *slack.MessageEvent) bool {
-	for _, ch := range b.slackRTM.GetInfo().Channels {
+
+	info := b.slackRTM.GetInfo()
+
+	for _, ch := range info.Channels {
 		if ch.ID == event.Channel && ch.Name == b.approvalsChannel {
 			return true
 		}
 	}
+
+	// checking private channels
+	for _, gr := range info.Groups {
+		if gr.ID == event.Channel && gr.Name == b.approvalsChannel {
+			return true
+		}
+	}
+
 	return false
 }
 
@@ -192,6 +203,7 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 		log.WithFields(log.Fields{
 			"event_bot_ID":  event.BotID,
 			"event_user":    event.User,
+			"msg":           event.Text,
 			"event_subtype": event.SubType,
 		}).Info("handleMessage: ignoring message")
 		return
@@ -212,6 +224,8 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 			b.approvalsRespCh <- approval
 			return
 		}
+	} else {
+		log.Warnf("not approvals channel: %s", event.Channel)
 	}
 
 	b.botMessagesChannel <- &bot.BotMessage{

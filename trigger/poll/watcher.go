@@ -202,6 +202,10 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 			"digest":   digest,
 			"schedule": schedule,
 		}).Info("trigger.poll.RepositoryWatcher: new watch tag digest job added")
+
+		// running it now
+		job.Run()
+
 		return w.cron.AddJob(key, schedule, job)
 	}
 
@@ -213,6 +217,10 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 		"digest":   digest,
 		"schedule": schedule,
 	}).Info("trigger.poll.RepositoryWatcher: new watch repository tags job added")
+
+	// running it now
+	job.Run()
+
 	return w.cron.AddJob(key, schedule, job)
 
 }
@@ -306,7 +314,6 @@ func (j *WatchRepositoryTagsJob) Run() {
 
 	creds := credentialshelper.GetCredentials(j.details.trackedImage)
 
-	// reg := j.details.imageRef.Scheme() + "://" + j.details.imageRef.Registry()
 	reg := j.details.trackedImage.Image.Scheme() + "://" + j.details.trackedImage.Image.Registry()
 	if j.details.latest == "" {
 		j.details.latest = j.details.trackedImage.Image.Tag()
