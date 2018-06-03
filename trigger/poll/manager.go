@@ -6,23 +6,9 @@ import (
 	"time"
 
 	"github.com/keel-hq/keel/provider"
-	"github.com/keel-hq/keel/types"
-
-	"github.com/prometheus/client_golang/prometheus"
 
 	log "github.com/sirupsen/logrus"
 )
-
-var pollTriggerTrackedImages = prometheus.NewGauge(
-	prometheus.GaugeOpts{
-		Name: "poll_trigger_tracked_images",
-		Help: "How many images are tracked by poll trigger",
-	},
-)
-
-func init() {
-	prometheus.MustRegister(pollTriggerTrackedImages)
-}
 
 // DefaultManager - default manager is responsible for scanning deployments and identifying
 // deployments that have market
@@ -47,7 +33,7 @@ func NewPollManager(providers provider.Providers, watcher Watcher) *DefaultManag
 		providers: providers,
 		watcher:   watcher,
 		mu:        &sync.Mutex{},
-		scanTick:  1,
+		scanTick:  3,
 	}
 }
 
@@ -91,23 +77,12 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 		return err
 	}
 
-	var tracked float64
-	for _, trackedImage := range trackedImages {
-		if trackedImage.Trigger != types.TriggerTypePoll {
-			continue
-		}
-		tracked++
-		err = s.watcher.Watch(trackedImage, trackedImage.PollSchedule)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":    err,
-				"schedule": trackedImage.PollSchedule,
-				"image":    trackedImage.Image.Remote(),
-			}).Error("trigger.poll.manager: failed to start watching repository")
-		}
+	err = s.watcher.Watch(trackedImages...)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("trigger.poll.manager: got error(-s) while watching images")
 	}
-
-	pollTriggerTrackedImages.Set(tracked)
 
 	return nil
 }

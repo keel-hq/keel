@@ -1,6 +1,7 @@
 package poll
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -15,13 +16,14 @@ import (
 	"github.com/keel-hq/keel/util/image"
 )
 
-func mustParse(img string) *types.TrackedImage {
+func mustParse(img string, schedule string) *types.TrackedImage {
 	ref, err := image.Parse(img)
 	if err != nil {
 		panic(err)
 	}
 	return &types.TrackedImage{
-		Image: ref,
+		Image:        ref,
+		PollSchedule: schedule,
 	}
 }
 
@@ -279,10 +281,14 @@ func TestWatchMultipleTags(t *testing.T) {
 
 	watcher := NewRepositoryWatcher(providers, frc)
 
-	watcher.Watch(mustParse("gcr.io/v2-namespace/hello-world:1.1.1"), "@every 10m")
-	watcher.Watch(mustParse("gcr.io/v2-namespace/greetings-world:1.1.1"), "@every 10m")
-	watcher.Watch(mustParse("gcr.io/v2-namespace/greetings-world:alpha"), "@every 10m")
-	watcher.Watch(mustParse("gcr.io/v2-namespace/greetings-world:master"), "@every 10m")
+	tracked := []*types.TrackedImage{
+		mustParse("gcr.io/v2-namespace/hello-world:1.1.1", "@every 10m"),
+		mustParse("gcr.io/v2-namespace/greetings-world:1.1.1", "@every 10m"),
+		mustParse("gcr.io/v2-namespace/greetings-world:alpha", "@every 10m"),
+		mustParse("gcr.io/v2-namespace/greetings-world:master", "@every 10m"),
+	}
+
+	watcher.Watch(tracked...)
 
 	if len(watcher.watched) != 4 {
 		t.Errorf("expected to find watching 4 entries, found: %d", len(watcher.watched))
@@ -426,5 +432,69 @@ func TestWatchTagJobLatestECR(t *testing.T) {
 
 	if job.details.digest != "sha256:7712aa425c17c2e413e5f4d64e2761eda009509d05d0e45a26e389d715aebe23" {
 		t.Errorf("job details digest wasn't updated")
+	}
+}
+
+func TestUnwatchAfterNotTrackedAnymore(t *testing.T) {
+	fp := &fakeProvider{}
+	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	am := approvals.New(mem, codecs.DefaultSerializer())
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	// returning some sha
+	frc := &fakeRegistryClient{
+		digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
+		tagsToReturn:   []string{"5.0.0"},
+	}
+
+	watcher := NewRepositoryWatcher(providers, frc)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	watcher.Start(ctx)
+
+	tracked := []*types.TrackedImage{
+		mustParse("gcr.io/v2-namespace/hello-world:1.1.1", "@every 10m"),
+		mustParse("gcr.io/v2-namespace/greetings-world:1.1.1", "@every 10m"),
+		mustParse("gcr.io/v2-namespace/greetings-world:alpha", "@every 10m"),
+		mustParse("gcr.io/v2-namespace/greetings-world:master", "@every 10m"),
+	}
+
+	watcher.Watch(tracked...)
+
+	if len(watcher.watched) != 4 {
+		t.Errorf("expected to find watching 4 entries, found: %d", len(watcher.watched))
+	}
+
+	if dig, ok := watcher.watched["gcr.io/v2-namespace/greetings-world:alpha"]; ok != true {
+		t.Errorf("alpha watcher not found")
+		if dig.digest != "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb" {
+			t.Errorf("digest not set for alpha")
+		}
+	}
+
+	if dig, ok := watcher.watched["gcr.io/v2-namespace/greetings-world:master"]; ok != true {
+		t.Errorf("alpha watcher not found")
+		if dig.digest != "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb" {
+			t.Errorf("digest not set for alpha")
+		}
+	}
+
+	if det, ok := watcher.watched["gcr.io/v2-namespace/greetings-world"]; ok != true {
+		t.Errorf("alpha watcher not found")
+		if det.latest != "5.0.0" {
+			t.Errorf("expected to find a tag set for multiple tags watch job")
+		}
+	}
+
+	trackedUpdated := []*types.TrackedImage{
+		mustParse("gcr.io/v2-namespace/hello-world:1.1.1", "@every 10m"),
+		mustParse("gcr.io/v2-namespace/greetings-world:1.1.1", "@every 10m"),
+		mustParse("gcr.io/v2-namespace/greetings-world:alpha", "@every 10m"),
+	}
+
+	watcher.Watch(trackedUpdated...)
+
+	if len(watcher.watched) != 3 {
+		t.Errorf("expected to find watching 3 entries, found: %d", len(watcher.watched))
 	}
 }
