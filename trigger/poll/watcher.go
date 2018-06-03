@@ -3,6 +3,7 @@ package poll
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/provider"
@@ -25,13 +26,21 @@ var registriesScannedCounter = prometheus.NewCounterVec(
 	[]string{"registry", "image"},
 )
 
+var pollTriggerTrackedImages = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Name: "poll_trigger_tracked_images",
+		Help: "How many images are tracked by poll trigger",
+	},
+)
+
 func init() {
 	prometheus.MustRegister(registriesScannedCounter)
+	prometheus.MustRegister(pollTriggerTrackedImages)
 }
 
 // Watcher - generic watcher interface
 type Watcher interface {
-	Watch(image *types.TrackedImage, schedule string) error
+	Watch(image ...*types.TrackedImage) error
 	Unwatch(image string) error
 }
 
@@ -73,11 +82,10 @@ func (w *RepositoryWatcher) Start(ctx context.Context) {
 	// starting cron job
 	w.cron.Start()
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				w.cron.Stop()
-			}
+		select {
+		case <-ctx.Done():
+			w.cron.Stop()
+			return
 		}
 	}()
 }
@@ -114,20 +122,62 @@ func (w *RepositoryWatcher) Unwatch(imageName string) error {
 
 // Watch - starts watching repository for changes, if it's already watching - ignores,
 // if details changed - updates details
-func (w *RepositoryWatcher) Watch(image *types.TrackedImage, schedule string) error {
+func (w *RepositoryWatcher) Watch(images ...*types.TrackedImage) error {
 
-	if schedule == "" {
-		return fmt.Errorf("cron schedule cannot be empty")
+	var errs []string
+	tracked := map[string]bool{}
+
+	for _, image := range images {
+		identifier, err := w.watch(image)
+		if err != nil {
+			errs = append(errs, err.Error())
+			continue
+		}
+		tracked[identifier] = true
 	}
 
-	_, err := cron.Parse(schedule)
+	pollTriggerTrackedImages.Set(float64(len(tracked)))
+
+	// removing registries that should not be tracked anymore
+	// for example: deployment using image X was deleted so we should not query
+	// registry that points to image X as nothing is using it anymore
+	w.unwatch(tracked)
+
+	if len(errs) > 0 {
+		return fmt.Errorf("encountered errors while adding images: %s", strings.Join(errs, ", "))
+	}
+
+	return nil
+}
+
+func (w *RepositoryWatcher) unwatch(tracked map[string]bool) {
+	for key, details := range w.watched {
+		if !tracked[key] {
+			log.WithFields(log.Fields{
+				"job_name": key,
+				"image":    details.trackedImage.String(),
+				"schedule": details.schedule,
+			}).Info("trigger.poll.RepositoryWatcher: image no tracked anymore, removing watcher")
+			w.cron.DeleteJob(key)
+			delete(w.watched, key)
+		}
+	}
+}
+
+func (w *RepositoryWatcher) watch(image *types.TrackedImage) (string, error) {
+
+	if image.PollSchedule == "" {
+		return "", fmt.Errorf("cron schedule cannot be empty")
+	}
+
+	_, err := cron.Parse(image.PollSchedule)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error":    err,
 			"image":    image.String(),
-			"schedule": schedule,
+			"schedule": image.PollSchedule,
 		}).Error("trigger.poll.RepositoryWatcher.addJob: invalid cron schedule")
-		return fmt.Errorf("invalid cron schedule: %s", err)
+		return "", fmt.Errorf("invalid cron schedule: %s", err)
 	}
 
 	key := getImageIdentifier(image.Image)
@@ -136,25 +186,25 @@ func (w *RepositoryWatcher) Watch(image *types.TrackedImage, schedule string) er
 	details, ok := w.watched[key]
 	if !ok {
 		// err = w.addJob(imageRef, registryUsername, registryPassword, schedule)
-		err = w.addJob(image, schedule)
+		err = w.addJob(image, image.PollSchedule)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
 				"image": image.String(),
 			}).Error("trigger.poll.RepositoryWatcher.Watch: failed to add image watch job")
-
+			return "", err
 		}
-		return err
+		return key, nil
 	}
 
 	// checking schedule
-	if details.schedule != schedule {
-		w.cron.UpdateJob(key, schedule)
+	if details.schedule != image.PollSchedule {
+		w.cron.UpdateJob(key, image.PollSchedule)
 	}
 
 	// nothing to do
 
-	return nil
+	return key, nil
 }
 
 func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) error {
@@ -254,7 +304,7 @@ func (j *WatchTagJob) Run() {
 		Password: creds.Password,
 	})
 
-	registriesScannedCounter.With(prometheus.Labels{"registry": j.details.trackedImage.Image.Registry(), "image": j.details.trackedImage.Image.Name()}).Inc()
+	registriesScannedCounter.With(prometheus.Labels{"registry": j.details.trackedImage.Image.Registry(), "image": j.details.trackedImage.Image.Repository()}).Inc()
 
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -334,6 +384,8 @@ func (j *WatchRepositoryTagsJob) Run() {
 		}).Error("trigger.poll.WatchRepositoryTagsJob: failed to get repository")
 		return
 	}
+
+	registriesScannedCounter.With(prometheus.Labels{"registry": j.details.trackedImage.Image.Registry(), "image": j.details.trackedImage.Image.Repository()}).Inc()
 
 	log.WithFields(log.Fields{
 		"current_tag":     j.details.trackedImage.Image.Tag(),
