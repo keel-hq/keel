@@ -90,7 +90,7 @@ func (b *buffer) loop(stop <-chan struct{}) {
 			default:
 				b.Printf("unhandled event type: %T: %v", ev, ev)
 			}
-		case <-stop:			
+		case <-stop:
 			return
 		}
 	}
