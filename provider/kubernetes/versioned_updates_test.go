@@ -366,6 +366,131 @@ func TestProvider_checkVersionedDeployment(t *testing.T) {
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,
 		},
+		{
+			name: "force update untagged container - match tag",
+			args: args{
+				newVersion: unsafeGetVersion("1.1.2"),
+				policy:     types.PolicyTypeForce,
+				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
+				resource: MustParseGR(&apps_v1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels: map[string]string{
+							types.KeelPolicyLabel:        "force",
+							types.KeelForceTagMatchLabel: "true",
+						},
+					},
+					apps_v1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
+									},
+									v1.Container{
+										Image: "yo-world:1.1.1",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DeploymentStatus{},
+				}),
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Resource: MustParseGR(&apps_v1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels: map[string]string{
+							types.KeelPolicyLabel:        "force",
+							types.KeelForceTagMatchLabel: "true",
+						},
+					},
+					apps_v1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
+									},
+									v1.Container{
+										Image: "yo-world:1.1.1",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DeploymentStatus{},
+				}),
+				NewVersion:     "1.1.2",
+				CurrentVersion: "1.1.2",
+			},
+			wantShouldUpdateDeployment: true,
+			wantErr:                    false,
+		},
+		{
+			name: "don't force update untagged container - match tag",
+			args: args{
+				newVersion: unsafeGetVersion("1.1.3"),
+				policy:     types.PolicyTypeForce,
+				repo:       &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.3"},
+				resource: MustParseGR(&apps_v1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels: map[string]string{
+							types.KeelPolicyLabel:        "force",
+							types.KeelForceTagMatchLabel: "true",
+						},
+					},
+					apps_v1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
+									},
+									v1.Container{
+										Image: "yo-world:1.1.1",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DeploymentStatus{},
+				}),
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Resource:       nil,
+				NewVersion:     "",
+				CurrentVersion: "",
+			},
+			wantShouldUpdateDeployment: false,
+			wantErr:                    false,
+		},
 	}
 
 	for _, tt := range tests {
