@@ -90,7 +90,7 @@ func (s *DefaultManager) scan(ctx context.Context) error {
 
 	for _, trackedImage := range trackedImages {
 		if !isGoogleContainerRegistry(trackedImage.Image.Registry()) {
-			log.Debug("registry %s is not a GCR, skipping", trackedImage.Image.Registry())
+			log.Debugf("registry %s is not a GCR, skipping", trackedImage.Image.Registry())
 			continue
 		}
 
