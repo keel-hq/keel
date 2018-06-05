@@ -21,7 +21,7 @@ import (
 func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy types.PolicyType, repo *types.Repository, resource *k8s.GenericResource) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
 	updatePlan = &UpdatePlan{}
 
-	eventRepoRef, err := image.Parse(repo.Name)
+	eventRepoRef, err := image.Parse(repo.String())
 	if err != nil {
 		return
 	}
