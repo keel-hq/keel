@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
@@ -78,9 +77,7 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		}
 
 		// updating spec template annotations
-		specAnnotations := resource.GetSpecAnnotations()
-		specAnnotations[types.KeelUpdateTimeAnnotation] = time.Now().String()
-		resource.SetSpecAnnotations(specAnnotations)
+		setUpdateTime(resource)
 
 		// updating image
 		if containerImageRef.Registry() == image.DefaultRegistryHostname {
