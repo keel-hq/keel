@@ -70,6 +70,11 @@ func (p *Provider) checkVersionedDeployment(newVersion *types.Version, policy ty
 		// if policy is force, don't bother with version checking
 		// same with `latest` images, update them to versioned ones
 		if policy == types.PolicyTypeForce || containerImageRef.Tag() == "latest" {
+			if matchTag, _ := labels[types.KeelForceTagMatchLabel]; matchTag == "true" {
+				if containerImageRef.Tag() != eventRepoRef.Tag() {
+					continue
+				}
+			}
 			if containerImageRef.Registry() == image.DefaultRegistryHostname {
 				resource.UpdateContainer(idx, fmt.Sprintf("%s:%s", containerImageRef.ShortName(), newVersion.String()))
 			} else {
