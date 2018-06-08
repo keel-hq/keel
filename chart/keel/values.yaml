@@ -77,7 +77,7 @@ webhookRelay:
   # webhookrelay docker image
   image:
     repository: webhookrelay/webhookrelayd
-    tag: 0.6.0
+    tag: 0.6.3
     pullPolicy: IfNotPresent
 
 # Keel self-update
