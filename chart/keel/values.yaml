@@ -70,10 +70,12 @@ service:
 # which can deliver webhooks to your internal Keel service through Keel sidecar container.
 webhookRelay:
   enabled: false
+  bucket: ""
   # webhookrelay.com credentials
+  # Set the key and secret values here to create the keel-webhookrelay secret with this
+  # chart -or- leave key and secret blank and create the keel-webhookrelay secret separately.
   key: ""
   secret: ""
-  bucket: ""
   # webhookrelay docker image
   image:
     repository: webhookrelay/webhookrelayd
