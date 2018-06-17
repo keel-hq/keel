@@ -86,7 +86,7 @@ spec:
     spec:
       serviceAccountName: keel
       containers:
-        - image: keelhq/keel:0.8.3
+        - image: keelhq/keel:0.9.3
           imagePullPolicy: Always
           env:
             # - name: POLL
@@ -96,6 +96,10 @@ spec:
             # Enable/disable Helm provider
             # - name: HELM_PROVIDER
             #   value: "1"
+            # Default Docker registry configuration (will override secrets if there are any)
+            # 'auth' parameter is base 64 encoded username:password pair. Ideally this environment variable would be a Kubernetes secret.
+            # - name: DOCKER_REGISTRY_CFG
+            #   value: '{"auths":{"https://index.docker.io/v1/":{"username":"login","password":"somepass","email":"email@email.com","auth":"longbase64secret"}}}'
             - name: PROJECT_ID
               value: "my-project-id"
             # - name: WEBHOOK_ENDPOINT

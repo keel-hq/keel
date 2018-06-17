@@ -59,6 +59,10 @@ const (
 
 	EnvHelmProvider      = "HELM_PROVIDER"  // helm provider
 	EnvHelmTillerAddress = "TILLER_ADDRESS" // helm provider
+
+	// EnvDefaultDockerRegistryCfg - default registry configuration that can be passed into
+	// keel for polling trigger
+	EnvDefaultDockerRegistryCfg = "DOCKER_REGISTRY_CFG"
 )
 
 // kubernetes config, if empty - will default to InCluster
@@ -174,7 +178,18 @@ func main() {
 	providers := setupProviders(implementer, sender, approvalsManager, &t.GenericResourceCache)
 
 	// registering secrets based credentials helper
-	secretsGetter := secrets.NewGetter(implementer)
+	dockerConfig := make(secrets.DockerCfg)
+	if os.Getenv(EnvDefaultDockerRegistryCfg) != "" {
+		dockerConfigStr := os.Getenv(EnvDefaultDockerRegistryCfg)
+		dockerConfig, err = secrets.DecodeDockerCfgJson([]byte(dockerConfigStr))
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Fatalf("failed to decode secret provided in %s env variable", EnvDefaultDockerRegistryCfg)
+		}
+	}
+	secretsGetter := secrets.NewGetter(implementer, dockerConfig)
+
 	ch := secretsCredentialsHelper.New(secretsGetter)
 	credentialshelper.RegisterCredentialsHelper("secrets", ch)
 

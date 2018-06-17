@@ -39,7 +39,7 @@ func TestGetSecret(t *testing.T) {
 		},
 	}
 
-	getter := NewGetter(impl)
+	getter := NewGetter(impl, nil)
 
 	trackedImage := &types.TrackedImage{
 		Image:     imgRef,
@@ -73,7 +73,7 @@ func TestGetDockerConfigJSONSecret(t *testing.T) {
 		},
 	}
 
-	getter := NewGetter(impl)
+	getter := NewGetter(impl, nil)
 
 	trackedImage := &types.TrackedImage{
 		Image:     imgRef,
@@ -106,7 +106,7 @@ func TestGetDockerConfigJSONSecretUsernmePassword(t *testing.T) {
 		},
 	}
 
-	getter := NewGetter(impl)
+	getter := NewGetter(impl, nil)
 
 	trackedImage := &types.TrackedImage{
 		Image:     imgRef,
@@ -128,6 +128,45 @@ func TestGetDockerConfigJSONSecretUsernmePassword(t *testing.T) {
 	}
 }
 
+func TestGetFromDefaultCredentials(t *testing.T) {
+	imgRef, _ := image.Parse("karolisr/webhook-demo:0.0.11")
+
+	impl := &testutil.FakeK8sImplementer{
+		AvailableSecret: &v1.Secret{
+			Data: map[string][]byte{
+				dockerConfigJSONKey: []byte(secretDockerConfigJSONPayloadWithUsernamePassword),
+			},
+			Type: v1.SecretTypeDockerConfigJson,
+		},
+	}
+
+	getter := NewGetter(impl, DockerCfg{
+		"https://index.docker.io/v1/": &Auth{
+			Username: "aa",
+			Password: "bb",
+		},
+	})
+
+	trackedImage := &types.TrackedImage{
+		Image:     imgRef,
+		Namespace: "default",
+		Secrets:   []string{"myregistrysecret"},
+	}
+
+	creds, err := getter.Get(trackedImage)
+	if err != nil {
+		t.Errorf("failed to get creds: %s", err)
+	}
+
+	if creds.Username != "aa" {
+		t.Errorf("unexpected username: %s", creds.Username)
+	}
+
+	if creds.Password != "bb" {
+		t.Errorf("unexpected pass: %s", creds.Password)
+	}
+}
+
 func TestGetSecretNotFound(t *testing.T) {
 	imgRef, _ := image.Parse("karolisr/webhook-demo:0.0.11")
 
@@ -135,7 +174,7 @@ func TestGetSecretNotFound(t *testing.T) {
 		Error: fmt.Errorf("some error"),
 	}
 
-	getter := NewGetter(impl)
+	getter := NewGetter(impl, nil)
 
 	trackedImage := &types.TrackedImage{
 		Image:     imgRef,
@@ -183,7 +222,7 @@ func TestLookupHelmSecret(t *testing.T) {
 		},
 	}
 
-	getter := NewGetter(impl)
+	getter := NewGetter(impl, nil)
 
 	trackedImage := &types.TrackedImage{
 		Image:     imgRef,
@@ -229,7 +268,7 @@ func TestLookupHelmEncodedSecret(t *testing.T) {
 		},
 	}
 
-	getter := NewGetter(impl)
+	getter := NewGetter(impl, nil)
 
 	trackedImage := &types.TrackedImage{
 		Image:     imgRef,
@@ -270,7 +309,7 @@ func TestLookupHelmNoSecretsFound(t *testing.T) {
 		Error: fmt.Errorf("not found"),
 	}
 
-	getter := NewGetter(impl)
+	getter := NewGetter(impl, nil)
 
 	trackedImage := &types.TrackedImage{
 		Image:     imgRef,

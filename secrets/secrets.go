@@ -36,12 +36,20 @@ type Getter interface {
 // DefaultGetter - default kubernetes secret getter implementation
 type DefaultGetter struct {
 	kubernetesImplementer kubernetes.Implementer
+	defaultDockerConfig   DockerCfg // default configuration supplied by optional environment variable
 }
 
 // NewGetter - create new default getter
-func NewGetter(implementer kubernetes.Implementer) *DefaultGetter {
+func NewGetter(implementer kubernetes.Implementer, defaultDockerConfig DockerCfg) *DefaultGetter {
+
+	// initialising empty configuration
+	if defaultDockerConfig == nil {
+		defaultDockerConfig = make(DockerCfg)
+	}
+
 	return &DefaultGetter{
 		kubernetesImplementer: implementer,
+		defaultDockerConfig:   defaultDockerConfig,
 	}
 }
 
@@ -49,6 +57,12 @@ func NewGetter(implementer kubernetes.Implementer) *DefaultGetter {
 func (g *DefaultGetter) Get(image *types.TrackedImage) (*types.Credentials, error) {
 	if image.Namespace == "" {
 		return nil, ErrNamespaceNotSpecified
+	}
+
+	// checking in default creds
+	creds, found := g.lookupDefaultDockerConfig(image)
+	if found {
+		return creds, nil
 	}
 
 	switch image.Provider {
@@ -64,6 +78,10 @@ func (g *DefaultGetter) Get(image *types.TrackedImage) (*types.Credentials, erro
 	}
 
 	return g.getCredentialsFromSecret(image)
+}
+
+func (g *DefaultGetter) lookupDefaultDockerConfig(image *types.TrackedImage) (*types.Credentials, bool) {
+	return credentialsFromConfig(image, g.defaultDockerConfig)
 }
 
 func (g *DefaultGetter) lookupSecrets(image *types.TrackedImage) ([]string, error) {
@@ -170,7 +188,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 				continue
 			}
 
-			dockerCfg, err = decodeJSONSecret(secretDataBts)
+			dockerCfg, err = DecodeDockerCfgJson(secretDataBts)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"image":       image.Image.Repository(),
@@ -192,58 +210,9 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 			continue
 		}
 
-		// looking for our registry
-		for registry, auth := range dockerCfg {
-			h, err := hostname(registry)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"image":      image.Image.Repository(),
-					"namespace":  image.Namespace,
-					"registry":   registry,
-					"secret_ref": secretRef,
-					"error":      err,
-				}).Error("secrets.defaultGetter: failed to parse hostname")
-				continue
-			}
-
-			if h == image.Image.Registry() {
-				if auth.Username != "" && auth.Password != "" {
-					credentials.Username = auth.Username
-					credentials.Password = auth.Password
-				} else if auth.Auth != "" {
-					username, password, err := decodeBase64Secret(auth.Auth)
-					if err != nil {
-						log.WithFields(log.Fields{
-							"image":      image.Image.Repository(),
-							"namespace":  image.Namespace,
-							"registry":   registry,
-							"secret_ref": secretRef,
-							"error":      err,
-						}).Error("secrets.defaultGetter: failed to decode auth secret")
-						continue
-					}
-					credentials.Username = username
-					credentials.Password = password
-				} else {
-					log.WithFields(log.Fields{
-						"image":      image.Image.Repository(),
-						"namespace":  image.Namespace,
-						"registry":   registry,
-						"secret_ref": secretRef,
-						"error":      err,
-					}).Warn("secrets.defaultGetter: secret doesn't have username, password and base64 encoded auth, skipping")
-					continue
-				}
-
-				log.WithFields(log.Fields{
-					"namespace": image.Namespace,
-					"provider":  image.Provider,
-					"registry":  image.Image.Registry(),
-					"image":     image.Image.Repository(),
-				}).Debug("secrets.defaultGetter: secret looked up successfully")
-
-				return credentials, nil
-			}
+		creds, found := credentialsFromConfig(image, dockerCfg)
+		if found {
+			return creds, nil
 		}
 	}
 
@@ -258,6 +227,64 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 	}
 
 	return credentials, nil
+}
+
+func credentialsFromConfig(image *types.TrackedImage, cfg DockerCfg) (*types.Credentials, bool) {
+	credentials := &types.Credentials{}
+	found := false
+	// looking for our registry
+	for registry, auth := range cfg {
+		h, err := hostname(registry)
+
+		if err != nil {
+			log.WithFields(log.Fields{
+				"image":     image.Image.Repository(),
+				"namespace": image.Namespace,
+				"registry":  registry,
+				"error":     err,
+			}).Error("secrets.defaultGetter: failed to parse hostname")
+			continue
+		}
+
+		if h == image.Image.Registry() {
+			if auth.Username != "" && auth.Password != "" {
+				credentials.Username = auth.Username
+				credentials.Password = auth.Password
+			} else if auth.Auth != "" {
+				username, password, err := decodeBase64Secret(auth.Auth)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"image":     image.Image.Repository(),
+						"namespace": image.Namespace,
+						"registry":  registry,
+						"error":     err,
+					}).Error("secrets.defaultGetter: failed to decode auth secret")
+					continue
+				}
+				credentials.Username = username
+				credentials.Password = password
+				found = true
+			} else {
+				log.WithFields(log.Fields{
+					"image":     image.Image.Repository(),
+					"namespace": image.Namespace,
+					"registry":  registry,
+					"error":     err,
+				}).Warn("secrets.defaultGetter: secret doesn't have username, password and base64 encoded auth, skipping")
+				continue
+			}
+
+			log.WithFields(log.Fields{
+				"namespace": image.Namespace,
+				"provider":  image.Provider,
+				"registry":  image.Image.Registry(),
+				"image":     image.Image.Repository(),
+			}).Debug("secrets.defaultGetter: secret looked up successfully")
+
+			return credentials, true
+		}
+	}
+	return credentials, found
 }
 
 func decodeBase64Secret(authSecret string) (username, password string, err error) {
@@ -296,7 +323,7 @@ func decodeSecret(data []byte) (DockerCfg, error) {
 	return cfg, nil
 }
 
-func decodeJSONSecret(data []byte) (DockerCfg, error) {
+func DecodeDockerCfgJson(data []byte) (DockerCfg, error) {
 	var cfg DockerCfgJSON
 	err := json.Unmarshal(data, &cfg)
 	if err != nil {
