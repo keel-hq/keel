@@ -214,60 +214,6 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 		if found {
 			return creds, nil
 		}
-
-		// looking for our registry
-		// for registry, auth := range dockerCfg {
-		// 	h, err := hostname(registry)
-		// 	if err != nil {
-		// 		log.WithFields(log.Fields{
-		// 			"image":      image.Image.Repository(),
-		// 			"namespace":  image.Namespace,
-		// 			"registry":   registry,
-		// 			"secret_ref": secretRef,
-		// 			"error":      err,
-		// 		}).Error("secrets.defaultGetter: failed to parse hostname")
-		// 		continue
-		// 	}
-
-		// 	if h == image.Image.Registry() {
-		// 		if auth.Username != "" && auth.Password != "" {
-		// 			credentials.Username = auth.Username
-		// 			credentials.Password = auth.Password
-		// 		} else if auth.Auth != "" {
-		// 			username, password, err := decodeBase64Secret(auth.Auth)
-		// 			if err != nil {
-		// 				log.WithFields(log.Fields{
-		// 					"image":      image.Image.Repository(),
-		// 					"namespace":  image.Namespace,
-		// 					"registry":   registry,
-		// 					"secret_ref": secretRef,
-		// 					"error":      err,
-		// 				}).Error("secrets.defaultGetter: failed to decode auth secret")
-		// 				continue
-		// 			}
-		// 			credentials.Username = username
-		// 			credentials.Password = password
-		// 		} else {
-		// 			log.WithFields(log.Fields{
-		// 				"image":      image.Image.Repository(),
-		// 				"namespace":  image.Namespace,
-		// 				"registry":   registry,
-		// 				"secret_ref": secretRef,
-		// 				"error":      err,
-		// 			}).Warn("secrets.defaultGetter: secret doesn't have username, password and base64 encoded auth, skipping")
-		// 			continue
-		// 		}
-
-		// 		log.WithFields(log.Fields{
-		// 			"namespace": image.Namespace,
-		// 			"provider":  image.Provider,
-		// 			"registry":  image.Image.Registry(),
-		// 			"image":     image.Image.Repository(),
-		// 		}).Debug("secrets.defaultGetter: secret looked up successfully")
-
-		// 		return credentials, nil
-		// 	}
-		// }
 	}
 
 	if len(image.Secrets) > 0 {
@@ -299,11 +245,6 @@ func credentialsFromConfig(image *types.TrackedImage, cfg DockerCfg) (*types.Cre
 			}).Error("secrets.defaultGetter: failed to parse hostname")
 			continue
 		}
-
-		log.WithFields(log.Fields{
-			"wanted":  h,
-			"current": image.Image.Registry(),
-		}).Info("searching for the registry")
 
 		if h == image.Image.Registry() {
 			if auth.Username != "" && auth.Password != "" {
