@@ -33,10 +33,16 @@ spec:
         - image: keelhq/keel:0.9.3
           imagePullPolicy: Always
           env:
+            # Poll enables active polling if specified in deployment.yaml, set it to 0 to disable feature
             # - name: POLL
-            #   value: "1"
-            - name: PUBSUB
-              value: "1"
+            #   value: "0"
+            # PubSub is used when using with Google's GCR registry       
+            # - name: PUBSUB
+            #  value: "1"
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
             # Enable/disable Helm provider
             # - name: HELM_PROVIDER
             #   value: "1"
@@ -70,6 +76,14 @@ spec:
             #   value: "pass"
             # - name: MATTERMOST_ENDPOINT
             #   value: "" 
+            # AWS ECR registry connection details
+            # More info can be found here: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+            # - name: AWS_REGION
+            #   value: "your aws region"
+            # - name: AWS_ACCESS_KEY_ID
+            #   value: "AKID"
+            # - name: AWS_SECRET_ACCESS_KEY
+            #   value: "secret"
           name: keel
           command: ["/bin/keel"]
           ports:
