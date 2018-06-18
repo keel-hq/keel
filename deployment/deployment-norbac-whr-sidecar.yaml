@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keel
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keel
+  namespace: keel
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: keel
+  namespace: keel
+  labels:
+      name: "keel"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: keel
+      labels:
+        app: keel
+    spec:
+      serviceAccountName: keel
+      containers:
+        # [START webhookrelay_container]
+        - image: webhookrelay/webhookrelayd:latest
+          name: webhookrelayd          
+          env:                         
+            - name: KEY
+              valueFrom:
+                secretKeyRef:
+                  name: webhookrelay-credentials
+                  key: key                
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: webhookrelay-credentials
+                  key: secret
+            - name: BUCKET
+              value: dockerhub 
+        # [END webhookrelay_container]
+        - image: keelhq/keel:0.9.3
+          imagePullPolicy: Always
+          env:
+            # Poll enables active polling if specified in deployment.yaml, set it to 0 to disable feature
+            # - name: POLL
+            #   value: "0"
+            # PubSub is used when using with Google's GCR registry       
+            # - name: PUBSUB
+            #  value: "1"
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            # Enable/disable Helm provider
+            # - name: HELM_PROVIDER
+            #   value: "1"
+            # - name: TILLER_ADDRESS
+            #   value: tiller-deploy.kube-system.svc.cluster.local:44134
+            # Default Docker registry configuration (will override secrets if there are any)
+            # 'auth' parameter is base 64 encoded username:password pair. Ideally this environment variable would be a Kubernetes secret.
+            # - name: DOCKER_REGISTRY_CFG
+            #   value: '{"auths":{"https://index.docker.io/v1/":{"username":"login","password":"somepass","email":"email@email.com","auth":"longbase64secret"}}}'
+            - name: PROJECT_ID
+              value: "my-project-id"
+            # - name: WEBHOOK_ENDPOINT
+            #   value: https://my.webhookrelay.com/v1/webhooks/2fc52b16-75f7-41f2-8e2d-81afbbcae709
+            # - name: SLACK_TOKEN
+            #   value: your-token-here
+            # - name: SLACK_CHANNELS
+            #   value: general
+            # - name: SLACK_APPROVALS_CHANNEL
+            #   value: approvals
+            # - name: HIPCHAT_TOKEN
+            #   value: your-token-here
+            # - name: HIPCHAT_CHANNELS
+            #   value: keel-bot
+            # - name: HIPCHAT_APPROVALS_CHANNEL
+            #   value: "111111_keel-approvals@conf.hipchat.com"
+            # - name: HIPCHAT_APPROVALS_BOT_NAME
+            #   value: "Mr Bor"
+            # - name: HIPCHAT_APPROVALS_USER_NAME
+            #   value: "111111_2222222"
+            # - name: HIPCHAT_APPROVALS_PASSWORT
+            #   value: "pass"
+            # - name: MATTERMOST_ENDPOINT
+            #   value: "" 
+            # AWS ECR registry connection details
+            # More info can be found here: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+            # - name: AWS_REGION
+            #   value: "your aws region"
+            # - name: AWS_ACCESS_KEY_ID
+            #   value: "AKID"
+            # - name: AWS_SECRET_ACCESS_KEY
+            #   value: "secret"
+          name: keel
+          command: ["/bin/keel"]
+          ports:
+            - containerPort: 9300
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9300
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
