@@ -68,6 +68,7 @@ func NewPubsubSubscriber(opts *Opts) (*PubsubSubscriber, error) {
 // Message - expected message from gcr
 type Message struct {
 	Action string `json:"action,omitempty"`
+	Digest string `json:"digest"`
 	Tag    string `json:"tag,omitempty"`
 }
 
@@ -183,8 +184,12 @@ func (s *PubsubSubscriber) callback(ctx context.Context, msg *pubsub.Message) {
 		"image_name": ref.Name(),
 	}).Debug("trigger.pubsub: got message")
 	event := types.Event{
-		Repository: types.Repository{Name: ref.Repository(), Tag: ref.Tag()},
-		CreatedAt:  time.Now(),
+		Repository: types.Repository{
+			Name:   ref.Repository(),
+			Tag:    ref.Tag(),
+			Digest: decoded.Digest,
+		},
+		CreatedAt: time.Now(),
 	}
 
 	s.providers.Submit(event)
