@@ -14,6 +14,7 @@ import (
 
 	"github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/constants"
+	"github.com/keel-hq/keel/version"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -162,7 +163,7 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 			Fallback: message,
 			Color:    color,
 			Fields:   fields,
-			Footer:   "https://keel.sh",
+			Footer:   fmt.Sprintf("https://keel.sh %s", version.GetKeelVersion().Version),
 			Ts:       json.Number(strconv.Itoa(int(time.Now().Unix()))),
 		},
 	}
