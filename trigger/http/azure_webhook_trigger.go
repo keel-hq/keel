@@ -49,6 +49,7 @@ type azureWebhook struct {
 	Target struct {
 		Repository string `json:"repository"`
 		Tag        string `json:"tag"`
+		Digest     string `json:"digest"`
 	} `json:"target"`
 	Request struct {
 		Host string `json:"host"`
@@ -56,8 +57,8 @@ type azureWebhook struct {
 }
 
 func (s *TriggerServer) azureHandler(resp http.ResponseWriter, req *http.Request) {
-	qw := azureWebhook{}
-	if err := json.NewDecoder(req.Body).Decode(&qw); err != nil {
+	aw := azureWebhook{}
+	if err := json.NewDecoder(req.Body).Decode(&aw); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("trigger.azureHandler: failed to decode request")
@@ -65,20 +66,20 @@ func (s *TriggerServer) azureHandler(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	if qw.Target.Tag == "" {
+	if aw.Target.Tag == "" {
 		resp.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(resp, "tag cannot be empty")
 		return
 	}
 
 	// for every updated tag generating event
-	var DockerURL = qw.Request.Host + "/" + qw.Target.Repository
+	var DockerURL = aw.Request.Host + "/" + aw.Target.Repository
 	event := types.Event{}
 	event.CreatedAt = time.Now()
 	event.TriggerName = "azure"
 	event.Repository.Name = DockerURL // need to build this url..
-	event.Repository.Tag = qw.Target.Tag
-
+	event.Repository.Tag = aw.Target.Tag
+	event.Repository.Digest = aw.Target.Digest
 	s.trigger(event)
 	newAzureWebhooksCounter.With(prometheus.Labels{"image": event.Repository.Name}).Inc()
 
