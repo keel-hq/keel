@@ -100,5 +100,13 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 		return false, err
 	}
 
+	if event.Repository.Digest != "" && event.Repository.Digest != existing.Digest {
+		err = p.approvalManager.Reset(existing)
+		if err != nil {
+			return false, fmt.Errorf("failed to reset approval after changed digest, error %s", err)
+		}
+		return false, nil
+	}
+
 	return existing.Status() == types.ApprovalStatusApproved, nil
 }
