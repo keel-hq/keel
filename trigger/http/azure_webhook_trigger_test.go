@@ -70,4 +70,8 @@ func TestAzureWebhookHandler(t *testing.T) {
 	if fp.submitted[0].Repository.Tag != "v1" {
 		t.Errorf("expected v1 but got %s", fp.submitted[0].Repository.Tag)
 	}
+
+	if fp.submitted[0].Repository.Digest != "sha256:80f0d5c8786bb9e621a45ece0db56d11cdc624ad20da9fe62e9d25490f331d7d" {
+		t.Errorf("expected sha256:80f0d5c8786bb9e621a45ece0db56d11cdc624ad20da9fe62e9d25490f331d7d but got %s", fp.submitted[0].Repository.Digest)
+	}
 }
