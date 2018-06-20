@@ -128,6 +128,9 @@ func (w *RepositoryWatcher) Watch(images ...*types.TrackedImage) error {
 	tracked := map[string]bool{}
 
 	for _, image := range images {
+		if image.Trigger != types.TriggerTypePoll {
+			continue
+		}
 		identifier, err := w.watch(image)
 		if err != nil {
 			errs = append(errs, err.Error())
