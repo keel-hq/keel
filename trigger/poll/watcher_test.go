@@ -24,6 +24,7 @@ func mustParse(img string, schedule string) *types.TrackedImage {
 	return &types.TrackedImage{
 		Image:        ref,
 		PollSchedule: schedule,
+		Trigger:      types.TriggerTypePoll,
 	}
 }
 
