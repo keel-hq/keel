@@ -34,6 +34,11 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 	return approvedPlans
 }
 
+// updateComplete is called after we successfully update resource
+func (p *Provider) updateComplete(plan *UpdatePlan) error {
+	return p.approvalManager.Delete(getIdentifier(plan.Namespace, plan.Name, plan.NewVersion))
+}
+
 func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error) {
 	if plan.Config.Approvals == 0 {
 		return true, nil

@@ -333,6 +333,15 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 			continue
 		}
 
+		err = p.updateComplete(plan)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":     err,
+				"name":      plan.Name,
+				"namespace": plan.Namespace,
+			}).Warn("provider.helm: got error while resetting approvals counter after successful update")
+		}
+
 		p.sender.Send(types.EventNotification{
 			Name:      "update release",
 			Message:   fmt.Sprintf("Successfully updated release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", ")),
@@ -346,22 +355,6 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 
 	return nil
 }
-
-// resp, err := u.client.UpdateRelease(
-// 		u.release,
-// 		chartPath,
-// 		helm.UpdateValueOverrides(rawVals),
-// 		helm.UpgradeDryRun(u.dryRun),
-// 		helm.UpgradeRecreate(u.recreate),
-// 		helm.UpgradeForce(u.force),
-// 		helm.UpgradeDisableHooks(u.disableHooks),
-// 		helm.UpgradeTimeout(u.timeout),
-// 		helm.ResetValues(u.resetValues),
-// 		helm.ReuseValues(u.reuseValues),
-// 		helm.UpgradeWait(u.wait))
-// 	if err != nil {
-// 		return fmt.Errorf("UPGRADE FAILED: %v", prettyError(err))
-// 	}
 
 func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_chart.Chart, overrideValues map[string]string) error {
 
