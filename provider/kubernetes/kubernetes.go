@@ -283,9 +283,17 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 			}).Warn("provider.kubernetes: got error while resetting approvals counter after successful update")
 		}
 
+		var msg string
+		releaseNotes := types.ParseReleaseNotesURL(resource.GetAnnotations())
+		if releaseNotes != "" {
+			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s). Release notes: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", "), releaseNotes)
+		} else {
+			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", "))
+		}
+
 		p.sender.Send(types.EventNotification{
 			Name:      "update resource",
-			Message:   fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", ")),
+			Message:   msg,
 			CreatedAt: time.Now(),
 			Type:      types.NotificationDeploymentUpdate,
 			Level:     types.LevelSuccess,
