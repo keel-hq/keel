@@ -166,3 +166,43 @@ func TestParseEventNotificationChannels(t *testing.T) {
 		})
 	}
 }
+
+func TestParseReleaseNotesURL(t *testing.T) {
+	type args struct {
+		annotations map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "nil map",
+			args: args{},
+			want: "",
+		},
+		{
+			name: "empty map",
+			args: args{
+				make(map[string]string),
+			},
+			want: "",
+		},
+		{
+			name: "link",
+			args: args{
+				annotations: map[string]string{
+					KeelReleaseNotesURL: "http://link",
+				},
+			},
+			want: "http://link",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ParseReleaseNotesURL(tt.args.annotations); got != tt.want {
+				t.Errorf("ParseReleaseNotesURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
