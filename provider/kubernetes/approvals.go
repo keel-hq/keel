@@ -35,6 +35,11 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 	return approvedPlans
 }
 
+// updateComplete is called after we successfully update resource
+func (p *Provider) updateComplete(plan *UpdatePlan) error {
+	return p.approvalManager.Delete(getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion))
+}
+
 func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error) {
 	labels := plan.Resource.GetLabels()
 
@@ -64,7 +69,6 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 		}
 	}
 
-	// identifier := getIdentifier(plan.Resource.Namespace, plan.Resource.Name, plan.NewVersion)
 	identifier := getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion)
 
 	// checking for existing approval
@@ -99,6 +103,18 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 
 		return false, err
 	}
+
+	// if event.Repository.Digest != "" && event.Repository.Digest != existing.Digest {
+	// 	err = p.approvalManager.Reset(existing)
+	// 	if err != nil {
+	// 		return false, fmt.Errorf("failed to reset approval after changed digest, error %s", err)
+	// 	}
+	// 	return false, nil
+	// }
+	// log.WithFields(log.Fields{
+	// 	"previous": existing.Digest,
+	// 	"new":      event.Repository.Digest,
+	// }).Info("digests match")
 
 	return existing.Status() == types.ApprovalStatusApproved, nil
 }

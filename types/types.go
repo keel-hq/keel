@@ -9,7 +9,6 @@ package types
 import (
 	"bytes"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -55,14 +54,14 @@ const KeelApprovalDeadlineDefault = 24
 
 // KeelPodDeleteDelay - optional delay betwen killing pods
 // during force deploy
-const KeelPodDeleteDelay = "keel.sh/forceDelay"
+// const KeelPodDeleteDelay = "keel.sh/forceDelay"
 
 //KeelPodMaxDelay defines maximum delay in seconds between deleting pods
-const KeelPodMaxDelay int64 = 600
+// const KeelPodMaxDelay int64 = 600
 
 // KeelPodTerminationGracePeriod - optional grace period during
 // pod termination
-const KeelPodTerminationGracePeriod = "keel.sh/gracePeriod"
+// const KeelPodTerminationGracePeriod = "keel.sh/gracePeriod"
 
 // Repository - represents main docker repository fields that
 // keel cares about
@@ -235,54 +234,54 @@ func ParseEventNotificationChannels(annotations map[string]string) []string {
 
 // ParsePodDeleteDelay - parses pod delete delay time in seconds
 // from a given map of annotations
-func ParsePodDeleteDelay(annotations map[string]string) int64 {
-	delay := int64(0)
-	if annotations == nil {
-		return delay
-	}
-	delayStr, ok := annotations[KeelPodDeleteDelay]
-	if !ok {
-		return delay
-	}
+// func ParsePodDeleteDelay(annotations map[string]string) int64 {
+// 	delay := int64(0)
+// 	if annotations == nil {
+// 		return delay
+// 	}
+// 	delayStr, ok := annotations[KeelPodDeleteDelay]
+// 	if !ok {
+// 		return delay
+// 	}
 
-	g, err := strconv.Atoi(delayStr)
-	if err != nil {
-		return delay
-	}
+// 	g, err := strconv.Atoi(delayStr)
+// 	if err != nil {
+// 		return delay
+// 	}
 
-	if g < 1 {
-		return delay
-	}
+// 	if g < 1 {
+// 		return delay
+// 	}
 
-	if int64(g) > KeelPodMaxDelay {
-		return KeelPodMaxDelay
-	}
-	return int64(g)
+// 	if int64(g) > KeelPodMaxDelay {
+// 		return KeelPodMaxDelay
+// 	}
+// 	return int64(g)
 
-}
+// }
 
-// ParsePodTerminationGracePeriod - parses pod termination time in seconds
-// from a given map of annotations
-func ParsePodTerminationGracePeriod(annotations map[string]string) int64 {
-	grace := int64(5)
-	if annotations == nil {
-		return grace
-	}
-	graceStr, ok := annotations[KeelPodTerminationGracePeriod]
-	if ok {
+// // ParsePodTerminationGracePeriod - parses pod termination time in seconds
+// // from a given map of annotations
+// func ParsePodTerminationGracePeriod(annotations map[string]string) int64 {
+// 	grace := int64(5)
+// 	if annotations == nil {
+// 		return grace
+// 	}
+// 	graceStr, ok := annotations[KeelPodTerminationGracePeriod]
+// 	if ok {
 
-		g, err := strconv.Atoi(graceStr)
-		if err != nil {
-			return grace
-		}
+// 		g, err := strconv.Atoi(graceStr)
+// 		if err != nil {
+// 			return grace
+// 		}
 
-		if g > 0 && g < 600 {
-			return int64(g)
-		}
-	}
+// 		if g > 0 && g < 600 {
+// 			return int64(g)
+// 		}
+// 	}
 
-	return grace
-}
+// 	return grace
+// }
 
 // Notification - notification types used by notifier
 type Notification int
@@ -433,6 +432,10 @@ type Approval struct {
 
 	CurrentVersion string `json:"currentVersion,omitempty"`
 	NewVersion     string `json:"newVersion,omitempty"`
+
+	// Digest is used to verify that images are the ones that got the approvals.
+	// If digest doesn't match for the image, votes are reset.
+	Digest string `json:"digest"`
 
 	// Requirements for the update such as number of votes
 	// and deadline

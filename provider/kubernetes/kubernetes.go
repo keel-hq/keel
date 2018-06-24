@@ -273,6 +273,16 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 			continue
 		}
 
+		err = p.updateComplete(plan)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":     err,
+				"name":      resource.Name,
+				"kind":      resource.Kind(),
+				"namespace": resource.Namespace,
+			}).Warn("provider.kubernetes: got error while resetting approvals counter after successful update")
+		}
+
 		p.sender.Send(types.EventNotification{
 			Name:      "update resource",
 			Message:   fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", ")),
@@ -356,11 +366,12 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 			log.WithFields(log.Fields{
 				"error":          err,
 				"repository_tag": repo.Tag,
-				"deployment":     resource.Name,
+				"resource_kind":  resource.Kind(),
+				"resource":       resource.Name,
 				"namespace":      resource.Namespace,
 				"kind":           resource.Kind(),
 				"policy":         policy,
-			}).Warn("provider.kubernetes: got error while parsing repository tag")
+			}).Warn("provider.kubernetes: got error while parsing repository tag, consider using 'force' policy")
 			continue
 		}
 
