@@ -73,6 +73,9 @@ type UpdatePlan struct {
 	CurrentVersion string
 	// New version that's already in the deployment
 	NewVersion string
+
+	// ReleaseNotes is a slice of combined release notes.
+	ReleaseNotes []string
 }
 
 // keel:
@@ -107,6 +110,7 @@ type ImageDetails struct {
 	RepositoryPath string `json:"repository"`
 	TagPath        string `json:"tag"`
 	DigestPath     string `json:"digest"`
+	ReleaseNotes   string `json:"releaseNotes"`
 }
 
 // Provider - helm provider, responsible for managing release updates
@@ -342,9 +346,16 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 			}).Warn("provider.helm: got error while resetting approvals counter after successful update")
 		}
 
+		var msg string
+		if len(plan.ReleaseNotes) == 0 {
+			msg = fmt.Sprintf("Successfully updated release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "))
+		} else {
+			msg = fmt.Sprintf("Successfully updated release %s/%s %s->%s (%s). Release notes: %s", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "), strings.Join(plan.ReleaseNotes, ", "))
+		}
+
 		p.sender.Send(types.EventNotification{
 			Name:      "update release",
-			Message:   fmt.Sprintf("Successfully updated release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", ")),
+			Message:   msg,
 			CreatedAt: time.Now(),
 			Type:      types.NotificationReleaseUpdate,
 			Level:     types.LevelSuccess,

@@ -73,6 +73,9 @@ func checkVersionedRelease(newVersion *types.Version, repo *types.Repository, na
 			plan.CurrentVersion = imageRef.Tag()
 			plan.Config = keelCfg
 			shouldUpdateRelease = true
+			if imageDetails.ReleaseNotes != "" {
+				plan.ReleaseNotes = append(plan.ReleaseNotes, imageDetails.ReleaseNotes)
+			}
 
 			log.WithFields(log.Fields{
 				"parsed_image":     imageRef.Remote(),
@@ -131,6 +134,9 @@ func checkVersionedRelease(newVersion *types.Version, repo *types.Repository, na
 			plan.CurrentVersion = currentVersion.String()
 			plan.Config = keelCfg
 			shouldUpdateRelease = true
+			if imageDetails.ReleaseNotes != "" {
+				plan.ReleaseNotes = append(plan.ReleaseNotes, imageDetails.ReleaseNotes)
+			}
 
 			log.WithFields(log.Fields{
 				"container_image":  imageRef.Repository(),

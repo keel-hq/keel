@@ -52,6 +52,9 @@ const KeelApprovalDeadlineLabel = "keel.sh/approvalDeadline"
 // KeelApprovalDeadlineDefault - default deadline in hours
 const KeelApprovalDeadlineDefault = 24
 
+// KeelReleasePage - optional release notes URL passed on with notification
+const KeelReleaseNotesURL = "keel.sh/releaseNotes"
+
 // KeelPodDeleteDelay - optional delay betwen killing pods
 // during force deploy
 // const KeelPodDeleteDelay = "keel.sh/forceDelay"
@@ -230,6 +233,14 @@ func ParseEventNotificationChannels(annotations map[string]string) []string {
 	}
 
 	return channels
+}
+
+func ParseReleaseNotesURL(annotations map[string]string) string {
+	if annotations == nil {
+		return ""
+	}
+
+	return annotations[KeelReleaseNotesURL]
 }
 
 // ParsePodDeleteDelay - parses pod delete delay time in seconds

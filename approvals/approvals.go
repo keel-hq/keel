@@ -29,9 +29,6 @@ type Manager interface {
 	// Update whole approval object
 	Update(r *types.Approval) error
 
-	// Reset approval when votes become invalid (image digest change detected)
-	Reset(r *types.Approval) error
-
 	// Increases Approval votes by 1
 	Approve(identifier, voter string) (*types.Approval, error)
 	// Rejects Approval
@@ -265,29 +262,6 @@ func (m *DefaultManager) Update(r *types.Approval) error {
 	}
 
 	return m.cache.Put(getKey(r.Identifier), bts)
-}
-
-// Reset - resets votes to 0. Used by providers when image digest change is detected
-func (m *DefaultManager) Reset(r *types.Approval) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	r.Voters = []string{}
-	r.VotesReceived = 0
-	r.UpdatedAt = time.Now()
-
-	bts, err := m.serializer.Encode(r)
-	if err != nil {
-		return err
-	}
-
-	err = m.cache.Put(getKey(r.Identifier), bts)
-	if err != nil {
-		return err
-	}
-
-	// republishing event to all subscribers
-	return m.publishRequest(r)
 }
 
 // Approve - increase VotesReceived by 1 and returns updated version

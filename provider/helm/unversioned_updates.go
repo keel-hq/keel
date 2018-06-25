@@ -84,6 +84,9 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 		plan.CurrentVersion = imageRef.Tag()
 		plan.Config = keelCfg
 		shouldUpdateRelease = true
+		if imageDetails.ReleaseNotes != "" {
+			plan.ReleaseNotes = append(plan.ReleaseNotes, imageDetails.ReleaseNotes)
+		}
 	}
 
 	return plan, shouldUpdateRelease, nil

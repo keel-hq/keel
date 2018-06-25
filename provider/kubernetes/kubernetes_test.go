@@ -638,6 +638,138 @@ func TestProcessEventBuildNumber(t *testing.T) {
 	}
 }
 
+func TestEventSent(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	deps := []*apps_v1.Deployment{
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "deployment-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:10",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+	}
+
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	fs := &fakeSender{}
+	provider, err := NewProvider(fp, fs, approver(), grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	repo := types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "11",
+	}
+
+	event := &types.Event{Repository: repo}
+	_, err = provider.processEvent(event)
+	if err != nil {
+		t.Errorf("got error while processing event: %s", err)
+	}
+
+	if fp.updated.Containers()[0].Image != repo.Name+":"+repo.Tag {
+		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Containers()[0].Image)
+	}
+
+	if fs.sentEvent.Message != "Successfully updated deployment xxxx/deployment-1 10->11 (gcr.io/v2-namespace/hello-world:11)" {
+		t.Errorf("expected 'Successfully updated deployment xxxx/deployment-1 10->11 (gcr.io/v2-namespace/hello-world:11)' sent message, got: %s", fs.sentEvent.Message)
+	}
+}
+
+func TestEventSentWithReleaseNotes(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	deps := []*apps_v1.Deployment{
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "deployment-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+				Annotations: map[string]string{types.KeelReleaseNotesURL: "https://github.com/keel-hq/keel/releases"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:10",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+	}
+
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	fs := &fakeSender{}
+	provider, err := NewProvider(fp, fs, approver(), grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	repo := types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "11",
+	}
+
+	event := &types.Event{Repository: repo}
+	_, err = provider.processEvent(event)
+	if err != nil {
+		t.Errorf("got error while processing event: %s", err)
+	}
+
+	if fp.updated.Containers()[0].Image != repo.Name+":"+repo.Tag {
+		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Containers()[0].Image)
+	}
+
+	if fs.sentEvent.Message != "Successfully updated deployment xxxx/deployment-1 10->11 (gcr.io/v2-namespace/hello-world:11). Release notes: https://github.com/keel-hq/keel/releases" {
+		t.Errorf("expected 'Successfully updated deployment xxxx/deployment-1 10->11 (gcr.io/v2-namespace/hello-world:11). Release notes: https://github.com/keel-hq/keel/releases' sent message, got: %s", fs.sentEvent.Message)
+	}
+}
+
 // Test to check how many deployments are "impacted" if we have sidecar container
 func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 	fp := &fakeImplementer{}
