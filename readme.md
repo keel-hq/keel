@@ -12,8 +12,8 @@
     <img src="https://goreportcard.com/badge/github.com/keel-hq/keel" alt="Go Report">
   </a>
   
-  <a href="https://img.shields.io/docker/pulls/karolisr/keel.svg">
-    <img src="https://img.shields.io/docker/pulls/karolisr/keel.svg" alt="Docker Pulls">
+  <a href="https://img.shields.io/docker/pulls/keelhq/keel.svg">
+    <img src="https://img.shields.io/docker/pulls/keelhq/keel.svg" alt="Docker Pulls">
   </a>   
 </p>
 
