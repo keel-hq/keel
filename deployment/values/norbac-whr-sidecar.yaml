@@ -1,0 +1,15 @@
+# Helm provider support
+helmProvider:
+  enabled: false
+
+# RBAC manifests management
+rbac:
+  enabled: false
+
+# Webhook Notification
+# Remote webhook endpoint for notification delivery
+webhook:
+  enabled: true
+  endpoint: ""
+
+debug: false

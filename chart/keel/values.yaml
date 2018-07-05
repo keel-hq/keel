@@ -4,7 +4,7 @@
 
 image:
   repository: keelhq/keel
-  tag: 0.9.0
+  # tag: 
   pullPolicy: IfNotPresent
 
 # Enable insecure registries
@@ -113,6 +113,10 @@ resources:
 # NodeSelector
 nodeSelector: {}
 
+affinity: {}
+
+tolerations: {}
+
 # base64 encoded json of GCP service account
 # more info available here: https://cloud.google.com/kubernetes-engine/docs/tutorials/authenticating-to-cloud-platform
 # e.g. --set googleApplicationCredentials=$(cat <JSON_KEY_FIEL> | base64)
@@ -120,3 +124,8 @@ nodeSelector: {}
 
 # Enable DEBUG logging
 debug: false
+
+# This is used by the static manifest generator in order to create a static
+# namespace manifest for the namespace that cert-manager is being installed
+# within. It should **not** be used if you are using Helm for deployment.
+createNamespaceResource: false

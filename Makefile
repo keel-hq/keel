@@ -26,5 +26,8 @@ image-debian:
 	docker build -t keelhq/keel:alpha -f Dockerfile.debian .
 
 alpha: image
-	@echo "++ Pushing keel alpha"	
+	@echo "++ Pushing keel alpha"
 	docker push keelhq/keel:alpha
+
+gen-deploy:
+	deployment/scripts/gen-deploy.sh
