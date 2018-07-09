@@ -23,7 +23,8 @@ spec:
       serviceAccountName: {{ template "keel.name" . }}
       containers:
         - name: keel
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          # Note that we use appVersion to get images tag.
+          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/keel"]
 {{- if .Values.googleApplicationCredentials }}
