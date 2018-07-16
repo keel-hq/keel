@@ -134,3 +134,8 @@ podAnnotations: {}
 
 aws:
   region: null
+
+podDisruptionBudget:
+  enabled: false
+  maxUnavailable: 1
+  minAvailable: null
