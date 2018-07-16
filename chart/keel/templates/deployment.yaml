@@ -110,6 +110,10 @@ spec:
             - name: INSECURE_REGISTRY
               value: "{{ .Values.insecure_registry }}"
  {{- end }}
+{{- if .Values.aws.region }}
+            - name: AWS_REGION
+              value: "{{ .Values.aws.region }}"
+{{- end }}
           ports:
             - containerPort: 9300
           livenessProbe:
