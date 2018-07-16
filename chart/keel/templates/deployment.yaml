@@ -19,6 +19,10 @@ spec:
       labels:
         app: {{ template "keel.name" . }}
         release: {{ .Release.Name }}
+{{- with .Values.podAnnotations }}
+      annotations:
+{{ toYaml . | indent 8 }}
+{{- end }}
     spec:
       serviceAccountName: {{ template "keel.name" . }}
       containers:

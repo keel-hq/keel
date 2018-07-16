@@ -130,5 +130,7 @@ debug: false
 # within. It should **not** be used if you are using Helm for deployment.
 createNamespaceResource: false
 
+podAnnotations: {}
+
 aws:
   region: null
