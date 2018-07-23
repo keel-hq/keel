@@ -4,9 +4,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 	"time"
+	"regexp"
 
 	// "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws"
@@ -37,30 +37,15 @@ func init() {
 // more on auth: https://stackoverflow.com/questions/41544554/how-to-run-aws-sdk-with-credentials-from-variables
 type CredentialsHelper struct {
 	enabled bool
-	region  string
 	cache   *Cache
 }
 
 // New creates a new instance of aws credentials helper
 func New() *CredentialsHelper {
 	ch := &CredentialsHelper{}
-
-	region := os.Getenv("AWS_REGION")
-	svc := ecr.New(session.New(), &aws.Config{
-		Region: aws.String(region),
-	})
-
-	_, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
-	if err != nil {
-		if os.Getenv("AWS_ACCESS_KEY_ID") != "" && os.Getenv("AWS_SECRET_ACCESS_KEY") != "" {
-			log.WithError(err).Error("extension.credentialshelper.aws: environment variables are set but initiliasation failed")
-		}
-	} else {
-		ch.enabled = true
-		log.Infof("extension.credentialshelper.aws: enabled")
-		ch.region = region
-		ch.cache = NewCache(AWSCredentialsExpiry)
-	}
+	ch.enabled = true
+	log.Infof("extension.credentialshelper.aws: enabled")
+	ch.cache = NewCache(AWSCredentialsExpiry)
 
 	return ch
 }
@@ -79,17 +64,27 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 
 	registry := image.Image.Registry()
 
-	if !strings.Contains(registry, "amazonaws.com") {
+	r := regexp.MustCompile(`(?P<registryId>\d+)\.dkr\.ecr\.(?P<region>\S+)\.amazonaws.com`)
+
+	if !r.MatchString(registry) {
 		return nil, credentialshelper.ErrUnsupportedRegistry
+	}
+
+	matches := r.FindStringSubmatch(registry)
+	registryFetched := make(map[string]string)
+	for i, name := range r.SubexpNames() {
+		if i != 0 && name != "" {
+			registryFetched[name] = matches[i]
+		}
 	}
 
 	cached, err := h.cache.Get(registry)
 	if err == nil {
 		return cached, nil
 	}
-
+	// fetch region from registry instead of env
 	svc := ecr.New(session.New(), &aws.Config{
-		Region: aws.String(h.region),
+		Region: aws.String(registryFetched["region"]),
 	})
 
 	input := &ecr.GetAuthorizationTokenInput{}
