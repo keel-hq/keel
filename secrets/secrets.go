@@ -76,6 +76,9 @@ func (g *DefaultGetter) Get(image *types.TrackedImage) (*types.Credentials, erro
 		// populating secrets
 		image.Secrets = secrets
 	}
+	if len(image.Secrets) == 0 {
+		return nil, ErrSecretsNotSpecified
+	}
 
 	return g.getCredentialsFromSecret(image)
 }

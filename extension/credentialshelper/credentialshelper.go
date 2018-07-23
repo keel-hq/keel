@@ -86,13 +86,15 @@ func GetCredentials(image *types.TrackedImage) (creds *types.Credentials) {
 						"helper":        name,
 						"error":         err,
 						"tracked_image": image,
-					}).Error("extension.credentialshelper: credentials not found")
+					}).Debug("extension.credentialshelper: credentials not found")
 				}
 			} else {
 				return creds
 			}
 		}
 	}
-
+	log.WithFields(log.Fields{
+		"tracked_image": image,
+	}).Error("extension.credentialshelper: credentials helper not found")
 	return creds
 }
