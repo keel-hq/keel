@@ -24,9 +24,11 @@ import (
 // This is required to reduce chance of hiting rate limits,
 // more info here: https://docs.aws.amazon.com/AmazonECR/latest/userguide/service_limits.html
 const AWSCredentialsExpiry = 2 * time.Hour
+var registryRegxp *regexp.Regexp
 
 func init() {
 	credentialshelper.RegisterCredentialsHelper("aws", New())
+	registryRegxp = regexp.MustCompile(`(?P<registryID>\d+)\.dkr\.ecr\.(?P<region>\S+)\.amazonaws\.com`)
 }
 
 // CredentialsHelper provides authorization to ECR.
@@ -64,18 +66,9 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 
 	registry := image.Image.Registry()
 
-	r := regexp.MustCompile(`(?P<registryId>\d+)\.dkr\.ecr\.(?P<region>\S+)\.amazonaws.com`)
-
-	if !r.MatchString(registry) {
-		return nil, credentialshelper.ErrUnsupportedRegistry
-	}
-
-	matches := r.FindStringSubmatch(registry)
-	registryFetched := make(map[string]string)
-	for i, name := range r.SubexpNames() {
-		if i != 0 && name != "" {
-			registryFetched[name] = matches[i]
-		}
+	_, region, err := parseRegistry(registry)
+	if err != nil {
+		return nil, err
 	}
 
 	cached, err := h.cache.Get(registry)
@@ -84,7 +77,7 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 	}
 	// fetch region from registry instead of env
 	svc := ecr.New(session.New(), &aws.Config{
-		Region: aws.String(registryFetched["region"]),
+		Region: aws.String(region),
 	})
 
 	input := &ecr.GetAuthorizationTokenInput{}
@@ -157,3 +150,21 @@ func decodeBase64Secret(authSecret string) (username, password string, err error
 
 	return parts[0], parts[1], nil
 }
+
+func parseRegistry(registry string) (registryID string, region string, err error) {
+	if !registryRegxp.MatchString(registry) {
+		err = credentialshelper.ErrUnsupportedRegistry
+		return
+	}
+	// parse registry with named regex, then put into map by name
+	matches := registryRegxp.FindStringSubmatch(registry)
+	registryParsed := make(map[string]string)
+	for i, name := range registryRegxp.SubexpNames() {
+		if i != 0 && name != "" {
+			registryParsed[name] = matches[i]
+		}
+	}
+
+	return registryParsed["registryID"], registryParsed["region"], nil
+}
+
