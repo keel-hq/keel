@@ -4,9 +4,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 	"time"
+	"regexp"
 
 	// "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws"
@@ -24,9 +24,11 @@ import (
 // This is required to reduce chance of hiting rate limits,
 // more info here: https://docs.aws.amazon.com/AmazonECR/latest/userguide/service_limits.html
 const AWSCredentialsExpiry = 2 * time.Hour
+var registryRegxp *regexp.Regexp
 
 func init() {
 	credentialshelper.RegisterCredentialsHelper("aws", New())
+	registryRegxp = regexp.MustCompile(`(?P<registryID>\d+)\.dkr\.ecr\.(?P<region>\S+)\.amazonaws\.com`)
 }
 
 // CredentialsHelper provides authorization to ECR.
@@ -37,30 +39,15 @@ func init() {
 // more on auth: https://stackoverflow.com/questions/41544554/how-to-run-aws-sdk-with-credentials-from-variables
 type CredentialsHelper struct {
 	enabled bool
-	region  string
 	cache   *Cache
 }
 
 // New creates a new instance of aws credentials helper
 func New() *CredentialsHelper {
 	ch := &CredentialsHelper{}
-
-	region := os.Getenv("AWS_REGION")
-	svc := ecr.New(session.New(), &aws.Config{
-		Region: aws.String(region),
-	})
-
-	_, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
-	if err != nil {
-		if os.Getenv("AWS_ACCESS_KEY_ID") != "" && os.Getenv("AWS_SECRET_ACCESS_KEY") != "" {
-			log.WithError(err).Error("extension.credentialshelper.aws: environment variables are set but initiliasation failed")
-		}
-	} else {
-		ch.enabled = true
-		log.Infof("extension.credentialshelper.aws: enabled")
-		ch.region = region
-		ch.cache = NewCache(AWSCredentialsExpiry)
-	}
+	ch.enabled = true
+	log.Infof("extension.credentialshelper.aws: enabled")
+	ch.cache = NewCache(AWSCredentialsExpiry)
 
 	return ch
 }
@@ -79,17 +66,18 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 
 	registry := image.Image.Registry()
 
-	if !strings.Contains(registry, "amazonaws.com") {
-		return nil, credentialshelper.ErrUnsupportedRegistry
+	_, region, err := parseRegistry(registry)
+	if err != nil {
+		return nil, err
 	}
 
 	cached, err := h.cache.Get(registry)
 	if err == nil {
 		return cached, nil
 	}
-
+	// fetch region from registry instead of env
 	svc := ecr.New(session.New(), &aws.Config{
-		Region: aws.String(h.region),
+		Region: aws.String(region),
 	})
 
 	input := &ecr.GetAuthorizationTokenInput{}
@@ -162,3 +150,21 @@ func decodeBase64Secret(authSecret string) (username, password string, err error
 
 	return parts[0], parts[1], nil
 }
+
+func parseRegistry(registry string) (registryID string, region string, err error) {
+	if !registryRegxp.MatchString(registry) {
+		err = credentialshelper.ErrUnsupportedRegistry
+		return
+	}
+	// parse registry with named regex, then put into map by name
+	matches := registryRegxp.FindStringSubmatch(registry)
+	registryParsed := make(map[string]string)
+	for i, name := range registryRegxp.SubexpNames() {
+		if i != 0 && name != "" {
+			registryParsed[name] = matches[i]
+		}
+	}
+
+	return registryParsed["registryID"], registryParsed["region"], nil
+}
+

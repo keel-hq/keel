@@ -62,3 +62,17 @@ func TestCredentialsCaching(t *testing.T) {
 		}
 	}
 }
+
+func TestAWSRegistryParse(t *testing.T) {
+	registry := "528670773427.dkr.ecr.us-east-2.amazonaws.com"
+	registryID, region, err := parseRegistry(registry)
+	if err != nil {
+		t.Fatalf("parseRegistry got error: %s", err)
+	}
+	if registryID != "528670773427" {
+		t.Fatalf("parseRegistry parse registryID(528670773427) not as expected: %s", registryID)
+	}
+	if region != "us-east-2" {
+		t.Fatalf("parseRegistry parse region(us-east-2) not as expected: %s", region)
+	}
+}
