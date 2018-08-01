@@ -104,6 +104,8 @@ spec:
             - name: HIPCHAT_APPROVALS_PASSWORT
               value: "{{ .Values.hipchat.password }}"
 {{- end }}
+            - name: NOTIFICATION_LEVEL
+              value: {{ default "info" .Values.notification_level | quote }}
 {{- if .Values.debug }}
             # Enable debug logging
             - name: DEBUG
