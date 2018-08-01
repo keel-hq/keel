@@ -27,7 +27,7 @@ Keel provides several key features:
 Docker image _polling_, _Kubernetes provider_ and _Helm provider_ support are set by default, then Kubernetes _deployments_ can be upgraded when new Docker image is available:
 
 ```console
-helm upgrade --install keel --namespace keel keel/
+$ helm upgrade --install keel --namespace keel keel/
 ```
 
 ### Setting up Helm release to be automatically updated by Keel
@@ -50,8 +50,8 @@ keel:
 
 The same can be applied with `--set` flag without using `values.yaml` file:
 
-```
-helm upgrade --install whd webhookdemo --namespace keel --reuse-values \
+```console
+$ helm upgrade --install whd webhookdemo --namespace keel --reuse-values \
   --set keel.policy="all",keel.trigger="poll",keel.pollSchedule="@every 3m" \
   --set keel.images[0].repository="image.repository" \
   --set keel.images[0].tag="image.tag"
