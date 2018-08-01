@@ -106,6 +106,7 @@ The following table lists has the main configurable parameters (polling, trigger
 | `hipchat.user_name`               | Hipchat username in Jabber format      |                                                           |
 | `hipchat.password`                | Hipchat password for approvals user    |                                                           |
 | `googleApplicationCredentials`    | GCP Service account key configurable   |                                                           |
+| `notification_level`              | Keel notification level                | `info`                                                    |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 

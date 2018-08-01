@@ -15,7 +15,7 @@ metadata:
   namespace: keel
   labels:
     app: keel
-    chart: keel-0.2.1
+    chart: keel-0.6.1
     release: keel
     heritage: Tiller
 
@@ -97,7 +97,7 @@ metadata:
   namespace: keel
   labels:
     app: keel
-    chart: keel-0.2.1
+    chart: keel-0.6.1
     release: keel
     heritage: Tiller
 spec:
@@ -120,7 +120,7 @@ metadata:
   namespace: keel
   labels:
     app: keel
-    chart: keel-0.2.1
+    chart: keel-0.6.1
     release: keel
     heritage: Tiller
 spec:
@@ -178,6 +178,8 @@ spec:
               value: ""
             - name: HIPCHAT_APPROVALS_PASSWORT
               value: ""
+            - name: NOTIFICATION_LEVEL
+              value: "info"
             # Enable insecure registries
             - name: INSECURE_REGISTRY
               value: "true"
@@ -222,6 +224,20 @@ spec:
               cpu: 50m
               memory: 64Mi
             
+
+---
+# Source: keel/templates/pod-disruption-budget.yaml
+
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: keel
+  namespace: keel
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: keel
 
 ---
 # Source: keel/templates/secrets-google.yaml

@@ -4,7 +4,7 @@
 
 image:
   repository: keelhq/keel
-  # tag: 
+  # tag:
   pullPolicy: IfNotPresent
 
 # Enable insecure registries
@@ -27,6 +27,9 @@ gcr:
   projectId:  ""
   pubSub:
     enabled: false
+
+# Notification level (debug, info, success, warn, error, fatal)
+notification_level: info
 
 # Webhook Notification
 # Remote webhook endpoint for notification delivery
