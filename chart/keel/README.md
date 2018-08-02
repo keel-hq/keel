@@ -89,7 +89,7 @@ The following table lists has the main configurable parameters (polling, trigger
 | `slack.enabled`                   | Enable/disable Slack Notification      | `false`                                                   |
 | `slack.token`                     | Slack token                            |                                                           |
 | `slack.channel`                   | Slack channel                          |                                                           |
-| `slack.approvals_channel`         | Slack channel for approvals            |                                                           |
+| `slack.approvalsChannel`          | Slack channel for approvals            |                                                           |
 | `service.enable`                  | Enable/disable Keel service            | `false`                                                   |
 | `service.type`                    | Keel service type                      | `LoadBalancer`                                            |
 | `service.externalPort`            | Keel service port                      | `9300`                                                    |
@@ -101,12 +101,12 @@ The following table lists has the main configurable parameters (polling, trigger
 | `hipchat.enabled`                 | Enable/disable hipchat integration     | `false`                                                   |
 | `hipchat.token`                   | Hipchat token                          |                                                           |
 | `hipchat.channel`                 | Hipchat channel                        |                                                           |
-| `hipchat.approvals_channel`       | Hipchat channel for approvals          |                                                           |
+| `hipchat.approvalsChannel`        | Hipchat channel for approvals          |                                                           |
 | `hipchat.bot_name`                | Name of the Hipchat bot                |                                                           |
 | `hipchat.user_name`               | Hipchat username in Jabber format      |                                                           |
 | `hipchat.password`                | Hipchat password for approvals user    |                                                           |
 | `googleApplicationCredentials`    | GCP Service account key configurable   |                                                           |
-| `notification_level`              | Keel notification level                | `info`                                                    |
+| `notificationLevel`               | Keel notification level                | `info`                                                    |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
