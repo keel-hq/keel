@@ -67,6 +67,18 @@ spec:
             - name: PUBSUB
               value: "1"
 {{- end }}
+{{- if .Values.ecr.enabled }}
+            # Enable AWS ECR
+            - name: AWS_ACCESS_KEY_ID
+              value: "{{ .Values.ecr.accessKeyId }}"
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "keel.name" . }}-aws-ecr
+                  key: secretAccessKey
+            - name: AWS_REGION
+              value: "{{ .Values.ecr.region }}"
+{{- end }}
 {{- if .Values.webhook.enabled }}
             # Enable webhook endpoint
             - name: WEBHOOK_ENDPOINT

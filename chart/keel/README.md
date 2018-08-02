@@ -80,10 +80,14 @@ The following table lists has the main configurable parameters (polling, trigger
 | Parameter                         | Description                            | Default                                                   |
 | --------------------------------- | -------------------------------------- | --------------------------------------------------------- |
 | `polling.enabled`                 | Docker registries polling              | `true`                                                    |
-| `helmProvider.enabled`            | Enable/disable Helm provider           | `true`                                                   |
+| `helmProvider.enabled`            | Enable/disable Helm provider           | `true`                                                    |
 | `gcr.enabled`                     | Enable/disable GCR Registry            | `false`                                                   |
 | `gcr.projectID`                   | GCP Project ID GCR belongs to          |                                                           |
 | `gcr.pubsub.enabled`              | Enable/disable GCP Pub/Sub trigger     | `false`                                                   |
+| `ecr.enabled`                     | Enable/disable AWS ECR Registry        | `false`                                                   |
+| `ecr.accessKeyId`                 | AWS_ACCESS_KEY_ID for ECR Registry     |                                                           |
+| `ecr.secretAccessKey`             | AWS_SECRET_ACCESS_KEY for ECR Registry |                                                           |
+| `ecr.region`                      | AWS_REGION for ECR Registry            |                                                           |
 | `webhook.enabled`                 | Enable/disable Webhook Notification    | `false`                                                   |
 | `webhook.endpoint`                | Remote webhook endpoint                |                                                           |
 | `slack.enabled`                   | Enable/disable Slack Notification      | `false`                                                   |

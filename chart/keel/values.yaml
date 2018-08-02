@@ -31,6 +31,14 @@ gcr:
 # Notification level (debug, info, success, warn, error, fatal)
 notificationLevel: info
 
+# AWS Elastic Container Registry
+# https://keel.sh/v1/guide/documentation.html#Polling-with-AWS-ECR
+ecr:
+  enabled: false
+  accessKeyId: ""
+  secretAccessKey: ""
+  region: ""
+
 # Webhook Notification
 # Remote webhook endpoint for notification delivery
 webhook:
