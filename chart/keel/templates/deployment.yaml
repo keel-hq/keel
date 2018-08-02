@@ -83,10 +83,10 @@ spec:
             - name: SLACK_CHANNELS
               value: "{{ .Values.slack.channel }}"
             - name: SLACK_APPROVALS_CHANNEL
-              value: "{{ .Values.slack.approvals_channel }}"
+              value: "{{ .Values.slack.approvalsChannel }}"
   {{- if .Values.slack.bot_name }}
             - name: SLACK_BOT_NAME
-              value: "{{ .Values.slack.bot_name }}"
+              value: "{{ .Values.slack.botName }}"
   {{- end }}
 {{- end }}
 {{- if .Values.hipchat.enabled }}
@@ -96,16 +96,16 @@ spec:
             - name: HIPCHAT_CHANNELS
               value: "{{ .Values.hipchat.channel }}"
             - name: HIPCHAT_APPROVALS_CHANNEL
-              value: "{{ .Values.hipchat.approvals_channel }}"
+              value: "{{ .Values.hipchat.approvalsChannel }}"
             - name: HIPCHAT_APPROVALS_BOT_NAME
-              value: "{{ .Values.hipchat.bot_name }}"
+              value: "{{ .Values.hipchat.botName }}"
             - name: HIPCHAT_APPROVALS_USER_NAME
-              value: "{{ .Values.hipchat.user_name }}"
+              value: "{{ .Values.hipchat.userName }}"
             - name: HIPCHAT_APPROVALS_PASSWORT
               value: "{{ .Values.hipchat.password }}"
 {{- end }}
             - name: NOTIFICATION_LEVEL
-              value: "{{ .Values.notification_level }}"
+              value: "{{ .Values.notificationLevel }}"
 {{- if .Values.debug }}
             # Enable debug logging
             - name: DEBUG
@@ -114,7 +114,7 @@ spec:
 {{- if .Values.insecure_registry }}
             # Enable insecure registries
             - name: INSECURE_REGISTRY
-              value: "{{ .Values.insecure_registry }}"
+              value: "{{ .Values.insecureRegistry }}"
  {{- end }}
 {{- if .Values.aws.region }}
             - name: AWS_REGION
