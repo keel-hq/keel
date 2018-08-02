@@ -8,7 +8,7 @@ image:
   pullPolicy: IfNotPresent
 
 # Enable insecure registries
-insecure_registry: false
+insecureRegistry: false
 
 # Polling is enabled by default,
 # you can disable it setting value below to false
@@ -29,7 +29,7 @@ gcr:
     enabled: false
 
 # Notification level (debug, info, success, warn, error, fatal)
-notification_level: info
+notificationLevel: info
 
 # Webhook Notification
 # Remote webhook endpoint for notification delivery
@@ -41,19 +41,19 @@ webhook:
 # bot name (default keel) must exist!
 slack:
   enabled: false
-  bot_name: ""
+  botName: ""
   token: ""
   channel: ""
-  approvals_channel: ""
+  approvalsChannel: ""
 
 # Hipchat notification and approvals
 hipchat:
   enabled: false
   token: ""
   channel: ""
-  approvals_channel: ""
-  bot_name: ""
-  user_name: ""
+  approvalsChannel: ""
+  botName: ""
+  userName: ""
   password: ""
 
 mattermost:
