@@ -102,8 +102,8 @@ The following table lists has the main configurable parameters (polling, trigger
 | `hipchat.token`                   | Hipchat token                          |                                                           |
 | `hipchat.channel`                 | Hipchat channel                        |                                                           |
 | `hipchat.approvalsChannel`        | Hipchat channel for approvals          |                                                           |
-| `hipchat.bot_name`                | Name of the Hipchat bot                |                                                           |
-| `hipchat.user_name`               | Hipchat username in Jabber format      |                                                           |
+| `hipchat.botName`                 | Name of the Hipchat bot                |                                                           |
+| `hipchat.userName`                | Hipchat username in Jabber format      |                                                           |
 | `hipchat.password`                | Hipchat password for approvals user    |                                                           |
 | `googleApplicationCredentials`    | GCP Service account key configurable   |                                                           |
 | `notificationLevel`               | Keel notification level                | `info`                                                    |
