@@ -52,6 +52,34 @@ Support Keel's development by:
 * Star this repository
 * [Follow on Twitter](https://twitter.com/keel_hq)
 
+### Lightning quick start
+
+Prerequisites:
+
+* [Helm](https://docs.helm.sh/using_helm/#installing-helm)
+* Kubernetes
+
+
+Clone this repo (you will need the chart):
+
+```
+git clone https://github.com/keel-hq/keel.git && cd keel
+```
+
+Install through Helm (with Helm provider enabled):
+
+```bash
+helm upgrade --install keel --namespace=kube-system ./chart/keel/ --set helmProvider.enabled="true" --set rbac.enabled="true"
+```
+
+If you work mostly with regular Kubernetes manifests, you can install Keel without Helm provider support:
+
+```bash
+helm upgrade --install keel --namespace=keel ./chart/keel/ --set helmProvider.enabled="false" --set rbac.enabled="true"
+```
+
+That's it, see [Configuration](https://github.com/keel-hq/keel#configuration) section now.
+
 ### Quick Start
 
 <p align="center">
