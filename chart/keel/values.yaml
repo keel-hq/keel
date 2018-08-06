@@ -4,7 +4,7 @@
 
 image:
   repository: keelhq/keel
-  # tag:
+  tag: 0.9.5
   pullPolicy: IfNotPresent
 
 # Enable insecure registries

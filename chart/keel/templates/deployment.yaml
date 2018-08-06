@@ -39,7 +39,9 @@ spec:
 {{- end }}
           env:
             - name: NAMESPACE
-              value: {{ .Release.Namespace }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
 {{- if .Values.googleApplicationCredentials }}
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /google/google-application-credentials.json
