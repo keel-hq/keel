@@ -6,6 +6,7 @@ import (
 	"github.com/keel-hq/keel/internal/k8s"
 
 	apps_v1 "k8s.io/api/apps/v1"
+	v1beta1 "k8s.io/api/batch/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -137,6 +138,11 @@ func (i *KubernetesImplementer) Update(obj *k8s.GenericResource) error {
 		}
 	case *apps_v1.DaemonSet:
 		_, err := i.client.Apps().DaemonSets(resource.Namespace).Update(resource)
+		if err != nil {
+			return err
+		}
+	case *v1beta1.CronJob:
+		_, err := i.client.BatchV1beta1().CronJobs(resource.Namespace).Update(resource)
 		if err != nil {
 			return err
 		}
