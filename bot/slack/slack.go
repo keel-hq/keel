@@ -206,7 +206,7 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 			"event_user":    event.User,
 			"msg":           event.Text,
 			"event_subtype": event.SubType,
-		}).Info("handleMessage: ignoring message")
+		}).Debug("handleMessage: ignoring message")
 		return
 	}
 

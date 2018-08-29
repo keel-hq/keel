@@ -13,7 +13,7 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/bot"
-	"github.com/keel-hq/keel/cache/kubekv"
+	"github.com/keel-hq/keel/cache/memory"
 
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/credentialshelper"
@@ -156,21 +156,10 @@ func main() {
 	k8s.WatchStatefulSets(&g, implementer.Client(), wl, buf)
 	k8s.WatchDaemonSets(&g, implementer.Client(), wl, buf)
 
-	keelsNamespace := constants.DefaultNamespace
-	if os.Getenv(EnvNamespace) != "" {
-		keelsNamespace = os.Getenv(EnvNamespace)
-	}
-
-	kkv, err := kubekv.New(implementer.ConfigMaps(keelsNamespace), "approvals")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error":     err,
-			"namespace": keelsNamespace,
-		}).Fatal("main: failed to initialise kube-kv")
-	}
+	approvalsCache := memory.NewMemoryCache(24*time.Hour, 24*time.Hour, 10*time.Second)
 
 	serializer := codecs.DefaultSerializer()
-	approvalsManager := approvals.New(kkv, serializer)
+	approvalsManager := approvals.New(approvalsCache, serializer)
 
 	go approvalsManager.StartExpiryService(ctx)
 
