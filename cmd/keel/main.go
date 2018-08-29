@@ -155,6 +155,7 @@ func main() {
 	k8s.WatchDeployments(&g, implementer.Client(), wl, buf)
 	k8s.WatchStatefulSets(&g, implementer.Client(), wl, buf)
 	k8s.WatchDaemonSets(&g, implementer.Client(), wl, buf)
+	k8s.WatchCronJobs(&g, implementer.Client(), wl, buf)
 
 	approvalsCache := memory.NewMemoryCache(24*time.Hour, 24*time.Hour, 10*time.Second)
 
