@@ -68,7 +68,7 @@ func RegisterSender(name string, s Sender) {
 
 	log.WithFields(log.Fields{
 		"name": name,
-	}).Info("extension.notification: sender registered")
+	}).Debug("extension.notification: sender registered")
 
 	senders[name] = s
 }

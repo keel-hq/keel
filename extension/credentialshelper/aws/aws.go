@@ -4,9 +4,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 
 	// "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws"
@@ -24,6 +24,7 @@ import (
 // This is required to reduce chance of hiting rate limits,
 // more info here: https://docs.aws.amazon.com/AmazonECR/latest/userguide/service_limits.html
 const AWSCredentialsExpiry = 2 * time.Hour
+
 var registryRegxp *regexp.Regexp
 
 func init() {
@@ -46,9 +47,7 @@ type CredentialsHelper struct {
 func New() *CredentialsHelper {
 	ch := &CredentialsHelper{}
 	ch.enabled = true
-	log.Infof("extension.credentialshelper.aws: enabled")
 	ch.cache = NewCache(AWSCredentialsExpiry)
-
 	return ch
 }
 
@@ -167,4 +166,3 @@ func parseRegistry(registry string) (registryID string, region string, err error
 
 	return registryParsed["registryID"], registryParsed["region"], nil
 }
-
