@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	apps_v1 "k8s.io/api/apps/v1"
+	v1beta1 "k8s.io/api/batch/v1beta1"
 	"k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/fields"
@@ -28,6 +29,11 @@ func WatchStatefulSets(g *workgroup.Group, client *kubernetes.Clientset, log log
 // WatchDaemonSets creates a SharedInformer for apps/v1.DaemonSet and registers it with g.
 func WatchDaemonSets(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, rs ...cache.ResourceEventHandler) {
 	watch(g, client.AppsV1().RESTClient(), log, "daemonsets", new(apps_v1.DaemonSet), rs...)
+}
+
+// WatchCronJobs creates a SharedInformer for v1beta1.CronJob and registers it with g.
+func WatchCronJobs(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, rs ...cache.ResourceEventHandler) {
+	watch(g, client.BatchV1beta1().RESTClient(), log, "cronjobs", new(v1beta1.CronJob), rs...)
 }
 
 func watch(g *workgroup.Group, c cache.Getter, log logrus.FieldLogger, resource string, objType runtime.Object, rs ...cache.ResourceEventHandler) {

@@ -16,11 +16,9 @@ spec:
     spec:
       serviceAccountName: keel
       containers:
-        - image: keelhq/keel:0.9.3
+        - image: keelhq/keel:0.9.7
           imagePullPolicy: Always
           env:
-            # - name: POLL
-            #   value: "1"
             - name: PUBSUB
               value: "1"
             # how to setup : https://cloud.google.com/kubernetes-engine/docs/tutorials/authenticating-to-cloud-platform  
