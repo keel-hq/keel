@@ -25,50 +25,15 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  labels:
+    name: keel
   name: keel
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - namespaces
-    verbs:
-      - watch
-      - list
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - get
-      - watch
-      - list
-  - apiGroups:
-      - ""
-      - extensions
-      - apps
-    resources:
-      - pods
-      - replicasets
-      - replicationcontrollers
-      - statefulsets
-      - deployments
-      - daemonsets
-      - jobs
-    verbs:
-      - get
-      - delete # required to delete pods during force upgrade of the same tag
-      - watch
-      - list
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - get
-      - create
-      - update
-
+  - apiGroups: ['*']
+    resources: ['*']
+    verbs: ['*']
+  - nonResourceURLs: ['*']
+    verbs: ['*']
 
 ---
 # Source: keel/templates/clusterrolebinding.yaml
