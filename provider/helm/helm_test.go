@@ -499,3 +499,71 @@ keel:
 		})
 	}
 }
+
+func TestGetChartMatchTag(t *testing.T) {
+
+	chartVals := `
+name: al Rashid
+where:
+  city: Basrah
+  title: caliph
+image:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.1.0
+
+keel:  
+  policy: all  
+  trigger: poll
+  matchTag: true
+  images:
+    - repository: image.repository
+      tag: image.tag
+
+`
+
+	fakeImpl := &fakeImplementer{
+		listReleasesResponse: &rls.ListReleasesResponse{
+			Releases: []*hapi_release5.Release{
+				&hapi_release5.Release{
+					Name: "release-1",
+					Chart: &chart.Chart{
+						Values:   &chart.Config{Raw: chartVals},
+						Metadata: &chart.Metadata{Name: "app-x"},
+					},
+					Config: &chart.Config{Raw: ""},
+				},
+			},
+		},
+	}
+
+	releases, err := fakeImpl.ListReleases()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	policyFound := false
+
+	for _, release := range releases.Releases {
+
+		vals, err := values(release.Chart, release.Config)
+		if err != nil {
+			t.Fatalf("failed to get values: %s", err)
+		}
+
+		cfg, err := getKeelConfig(vals)
+		if err != nil {
+			t.Errorf("failed to get image paths: %s", err)
+		}
+
+		if cfg.Policy == types.PolicyTypeAll {
+			policyFound = true
+		}
+		if !cfg.MatchTag {
+			t.Errorf("expected to find 'matchTag' == true ")
+		}
+	}
+
+	if !policyFound {
+		t.Errorf("policy not found")
+	}
+}

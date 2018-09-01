@@ -97,6 +97,7 @@ type Root struct {
 // KeelChartConfig - keel related configuration taken from values.yaml
 type KeelChartConfig struct {
 	Policy               types.PolicyType  `json:"policy"`
+	MatchTag             bool              `json:"matchTag"`
 	Trigger              types.TriggerType `json:"trigger"`
 	PollSchedule         string            `json:"pollSchedule"`
 	Approvals            int               `json:"approvals"`        // Minimum required approvals
