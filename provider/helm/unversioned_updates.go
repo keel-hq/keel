@@ -66,7 +66,16 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 			log.WithFields(log.Fields{
 				"parsed_image_name": imageRef.Remote(),
 				"target_image_name": repo.Name,
-			}).Info("provider.helm: images do not match, ignoring")
+			}).Debug("provider.helm: images do not match, ignoring")
+			continue
+		}
+
+		if keelCfg.MatchTag && imageRef.Tag() != eventRepoRef.Tag() {
+			log.WithFields(log.Fields{
+				"parsed_image_name": imageRef.Remote(),
+				"target_image_name": repo.Name,
+				"policy":            keelCfg.Policy.String(),
+			}).Info("provider.helm: match tag set but tags do not match, ignoring")
 			continue
 		}
 
