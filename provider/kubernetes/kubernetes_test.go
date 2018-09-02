@@ -294,7 +294,7 @@ func TestPrereleaseGetImpactedA(t *testing.T) {
 			meta_v1.ObjectMeta{
 				Name:      "dep-1",
 				Namespace: "xxxx",
-				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+				Labels:    map[string]string{types.KeelPolicyLabel: "major"},
 			},
 			apps_v1.DeploymentSpec{
 				Template: v1.PodTemplateSpec{
@@ -314,7 +314,7 @@ func TestPrereleaseGetImpactedA(t *testing.T) {
 			meta_v1.ObjectMeta{
 				Name:      "dep-2",
 				Namespace: "xxxx",
-				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+				Labels:    map[string]string{types.KeelPolicyLabel: "major"},
 			},
 			apps_v1.DeploymentSpec{
 				Template: v1.PodTemplateSpec{
@@ -404,7 +404,7 @@ func TestPrereleaseGetImpactedB(t *testing.T) {
 			meta_v1.ObjectMeta{
 				Name:      "dep-2",
 				Namespace: "xxxx",
-				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+				Labels:    map[string]string{types.KeelPolicyLabel: "major"},
 			},
 			apps_v1.DeploymentSpec{
 				Template: v1.PodTemplateSpec{

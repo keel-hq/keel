@@ -15,10 +15,10 @@ import (
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/internal/k8s"
+	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 	"github.com/keel-hq/keel/util/policies"
-	"github.com/keel-hq/keel/util/version"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -133,8 +133,8 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		labels := gr.GetLabels()
 
 		// ignoring unlabelled deployments
-		policy := policies.GetPolicy(labels)
-		if policy == types.PolicyTypeNone {
+		plc := policy.GetPolicyFromLabels(labels)
+		if plc.Type() == policy.PolicyTypeNone {
 			continue
 		}
 
@@ -303,6 +303,8 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		log.WithFields(log.Fields{
 			"name":      resource.Name,
 			"kind":      resource.Kind(),
+			"previous":  plan.CurrentVersion,
+			"new":       plan.NewVersion,
 			"namespace": resource.Namespace,
 		}).Info("provider.kubernetes: resource updated")
 		updated = append(updated, resource)
@@ -341,49 +343,14 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 
 		labels := resource.GetLabels()
 
-		policy := policies.GetPolicy(labels)
-		if policy == types.PolicyTypeNone {
-			// skip
+		plc := policy.GetPolicyFromLabels(labels)
+		if plc.Type() == policy.PolicyTypeNone {
 			log.Debugf("no policy defined, skipping: %s, labels: %s", resource.Identifier, labels)
 			continue
 		}
+		log.Infof("keel policy for %s found: %s", resource.Identifier, plc.Name())
 
-		newVersion, err := version.GetVersion(repo.Tag)
-		if err != nil {
-			// failed to get new version tag
-			if policy == types.PolicyTypeForce {
-				updated, shouldUpdateDeployment, err := p.checkUnversionedDeployment(policy, repo, resource)
-				if err != nil {
-					log.WithFields(log.Fields{
-						"error":     err,
-						"name":      resource.Name,
-						"namespace": resource.Namespace,
-						"kind":      resource.Kind(),
-					}).Error("provider.kubernetes: got error while checking unversioned resource")
-					continue
-				}
-
-				if shouldUpdateDeployment {
-					impacted = append(impacted, updated)
-				}
-
-				// success, unversioned deployment marked for update
-				continue
-			}
-
-			log.WithFields(log.Fields{
-				"error":          err,
-				"repository_tag": repo.Tag,
-				"resource_kind":  resource.Kind(),
-				"resource":       resource.Name,
-				"namespace":      resource.Namespace,
-				"kind":           resource.Kind(),
-				"policy":         policy,
-			}).Warn("provider.kubernetes: got error while parsing repository tag, consider using 'force' policy")
-			continue
-		}
-
-		updated, shouldUpdateDeployment, err := p.checkVersionedDeployment(newVersion, policy, repo, resource)
+		updated, shouldUpdateDeployment, err := checkForUpdate(plc, repo, resource)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
@@ -398,7 +365,6 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 			impacted = append(impacted, updated)
 		}
 	}
-	// }
 
 	return impacted, nil
 }
