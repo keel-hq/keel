@@ -15,6 +15,14 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func mustParseGlob(str string) policy.Policy {
+	p, err := policy.NewGlobPolicy(str)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
 func TestProvider_checkForUpdate(t *testing.T) {
 
 	timeutil.Now = func() time.Time {
@@ -137,7 +145,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 		{
 			name: "different tag name for poll image",
 			args: args{
-				policy: policy.NewForcePolicy(false),
+				policy: policy.NewForcePolicy(true),
 				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "master"},
 				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
@@ -545,6 +553,76 @@ func TestProvider_checkForUpdate(t *testing.T) {
 				}),
 				NewVersion:     "latest-staging",
 				CurrentVersion: "latest-staging",
+			},
+			wantShouldUpdateDeployment: true,
+			wantErr:                    false,
+		},
+		{
+			name: "daemonset, glob matcher",
+			args: args{
+				policy: mustParseGlob("glob:release-*"),
+				repo:   &types.Repository{Host: "eu.gcr.io", Name: "karolisr/keel", Tag: "release-2"},
+				resource: MustParseGR(&apps_v1.DaemonSet{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Labels:    map[string]string{types.KeelPolicyLabel: "glob:release-*"},
+						Annotations: map[string]string{
+							types.KeelForceTagMatchLabel: "true",
+						},
+					},
+					apps_v1.DaemonSetSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "eu.gcr.io/karolisr/keel:release-1",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DaemonSetStatus{},
+				}),
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Resource: MustParseGR(&apps_v1.DaemonSet{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:      "dep-1",
+						Namespace: "xxxx",
+						Annotations: map[string]string{
+							types.KeelForceTagMatchLabel: "true",
+						},
+						Labels: map[string]string{types.KeelPolicyLabel: "glob:release-*"},
+					},
+					apps_v1.DaemonSetSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+									// "time": timeutil.Now().String(),
+								},
+							},
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									v1.Container{
+										Image: "eu.gcr.io/karolisr/keel:release-2",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DaemonSetStatus{},
+				}),
+				NewVersion:     "release-2",
+				CurrentVersion: "release-1",
 			},
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,
