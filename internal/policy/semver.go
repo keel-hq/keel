@@ -16,7 +16,6 @@ const (
 	SemverPolicyTypeMajor
 	SemverPolicyTypeMinor
 	SemverPolicyTypePatch
-	// SemverPolicyTypeForce // update always when a new image is available
 )
 
 func (t SemverPolicyType) String() string {
@@ -31,8 +30,6 @@ func (t SemverPolicyType) String() string {
 		return "minor"
 	case SemverPolicyTypePatch:
 		return "patch"
-	// case PolicyTypeForce:
-	// 	return "force"
 	default:
 		return ""
 	}
@@ -49,7 +46,16 @@ type SemverPolicy struct {
 }
 
 func (sp *SemverPolicy) ShouldUpdate(current, new string) (bool, error) {
+	return shouldUpdate(sp.spt, current, new)
+}
 
+func (sp *SemverPolicy) Name() string {
+	return sp.spt.String()
+}
+
+func (sp *SemverPolicy) Type() PolicyType { return PolicyTypeSemver }
+
+func shouldUpdate(spt SemverPolicyType, current, new string) (bool, error) {
 	if current == "latest" {
 		return true, nil
 	}
@@ -64,7 +70,7 @@ func (sp *SemverPolicy) ShouldUpdate(current, new string) (bool, error) {
 		return false, fmt.Errorf("failed to parse new version: %s", err)
 	}
 
-	if currentVersion.Prerelease() != newVersion.Prerelease() && sp.spt != SemverPolicyTypeAll {
+	if currentVersion.Prerelease() != newVersion.Prerelease() && spt != SemverPolicyTypeAll {
 		return false, nil
 	}
 
@@ -73,7 +79,7 @@ func (sp *SemverPolicy) ShouldUpdate(current, new string) (bool, error) {
 		return false, nil
 	}
 
-	switch sp.spt {
+	switch spt {
 	case SemverPolicyTypeAll, SemverPolicyTypeMajor:
 		return true, nil
 	case SemverPolicyTypeMinor:
@@ -83,9 +89,3 @@ func (sp *SemverPolicy) ShouldUpdate(current, new string) (bool, error) {
 	}
 	return false, nil
 }
-
-func (sp *SemverPolicy) Name() string {
-	return sp.spt.String()
-}
-
-func (sp *SemverPolicy) Type() PolicyType { return PolicyTypeSemver }
