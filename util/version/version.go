@@ -2,7 +2,6 @@ package version
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 	"strings"
 
@@ -113,39 +112,4 @@ func NewAvailable(current string, tags []string) (newVersion string, newAvailabl
 		return vs[0].Original(), true, nil
 	}
 	return "", false, nil
-}
-
-// ShouldUpdate - checks whether update is needed
-func ShouldUpdate(current *types.Version, new *types.Version, policy types.PolicyType) (bool, error) {
-	if policy == types.PolicyTypeForce {
-		return true, nil
-	}
-
-	currentVersion, err := semver.NewVersion(current.String())
-	if err != nil {
-		return false, fmt.Errorf("failed to parse current version: %s", err)
-	}
-	newVersion, err := semver.NewVersion(new.String())
-	if err != nil {
-		return false, fmt.Errorf("failed to parse new version: %s", err)
-	}
-
-	if currentVersion.Prerelease() != newVersion.Prerelease() {
-		return false, nil
-	}
-
-	// new version is not higher than current - do nothing
-	if !currentVersion.LessThan(newVersion) {
-		return false, nil
-	}
-
-	switch policy {
-	case types.PolicyTypeAll, types.PolicyTypeMajor:
-		return true, nil
-	case types.PolicyTypeMinor:
-		return newVersion.Major() == currentVersion.Major(), nil
-	case types.PolicyTypePatch:
-		return newVersion.Major() == currentVersion.Major() && newVersion.Minor() == currentVersion.Minor(), nil
-	}
-	return false, nil
 }
