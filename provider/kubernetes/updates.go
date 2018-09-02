@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/policy"
@@ -70,17 +71,11 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 			continue
 		}
 
+		// TODO: investigate whether this still makes sense as now we can always set matchTag=true for poll triggers
 		// if poll trigger is used, also checking for matching versions
 		// if _, ok := annotations[types.KeelPollScheduleAnnotation]; ok {
 		// 	if repo.Tag != containerImageRef.Tag() {
 		// 		fmt.Printf("tags different, not updating (%s != %s) \n", eventRepoRef.Tag(), containerImageRef.Tag())
-		// 		continue
-		// 	}
-		// }
-
-		// updating annotations
-		// if matchTag, _ := labels[types.KeelForceTagMatchLabel]; matchTag == "true" {
-		// 	if containerImageRef.Tag() != eventRepoRef.Tag() {
 		// 		continue
 		// 	}
 		// }
@@ -112,4 +107,10 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 	}
 
 	return updatePlan, shouldUpdateDeployment, nil
+}
+
+func setUpdateTime(resource *k8s.GenericResource) {
+	specAnnotations := resource.GetSpecAnnotations()
+	specAnnotations[types.KeelUpdateTimeAnnotation] = time.Now().String()
+	resource.SetSpecAnnotations(specAnnotations)
 }
