@@ -277,14 +277,14 @@ keel:
 }
 
 func TestGetTriggerFromConfig(t *testing.T) {
-	vals, err := testingConfigYaml(&KeelChartConfig{Trigger: types.TriggerTypePoll})
+	vals, err := testingConfigYaml(&KeelChartConfig{Trigger: types.TriggerTypePoll, Policy: "all"})
 	if err != nil {
 		t.Fatalf("Failed to load testdata: %s", err)
 	}
 
 	cfg, err := getKeelConfig(vals)
 	if err != nil {
-		t.Errorf("failed to get image paths: %s", err)
+		t.Fatalf("failed to get image paths: %s", err)
 	}
 
 	if cfg.Trigger != types.TriggerTypePoll {
@@ -304,7 +304,7 @@ func TestGetPolicyFromConfig(t *testing.T) {
 	}
 
 	// if cfg.Policy != types.PolicyTypeAll {
-	if cfg.Plc.Name() == policy.SemverPolicyTypeAll.String() {
+	if cfg.Plc.Name() != policy.SemverPolicyTypeAll.String() {
 		t.Errorf("invalid policy: %s", cfg.Policy)
 	}
 }
@@ -503,6 +503,7 @@ keel:
 				Images: []ImageDetails{
 					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
+				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
 			},
 		},
 		{
@@ -515,6 +516,7 @@ keel:
 				Images: []ImageDetails{
 					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
+				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
 			},
 		},
 		{
@@ -527,6 +529,7 @@ keel:
 				Images: []ImageDetails{
 					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
+				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor),
 			},
 		},
 	}
