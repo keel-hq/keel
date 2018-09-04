@@ -348,7 +348,6 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 			log.Debugf("no policy defined, skipping: %s, labels: %s", resource.Identifier, labels)
 			continue
 		}
-		log.Infof("keel policy for %s found: %s", resource.Identifier, plc.Name())
 
 		updated, shouldUpdateDeployment, err := checkForUpdate(plc, repo, resource)
 		if err != nil {
