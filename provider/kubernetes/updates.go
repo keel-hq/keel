@@ -2,15 +2,17 @@ package kubernetes
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/keel-hq/keel/internal/k8s"
+	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *types.Repository, resource *k8s.GenericResource) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
+func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.GenericResource) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
 	updatePlan = &UpdatePlan{}
 
 	eventRepoRef, err := image.Parse(repo.String())
@@ -18,20 +20,13 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 		return
 	}
 
-	labels := resource.GetLabels()
 	log.WithFields(log.Fields{
-		"labels":    labels,
 		"name":      resource.Name,
 		"namespace": resource.Namespace,
 		"kind":      resource.Kind(),
-		"policy":    policy,
+		"policy":    plc.Name(),
 	}).Info("provider.kubernetes.checkVersionedDeployment: keel policy found, checking resource...")
-
-	annotations := resource.GetAnnotations()
-
 	shouldUpdateDeployment = false
-
-	// for idx, c := range deployment.Spec.Template.Spec.Containers {
 	for idx, c := range resource.Containers() {
 		containerImageRef, err := image.Parse(c.Image)
 		if err != nil {
@@ -49,7 +44,7 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 			"parsed_image_name": containerImageRef.Remote(),
 			"target_image_name": repo.Name,
 			"target_tag":        repo.Tag,
-			"policy":            policy,
+			"policy":            plc.Name(),
 			"image":             c.Image,
 		}).Info("provider.kubernetes: checking image")
 
@@ -61,20 +56,29 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 			continue
 		}
 
-		// if poll trigger is used, also checking for matching versions
-		if _, ok := annotations[types.KeelPollScheduleAnnotation]; ok {
-			if repo.Tag != containerImageRef.Tag() {
-				fmt.Printf("tags different, not updating (%s != %s) \n", eventRepoRef.Tag(), containerImageRef.Tag())
-				continue
-			}
+		shouldUpdateContainer, err := plc.ShouldUpdate(containerImageRef.Tag(), eventRepoRef.Tag())
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":             err,
+				"parsed_image_name": containerImageRef.Remote(),
+				"target_image_name": repo.Name,
+				"policy":            plc.Name(),
+			}).Error("provider.kubernetes: failed to check whether container should be updated")
+			continue
 		}
 
-		// updating annotations
-		if matchTag, _ := labels[types.KeelForceTagMatchLabel]; matchTag == "true" {
-			if containerImageRef.Tag() != eventRepoRef.Tag() {
-				continue
-			}
+		if !shouldUpdateContainer {
+			continue
 		}
+
+		// TODO: investigate whether this still makes sense as now we can always set matchTag=true for poll triggers
+		// if poll trigger is used, also checking for matching versions
+		// if _, ok := annotations[types.KeelPollScheduleAnnotation]; ok {
+		// 	if repo.Tag != containerImageRef.Tag() {
+		// 		fmt.Printf("tags different, not updating (%s != %s) \n", eventRepoRef.Tag(), containerImageRef.Tag())
+		// 		continue
+		// 	}
+		// }
 
 		// updating spec template annotations
 		setUpdateTime(resource)
@@ -97,10 +101,16 @@ func (p *Provider) checkUnversionedDeployment(policy types.PolicyType, repo *typ
 			"raw_image_name":   c.Image,
 			"target_image":     repo.Name,
 			"target_image_tag": repo.Tag,
-			"policy":           policy,
+			"policy":           plc.Name(),
 		}).Info("provider.kubernetes: impacted deployment container found")
 
 	}
 
 	return updatePlan, shouldUpdateDeployment, nil
+}
+
+func setUpdateTime(resource *k8s.GenericResource) {
+	specAnnotations := resource.GetSpecAnnotations()
+	specAnnotations[types.KeelUpdateTimeAnnotation] = time.Now().String()
+	resource.SetSpecAnnotations(specAnnotations)
 }

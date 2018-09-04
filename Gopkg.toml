@@ -119,3 +119,7 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/ryanuber/go-glob"
+  version = "0.1.0"

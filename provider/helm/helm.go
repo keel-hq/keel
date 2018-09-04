@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
-	"github.com/keel-hq/keel/util/version"
 
 	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
 
@@ -96,7 +96,7 @@ type Root struct {
 
 // KeelChartConfig - keel related configuration taken from values.yaml
 type KeelChartConfig struct {
-	Policy               types.PolicyType  `json:"policy"`
+	Policy               string            `json:"policy"`
 	MatchTag             bool              `json:"matchTag"`
 	Trigger              types.TriggerType `json:"trigger"`
 	PollSchedule         string            `json:"pollSchedule"`
@@ -104,6 +104,8 @@ type KeelChartConfig struct {
 	ApprovalDeadline     int               `json:"approvalDeadline"` // Deadline in hours
 	Images               []ImageDetails    `json:"images"`
 	NotificationChannels []string          `json:"notificationChannels"` // optional notification channels
+
+	Plc policy.Policy `json:"-"`
 }
 
 // ImageDetails - image details
@@ -264,32 +266,8 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 
 	for _, release := range releaseList.Releases {
 
-		newVersion, err := version.GetVersion(event.Repository.Tag)
-		if err != nil {
-			plan, update, errCheck := checkUnversionedRelease(&event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
-			if errCheck != nil {
-				log.WithFields(log.Fields{
-					"error":      err,
-					"deployment": release.Name,
-					"namespace":  release.Namespace,
-				}).Error("provider.helm: got error while checking unversioned release")
-				continue
-			}
-
-			if update {
-				plans = append(plans, plan)
-				helmUnversionedUpdatesCounter.With(prometheus.Labels{"chart": fmt.Sprintf("%s/%s", release.Namespace, release.Name)}).Inc()
-				continue
-			}
-
-			log.WithFields(log.Fields{
-				"error": err,
-				"tag":   event.Repository.Tag,
-			}).Error("provider.helm: failed to parse version")
-			continue
-		}
-
-		plan, update, err := checkVersionedRelease(newVersion, &event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
+		// plan, update, err := checkRelease(newVersion, &event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
+		plan, update, err := checkRelease(&event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":     err,
@@ -446,5 +424,14 @@ func getKeelConfig(vals chartutil.Values) (*KeelChartConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse keel config: %s", err)
 	}
-	return &r.Keel, nil
+
+	if r.Keel.Policy == "" {
+		return nil, fmt.Errorf("policy not specified")
+	}
+
+	cfg := r.Keel
+
+	cfg.Plc = policy.GetPolicy(cfg.Policy, &policy.Options{MatchTag: cfg.MatchTag})
+
+	return &cfg, nil
 }

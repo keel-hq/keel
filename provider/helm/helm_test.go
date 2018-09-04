@@ -9,6 +9,7 @@ import (
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/extension/notification"
+	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/codecs"
 	"k8s.io/helm/pkg/chartutil"
@@ -127,7 +128,7 @@ keel:
 			t.Errorf("failed to get image paths: %s", err)
 		}
 
-		if cfg.Policy == types.PolicyTypeAll {
+		if cfg.Plc.Name() == policy.SemverPolicyTypeAll.String() {
 			policyFound = true
 		}
 	}
@@ -185,6 +186,48 @@ keel:
 	}
 }
 
+func TestGetTrackedReleasesWithoutKeelConfig(t *testing.T) {
+
+	chartVals := `
+name: chart-x
+where:
+  city: kaunas
+  title: hmm
+image:
+  repository: gcr.io/v2-namespace/bye-world
+  tag: 1.1.0
+
+image2:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.2.0 
+
+`
+
+	fakeImpl := &fakeImplementer{
+		listReleasesResponse: &rls.ListReleasesResponse{
+			Releases: []*hapi_release5.Release{
+				&hapi_release5.Release{
+					Name: "release-1",
+					Chart: &chart.Chart{
+						Values:   &chart.Config{Raw: chartVals},
+						Metadata: &chart.Metadata{Name: "app-x"},
+					},
+					Config: &chart.Config{Raw: ""},
+				},
+			},
+		},
+	}
+
+	prov := NewProvider(fakeImpl, &fakeSender{}, approver())
+
+	tracked, _ := prov.TrackedImages()
+
+	if len(tracked) != 0 {
+		t.Errorf("didn't expect to find any tracked releases, found: %d", len(tracked))
+	}
+
+}
+
 func TestGetTrackedReleasesTotallyNonStandard(t *testing.T) {
 
 	chartVals := `
@@ -234,14 +277,14 @@ keel:
 }
 
 func TestGetTriggerFromConfig(t *testing.T) {
-	vals, err := testingConfigYaml(&KeelChartConfig{Trigger: types.TriggerTypePoll})
+	vals, err := testingConfigYaml(&KeelChartConfig{Trigger: types.TriggerTypePoll, Policy: "all"})
 	if err != nil {
 		t.Fatalf("Failed to load testdata: %s", err)
 	}
 
 	cfg, err := getKeelConfig(vals)
 	if err != nil {
-		t.Errorf("failed to get image paths: %s", err)
+		t.Fatalf("failed to get image paths: %s", err)
 	}
 
 	if cfg.Trigger != types.TriggerTypePoll {
@@ -250,7 +293,7 @@ func TestGetTriggerFromConfig(t *testing.T) {
 }
 
 func TestGetPolicyFromConfig(t *testing.T) {
-	vals, err := testingConfigYaml(&KeelChartConfig{Policy: types.PolicyTypeAll})
+	vals, err := testingConfigYaml(&KeelChartConfig{Policy: "all"})
 	if err != nil {
 		t.Fatalf("Failed to load testdata: %s", err)
 	}
@@ -260,13 +303,14 @@ func TestGetPolicyFromConfig(t *testing.T) {
 		t.Errorf("failed to get image paths: %s", err)
 	}
 
-	if cfg.Policy != types.PolicyTypeAll {
+	// if cfg.Policy != types.PolicyTypeAll {
+	if cfg.Plc.Name() != policy.SemverPolicyTypeAll.String() {
 		t.Errorf("invalid policy: %s", cfg.Policy)
 	}
 }
 
 func TestGetImagesFromConfig(t *testing.T) {
-	vals, err := testingConfigYaml(&KeelChartConfig{Policy: types.PolicyTypeAll, Images: []ImageDetails{
+	vals, err := testingConfigYaml(&KeelChartConfig{Policy: "all", Images: []ImageDetails{
 		ImageDetails{
 			RepositoryPath: "repopath",
 			TagPath:        "tagpath",
@@ -454,35 +498,38 @@ keel:
 			name: "correct config",
 			args: args{vals: valuesBasic},
 			want: &KeelChartConfig{
-				Policy:  types.PolicyTypeAll,
+				Policy:  "all",
 				Trigger: types.TriggerTypeDefault,
 				Images: []ImageDetails{
 					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
+				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
 			},
 		},
 		{
 			name: "custom notification channels",
 			args: args{vals: valuesChannels},
 			want: &KeelChartConfig{
-				Policy:               types.PolicyTypeAll,
+				Policy:               "all",
 				Trigger:              types.TriggerTypeDefault,
 				NotificationChannels: []string{"chan1", "chan2"},
 				Images: []ImageDetails{
 					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
+				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
 			},
 		},
 		{
 			name: "correct polling config",
 			args: args{vals: valuesPoll},
 			want: &KeelChartConfig{
-				Policy:       types.PolicyTypeMajor,
+				Policy:       "major",
 				Trigger:      types.TriggerTypePoll,
 				PollSchedule: "@every 30m",
 				Images: []ImageDetails{
 					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
+				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor),
 			},
 		},
 	}
@@ -555,7 +602,7 @@ keel:
 			t.Errorf("failed to get image paths: %s", err)
 		}
 
-		if cfg.Policy == types.PolicyTypeAll {
+		if cfg.Plc.Name() == policy.SemverPolicyTypeAll.String() {
 			policyFound = true
 		}
 		if !cfg.MatchTag {

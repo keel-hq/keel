@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
@@ -9,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func checkUnversionedRelease(repo *types.Repository, namespace, name string, chart *hapi_chart.Chart, config *hapi_chart.Config) (plan *UpdatePlan, shouldUpdateRelease bool, err error) {
+func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_chart.Chart, config *hapi_chart.Config) (plan *UpdatePlan, shouldUpdateRelease bool, err error) {
 
 	plan = &UpdatePlan{
 		Chart:     chart,
@@ -44,9 +45,10 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 		// ignoring this release, no keel config found
 		return plan, false, nil
 	}
+	log.Infof("policy for release %s/%s parsed: %s", namespace, name, keelCfg.Plc.Name())
 
-	if keelCfg.Policy != types.PolicyTypeForce {
-		// policy is not force, ignoring release
+	if keelCfg.Plc.Type() == policy.PolicyTypeNone {
+		// policy is not set, ignoring release
 		return plan, false, nil
 	}
 
@@ -70,14 +72,33 @@ func checkUnversionedRelease(repo *types.Repository, namespace, name string, cha
 			continue
 		}
 
-		if keelCfg.MatchTag && imageRef.Tag() != eventRepoRef.Tag() {
+		shouldUpdate, err := keelCfg.Plc.ShouldUpdate(imageRef.Tag(), eventRepoRef.Tag())
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":           err,
+				"repository_name": imageDetails.RepositoryPath,
+				"repository_tag":  imageDetails.TagPath,
+			}).Error("provider.helm: got error while checking whether update the chart")
+			continue
+		}
+
+		if !shouldUpdate {
 			log.WithFields(log.Fields{
 				"parsed_image_name": imageRef.Remote(),
 				"target_image_name": repo.Name,
-				"policy":            keelCfg.Policy.String(),
-			}).Info("provider.helm: match tag set but tags do not match, ignoring")
+				"policy":            keelCfg.Plc.Name(),
+			}).Info("provider.helm: ignoring")
 			continue
 		}
+
+		// if keelCfg.MatchTag && imageRef.Tag() != eventRepoRef.Tag() {
+		// 	log.WithFields(log.Fields{
+		// 		"parsed_image_name": imageRef.Remote(),
+		// 		"target_image_name": repo.Name,
+		// 		"policy":            keelCfg.Policy.String(),
+		// 	}).Info("provider.helm: match tag set but tags do not match, ignoring")
+		// 	continue
+		// }
 
 		if imageDetails.DigestPath != "" {
 			plan.Values[imageDetails.DigestPath] = repo.Digest

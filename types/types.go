@@ -25,7 +25,8 @@ const KeelPolicyLabel = "keel.sh/policy"
 const KeelTriggerLabel = "keel.sh/trigger"
 
 // KeelForceTagMatchLabel - label that checks whether tags match before force updating
-const KeelForceTagMatchLabel = "keel.sh/match-tag"
+const KeelForceTagMatchLegacyLabel = "keel.sh/match-tag"
+const KeelForceTagMatchLabel = "keel.sh/matchTag"
 
 // KeelPollScheduleAnnotation - optional variable to setup custom schedule for polling, defaults to @every 10m
 const KeelPollScheduleAnnotation = "keel.sh/pollSchedule"
@@ -154,56 +155,6 @@ func ParseTrigger(trigger string) TriggerType {
 	}
 	return TriggerTypeDefault
 }
-
-// PolicyType - policy type
-type PolicyType int
-
-// ParsePolicy - parse policy type
-func ParsePolicy(policy string) PolicyType {
-	switch policy {
-	case "all":
-		return PolicyTypeAll
-	case "major":
-		return PolicyTypeMajor
-	case "minor":
-		return PolicyTypeMinor
-	case "patch":
-		return PolicyTypePatch
-	case "force":
-		return PolicyTypeForce
-	default:
-		return PolicyTypeNone
-	}
-}
-
-func (t PolicyType) String() string {
-	switch t {
-	case PolicyTypeNone:
-		return "none"
-	case PolicyTypeAll:
-		return "all"
-	case PolicyTypeMajor:
-		return "major"
-	case PolicyTypeMinor:
-		return "minor"
-	case PolicyTypePatch:
-		return "patch"
-	case PolicyTypeForce:
-		return "force"
-	default:
-		return ""
-	}
-}
-
-// available policies
-const (
-	PolicyTypeNone PolicyType = iota
-	PolicyTypeAll
-	PolicyTypeMajor
-	PolicyTypeMinor
-	PolicyTypePatch
-	PolicyTypeForce // update always when a new image is available
-)
 
 // EventNotification notification used for sending
 type EventNotification struct {
