@@ -98,7 +98,7 @@ spec:
               value: "{{ .Values.slack.channel }}"
             - name: SLACK_APPROVALS_CHANNEL
               value: "{{ .Values.slack.approvalsChannel }}"
-  {{- if .Values.slack.bot_name }}
+  {{- if .Values.slack.botName }}
             - name: SLACK_BOT_NAME
               value: "{{ .Values.slack.botName }}"
   {{- end }}
@@ -125,7 +125,7 @@ spec:
             - name: DEBUG
               value: "1"
 {{- end }}
-{{- if .Values.insecure_registry }}
+{{- if .Values.insecureRegistry }}
             # Enable insecure registries
             - name: INSECURE_REGISTRY
               value: "{{ .Values.insecureRegistry }}"
