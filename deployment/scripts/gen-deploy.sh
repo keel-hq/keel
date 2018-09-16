@@ -16,7 +16,7 @@ gen() {
 
 	mkdir -p "$(dirname ${OUTPUT})"
   cp chart/keel/values.yaml "${TMP_VALUES}"/
-  sed -i "" 's/false/true/g' "${TMP_VALUES}/values.yaml"
+  sed -i 's/false/true/g' "${TMP_VALUES}/values.yaml"
 	helm template \
 		"chart/keel" \
     --values "${TMP_VALUES}/values.yaml" \
