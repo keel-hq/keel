@@ -15,7 +15,7 @@ metadata:
   namespace: keel
   labels:
     app: keel
-    chart: keel-0.6.1
+    chart: keel-0.7.0
     release: keel
     heritage: Tiller
 
@@ -25,15 +25,52 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  labels:
-    name: keel
   name: keel
 rules:
-  - apiGroups: ['*']
-    resources: ['*']
-    verbs: ['*']
-  - nonResourceURLs: ['*']
-    verbs: ['*']
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - watch
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - watch
+      - list
+  - apiGroups:
+      - ""
+      - extensions
+      - apps
+      - batch
+    resources:
+      - pods
+      - replicasets
+      - replicationcontrollers
+      - statefulsets
+      - deployments
+      - daemonsets
+      - jobs
+      - cronjobs
+    verbs:
+      - get
+      - delete # required to delete pods during force upgrade of the same tag
+      - watch
+      - list
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - create
+      - update
+
 
 ---
 # Source: keel/templates/clusterrolebinding.yaml
@@ -62,7 +99,7 @@ metadata:
   namespace: keel
   labels:
     app: keel
-    chart: keel-0.6.1
+    chart: keel-0.7.0
     release: keel
     heritage: Tiller
 spec:
@@ -85,7 +122,7 @@ metadata:
   namespace: keel
   labels:
     app: keel
-    chart: keel-0.6.1
+    chart: keel-0.7.0
     release: keel
     heritage: Tiller
 spec:
@@ -104,12 +141,14 @@ spec:
       containers:
         - name: keel
           # Note that we use appVersion to get images tag.
-          image: "keelhq/keel:0.9.5"
+          image: "keelhq/keel:0.10.0"
           imagePullPolicy: IfNotPresent
           command: ["/bin/keel"]
           env:
             - name: NAMESPACE
-              value: keel
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
             # Enable polling
             - name: POLL
               value: "1"
@@ -118,6 +157,16 @@ spec:
               value: ""
             - name: PUBSUB
               value: "1"
+            # Enable AWS ECR
+            - name: AWS_ACCESS_KEY_ID
+              value: ""
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: keel-aws-ecr
+                  key: secretAccessKey
+            - name: AWS_REGION
+              value: ""
             # Enable webhook endpoint
             - name: WEBHOOK_ENDPOINT
               value: ""
@@ -203,6 +252,10 @@ spec:
   selector:
     matchLabels:
       app: keel
+
+---
+# Source: keel/templates/secrets-aws-ecr.yaml
+
 
 ---
 # Source: keel/templates/secrets-google.yaml
