@@ -143,31 +143,6 @@ spec:
               cpu: 50m
               memory: 64Mi
             
-        - name: webhookrelayd
-          image: "webhookrelay/webhookrelayd:0.6.3"
-          imagePullPolicy: IfNotPresent
-          command: ["/relayd"]
-          env:
-            - name: KEY
-              valueFrom:
-                secretKeyRef:
-                  name: keel-webhookrelay
-                  key: key
-            - name: SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: keel-webhookrelay
-                  key: secret
-            - name: BUCKET
-              value: ""
-          resources:
-            limits:
-              cpu: 100m
-              memory: 128Mi
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            
 
 ---
 # Source: keel/templates/pod-disruption-budget.yaml
@@ -182,24 +157,3 @@ spec:
   selector:
     matchLabels:
       app: keel
-
----
-# Source: keel/templates/clusterrole.yaml
-
-
----
-# Source: keel/templates/clusterrolebinding.yaml
-
-
----
-# Source: keel/templates/secrets-aws-ecr.yaml
-
-
----
-# Source: keel/templates/secrets-google.yaml
-
-
----
-# Source: keel/templates/secrets-webhookrelay.yaml
-
-
