@@ -100,6 +100,20 @@ func TestParseRepo(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "git.technotrade.ua:4567/anatoliy/mysql-nafta:0.0.1 (semver)",
+			args: args{remote: "git.technotrade.ua:4567/anatoliy/mysql-nafta:0.0.1"},
+			want: &Repository{
+				Name:       "anatoliy/mysql-nafta:0.0.1",
+				Repository: "git.technotrade.ua:4567/anatoliy/mysql-nafta",
+				Remote:     "git.technotrade.ua:4567/anatoliy/mysql-nafta:0.0.1",
+				Registry:   "git.technotrade.ua:4567",
+				ShortName:  "anatoliy/mysql-nafta",
+				Tag:        "0.0.1",
+				Scheme:     "https",
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
