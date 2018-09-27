@@ -235,10 +235,20 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 func credentialsFromConfig(image *types.TrackedImage, cfg DockerCfg) (*types.Credentials, bool) {
 	credentials := &types.Credentials{}
 	found := false
+	
+	imageRegistry, err := domainOnly(image.Image.Registry())
+	if err != nil {
+		log.WithFields(log.Fields{
+			"image":     image.Image.Repository(),
+			"namespace": image.Namespace,
+			"error":     err,
+		}).Error("secrets.credentialsFromConfig: failed to parse registry hostname")
+		return credentials, false
+    }
 	// looking for our registry
 	for registry, auth := range cfg {
 		h, err := hostname(registry)
-
+		
 		if err != nil {
 			log.WithFields(log.Fields{
 				"image":     image.Image.Repository(),
@@ -249,7 +259,7 @@ func credentialsFromConfig(image *types.TrackedImage, cfg DockerCfg) (*types.Cre
 			continue
 		}
 
-		if h == image.Image.Registry() {
+		if h == imageRegistry {
 			if auth.Username != "" && auth.Password != "" {
 				credentials.Username = auth.Username
 				credentials.Password = auth.Password
@@ -312,6 +322,14 @@ func hostname(registry string) (string, error) {
 			return "", err
 		}
 		return u.Hostname(), nil
+	}
+
+	return registry, nil
+}
+
+func domainOnly(registry string) (string, error) {
+	if strings.Contains(registry, ":") {
+		return strings.Split(registry, ":")[0], nil
 	}
 
 	return registry, nil
