@@ -354,7 +354,6 @@ func TestLookupWithPortedRegistry(t *testing.T) {
 			Data: map[string][]byte{
 				dockerConfigKey: []byte(secretDataPayloadWithPort),
 			},
-                        Name: "example.com",
 			Type: v1.SecretTypeDockercfg,
 		},
 	}
