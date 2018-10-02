@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"net/url"
+
 	"github.com/tbruyelle/hipchat-go/hipchat"
 
 	"github.com/keel-hq/keel/constants"
@@ -46,6 +48,11 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	}
 
 	s.hipchatClient = hipchat.NewClient(token)
+
+	if os.Getenv("HIPCHAT_SERVER") != "" {
+		server, _ := url.Parse(os.Getenv("HIPCHAT_SERVER"))
+		s.hipchatClient.BaseURL = server
+	}
 
 	log.WithFields(log.Fields{
 		"name":     "hipchat",
