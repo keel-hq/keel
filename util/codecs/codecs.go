@@ -31,7 +31,7 @@ type Serializer interface {
 
 // DefaultSerializer - returns default serializer
 func DefaultSerializer() Serializer {
-	return &GobSerializer{}
+	return &JSONSerializer{}
 }
 
 // GobSerializer - gob based serializer

@@ -2,6 +2,7 @@ package approvals
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/keel-hq/keel/cache"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/codecs"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -55,8 +55,7 @@ const (
 type DefaultManager struct {
 	// cache is used to store approvals, key example:
 	// approvals/<provider name>/<identifier>
-	cache      cache.Cache
-	serializer codecs.Serializer
+	cache cache.Cache
 
 	// subscriber channels
 	channels map[uint64]chan *types.Approval
@@ -70,10 +69,9 @@ type DefaultManager struct {
 }
 
 // New create new instance of default manager
-func New(cache cache.Cache, serializer codecs.Serializer) *DefaultManager {
+func New(cache cache.Cache) *DefaultManager {
 	man := &DefaultManager{
 		cache:      cache,
-		serializer: serializer,
 		channels:   make(map[uint64]chan *types.Approval),
 		approvedCh: make(map[uint64]chan *types.Approval),
 		index:      0,
@@ -119,7 +117,7 @@ func (m *DefaultManager) expireEntries() error {
 
 	for k, v := range approvals {
 		var approval types.Approval
-		err = m.serializer.Decode(v, &approval)
+		err = json.Unmarshal(v, &approval)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":      err,
@@ -222,7 +220,7 @@ func (m *DefaultManager) Create(r *types.Approval) error {
 	r.CreatedAt = time.Now()
 	r.UpdatedAt = time.Now()
 
-	bts, err := m.serializer.Encode(r)
+	bts, err := json.Marshal(r)
 	if err != nil {
 		return err
 	}
@@ -245,7 +243,7 @@ func (m *DefaultManager) Update(r *types.Approval) error {
 	r.CreatedAt = existing.CreatedAt
 	r.UpdatedAt = time.Now()
 
-	bts, err := m.serializer.Encode(r)
+	bts, err := json.Marshal(r)
 	if err != nil {
 		return err
 	}
@@ -333,7 +331,7 @@ func (m *DefaultManager) Get(identifier string) (*types.Approval, error) {
 	}
 
 	var approval types.Approval
-	err = m.serializer.Decode(bts, &approval)
+	err = json.Unmarshal(bts, &approval)
 	return &approval, err
 }
 
@@ -347,10 +345,11 @@ func (m *DefaultManager) List() ([]*types.Approval, error) {
 	var approvals []*types.Approval
 	for _, v := range bts {
 		var approval types.Approval
-		err = m.serializer.Decode(v, &approval)
+		err = json.Unmarshal(v, &approval)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"error": err,
+				"error":   err,
+				"payload": string(v),
 			}).Error("approvals.manager: failed to decode payload")
 			continue
 		}

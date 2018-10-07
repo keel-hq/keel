@@ -29,7 +29,6 @@ import (
 	"github.com/keel-hq/keel/trigger/poll"
 	"github.com/keel-hq/keel/trigger/pubsub"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/codecs"
 	"github.com/keel-hq/keel/version"
 
 	// notification extensions
@@ -157,10 +156,8 @@ func main() {
 	k8s.WatchDaemonSets(&g, implementer.Client(), wl, buf)
 	k8s.WatchCronJobs(&g, implementer.Client(), wl, buf)
 
-	approvalsCache := memory.NewMemoryCache(24*time.Hour, 24*time.Hour, 10*time.Second)
-
-	serializer := codecs.DefaultSerializer()
-	approvalsManager := approvals.New(approvalsCache, serializer)
+	approvalsCache := memory.NewMemoryCache()
+	approvalsManager := approvals.New(approvalsCache)
 
 	go approvalsManager.StartExpiryService(ctx)
 
