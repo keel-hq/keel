@@ -2,11 +2,38 @@ JOBDATE		?= $(shell date -u +%Y-%m-%dT%H%M%SZ)
 GIT_REVISION	= $(shell git rev-parse --short HEAD)
 VERSION		?= $(shell git describe --tags --abbrev=0)
 
+LDFLAGS		+= -s -w
 LDFLAGS		+= -X github.com/keel-hq/keel/version.Version=$(VERSION)
 LDFLAGS		+= -X github.com/keel-hq/keel/version.Revision=$(GIT_REVISION)
 LDFLAGS		+= -X github.com/keel-hq/keel/version.BuildDate=$(JOBDATE)
 
 .PHONY: release
+
+fetch-certs:
+	curl --remote-name --time-cond cacert.pem https://curl.haxx.se/ca/cacert.pem
+	cp cacert.pem ca-certificates.crt
+
+compress:
+	upx --brute cmd/keel/release/keel-linux-arm
+	upx --brute cmd/keel/release/keel-linux-aarch64
+
+build-binaries:
+	go get github.com/mitchellh/gox
+	@echo "++ Building keel binaries"
+	cd cmd/keel && gox -verbose -output="release/{{.Dir}}-{{.OS}}-{{.Arch}}" \
+		-ldflags "$(LDFLAGS)" -osarch="linux/arm"
+	@echo "++ building aarch64 binary"
+	cd cmd/keel && env GOARCH=arm64 GOOS=linux go build -ldflags="-s -w" -o release/keel-linux-aarch64
+
+armhf:
+	docker build -t keelhq/keel-arm:latest -f Dockerfile.armhf .
+	docker push keelhq/keel-arm:latest
+
+aarch64:
+	docker build -t keelhq/keel-aarch64:latest -f Dockerfile.aarch64 .
+	docker push keelhq/keel-aarch64:latest
+
+arm: build-binaries	compress fetch-certs armhf aarch64
 
 test:
 	go test -v `go list ./... | egrep -v /vendor/`
