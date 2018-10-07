@@ -15,7 +15,6 @@ import (
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/codecs"
 
 	"testing"
 
@@ -85,14 +84,14 @@ func (i *fakeSlackImplementer) PostMessage(channel, text string, params slack.Po
 func TestBotRequest(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
+	mem := memory.NewMemoryCache()
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {
 		t.Skip()
 	}
 
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	am := approvals.New(mem)
 
 	New("keel", token, "approvals", f8s, am, fi)
 	defer b.Stop()
@@ -126,14 +125,14 @@ func TestBotRequest(t *testing.T) {
 func TestProcessApprovedResponse(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
+	mem := memory.NewMemoryCache()
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {
 		t.Skip()
 	}
 
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	am := approvals.New(mem)
 
 	New("keel", token, "approvals", f8s, am, fi)
 	defer b.Stop()
@@ -167,14 +166,14 @@ func TestProcessApprovedResponse(t *testing.T) {
 func TestProcessApprovalReply(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
+	mem := memory.NewMemoryCache()
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {
 		t.Skip()
 	}
 
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	am := approvals.New(mem)
 
 	identifier := "k8s/project/repo:1.2.3"
 
@@ -232,7 +231,7 @@ func TestProcessApprovalReply(t *testing.T) {
 func TestProcessRejectedReply(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache(100*time.Hour, 100*time.Hour, 100*time.Hour)
+	mem := memory.NewMemoryCache()
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {
@@ -241,7 +240,7 @@ func TestProcessRejectedReply(t *testing.T) {
 
 	identifier := "k8s/project/repo:1.2.3"
 
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	am := approvals.New(mem)
 	// creating initial approve request
 	err := am.Create(&types.Approval{
 		Identifier:     identifier,
@@ -304,7 +303,7 @@ func TestIsApproval(t *testing.T) {
 	//
 	// identifier := "k8s/project/repo:1.2.3"
 	//
-	// am := approvals.New(mem, codecs.DefaultSerializer())
+	// am := approvals.New(mem)
 	// // creating initial approve request
 	// err := am.Create(&types.Approval{
 	// 	Identifier:     identifier,

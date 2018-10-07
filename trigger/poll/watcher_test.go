@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/cache/memory"
@@ -12,7 +11,6 @@ import (
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/codecs"
 	"github.com/keel-hq/keel/util/image"
 )
 
@@ -74,8 +72,8 @@ func (p *fakeProvider) TrackedImages() ([]*types.TrackedImage, error) {
 func TestWatchTagJob(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -121,8 +119,8 @@ func TestWatchTagJob(t *testing.T) {
 func TestWatchTagJobLatest(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -168,8 +166,8 @@ func TestWatchTagJobLatest(t *testing.T) {
 func TestWatchAllTagsJob(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -204,8 +202,8 @@ func TestWatchAllTagsJob(t *testing.T) {
 func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -270,8 +268,8 @@ func TestWatchMultipleTags(t *testing.T) {
 			},
 		},
 	}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	// returning some sha
@@ -346,8 +344,8 @@ func TestWatchTagJobCheckCredentials(t *testing.T) {
 	defer credentialshelper.UnregisterCredentialsHelper("fake")
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -395,8 +393,8 @@ func TestWatchTagJobLatestECR(t *testing.T) {
 		},
 	}
 
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	rc := registry.New()
 
@@ -438,8 +436,8 @@ func TestWatchTagJobLatestECR(t *testing.T) {
 
 func TestUnwatchAfterNotTrackedAnymore(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	// returning some sha

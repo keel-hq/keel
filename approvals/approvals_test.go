@@ -7,13 +7,12 @@ import (
 
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/codecs"
 )
 
 func TestCreateApproval(t *testing.T) {
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache()
 
-	am := New(mem, codecs.DefaultSerializer())
+	am := New(mem)
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -38,9 +37,9 @@ func TestCreateApproval(t *testing.T) {
 }
 
 func TestDeleteApproval(t *testing.T) {
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache()
 
-	am := New(mem, codecs.DefaultSerializer())
+	am := New(mem)
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -67,9 +66,9 @@ func TestDeleteApproval(t *testing.T) {
 }
 
 func TestUpdateApproval(t *testing.T) {
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache()
 
-	am := New(mem, codecs.DefaultSerializer())
+	am := New(mem)
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -124,9 +123,9 @@ func TestUpdateApproval(t *testing.T) {
 }
 
 func TestUpdateApprovalRejected(t *testing.T) {
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache()
 
-	am := New(mem, codecs.DefaultSerializer())
+	am := New(mem)
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -208,9 +207,9 @@ func TestUpdateApprovalRejected(t *testing.T) {
 }
 
 func TestApprove(t *testing.T) {
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache()
 
-	am := New(mem, codecs.DefaultSerializer())
+	am := New(mem)
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -239,9 +238,9 @@ func TestApprove(t *testing.T) {
 }
 
 func TestApproveTwiceSameVoter(t *testing.T) {
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache()
 
-	am := New(mem, codecs.DefaultSerializer())
+	am := New(mem)
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -272,9 +271,9 @@ func TestApproveTwiceSameVoter(t *testing.T) {
 }
 
 func TestApproveTwoVoters(t *testing.T) {
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache()
 
-	am := New(mem, codecs.DefaultSerializer())
+	am := New(mem)
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -305,9 +304,9 @@ func TestApproveTwoVoters(t *testing.T) {
 }
 
 func TestReject(t *testing.T) {
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache()
 
-	am := New(mem, codecs.DefaultSerializer())
+	am := New(mem)
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -336,9 +335,9 @@ func TestReject(t *testing.T) {
 }
 
 func TestExpire(t *testing.T) {
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
+	mem := memory.NewMemoryCache()
 
-	am := New(mem, codecs.DefaultSerializer())
+	am := New(mem)
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,

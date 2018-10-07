@@ -10,7 +10,6 @@ import (
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/codecs"
 	"github.com/keel-hq/keel/util/image"
 
 	"testing"
@@ -67,8 +66,8 @@ func TestCheckDeployment(t *testing.T) {
 		},
 	}
 
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	fs := &fakeSubscriber{}

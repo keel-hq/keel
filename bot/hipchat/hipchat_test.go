@@ -14,7 +14,6 @@ import (
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/codecs"
 
 	testutil "github.com/keel-hq/keel/util/testing"
 
@@ -109,8 +108,8 @@ func TestHelpCommand(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeXmppImplementer{}
 	fi.messages = make(chan *h.Message)
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 
 	NewBot(f8s, am, fi)
 	defer b.Stop()
@@ -139,8 +138,8 @@ func TestBotAproval(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeXmppImplementer{}
 	fi.messages = make(chan *h.Message)
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 
 	NewBot(f8s, am, fi)
 	defer b.Stop()
@@ -201,8 +200,8 @@ func TestBotReject(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeXmppImplementer{}
 	fi.messages = make(chan *h.Message)
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 
 	NewBot(f8s, am, fi)
 	defer b.Stop()

@@ -3,7 +3,6 @@ package helm
 import (
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/keel-hq/keel/approvals"
@@ -11,7 +10,6 @@ import (
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/codecs"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/helm"
 	"k8s.io/helm/pkg/proto/hapi/chart"
@@ -20,9 +18,9 @@ import (
 )
 
 func approver() *approvals.DefaultManager {
-	cache := memory.NewMemoryCache(10*time.Minute, 10*time.Minute, 10*time.Minute)
+	cache := memory.NewMemoryCache()
 
-	return approvals.New(cache, codecs.DefaultSerializer())
+	return approvals.New(cache)
 }
 
 type fakeSender struct {

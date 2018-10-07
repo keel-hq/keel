@@ -2,14 +2,12 @@ package kubernetes
 
 import (
 	"testing"
-	"time"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/codecs"
 
 	apps_v1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
@@ -110,9 +108,8 @@ func (s *fakeSender) Send(event types.EventNotification) error {
 }
 
 func approver() *approvals.DefaultManager {
-	cache := memory.NewMemoryCache(10*time.Minute, 10*time.Minute, 10*time.Minute)
-
-	return approvals.New(cache, codecs.DefaultSerializer())
+	cache := memory.NewMemoryCache()
+	return approvals.New(cache)
 }
 
 func TestGetNamespaces(t *testing.T) {

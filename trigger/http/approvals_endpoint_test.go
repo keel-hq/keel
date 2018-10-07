@@ -6,20 +6,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/codecs"
 )
 
 func TestListApprovals(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
 	srv.registerRoutes(srv.router)
@@ -74,8 +72,8 @@ func TestListApprovals(t *testing.T) {
 
 func TestDeleteApproval(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
 	srv.registerRoutes(srv.router)
@@ -114,8 +112,8 @@ func TestDeleteApproval(t *testing.T) {
 
 func TestApprove(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
 	srv.registerRoutes(srv.router)
@@ -162,8 +160,8 @@ func TestApprove(t *testing.T) {
 
 func TestApproveNotFound(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
 	srv.registerRoutes(srv.router)
@@ -186,8 +184,8 @@ func TestApproveNotFound(t *testing.T) {
 
 func TestApproveGarbageRequest(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
 	srv.registerRoutes(srv.router)
@@ -210,8 +208,8 @@ func TestApproveGarbageRequest(t *testing.T) {
 
 func TestSameVoter(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
 	srv.registerRoutes(srv.router)
@@ -259,8 +257,8 @@ func TestSameVoter(t *testing.T) {
 }
 func TestDifferentVoter(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
 	srv.registerRoutes(srv.router)
@@ -312,8 +310,8 @@ func TestDifferentVoter(t *testing.T) {
 
 func TestReject(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Second, 100*time.Second, 10*time.Second)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
 	srv.registerRoutes(srv.router)

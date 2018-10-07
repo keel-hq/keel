@@ -3,12 +3,10 @@ package http
 import (
 	"bytes"
 	"net/http"
-	"time"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/provider"
-	"github.com/keel-hq/keel/util/codecs"
 
 	"net/http/httptest"
 	"testing"
@@ -38,8 +36,8 @@ var fakeAzureWebhook = `{
 func TestAzureWebhookHandler(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{Providers: providers})
 	srv.registerRoutes(srv.router)

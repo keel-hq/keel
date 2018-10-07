@@ -2,7 +2,6 @@ package pubsub
 
 import (
 	"encoding/json"
-	"time"
 
 	"cloud.google.com/go/pubsub"
 	"golang.org/x/net/context"
@@ -10,7 +9,6 @@ import (
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/provider"
-	"github.com/keel-hq/keel/util/codecs"
 
 	"testing"
 )
@@ -25,8 +23,8 @@ func fakeDoneFunc(id string, done bool) {
 func TestCallback(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	sub := &PubsubSubscriber{disableAck: true, providers: providers}
 
@@ -52,8 +50,8 @@ func TestCallback(t *testing.T) {
 func TestCallbackTagNotSemver(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	sub := &PubsubSubscriber{disableAck: true, providers: providers}
 
@@ -80,8 +78,8 @@ func TestCallbackTagNotSemver(t *testing.T) {
 func TestCallbackNoTag(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache(100*time.Millisecond, 100*time.Millisecond, 10*time.Millisecond)
-	am := approvals.New(mem, codecs.DefaultSerializer())
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
 	sub := &PubsubSubscriber{disableAck: true, providers: providers}
 
