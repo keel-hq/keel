@@ -407,9 +407,8 @@ func (j *WatchRepositoryTagsJob) Run() {
 		return
 	}
 
-	log.Debugf("new tag '%s' available", latestVersion)
-
 	if newAvailable {
+		log.Debugf("new tag '%s' available", latestVersion)
 		// updating current latest
 		j.details.latest = latestVersion
 		event := types.Event{
@@ -424,5 +423,7 @@ func (j *WatchRepositoryTagsJob) Run() {
 			"new_tag":    latestVersion,
 		}).Info("trigger.poll.WatchRepositoryTagsJob: submiting event to providers")
 		j.providers.Submit(event)
+	} else {
+		log.Debugf("no new tag available")
 	}
 }
