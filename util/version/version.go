@@ -109,7 +109,9 @@ func NewAvailable(current string, tags []string) (newVersion string, newAvailabl
 	sort.Sort(sort.Reverse(semver.Collection(vs)))
 
 	if currentVersion.LessThan(vs[0]) {
+		log.WithFields(log.Fields{"currentVersion": currentVersion, "latestAvailable": vs[0]}).Debug("latest available is newer than current")
 		return vs[0].Original(), true, nil
 	}
+	log.WithFields(log.Fields{"currentVersion": currentVersion, "latestAvailable": vs[0]}).Debug("latest available is not newer than current")
 	return "", false, nil
 }
