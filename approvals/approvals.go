@@ -58,11 +58,11 @@ type DefaultManager struct {
 	cache cache.Cache
 
 	// subscriber channels
-	channels map[uint64]chan *types.Approval
-	index    uint64
+	channels map[uint32]chan *types.Approval
+	index    uint32
 
 	// approved channels
-	approvedCh map[uint64]chan *types.Approval
+	approvedCh map[uint32]chan *types.Approval
 
 	mu    *sync.Mutex
 	subMu *sync.RWMutex
@@ -72,8 +72,8 @@ type DefaultManager struct {
 func New(cache cache.Cache) *DefaultManager {
 	man := &DefaultManager{
 		cache:      cache,
-		channels:   make(map[uint64]chan *types.Approval),
-		approvedCh: make(map[uint64]chan *types.Approval),
+		channels:   make(map[uint32]chan *types.Approval),
+		approvedCh: make(map[uint32]chan *types.Approval),
 		index:      0,
 		mu:         &sync.Mutex{},
 		subMu:      &sync.RWMutex{},
@@ -143,7 +143,7 @@ func (m *DefaultManager) expireEntries() error {
 // Subscribe - subscribe for approval events
 func (m *DefaultManager) Subscribe(ctx context.Context) (<-chan *types.Approval, error) {
 	m.subMu.Lock()
-	index := atomic.AddUint64(&m.index, 1)
+	index := atomic.AddUint32(&m.index, 1)
 	approvalsCh := make(chan *types.Approval, 10)
 	m.channels[index] = approvalsCh
 	m.subMu.Unlock()
@@ -168,7 +168,7 @@ func (m *DefaultManager) Subscribe(ctx context.Context) (<-chan *types.Approval,
 // SubscribeApproved - subscribe for approved update requests
 func (m *DefaultManager) SubscribeApproved(ctx context.Context) (<-chan *types.Approval, error) {
 	m.subMu.Lock()
-	index := atomic.AddUint64(&m.index, 1)
+	index := atomic.AddUint32(&m.index, 1)
 	approvedCh := make(chan *types.Approval, 10)
 	m.approvedCh[index] = approvedCh
 	m.subMu.Unlock()
