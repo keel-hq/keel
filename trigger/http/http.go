@@ -106,6 +106,11 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 
 	mux.HandleFunc("/v1/webhooks/azure", s.azureHandler).Methods("POST", "OPTIONS")
 
+	// Docker registry notifications, used by Docker, Gitlab, Harbor
+	// https://docs.docker.com/registry/notifications/
+	//https://docs.gitlab.com/ee/administration/container_registry.html#configure-container-registry-notifications
+	mux.HandleFunc("/v1/webhooks/registry", s.registryNotificationHandler).Methods("POST", "OPTIONS")
+
 	mux.Handle("/metrics", promhttp.Handler())
 }
 
