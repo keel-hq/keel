@@ -114,5 +114,4 @@ func (s *TriggerServer) dockerHubHandler(resp http.ResponseWriter, req *http.Req
 	resp.WriteHeader(http.StatusOK)
 
 	newDockerhubWebhooksCounter.With(prometheus.Labels{"image": event.Repository.Name}).Inc()
-	return
 }
