@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/Masterminds/semver"
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/types"
 
@@ -109,6 +110,47 @@ func (p *DefaultProviders) TrackedImages() ([]*types.TrackedImage, error) {
 	}
 
 	return trackedImages, nil
+}
+
+func appendImage(images []*types.TrackedImage, new *types.TrackedImage) []*types.TrackedImage {
+	for idx, existing := range images {
+		if existing.Image.Repository() == new.Image.Repository() {
+
+			newSemverTag, err := semver.NewVersion(new.Image.Tag())
+			if err != nil {
+				// not semver, just appending as new image
+				return append(images, new)
+			}
+
+			existingSemverTag, err := semver.NewVersion(existing.Image.Tag())
+			if err != nil {
+				// existing tag not semver, just appending as new image
+				return append(images, new)
+			}
+
+			// semver, checking for prerelease tags
+			if newSemverTag.Prerelease() != "" {
+				found := false
+				for _, tag := range existing.SemverPreReleaseTags {
+					if tag == newSemverTag.Prerelease() {
+						found = true
+					}
+				}
+				if !found {
+					images[idx].SemverPreReleaseTags = append(images[idx].SemverPreReleaseTags, newSemverTag.Prerelease())
+				}
+			}
+
+			// if new semver tag is a higher version, updating it as well
+			if newSemverTag.GreaterThan(existingSemverTag) {
+				images[idx].Image = new.Image
+			}
+
+			return images
+		}
+	}
+
+	return append(images, new)
 }
 
 // List - list available providers
