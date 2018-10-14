@@ -177,6 +177,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				Provider:     ProviderName,
 				Namespace:    gr.Namespace,
 				Secrets:      secrets,
+				Meta:         make(map[string]string),
 			})
 		}
 	}
