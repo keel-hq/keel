@@ -2,6 +2,8 @@ package testing
 
 import (
 	"github.com/keel-hq/keel/internal/k8s"
+	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/image"
 
 	apps_v1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
@@ -78,4 +80,19 @@ func (i *FakeK8sImplementer) DeletePod(namespace, name string, opts *meta_v1.Del
 		v1.PodStatus{},
 	})
 	return nil
+}
+
+func GetTrackedImage(i string) *types.TrackedImage {
+	ref, err := image.Parse(i)
+	if err != nil {
+		panic(err)
+	}
+	return &types.TrackedImage{
+		Image:        ref,
+		PollSchedule: "",
+		Trigger:      types.TriggerTypeDefault,
+		Provider:     "",
+		Namespace:    "",
+		Meta:         make(map[string]string),
+	}
 }
