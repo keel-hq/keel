@@ -25,13 +25,21 @@ build-binaries:
 	@echo "++ building aarch64 binary"
 	cd cmd/keel && env GOARCH=arm64 GOOS=linux go build -ldflags="-s -w" -o release/keel-linux-aarch64
 
-armhf:
+armhf-latest:
 	docker build -t keelhq/keel-arm:latest -f Dockerfile.armhf .
 	docker push keelhq/keel-arm:latest
 
-aarch64:
+aarch64-latest:
 	docker build -t keelhq/keel-aarch64:latest -f Dockerfile.aarch64 .
 	docker push keelhq/keel-aarch64:latest
+
+armhf:
+	docker build -t keelhq/keel-arm:$(VERSION) -f Dockerfile.armhf .
+	docker push keelhq/keel-arm:$(VERSION)
+
+aarch64:
+	docker build -t keelhq/keel-aarch64:$(VERSION) -f Dockerfile.aarch64 .
+	docker push keelhq/keel-aarch64:$(VERSION)
 
 arm: build-binaries	compress fetch-certs armhf aarch64
 
@@ -44,7 +52,7 @@ build:
 
 install:
 	@echo "++ Installing keel"
-	CGO_ENABLED=0 GOOS=linux go install -ldflags "$(LDFLAGS) -w -s" github.com/keel-hq/keel/cmd/keel
+	CGO_ENABLED=0 GOOS=linux go install -ldflags "$(LDFLAGS)" github.com/keel-hq/keel/cmd/keel	
 
 image:
 	docker build -t keelhq/keel:alpha -f Dockerfile .
