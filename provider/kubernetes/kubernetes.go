@@ -171,13 +171,14 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				continue
 			}
 			trackedImages = append(trackedImages, &types.TrackedImage{
-				Image:        ref,
-				PollSchedule: schedule,
-				Trigger:      trigger,
-				Provider:     ProviderName,
-				Namespace:    gr.Namespace,
-				Secrets:      secrets,
-				Meta:         make(map[string]string),
+				Image:                ref,
+				PollSchedule:         schedule,
+				Trigger:              trigger,
+				Provider:             ProviderName,
+				Namespace:            gr.Namespace,
+				Secrets:              secrets,
+				Meta:                 make(map[string]string),
+				SemverPreReleaseTags: make(map[string]string),
 			})
 		}
 	}
