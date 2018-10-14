@@ -75,7 +75,7 @@ func GetImageNameAndVersion(name string) (string, *types.Version, error) {
 
 // NewAvailable - takes version and current tags. Checks whether there is a new version in the list of tags
 // and returns it as well as newAvailable bool
-func NewAvailable(current string, tags []string) (newVersion string, newAvailable bool, err error) {
+func NewAvailable(current string, tags []string, matchPreRelease bool) (newVersion string, newAvailable bool, err error) {
 
 	currentVersion, err := semver.NewVersion(current)
 	if err != nil {
@@ -96,6 +96,10 @@ func NewAvailable(current string, tags []string) (newVersion string, newAvailabl
 			}).Debug("failed to parse tag")
 			continue
 
+		}
+
+		if matchPreRelease && currentVersion.Prerelease() != v.Prerelease() {
+			continue
 		}
 
 		vs = append(vs, v)
