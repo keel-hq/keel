@@ -94,7 +94,7 @@ func GetPolicy(policyName string, options *Options) Policy {
 		return NewForcePolicy(options.MatchTag)
 	}
 
-	log.Infof("unknown policy '%s'", policyName)
+	log.Infof("policy.GetPolicy: unknown policy '%s', please check your configuration", policyName)
 
 	return &NilPolicy{}
 }
