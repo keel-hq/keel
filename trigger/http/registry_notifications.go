@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -99,18 +98,18 @@ func (s *TriggerServer) registryNotificationHandler(resp http.ResponseWriter, re
 		return
 	}
 
+	log.WithFields(log.Fields{
+		"event": rn,
+	}).Debug("registryNotificationHandler: received event, looking for a push tag")
+
 	for _, e := range rn.Events {
 
 		if e.Action != "push" {
-			// ignoring non-push events
-			resp.WriteHeader(200)
-			return
+			continue
 		}
 
 		if e.Target.Tag == "" {
-			resp.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(resp, "tag cannot be empty")
-			return
+			continue
 		}
 
 		dockerURL := e.Request.Host + "/" + e.Target.Repository
@@ -122,10 +121,16 @@ func (s *TriggerServer) registryNotificationHandler(resp http.ResponseWriter, re
 		event.Repository.Tag = e.Target.Tag
 		event.Repository.Digest = e.Target.Digest
 
+		log.WithFields(log.Fields{
+			"action":     e.Action,
+			"tag":        e.Target.Tag,
+			"repository": dockerURL,
+			"digest":     e.Target.Digest,
+		}).Debug("registryNotificationHandler: got registry notification, processing")
+
 		s.trigger(event)
 
 		newRegistryNotificationWebhooksCounter.With(prometheus.Labels{"image": event.Repository.Name}).Inc()
-
 	}
 
 }

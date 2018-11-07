@@ -225,7 +225,15 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 			"error": err,
 		}).Fatal("main.setupProviders: failed to create kubernetes provider")
 	}
-	go k8sProvider.Start()
+	go func() {
+		err := k8sProvider.Start()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Fatal("kubernetes provider stopped with an error")
+		}
+	}()
+
 	enabledProviders = append(enabledProviders, k8sProvider)
 
 	if os.Getenv(EnvHelmProvider) == "1" {
@@ -233,7 +241,15 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 		helmImplementer := helm.NewHelmImplementer(tillerAddr)
 		helmProvider := helm.NewProvider(helmImplementer, sender, approvalsManager)
 
-		go helmProvider.Start()
+		go func() {
+			err := helmProvider.Start()
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Fatal("helm provider stopped with an error")
+			}
+		}()
+
 		enabledProviders = append(enabledProviders, helmProvider)
 	}
 
@@ -253,7 +269,15 @@ func setupTriggers(ctx context.Context, providers provider.Providers, approvalsM
 		ApprovalManager: approvalsManager,
 	})
 
-	go whs.Start()
+	go func() {
+		err := whs.Start()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+				"port":  types.KeelDefaultPort,
+			}).Fatal("trigger server stopped")
+		}
+	}()
 
 	// checking whether pubsub (GCR) trigger is enabled
 	if os.Getenv(EnvTriggerPubSub) != "" {
