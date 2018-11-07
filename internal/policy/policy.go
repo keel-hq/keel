@@ -30,15 +30,20 @@ func (np *NilPolicy) ShouldUpdate(c, n string) (bool, error) { return false, nil
 func (np *NilPolicy) Name() string                           { return "nil policy" }
 func (np *NilPolicy) Type() PolicyType                       { return PolicyTypeNone }
 
-// GetPolicyFromLabels - gets policy from k8s labels
-func GetPolicyFromLabels(labels map[string]string) Policy {
+// GetPolicyFromLabelsOrAnnotations - gets policy from k8s labels or annotations
+func GetPolicyFromLabelsOrAnnotations(labels map[string]string, annotations map[string]string) Policy {
 
-	policyName, ok := getPolicyFromLabels(labels)
+	policyNameA, ok := getPolicyFromLabels(annotations)
+	if ok {
+		return GetPolicy(policyNameA, &Options{MatchTag: getMatchTag(annotations)})
+	}
+
+	policyNameL, ok := getPolicyFromLabels(labels)
 	if !ok {
 		return &NilPolicy{}
 	}
 
-	return GetPolicy(policyName, &Options{MatchTag: getMatchTag(labels)})
+	return GetPolicy(policyNameL, &Options{MatchTag: getMatchTag(labels)})
 
 	// switch policyName {
 	// case "all", "major", "minor", "patch":
