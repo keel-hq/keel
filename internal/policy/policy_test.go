@@ -91,3 +91,39 @@ func TestGetPolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestGetPolicyFromLabelsOrAnnotations(t *testing.T) {
+	type args struct {
+		labels      map[string]string
+		annotations map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want Policy
+	}{
+		{
+			name: "annotations policy",
+			args: args{
+				labels:      map[string]string{"foo": "bar"},
+				annotations: map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			want: NewSemverPolicy(SemverPolicyTypeAll),
+		},
+		{
+			name: "annotations overides labels",
+			args: args{
+				labels:      map[string]string{types.KeelPolicyLabel: "patch"},
+				annotations: map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			want: NewSemverPolicy(SemverPolicyTypeAll),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetPolicyFromLabelsOrAnnotations(tt.args.labels, tt.args.annotations); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetPolicyFromLabelsOrAnnotations() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

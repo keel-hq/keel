@@ -131,14 +131,14 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 
 	for _, gr := range p.cache.Values() {
 		labels := gr.GetLabels()
+		annotations := gr.GetAnnotations()
 
 		// ignoring unlabelled deployments
-		plc := policy.GetPolicyFromLabels(labels)
+		plc := policy.GetPolicyFromLabelsOrAnnotations(labels, annotations)
 		if plc.Type() == policy.PolicyTypeNone {
 			continue
 		}
 
-		annotations := gr.GetAnnotations()
 		schedule, ok := annotations[types.KeelPollScheduleAnnotation]
 		if ok {
 			_, err := cron.Parse(schedule)
@@ -156,7 +156,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		}
 
 		// trigger type, we only care for "poll" type triggers
-		trigger := policies.GetTriggerPolicy(labels)
+		trigger := policies.GetTriggerPolicy(labels, annotations)
 		secrets := gr.GetImagePullSecrets()
 		images := gr.GetImages()
 		for _, img := range images {
@@ -343,10 +343,11 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 	for _, resource := range p.cache.Values() {
 
 		labels := resource.GetLabels()
+		annotations := resource.GetAnnotations()
 
-		plc := policy.GetPolicyFromLabels(labels)
+		plc := policy.GetPolicyFromLabelsOrAnnotations(labels, annotations)
 		if plc.Type() == policy.PolicyTypeNone {
-			log.Debugf("no policy defined, skipping: %s, labels: %s", resource.Identifier, labels)
+			log.Debugf("no policy defined, skipping: %s, labels: %s, annotations: %s", resource.Identifier, labels, annotations)
 			continue
 		}
 

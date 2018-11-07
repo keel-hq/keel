@@ -187,7 +187,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				"error":     err,
 				"release":   release.Name,
 				"namespace": release.Namespace,
-			}).Error("provider.helm: failed to get config for release")
+			}).Debug("provider.helm: failed to get config for release")
 			continue
 		}
 
