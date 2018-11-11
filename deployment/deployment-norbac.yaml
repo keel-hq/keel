@@ -86,7 +86,7 @@ spec:
             - name: PROJECT_ID
               value: ""
             - name: PUBSUB
-              value: "1"
+              value: "" # Set to '1' or 'true' to enable GCR pubsub
             # Enable AWS ECR
             - name: AWS_ACCESS_KEY_ID
               value: ""
