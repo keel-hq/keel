@@ -161,10 +161,7 @@ spec:
             - name: AWS_ACCESS_KEY_ID
               value: ""
             - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: keel-aws-ecr
-                  key: secretAccessKey
+              value: ""
             - name: AWS_REGION
               value: ""
             # Enable webhook endpoint
