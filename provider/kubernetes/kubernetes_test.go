@@ -267,6 +267,102 @@ func TestGetImpacted(t *testing.T) {
 	}
 
 }
+func TestGetImpactedPolicyAnnotations(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+
+	deps := []*apps_v1.Deployment{
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-1",
+				Namespace:   "xxxx",
+				Annotations: map[string]string{types.KeelPolicyLabel: "all"},
+				Labels:      map[string]string{"foo": "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-2",
+				Namespace: "xxxx",
+				Labels:    map[string]string{"whatever": "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+	}
+
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	// creating "new version" event
+	repo := &types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "1.1.2",
+	}
+
+	plans, err := provider.createUpdatePlans(repo)
+	if err != nil {
+		t.Errorf("failed to get deployments: %s", err)
+	}
+
+	if len(plans) != 1 {
+		t.Fatalf("expected to find 1 deployment update plan but found %d", len(plans))
+	}
+
+	found := false
+	for _, c := range plans[0].Resource.Containers() {
+
+		containerImageName := versionreg.ReplaceAllString(c.Image, "")
+
+		if containerImageName == repo.Name {
+			found = true
+		}
+	}
+
+	if !found {
+		t.Errorf("couldn't find expected deployment in impacted deployment list")
+	}
+
+}
 func TestPrereleaseGetImpactedA(t *testing.T) {
 	// test scenario when we have two deployments, one with pre-release tag
 	// and one without. New image comes without the prerelease tag. Expected scenario

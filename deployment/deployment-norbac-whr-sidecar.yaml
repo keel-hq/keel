@@ -71,7 +71,7 @@ spec:
       containers:
         - name: keel
           # Note that we use appVersion to get images tag.
-          image: "keelhq/keel:0.10.0"
+          image: "keelhq/keel:0.12.0"
           imagePullPolicy: IfNotPresent
           command: ["/bin/keel"]
           env:
@@ -79,22 +79,16 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            # Enable polling
-            - name: POLL
-              value: "1"
             # Enable GCR with pub/sub support
             - name: PROJECT_ID
-              value: ""
+              value: ""  
             - name: PUBSUB
-              value: "1"
+              value: "" # Set to '1' or 'true' to enable GCR pubsub
             # Enable AWS ECR
             - name: AWS_ACCESS_KEY_ID
               value: ""
             - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: keel-aws-ecr
-                  key: secretAccessKey
+              value: ""
             - name: AWS_REGION
               value: ""
             # Enable webhook endpoint

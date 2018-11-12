@@ -16,7 +16,7 @@ spec:
     spec:
       serviceAccountName: keel
       containers:
-        - image: keelhq/keel:0.9.7
+        - image: keelhq/keel:0.12.0
           imagePullPolicy: Always
           env:
             - name: PUBSUB
