@@ -44,7 +44,7 @@ aarch64:
 arm: build-binaries	compress fetch-certs armhf aarch64
 
 test:
-	go test -v `go list ./... | egrep -v /vendor/`
+	go test -v `go list ./... | egrep -v /tests/`
 
 build:
 	@echo "++ Building keel"
@@ -66,3 +66,6 @@ alpha: image
 
 gen-deploy:
 	deployment/scripts/gen-deploy.sh
+
+e2e: install
+	cd tests && go test
