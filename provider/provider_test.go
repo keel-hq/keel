@@ -89,6 +89,22 @@ func Test_appendImage(t *testing.T) {
 			},
 		},
 		{
+			name: "semver prerelease",
+			args: args{
+				images: []*types.TrackedImage{},
+				new:    testingUtils.GetTrackedImage("karolisr/webhook-demo:1.5.0-dev"),
+			},
+			want: []*types.TrackedImage{
+				&types.TrackedImage{
+					Image: mustParse("karolisr/webhook-demo:1.5.0-dev"),
+					SemverPreReleaseTags: map[string]string{
+						"dev": "1.5.0-dev",
+					},
+					Meta: make(map[string]string),
+				},
+			},
+		},
+		{
 			name: "new semver with previous non-semver tag",
 			args: args{
 				images: []*types.TrackedImage{
