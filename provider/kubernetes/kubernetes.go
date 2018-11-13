@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/rusenask/cron"
 
 	"k8s.io/api/core/v1"
@@ -170,6 +171,15 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				}).Error("provider.kubernetes: failed to parse image")
 				continue
 			}
+			svp := make(map[string]string)
+
+			semverTag, err := semver.NewVersion(ref.Tag())
+			if err == nil {
+				if semverTag.Prerelease() != "" {
+					svp[semverTag.Prerelease()] = ref.Tag()
+				}
+			}
+
 			trackedImages = append(trackedImages, &types.TrackedImage{
 				Image:                ref,
 				PollSchedule:         schedule,
@@ -178,7 +188,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				Namespace:            gr.Namespace,
 				Secrets:              secrets,
 				Meta:                 make(map[string]string),
-				SemverPreReleaseTags: make(map[string]string),
+				SemverPreReleaseTags: svp,
 			})
 		}
 	}
