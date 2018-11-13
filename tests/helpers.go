@@ -3,12 +3,14 @@ package tests
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -48,7 +50,7 @@ func getKubernetesClient() (*rest.Config, *kubernetes.Clientset) {
 func createNamespaceForTest() string {
 	_, clientset := getKubernetesClient()
 	ns := &v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: meta_v1.ObjectMeta{
 			GenerateName: "keel-e2e-test-",
 		},
 	}
@@ -66,7 +68,7 @@ func deleteTestNamespace(namespace string) error {
 
 	defer log.Infof("test namespace '%s' deleted", namespace)
 	_, clientset := getKubernetesClient()
-	deleteOptions := metav1.DeleteOptions{}
+	deleteOptions := meta_v1.DeleteOptions{}
 	return clientset.CoreV1().Namespaces().Delete(namespace, &deleteOptions)
 }
 
@@ -90,4 +92,27 @@ func startKeel(ctx context.Context) error {
 	}()
 
 	return c.Run()
+}
+
+func waitFor(ctx context.Context, kcs *kubernetes.Clientset, namespace, name string, desired string) error {
+	last := ""
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("expected '%s', got: '%s'", desired, last)
+		default:
+			updated, err := kcs.AppsV1().Deployments(namespace).Get(name, meta_v1.GetOptions{})
+			if err != nil {
+				time.Sleep(500 * time.Millisecond)
+				continue
+			}
+
+			if updated.Spec.Template.Spec.Containers[0].Image != desired {
+				time.Sleep(500 * time.Millisecond)
+				last = updated.Spec.Template.Spec.Containers[0].Image
+				continue
+			}
+			return nil
+		}
+	}
 }
