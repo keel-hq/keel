@@ -41,15 +41,17 @@ var dockerHub0150Webhook = `{
 func TestSemverUpdate(t *testing.T) {
 
 	// stop := make(chan struct{})
-	context, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	// defer close(ctx)
 	defer cancel()
 
-	go startKeel(context)
+	go startKeel(ctx)
 
 	_, kcs := getKubernetesClient()
 
 	t.Run("UpdateThroughDockerHubWebhook", func(t *testing.T) {
+
+		// t.Skip()
 
 		testNamespace := createNamespaceForTest()
 		defer deleteTestNamespace(testNamespace)
@@ -112,19 +114,19 @@ func TestSemverUpdate(t *testing.T) {
 			t.Errorf("unexpected webhook response from keel: %d", resp.StatusCode)
 		}
 
-		time.Sleep(2 * time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
 
-		updated, err := kcs.AppsV1().Deployments(testNamespace).Get(dep.ObjectMeta.Name, meta_v1.GetOptions{})
+		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "karolisr/webhook-demo:0.0.15")
 		if err != nil {
-			t.Fatalf("failed to get deployment: %s", err)
-		}
-
-		if updated.Spec.Template.Spec.Containers[0].Image != "karolisr/webhook-demo:0.0.15" {
-			t.Errorf("expected 'karolisr/webhook-demo:0.0.15', got: '%s'", updated.Spec.Template.Spec.Containers[0].Image)
+			t.Errorf("update failed: %s", err)
 		}
 	})
 
-	t.Run("UpdateThroughDockerHubPolling", func(t *testing.T) {
+	t.Run("UpdateThroughDockerHubPollingA", func(t *testing.T) {
+		// UpdateThroughDockerHubPollingA tests a polling trigger when we have a higher version
+		// but without a pre-release tag and a lower version with pre-release. The version of the deployment
+		// is with pre-prerealse so we should upgrade to that one.
 
 		testNamespace := createNamespaceForTest()
 		defer deleteTestNamespace(testNamespace)
@@ -170,18 +172,70 @@ func TestSemverUpdate(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
-		// giving some time to get started
-		// TODO: replace with a readiness check function to wait for 1/1 READY
-		time.Sleep(2 * time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
 
-		updated, err := kcs.AppsV1().Deployments(testNamespace).Get(dep.ObjectMeta.Name, meta_v1.GetOptions{})
+		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "keelhq/push-workflow-example:0.5.0-dev")
 		if err != nil {
-			t.Fatalf("failed to get deployment: %s", err)
-		}
-
-		if updated.Spec.Template.Spec.Containers[0].Image != "keelhq/push-workflow-example:0.5.0-dev" {
-			t.Errorf("expected 'keelhq/push-workflow-example:0.5.0-dev', got: '%s'", updated.Spec.Template.Spec.Containers[0].Image)
+			t.Errorf("update failed: %s", err)
 		}
 	})
 
+	t.Run("UpdateThroughDockerHubPollingB", func(t *testing.T) {
+		// UpdateThroughDockerHubPollingA tests a polling trigger when we have a higher version
+		// but without a pre-release tag and a lower version with pre-release. The version of the deployment
+		// is without pre-prerealse
+
+		testNamespace := createNamespaceForTest()
+		defer deleteTestNamespace(testNamespace)
+
+		dep := &apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "deployment-1",
+				Namespace: testNamespace,
+				Labels: map[string]string{
+					types.KeelPolicyLabel:  "major",
+					types.KeelTriggerLabel: "poll",
+				},
+				Annotations: map[string]string{},
+			},
+			apps_v1.DeploymentSpec{
+				Selector: &meta_v1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "wd-1",
+					},
+				},
+				Template: v1.PodTemplateSpec{
+					ObjectMeta: meta_v1.ObjectMeta{
+						Labels: map[string]string{
+							"app":     "wd-1",
+							"release": "1",
+						},
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Name:  "wd-1",
+								Image: "keelhq/push-workflow-example:0.1.0",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		}
+
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		if err != nil {
+			t.Fatalf("failed to create deployment: %s", err)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+
+		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "keelhq/push-workflow-example:0.10.0")
+		if err != nil {
+			t.Errorf("update failed: %s", err)
+		}
+	})
 }
