@@ -24,8 +24,10 @@ type TrackedImage struct {
 	// dev, prod
 	// SemverPreReleaseTags []string
 	SemverPreReleaseTags map[string]string
+	// combined semver tags
+	Tags []string
 }
 
 func (i TrackedImage) String() string {
-	return fmt.Sprintf("namespace:%s,image:%s:%s,provider:%s,trigger:%s,sched:%s,secrets:%s,semver:%v", i.Namespace, i.Image.Repository(), i.Image.Tag(), i.Provider, i.Trigger, i.PollSchedule, i.Secrets, i.SemverPreReleaseTags)
+	return fmt.Sprintf("namespace:%s,image:%s:%s,provider:%s,trigger:%s,sched:%s,secrets:%s,semver:%v,tags:%v", i.Namespace, i.Image.Repository(), i.Image.Tag(), i.Provider, i.Trigger, i.PollSchedule, i.Secrets, i.SemverPreReleaseTags, i.Tags)
 }

@@ -119,3 +119,34 @@ func NewAvailable(current string, tags []string, matchPreRelease bool) (newVersi
 	log.WithFields(log.Fields{"currentVersion": currentVersion, "latestAvailable": vs[0]}).Debug("latest available is not newer than current")
 	return "", false, nil
 }
+
+// Lowest - returns the lowest versioned tag from the slice
+func Lowest(tags []string) string {
+	if len(tags) == 0 {
+		return ""
+	}
+
+	var vs []*semver.Version
+	for _, r := range tags {
+		v, err := semver.NewVersion(r)
+		if err != nil {
+			continue
+
+		}
+
+		if v.Prerelease() != "" {
+			continue
+		}
+
+		vs = append(vs, v)
+	}
+
+	if len(vs) == 0 {
+		log.Debug("no versions available")
+		return ""
+	}
+
+	sort.Sort(semver.Collection(vs))
+
+	return vs[0].String()
+}

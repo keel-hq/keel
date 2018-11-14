@@ -95,5 +95,6 @@ func GetTrackedImage(i string) *types.TrackedImage {
 		Namespace:            "",
 		Meta:                 make(map[string]string),
 		SemverPreReleaseTags: make(map[string]string),
+		Tags:                 []string{ref.Tag()},
 	}
 }
