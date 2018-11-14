@@ -122,3 +122,23 @@ To test Keel while developing:
 3. Build Keel from `cmd/keel` directory. 
 4. Start Keel with: `keel --no-incluster`. This will use Kubeconfig from your home. 
 
+### Running unit tests
+
+To run unit tests:
+
+```
+make test
+```
+
+### Running e2e tests
+
+Prerequisites:
+- configured kubectl + kubeconfig
+- a running cluster (test suite will create testing namespaces and delete them after tests)
+- Go environment (will compile Keel before running)
+
+Once prerequisites are ready:
+
+```
+make e2e
+```
