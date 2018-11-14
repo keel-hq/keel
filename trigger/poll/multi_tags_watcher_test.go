@@ -43,7 +43,10 @@ func TestWatchMultipleTagsWithSemver(t *testing.T) {
 		mustParse("gcr.io/v2-namespace/hello-world:1.1.1", "@every 10m"),
 	}
 
-	watcher.Watch(tracked...)
+	err := watcher.Watch(tracked...)
+	if err != nil {
+		t.Errorf("failed to watch: %s", err)
+	}
 
 	if len(watcher.watched) != 1 {
 		t.Errorf("expected to find watching 4 entries, found: %d", len(watcher.watched))

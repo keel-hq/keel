@@ -22,7 +22,8 @@ type WatchRepositoryTagsJob struct {
 	providers      provider.Providers
 	registryClient registry.Client
 	details        *watchDetails
-	latests        map[string]string // a map of prerelease tags and their corresponding latest versions
+
+	latests map[string]string // a map of prerelease tags and their corresponding latest versions
 }
 
 // NewWatchRepositoryTagsJob - new tags watcher job
@@ -85,13 +86,17 @@ func (j *WatchRepositoryTagsJob) Run() {
 func (j *WatchRepositoryTagsJob) processTags(tags []string) error {
 	var errors []string
 
+	log.WithFields(log.Fields{
+		"latest":   j.details.latest,
+		"all_tags": tags,
+	}).Debug("trigger.poll.WatchRepositoryTagsJob: checking for new version")
 	latestVersion, newAvailable, err := version.NewAvailable(j.details.latest, tags, false)
 	if err != nil {
 		errors = append(errors, fmt.Sprintf("new available version func returned an error: %s", err))
 	}
 
 	if newAvailable {
-		log.Debugf("new tag '%s' available", latestVersion)
+		log.Debugf("new tag '%s' available, submitting event and assigning it to be the latest", latestVersion)
 		// updating current latest
 		j.details.latest = latestVersion
 		event := types.Event{
@@ -104,10 +109,18 @@ func (j *WatchRepositoryTagsJob) processTags(tags []string) error {
 		log.WithFields(log.Fields{
 			"repository": j.details.trackedImage.Image.Repository(),
 			"new_tag":    latestVersion,
-		}).Info("trigger.poll.WatchRepositoryTagsJob: submiting event to providers")
-		j.providers.Submit(event)
+		}).Debug("trigger.poll.WatchRepositoryTagsJob: submiting event to providers")
+		err := j.providers.Submit(event)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"repository": j.details.trackedImage.Image.Repository(),
+				"new_tag":    latestVersion,
+				"error":      err,
+			}).Error("trigger.poll.WatchRepositoryTagsJob: error while submitting an event")
+		}
 	}
 
+	log.Debugf("trigger.poll.WatchRepositoryTagsJob: processing tags %s", tags)
 	for _, tag := range tags {
 		sv, err := semver.NewVersion(tag)
 		if err != nil {
@@ -117,6 +130,14 @@ func (j *WatchRepositoryTagsJob) processTags(tags []string) error {
 			continue
 		}
 		trackedVersion, ok := j.details.trackedImage.SemverPreReleaseTags[sv.Prerelease()]
+
+		log.WithFields(log.Fields{
+			"all":         tags,
+			"pre_release": sv.Prerelease(),
+			"tracked":     trackedVersion,
+			"tracked_all": j.details.trackedImage.SemverPreReleaseTags,
+		}).Debug("looking for a pre-release")
+
 		if ok {
 			latestVersion, newAvailable, err := version.NewAvailable(trackedVersion, tags, true)
 			if err != nil {
@@ -140,8 +161,15 @@ func (j *WatchRepositoryTagsJob) processTags(tags []string) error {
 				log.WithFields(log.Fields{
 					"repository": j.details.trackedImage.Image.Repository(),
 					"new_tag":    latestVersion,
-				}).Info("trigger.poll.WatchRepositoryTagsJob: submiting event to providers")
-				j.providers.Submit(event)
+				}).Debug("trigger.poll.WatchRepositoryTagsJob: submiting event to providers")
+				err := j.providers.Submit(event)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"repository": j.details.trackedImage.Image.Repository(),
+						"new_tag":    latestVersion,
+						"error":      err,
+					}).Error("trigger.poll.WatchRepositoryTagsJob: error while submitting an event")
+				}
 			}
 
 			if err != nil {
@@ -150,10 +178,6 @@ func (j *WatchRepositoryTagsJob) processTags(tags []string) error {
 		}
 		// nothing to do
 	}
-
-	// for k, v := range j.details.trackedImage.SemverPreReleaseTags {
-
-	// }
 
 	if len(errors) > 0 {
 		return fmt.Errorf("errors while processing repository tags: %s", strings.Join(errors, ","))
