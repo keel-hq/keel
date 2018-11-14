@@ -109,7 +109,24 @@ func (p *DefaultProviders) TrackedImages() ([]*types.TrackedImage, error) {
 		trackedImages = append(trackedImages, ti...)
 	}
 
+	log.WithFields(log.Fields{
+		"images": trackedImages,
+	}).Debug("tracked images")
+
 	return trackedImages, nil
+}
+
+func appendIfDoesntExist(tags []string, tag string) []string {
+	found := false
+	for _, t := range tags {
+		if t == tag {
+			found = true
+		}
+	}
+	if !found {
+		return append(tags, tag)
+	}
+	return tags
 }
 
 func appendImage(images []*types.TrackedImage, new *types.TrackedImage) []*types.TrackedImage {
@@ -119,6 +136,8 @@ func appendImage(images []*types.TrackedImage, new *types.TrackedImage) []*types
 		// not semver, just appending as a new image
 		return append(images, new)
 	}
+
+	new.Tags = appendIfDoesntExist(new.Tags, new.Image.Tag())
 
 	// looking for a semver image
 	idx, ok := lookupSemverImageIdx(images, new)
@@ -157,6 +176,8 @@ func appendImage(images []*types.TrackedImage, new *types.TrackedImage) []*types
 	if newSemverTag.GreaterThan(existingSemverTag) {
 		images[idx].Image = new.Image
 	}
+
+	images[idx].Tags = appendIfDoesntExist(images[idx].Tags, new.Image.Tag())
 
 	return images
 }
