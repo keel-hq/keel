@@ -230,7 +230,7 @@ func (p *Provider) processEvent(event *types.Event) (updated []*k8s.GenericResou
 		log.WithFields(log.Fields{
 			"image": event.Repository.Name,
 			"tag":   event.Repository.Tag,
-		}).Info("provider.kubernetes: no plans for deployment updates found for this event")
+		}).Debug("provider.kubernetes: no plans for deployment updates found for this event")
 		return
 	}
 
