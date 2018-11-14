@@ -72,10 +72,13 @@ func deleteTestNamespace(namespace string) error {
 	return clientset.CoreV1().Namespaces().Delete(namespace, &deleteOptions)
 }
 
-func startKeel(ctx context.Context) error {
+type KeelCmd struct {
+	cmd *exec.Cmd
+}
+
+func (kc *KeelCmd) Start(ctx context.Context) error {
 
 	log.Info("keel started")
-	defer log.Info("keel stopped")
 
 	cmd := "keel"
 	args := []string{"--no-incluster", "--kubeconfig", getKubeConfig()}
@@ -83,15 +86,14 @@ func startKeel(ctx context.Context) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 
-	go func() {
-		<-ctx.Done()
-		err := c.Process.Kill()
-		if err != nil {
-			log.Errorf("failed to kill keel process: %s", err)
-		}
-	}()
+	kc.cmd = c
 
 	return c.Run()
+}
+
+func (kc *KeelCmd) Stop() error {
+	defer log.Info("keel stopped")
+	return kc.cmd.Process.Kill()
 }
 
 func waitFor(ctx context.Context, kcs *kubernetes.Clientset, namespace, name string, desired string) error {

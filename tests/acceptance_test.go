@@ -12,6 +12,8 @@ import (
 	apps_v1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var dockerHub0150Webhook = `{
@@ -38,20 +40,36 @@ var dockerHub0150Webhook = `{
 	}
 }`
 
-func TestSemverUpdate(t *testing.T) {
+func TestWebhooksSemverUpdate(t *testing.T) {
 
 	// stop := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	// defer close(ctx)
 	defer cancel()
 
-	go startKeel(ctx)
+	// go startKeel(ctx)
+	keel := &KeelCmd{}
+	go func() {
+		err := keel.Start(ctx)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Error("failed to start Keel process")
+		}
+	}()
+
+	defer func() {
+		err := keel.Stop()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Error("failed to stop Keel process")
+		}
+	}()
 
 	_, kcs := getKubernetesClient()
 
 	t.Run("UpdateThroughDockerHubWebhook", func(t *testing.T) {
-
-		// t.Skip()
 
 		testNamespace := createNamespaceForTest()
 		defer deleteTestNamespace(testNamespace)
@@ -122,6 +140,36 @@ func TestSemverUpdate(t *testing.T) {
 			t.Errorf("update failed: %s", err)
 		}
 	})
+}
+
+func TestPollingSemverUpdate(t *testing.T) {
+
+	// stop := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	// defer close(ctx)
+	defer cancel()
+
+	// go startKeel(ctx)
+	keel := &KeelCmd{}
+	go func() {
+		err := keel.Start(ctx)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Error("failed to start Keel process")
+		}
+	}()
+
+	defer func() {
+		err := keel.Stop()
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Error("failed to stop Keel process")
+		}
+	}()
+
+	_, kcs := getKubernetesClient()
 
 	t.Run("UpdateThroughDockerHubPollingA", func(t *testing.T) {
 		// UpdateThroughDockerHubPollingA tests a polling trigger when we have a higher version
@@ -140,7 +188,9 @@ func TestSemverUpdate(t *testing.T) {
 					types.KeelPolicyLabel:  "major",
 					types.KeelTriggerLabel: "poll",
 				},
-				Annotations: map[string]string{},
+				Annotations: map[string]string{
+					types.KeelPollScheduleAnnotation: "@every 2s",
+				},
 			},
 			apps_v1.DeploymentSpec{
 				Selector: &meta_v1.LabelSelector{
@@ -192,13 +242,15 @@ func TestSemverUpdate(t *testing.T) {
 		dep := &apps_v1.Deployment{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
-				Name:      "deployment-1",
+				Name:      "deployment-2",
 				Namespace: testNamespace,
 				Labels: map[string]string{
 					types.KeelPolicyLabel:  "major",
 					types.KeelTriggerLabel: "poll",
 				},
-				Annotations: map[string]string{},
+				Annotations: map[string]string{
+					types.KeelPollScheduleAnnotation: "@every 2s",
+				},
 			},
 			apps_v1.DeploymentSpec{
 				Selector: &meta_v1.LabelSelector{
