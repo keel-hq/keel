@@ -25,7 +25,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 		"namespace": resource.Namespace,
 		"kind":      resource.Kind(),
 		"policy":    plc.Name(),
-	}).Info("provider.kubernetes.checkVersionedDeployment: keel policy found, checking resource...")
+	}).Debug("provider.kubernetes.checkVersionedDeployment: keel policy found, checking resource...")
 	shouldUpdateDeployment = false
 	for idx, c := range resource.Containers() {
 		containerImageRef, err := image.Parse(c.Image)
@@ -46,13 +46,13 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 			"target_tag":        repo.Tag,
 			"policy":            plc.Name(),
 			"image":             c.Image,
-		}).Info("provider.kubernetes: checking image")
+		}).Debug("provider.kubernetes: checking image")
 
 		if containerImageRef.Repository() != eventRepoRef.Repository() {
 			log.WithFields(log.Fields{
 				"parsed_image_name": containerImageRef.Remote(),
 				"target_image_name": repo.Name,
-			}).Info("provider.kubernetes: images do not match, ignoring")
+			}).Debug("provider.kubernetes: images do not match, ignoring")
 			continue
 		}
 

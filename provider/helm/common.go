@@ -40,9 +40,10 @@ func getImages(vals chartutil.Values) ([]*types.TrackedImage, error) {
 		}
 
 		trackedImage := &types.TrackedImage{
-			Image:        imageRef,
-			PollSchedule: keelCfg.PollSchedule,
-			Trigger:      keelCfg.Trigger,
+			Image:                imageRef,
+			PollSchedule:         keelCfg.PollSchedule,
+			Trigger:              keelCfg.Trigger,
+			SemverPreReleaseTags: make(map[string]string),
 		}
 
 		images = append(images, trackedImage)

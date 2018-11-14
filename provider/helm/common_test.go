@@ -47,8 +47,9 @@ func Test_getImages(t *testing.T) {
 			},
 			want: []*types.TrackedImage{
 				&types.TrackedImage{
-					Image:   img,
-					Trigger: types.TriggerTypePoll,
+					Image:                img,
+					Trigger:              types.TriggerTypePoll,
+					SemverPreReleaseTags: make(map[string]string),
 				},
 			},
 			wantErr: false,

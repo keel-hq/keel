@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/provider"
@@ -49,6 +50,8 @@ type watchDetails struct {
 	digest       string // image digest
 	latest       string // latest tag
 	schedule     string
+
+	mu sync.RWMutex
 }
 
 // RepositoryWatcher - repository watcher cron
@@ -82,11 +85,8 @@ func (w *RepositoryWatcher) Start(ctx context.Context) {
 	// starting cron job
 	w.cron.Start()
 	go func() {
-		select {
-		case <-ctx.Done():
-			w.cron.Stop()
-			return
-		}
+		<-ctx.Done()
+		w.cron.Stop()
 	}()
 }
 
@@ -202,11 +202,22 @@ func (w *RepositoryWatcher) watch(image *types.TrackedImage) (string, error) {
 
 	// checking schedule
 	if details.schedule != image.PollSchedule {
-		w.cron.UpdateJob(key, image.PollSchedule)
+		err := w.cron.UpdateJob(key, image.PollSchedule)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+				"image": image.String(),
+			}).Error("trigger.poll.RepositoryWatcher.Watch: failed to update image watch job")
+		}
 	}
 
-	// nothing to do
+	details.mu.Lock()
+	details.trackedImage = image
+	// setting main latest version to the lowest from the tracked
+	details.latest = version.Lowest(details.trackedImage.Tags)
+	details.mu.Unlock()
 
+	// nothing to do
 	return key, nil
 }
 
@@ -276,154 +287,4 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 
 	return w.cron.AddJob(key, schedule, job)
 
-}
-
-// WatchTagJob - Watch specific tag job
-type WatchTagJob struct {
-	providers      provider.Providers
-	registryClient registry.Client
-	details        *watchDetails
-}
-
-// NewWatchTagJob - new watch tag job monitors specific tag by checking digest based on specified
-// cron style schedule
-func NewWatchTagJob(providers provider.Providers, registryClient registry.Client, details *watchDetails) *WatchTagJob {
-	return &WatchTagJob{
-		providers:      providers,
-		registryClient: registryClient,
-		details:        details,
-	}
-}
-
-// Run - main function to check schedule
-func (j *WatchTagJob) Run() {
-	creds := credentialshelper.GetCredentials(j.details.trackedImage)
-	reg := j.details.trackedImage.Image.Scheme() + "://" + j.details.trackedImage.Image.Registry()
-	currentDigest, err := j.registryClient.Digest(registry.Opts{
-		Registry: reg,
-		Name:     j.details.trackedImage.Image.ShortName(),
-		Tag:      j.details.trackedImage.Image.Tag(),
-		Username: creds.Username,
-		Password: creds.Password,
-	})
-
-	registriesScannedCounter.With(prometheus.Labels{"registry": j.details.trackedImage.Image.Registry(), "image": j.details.trackedImage.Image.Repository()}).Inc()
-
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-			"image": j.details.trackedImage.Image.String(),
-		}).Error("trigger.poll.WatchTagJob: failed to check digest")
-		return
-	}
-
-	log.WithFields(log.Fields{
-		"current_digest": j.details.digest,
-		"new_digest":     currentDigest,
-		"image":          j.details.trackedImage.Image.String(),
-	}).Debug("trigger.poll.WatchTagJob: checking digest")
-
-	// checking whether image digest has changed
-	if j.details.digest != currentDigest {
-		// updating digest
-		j.details.digest = currentDigest
-
-		event := types.Event{
-			Repository: types.Repository{
-				Name:   j.details.trackedImage.Image.Repository(),
-				Tag:    j.details.trackedImage.Image.Tag(),
-				Digest: currentDigest,
-			},
-			TriggerName: types.TriggerTypePoll.String(),
-		}
-		log.WithFields(log.Fields{
-			"image":      j.details.trackedImage.Image.String(),
-			"new_digest": currentDigest,
-		}).Info("trigger.poll.WatchTagJob: digest change detected, submiting event to providers")
-
-		j.providers.Submit(event)
-
-	}
-}
-
-// WatchRepositoryTagsJob - watch all tags
-type WatchRepositoryTagsJob struct {
-	providers      provider.Providers
-	registryClient registry.Client
-	details        *watchDetails
-}
-
-// NewWatchRepositoryTagsJob - new tags watcher job
-func NewWatchRepositoryTagsJob(providers provider.Providers, registryClient registry.Client, details *watchDetails) *WatchRepositoryTagsJob {
-	return &WatchRepositoryTagsJob{
-		providers:      providers,
-		registryClient: registryClient,
-		details:        details,
-	}
-}
-
-// Run - main function to check schedule
-func (j *WatchRepositoryTagsJob) Run() {
-
-	creds := credentialshelper.GetCredentials(j.details.trackedImage)
-
-	reg := j.details.trackedImage.Image.Scheme() + "://" + j.details.trackedImage.Image.Registry()
-	if j.details.latest == "" {
-		j.details.latest = j.details.trackedImage.Image.Tag()
-	}
-
-	repository, err := j.registryClient.Get(registry.Opts{
-		Registry: reg,
-		Name:     j.details.trackedImage.Image.ShortName(),
-		Tag:      j.details.latest,
-		Username: creds.Username,
-		Password: creds.Password,
-	})
-
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-			"image": j.details.trackedImage.Image.String(),
-		}).Error("trigger.poll.WatchRepositoryTagsJob: failed to get repository")
-		return
-	}
-
-	registriesScannedCounter.With(prometheus.Labels{"registry": j.details.trackedImage.Image.Registry(), "image": j.details.trackedImage.Image.Repository()}).Inc()
-
-	log.WithFields(log.Fields{
-		"current_tag":     j.details.trackedImage.Image.Tag(),
-		"repository_tags": repository.Tags,
-		"image_name":      j.details.trackedImage.Image.Remote(),
-	}).Debug("trigger.poll.WatchRepositoryTagsJob: checking tags")
-
-	latestVersion, newAvailable, err := version.NewAvailable(j.details.latest, repository.Tags)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error":           err,
-			"repository_tags": repository.Tags,
-			// "image":           j.details.imageRef.Remote(),
-			"image": j.details.trackedImage.Image.String(),
-		}).Error("trigger.poll.WatchRepositoryTagsJob: failed to get latest version from tags")
-		return
-	}
-
-	if newAvailable {
-		log.Debugf("new tag '%s' available", latestVersion)
-		// updating current latest
-		j.details.latest = latestVersion
-		event := types.Event{
-			Repository: types.Repository{
-				Name: j.details.trackedImage.Image.Repository(),
-				Tag:  latestVersion,
-			},
-			TriggerName: types.TriggerTypePoll.String(),
-		}
-		log.WithFields(log.Fields{
-			"repository": j.details.trackedImage.Image.Repository(),
-			"new_tag":    latestVersion,
-		}).Info("trigger.poll.WatchRepositoryTagsJob: submiting event to providers")
-		j.providers.Submit(event)
-	} else {
-		log.Debugf("no new tag available")
-	}
 }

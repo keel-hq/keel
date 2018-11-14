@@ -20,9 +20,10 @@ func mustParse(img string, schedule string) *types.TrackedImage {
 		panic(err)
 	}
 	return &types.TrackedImage{
-		Image:        ref,
-		PollSchedule: schedule,
-		Trigger:      types.TriggerTypePoll,
+		Image:                ref,
+		PollSchedule:         schedule,
+		Trigger:              types.TriggerTypePoll,
+		SemverPreReleaseTags: make(map[string]string),
 	}
 }
 

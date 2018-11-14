@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/rusenask/cron"
 
 	"k8s.io/api/core/v1"
@@ -170,13 +171,24 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				}).Error("provider.kubernetes: failed to parse image")
 				continue
 			}
+			svp := make(map[string]string)
+
+			semverTag, err := semver.NewVersion(ref.Tag())
+			if err == nil {
+				if semverTag.Prerelease() != "" {
+					svp[semverTag.Prerelease()] = ref.Tag()
+				}
+			}
+
 			trackedImages = append(trackedImages, &types.TrackedImage{
-				Image:        ref,
-				PollSchedule: schedule,
-				Trigger:      trigger,
-				Provider:     ProviderName,
-				Namespace:    gr.Namespace,
-				Secrets:      secrets,
+				Image:                ref,
+				PollSchedule:         schedule,
+				Trigger:              trigger,
+				Provider:             ProviderName,
+				Namespace:            gr.Namespace,
+				Secrets:              secrets,
+				Meta:                 make(map[string]string),
+				SemverPreReleaseTags: svp,
 			})
 		}
 	}
@@ -218,7 +230,7 @@ func (p *Provider) processEvent(event *types.Event) (updated []*k8s.GenericResou
 		log.WithFields(log.Fields{
 			"image": event.Repository.Name,
 			"tag":   event.Repository.Tag,
-		}).Info("provider.kubernetes: no plans for deployment updates found for this event")
+		}).Debug("provider.kubernetes: no plans for deployment updates found for this event")
 		return
 	}
 

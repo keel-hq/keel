@@ -139,3 +139,32 @@ func TestGetVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestLowest(t *testing.T) {
+	type args struct {
+		tags []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			args: args{tags: []string{}},
+			want: "",
+		},
+		{
+			name: "thre semvers",
+			args: args{tags: []string{"5.0.0", "1.0.0", "3.0.0"}},
+			want: "1.0.0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Lowest(tt.args.tags); got != tt.want {
+				t.Errorf("Lowest() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
