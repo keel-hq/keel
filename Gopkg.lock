@@ -729,8 +729,10 @@
     "kubernetes/typed/storage/v1alpha1",
     "kubernetes/typed/storage/v1beta1",
     "pkg/version",
+    "plugin/pkg/client/auth/gcp",
     "rest",
     "rest/watch",
+    "third_party/forked/golang/template",
     "tools/auth",
     "tools/cache",
     "tools/clientcmd",
@@ -745,7 +747,8 @@
     "util/cert",
     "util/flowcontrol",
     "util/homedir",
-    "util/integer"
+    "util/integer",
+    "util/jsonpath"
   ]
   revision = "90539b4e75a8daaf7f67c3874c6180bfb1a63936"
 
@@ -775,6 +778,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "862afa4784e3cfe505b71bc7100372e9c3c4d82d964b5ff880de988e955b71b6"
+  inputs-digest = "836569579f1c08cf25b2ca56afd8e16792f7f83bd9a467492cc73bb9901258bd"
   solver-name = "gps-cdcl"
   solver-version = 1
