@@ -52,9 +52,8 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	s.endpoint = httpConfig.Endpoint
 
 	// Setup HTTP client.
-	transport := &http.Transport{}
 	s.client = &http.Client{
-		Transport: transport,
+		Transport: http.DefaultTransport,
 		Timeout:   timeout,
 	}
 
