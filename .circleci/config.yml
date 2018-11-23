@@ -29,6 +29,7 @@ jobs:
           command: |
             shellcheck -x .scripts/gen_packages.sh
             shellcheck -x .scripts/index_repo.sh
+            shellcheck -x .scripts/repo-sync.sh
             shellcheck -x .test/e2e-kind.sh
   lint-charts:
     docker:
