@@ -63,9 +63,12 @@ main() {
     kubectl -n kube-system create sa tiller 
     kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
     docker exec "$config_container_id" helm init --service-account tiller
+    echo "Wait for Tiller to be up and ready..."
+    until kubectl -n kube-system get pods 2>&1 | grep -w "tiller-deploy"  | grep -w "1/1"; do sleep 1; done
+    echo
 
-    # Run install test
-    docker exec "$config_container_id" helm init --service-account tiller && ct install --config /workdir/.test/ct.yaml
+    # Run chart install test
+    docker exec "$config_container_id" ct install --config /workdir/.test/ct.yaml
 
     echo "Done Testing!"
 }
