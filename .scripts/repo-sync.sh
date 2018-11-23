@@ -7,7 +7,7 @@ REPO_URL="https://charts.keel.sh"
 function gen_packages() {
   echo "Packaging charts from source code"
   mkdir -p temp
-  for d in stable/*
+  for d in chart/*
   do
    if [[ -d $d ]]
    then
