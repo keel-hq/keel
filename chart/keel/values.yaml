@@ -24,7 +24,7 @@ helmProvider:
 # GCP Project ID
 gcr:
   enabled: false
-  projectId:  ""
+  projectId: ""
   pubSub:
     enabled: false
 
@@ -105,8 +105,8 @@ keel:
   pollSchedule: "@every 3m"
   # images to track and update
   images:
-   - repository: image.repository
-     tag: image.tag
+    - repository: image.repository
+      tag: image.tag
 
 # RBAC manifests management
 rbac:
