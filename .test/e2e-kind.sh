@@ -59,7 +59,12 @@ main() {
     git fetch k8s master
     echo
     
-    # shellcheck disable=SC2086
+    # Install Tiller with RABC
+    kubectl -n kube-system create sa tiller 
+    kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+    docker exec "$config_container_id" helm init --service-account tiller
+
+    # Run install test
     docker exec "$config_container_id" ct install --config /workdir/.test/ct.yaml
 
     echo "Done Testing!"
