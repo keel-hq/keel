@@ -19,3 +19,53 @@ jobs:
       # specify any bash command here prefixed with `run: `
       - run: make build
       - run: make test
+  lint-scripts:
+    docker:
+      - image: koalaman/shellcheck-alpine
+    steps:
+      - checkout
+      - run:
+          name: lint
+          command: |
+            shellcheck -x .scripts/gen_packages.sh
+            shellcheck -x .scripts/index_repo.sh
+            shellcheck -x .test/e2e-kind.sh
+  lint-charts:
+    docker:
+      - image: quay.io/helmpack/chart-testing:v2.0.1
+    steps:
+      - checkout
+      - run:
+          name: lint
+          command: |
+            git remote add k8s https://github.com/keel-hq/keel
+            git fetch k8s master
+            ct lint --config .test/ct.yaml
+  install-charts:
+    machine: true
+    environment:
+      CHART_TESTING_IMAGE: quay.io/helmpack/chart-testing
+      CHART_TESTING_TAG: v2.0.1
+      CHARTS_REPO: https://github.com/keel-hq/keel
+      K8S_VERSION: v1.11.3
+    steps:
+      - checkout
+      - run:
+          name: install
+          command: |
+            .test/e2e-kind.sh
+          no_output_timeout: 3600
+workflows:
+  version: 2
+  build_lint_and_install:
+    jobs:
+      - build
+      - lint-scripts:
+          requires:
+            - build
+      - lint-charts:
+          requires:
+            - lint-scripts
+      - install-charts:
+          requires:
+            - lint-charts
