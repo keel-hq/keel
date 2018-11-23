@@ -65,7 +65,7 @@ main() {
     docker exec "$config_container_id" helm init --service-account tiller
 
     # Run install test
-    docker exec "$config_container_id" ct install --config /workdir/.test/ct.yaml
+    docker exec "$config_container_id" helm init --service-account tiller && ct install --config /workdir/.test/ct.yaml
 
     echo "Done Testing!"
 }
