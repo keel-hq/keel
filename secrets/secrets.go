@@ -235,7 +235,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 func credentialsFromConfig(image *types.TrackedImage, cfg DockerCfg) (*types.Credentials, bool) {
 	credentials := &types.Credentials{}
 	found := false
-	
+
 	imageRegistry, err := domainOnly(image.Image.Registry())
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -244,11 +244,11 @@ func credentialsFromConfig(image *types.TrackedImage, cfg DockerCfg) (*types.Cre
 			"error":     err,
 		}).Error("secrets.credentialsFromConfig: failed to parse registry hostname")
 		return credentials, false
-    }
+	}
 	// looking for our registry
 	for registry, auth := range cfg {
 		h, err := hostname(registry)
-		
+
 		if err != nil {
 			log.WithFields(log.Fields{
 				"image":     image.Image.Repository(),
@@ -315,6 +315,10 @@ func decodeBase64Secret(authSecret string) (username, password string, err error
 	return parts[0], parts[1], nil
 }
 
+func EncodeBase64Secret(username, password string) string {
+	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password)))
+}
+
 func hostname(registry string) (string, error) {
 	if strings.HasPrefix(registry, "http://") || strings.HasPrefix(registry, "https://") {
 		u, err := url.Parse(registry)
@@ -351,6 +355,10 @@ func DecodeDockerCfgJson(data []byte) (DockerCfg, error) {
 		return nil, err
 	}
 	return cfg.Auths, nil
+}
+
+func EncodeDockerCfgJson(cfg *DockerCfg) ([]byte, error) {
+	return json.Marshal(cfg)
 }
 
 // DockerCfgJSON - secret structure when dockerconfigjson is used
