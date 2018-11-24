@@ -30,7 +30,7 @@ func TestGet(t *testing.T) {
 	client := New()
 	repo, err := client.Get(Opts{
 		Registry: constants.DefaultDockerRegistry,
-		Name:     "karolisr/keel",
+		Name:     "keelhq/keel",
 	})
 
 	if err != nil {
