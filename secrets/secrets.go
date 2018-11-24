@@ -139,6 +139,7 @@ func getPodImagePullSecrets(pod *v1.Pod) []string {
 func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*types.Credentials, error) {
 
 	credentials := &types.Credentials{}
+	secretFound := false
 
 	for _, secretRef := range image.Secrets {
 		secret, err := g.kubernetesImplementer.Secret(image.Namespace, secretRef)
@@ -178,6 +179,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 				}).Error("secrets.defaultGetter: failed to decode secret")
 				continue
 			}
+			secretFound = true
 		case v1.SecretTypeDockerConfigJson:
 			secretDataBts, ok := secret.Data[dockerConfigJSONKey]
 			if !ok {
@@ -190,6 +192,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 				}).Warn("secrets.defaultGetter: secret is missing key '.dockerconfigjson', ensure that key exists")
 				continue
 			}
+			secretFound = true
 
 			dockerCfg, err = DecodeDockerCfgJson(secretDataBts)
 			if err != nil {
@@ -202,6 +205,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 				}).Error("secrets.defaultGetter: failed to decode secret")
 				continue
 			}
+			secretFound = true
 
 		default:
 			log.WithFields(log.Fields{
@@ -219,7 +223,15 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 		}
 	}
 
-	if len(image.Secrets) > 0 {
+	if secretFound {
+		log.WithFields(log.Fields{
+			"namespace": image.Namespace,
+			"provider":  image.Provider,
+			"registry":  image.Image.Registry(),
+			"image":     image.Image.Repository(),
+			"secrets":   image.Secrets,
+		}).Warn("secrets.defaultGetter.lookupSecrets: secret found but couldn't detect authentication for the desired registry")
+	} else if len(image.Secrets) > 0 {
 		log.WithFields(log.Fields{
 			"namespace": image.Namespace,
 			"provider":  image.Provider,
@@ -245,6 +257,7 @@ func credentialsFromConfig(image *types.TrackedImage, cfg DockerCfg) (*types.Cre
 		}).Error("secrets.credentialsFromConfig: failed to parse registry hostname")
 		return credentials, false
 	}
+
 	// looking for our registry
 	for registry, auth := range cfg {
 		h, err := hostname(registry)
@@ -306,7 +319,7 @@ func decodeBase64Secret(authSecret string) (username, password string, err error
 		return
 	}
 
-	parts := strings.Split(string(decoded), ":")
+	parts := strings.SplitN(string(decoded), ":", 2)
 
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("unexpected auth secret format")
@@ -349,6 +362,7 @@ func decodeSecret(data []byte) (DockerCfg, error) {
 }
 
 func DecodeDockerCfgJson(data []byte) (DockerCfg, error) {
+	// var cfg DockerCfg
 	var cfg DockerCfgJSON
 	err := json.Unmarshal(data, &cfg)
 	if err != nil {
@@ -358,7 +372,9 @@ func DecodeDockerCfgJson(data []byte) (DockerCfg, error) {
 }
 
 func EncodeDockerCfgJson(cfg *DockerCfg) ([]byte, error) {
-	return json.Marshal(cfg)
+	return json.Marshal(&DockerCfgJSON{
+		Auths: *cfg,
+	})
 }
 
 // DockerCfgJSON - secret structure when dockerconfigjson is used
