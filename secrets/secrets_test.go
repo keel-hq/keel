@@ -452,12 +452,12 @@ func Test_hostname(t *testing.T) {
 			want:    "quay.io",
 			wantErr: false,
 		},
-                {
-                        name:    "withport",
-                        args:    args{registry: "https://example.com:3456"},
-                        want:    "example.com",
-                        wantErr: false,
-                },
+		{
+			name:    "withport",
+			args:    args{registry: "https://example.com:3456"},
+			want:    "example.com",
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
