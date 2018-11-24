@@ -209,9 +209,7 @@ func TestPollingPrivateRegistry(t *testing.T) {
 		// is with pre-prerealse so we should upgrade to that one.
 
 		testNamespace := createNamespaceForTest()
-		// defer deleteTestNamespace(testNamespace)
-
-		fmt.Printf("creating secret: %s %s \n", user, password)
+		defer deleteTestNamespace(testNamespace)
 
 		payload, err := secrets.EncodeDockerCfgJson(&secrets.DockerCfg{
 			"https://index.docker.io/v1/": &secrets.Auth{
@@ -282,8 +280,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 						},
 						Containers: []v1.Container{
 							v1.Container{
-								Name:  "wd-1",
-								Image: "karolisr/demo-webhook:0.0.1",
+								ImagePullPolicy: v1.PullAlways,
+								Name:            "wd-1",
+								Image:           "karolisr/demo-webhook:0.0.1",
 							},
 						},
 					},
