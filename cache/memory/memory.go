@@ -27,11 +27,6 @@ func (c *Cache) Put(key string, value []byte) error {
 	c.entries[key] = value
 	c.mu.Unlock()
 
-	log.WithFields(log.Fields{
-		"KEY":   key,
-		"VALUE": string(value),
-	}).Info("CACHE PUT")
-
 	return nil
 }
 func (c *Cache) Get(key string) ([]byte, error) {
