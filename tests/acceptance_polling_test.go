@@ -234,7 +234,6 @@ func TestPollingPrivateRegistry(t *testing.T) {
 			},
 			Type: v1.SecretTypeDockerConfigJson,
 			Data: map[string][]byte{
-				// ".dockerconfigjson": []byte(base64.StdEncoding.EncodeToString([]byte(payload))),
 				".dockerconfigjson": []byte(payload),
 			},
 		}
@@ -299,6 +298,118 @@ func TestPollingPrivateRegistry(t *testing.T) {
 		defer cancel()
 
 		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "karolisr/demo-webhook:0.0.2")
+		if err != nil {
+			t.Errorf("update failed: %s", err)
+		}
+	})
+
+	t.Run("UpdateThroughPrivateGitlabPolling", func(t *testing.T) {
+
+		user := os.Getenv("GITLAB_USERNAME")
+		password := os.Getenv("GITLAB_PASSWORD")
+
+		if user == "" || password == "" {
+			fmt.Println("[X] Skipping UpdateThroughPrivateGitlabPolling test since GITLAB_USERNAME and/or GITLAB_PASSWORD env vars not set")
+			t.Skip()
+		}
+
+		testNamespace := createNamespaceForTest()
+		defer func() {
+			err := deleteTestNamespace(testNamespace)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":     err,
+					"namespace": testNamespace,
+				}).Error("error while deleting test namespace")
+			}
+		}()
+
+		payload, err := secrets.EncodeDockerCfgJson(&secrets.DockerCfg{
+			"registry.gitlab.com": &secrets.Auth{
+				Auth: secrets.EncodeBase64Secret(user, password),
+			},
+		})
+		if err != nil {
+			t.Fatalf("failed to encode docker cfg secret payload: %s", err)
+		}
+
+		secretName := "gitlab-registry-credentials"
+
+		secret := &v1.Secret{
+			TypeMeta: meta_v1.TypeMeta{},
+			ObjectMeta: meta_v1.ObjectMeta{
+				Name:        secretName,
+				Namespace:   testNamespace,
+				Labels:      map[string]string{},
+				Annotations: map[string]string{},
+			},
+			Type: v1.SecretTypeDockerConfigJson,
+			Data: map[string][]byte{
+				".dockerconfigjson": []byte(payload),
+			},
+		}
+
+		_, err = kcs.CoreV1().Secrets(testNamespace).Create(secret)
+		if err != nil {
+			t.Fatalf("failed to create secret: %s", err)
+		} else {
+			t.Logf("secret '%s' created in namespace '%s'", secret.Name, secret.Namespace)
+		}
+
+		dep := &apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "deployment-1",
+				Namespace: testNamespace,
+				Labels: map[string]string{
+					types.KeelPolicyLabel:  "major",
+					types.KeelTriggerLabel: "poll",
+				},
+				Annotations: map[string]string{
+					types.KeelPollScheduleAnnotation: "@every 2s",
+				},
+			},
+			apps_v1.DeploymentSpec{
+				Selector: &meta_v1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "wd-1",
+					},
+				},
+				Template: v1.PodTemplateSpec{
+
+					ObjectMeta: meta_v1.ObjectMeta{
+						Labels: map[string]string{
+							"app":     "wd-1",
+							"release": "1",
+						},
+					},
+					Spec: v1.PodSpec{
+						ImagePullSecrets: []v1.LocalObjectReference{
+							{
+								Name: secretName,
+							},
+						},
+						Containers: []v1.Container{
+							v1.Container{
+								ImagePullPolicy: v1.PullAlways,
+								Name:            "wd-1",
+								Image:           "registry.gitlab.com/karolisr/keel:0.1.0",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		}
+
+		_, err = kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		if err != nil {
+			t.Fatalf("failed to create deployment: %s", err)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+
+		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "registry.gitlab.com/karolisr/keel:0.2.0")
 		if err != nil {
 			t.Errorf("update failed: %s", err)
 		}
