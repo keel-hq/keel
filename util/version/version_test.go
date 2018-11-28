@@ -46,15 +46,10 @@ func TestGetVersionFromImageName(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "non semver, missing minor and patch",
-			args: args{name: "index.docker.io/application:42"},
-			want: &types.Version{
-				Major:    42,
-				Minor:    0,
-				Patch:    0,
-				Original: "42",
-			},
-			wantErr: false,
+			name:    "non semver, missing minor and patch",
+			args:    args{name: "index.docker.io/application:42"},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -104,26 +99,16 @@ func TestGetVersion(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "not semver",
-			args: args{version: "23"},
-			want: &types.Version{
-				Major:    23,
-				Minor:    0,
-				Patch:    0,
-				Original: "23",
-			},
-			wantErr: false,
+			name:    "not semver",
+			args:    args{version: "23"},
+			want:    nil,
+			wantErr: true,
 		},
 		{
-			name: "not semver, long number",
-			args: args{version: "1234567"},
-			want: &types.Version{
-				Major:    1234567,
-				Minor:    0,
-				Patch:    0,
-				Original: "1234567",
-			},
-			wantErr: false,
+			name:    "not semver, long number",
+			args:    args{version: "1234567"},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
