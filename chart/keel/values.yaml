@@ -143,6 +143,11 @@ createNamespaceResource: false
 
 podAnnotations: {}
 
+serviceAnnotations: {}
+# Useful for making the load balancer internal
+# serviceAnnotations:
+#    cloud.google.com/load-balancer-type: Internal
+
 aws:
   region: null
 

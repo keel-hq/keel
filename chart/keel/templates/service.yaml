@@ -9,6 +9,10 @@ metadata:
     chart: {{ template "keel.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+{{- with .Values.serviceAnnotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
 spec:
   type: {{ .Values.service.type }}
   {{- if .Values.service.clusterIP }}
