@@ -88,13 +88,12 @@ func GetTrackedImage(i string) *types.TrackedImage {
 		panic(err)
 	}
 	return &types.TrackedImage{
-		Image:                ref,
-		PollSchedule:         "",
-		Trigger:              types.TriggerTypeDefault,
-		Provider:             "",
-		Namespace:            "",
-		Meta:                 make(map[string]string),
-		SemverPreReleaseTags: make(map[string]string),
-		Tags:                 []string{ref.Tag()},
+		Image:        ref,
+		PollSchedule: "",
+		Trigger:      types.TriggerTypeDefault,
+		Provider:     "",
+		Namespace:    "",
+		Meta:         make(map[string]string),
+		Tags:         []string{ref.Tag()},
 	}
 }
