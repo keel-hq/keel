@@ -17,16 +17,20 @@ var ErrKeelConfigNotFound = errors.New("keel configuration not found")
 
 // getImages - get images from chart values
 func getImages(vals chartutil.Values) ([]*types.TrackedImage, error) {
+	var images []*types.TrackedImage
+
 	keelCfg, err := getKeelConfig(vals)
 	if err != nil {
+		if err == ErrPolicyNotSpecified {
+			// nothing to do
+			return images, nil
+		}
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("provider.helm: failed to get keel configuration for release")
 		// ignoring this release, no keel config found
 		return nil, ErrKeelConfigNotFound
 	}
-
-	var images []*types.TrackedImage
 
 	for _, imageDetails := range keelCfg.Images {
 		imageRef, err := parseImage(vals, &imageDetails)
@@ -40,10 +44,10 @@ func getImages(vals chartutil.Values) ([]*types.TrackedImage, error) {
 		}
 
 		trackedImage := &types.TrackedImage{
-			Image:                imageRef,
-			PollSchedule:         keelCfg.PollSchedule,
-			Trigger:              keelCfg.Trigger,
-			SemverPreReleaseTags: make(map[string]string),
+			Image:        imageRef,
+			PollSchedule: keelCfg.PollSchedule,
+			Trigger:      keelCfg.Trigger,
+			Policy:       keelCfg.Plc,
 		}
 
 		images = append(images, trackedImage)
