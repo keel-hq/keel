@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 
-	"github.com/Masterminds/semver"
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/types"
 
@@ -114,91 +113,6 @@ func (p *DefaultProviders) TrackedImages() ([]*types.TrackedImage, error) {
 	}).Debug("tracked images")
 
 	return trackedImages, nil
-}
-
-func appendIfDoesntExist(tags []string, tag string) []string {
-	found := false
-	for _, t := range tags {
-		if t == tag {
-			found = true
-		}
-	}
-	if !found {
-		return append(tags, tag)
-	}
-	return tags
-}
-
-func appendImage(images []*types.TrackedImage, new *types.TrackedImage) []*types.TrackedImage {
-
-	newSemverTag, err := semver.NewVersion(new.Image.Tag())
-	if err != nil {
-		// not semver, just appending as a new image
-		return append(images, new)
-	}
-
-	new.Tags = appendIfDoesntExist(new.Tags, new.Image.Tag())
-
-	// looking for a semver image
-	idx, ok := lookupSemverImageIdx(images, new)
-	if !ok || len(images) == 0 {
-		if newSemverTag.Prerelease() != "" {
-			new.SemverPreReleaseTags[newSemverTag.Prerelease()] = new.Image.Tag()
-			// new.SemverPreReleaseTags = append(new.SemverPreReleaseTags, newSemverTag.Prerelease())
-		}
-		return append(images, new)
-	}
-
-	existingSemverTag, err := semver.NewVersion(images[idx].Image.Tag())
-	if err != nil {
-		// existing tag not semver, just appending as new image
-		if newSemverTag.Prerelease() != "" {
-			new.SemverPreReleaseTags[newSemverTag.Prerelease()] = new.Image.Tag()
-			// new.SemverPreReleaseTags = append(new.SemverPreReleaseTags, newSemverTag.Prerelease())
-		}
-		return append(images, new)
-	}
-
-	// semver, checking for prerelease tags
-	if newSemverTag.Prerelease() != "" {
-		_, ok := images[idx].SemverPreReleaseTags[newSemverTag.Prerelease()]
-		if ok {
-			// checking which is higher and setting higher
-			if newSemverTag.GreaterThan(existingSemverTag) {
-				images[idx].SemverPreReleaseTags[newSemverTag.Prerelease()] = new.Image.Tag()
-				return images
-			}
-		}
-		images[idx].SemverPreReleaseTags[newSemverTag.Prerelease()] = new.Image.Tag()
-	}
-
-	// if new semver tag is a higher version, updating it as well
-	if newSemverTag.GreaterThan(existingSemverTag) {
-		images[idx].Image = new.Image
-	}
-
-	images[idx].Tags = appendIfDoesntExist(images[idx].Tags, new.Image.Tag())
-
-	return images
-}
-
-func lookupSemverImageIdx(images []*types.TrackedImage, new *types.TrackedImage) (int, bool) {
-	_, err := semver.NewVersion(new.Image.Tag())
-	if err != nil {
-		// looking for a non semver
-		return 0, false
-	}
-	for idx, existing := range images {
-
-		if existing.Image.Repository() == new.Image.Repository() {
-			_, err = semver.NewVersion(existing.Image.Tag())
-			if err != nil {
-				continue
-			}
-			return idx, true
-		}
-	}
-	return 0, false
 }
 
 // List - list available providers
