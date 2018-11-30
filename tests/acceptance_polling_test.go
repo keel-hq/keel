@@ -163,6 +163,63 @@ func TestPollingSemverUpdate(t *testing.T) {
 			t.Errorf("update failed: %s", err)
 		}
 	})
+
+	t.Run("UpdateThroughDockerHubPollingC", func(t *testing.T) {
+
+		testNamespace := createNamespaceForTest()
+		defer deleteTestNamespace(testNamespace)
+
+		dep := &apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "deployment-2",
+				Namespace: testNamespace,
+				Labels: map[string]string{
+					types.KeelPolicyLabel:  "major",
+					types.KeelTriggerLabel: "poll",
+				},
+				Annotations: map[string]string{
+					types.KeelPollScheduleAnnotation: "@every 2s",
+				},
+			},
+			apps_v1.DeploymentSpec{
+				Selector: &meta_v1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "wd-1",
+					},
+				},
+				Template: v1.PodTemplateSpec{
+					ObjectMeta: meta_v1.ObjectMeta{
+						Labels: map[string]string{
+							"app":     "wd-1",
+							"release": "1",
+						},
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Name:  "wd-1",
+								Image: "keelhq/push-workflow-example:0.3.0-alpha",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		}
+
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		if err != nil {
+			t.Fatalf("failed to create deployment: %s", err)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+
+		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "keelhq/push-workflow-example:0.11.0-alpha")
+		if err != nil {
+			t.Errorf("update failed: %s", err)
+		}
+	})
 }
 
 func TestPollingPrivateRegistry(t *testing.T) {
