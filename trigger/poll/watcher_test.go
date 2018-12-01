@@ -8,6 +8,7 @@ import (
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/extension/credentialshelper"
+	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
 	"github.com/keel-hq/keel/types"
@@ -20,10 +21,9 @@ func mustParse(img string, schedule string) *types.TrackedImage {
 		panic(err)
 	}
 	return &types.TrackedImage{
-		Image:                ref,
-		PollSchedule:         schedule,
-		Trigger:              types.TriggerTypePoll,
-		SemverPreReleaseTags: make(map[string]string),
+		Image:        ref,
+		PollSchedule: schedule,
+		Trigger:      types.TriggerTypePoll,
 	}
 }
 
@@ -166,7 +166,15 @@ func TestWatchTagJobLatest(t *testing.T) {
 
 func TestWatchAllTagsJob(t *testing.T) {
 
-	fp := &fakeProvider{}
+	reference, _ := image.Parse("foo/bar:1.1.0")
+	fp := &fakeProvider{
+		images: []*types.TrackedImage{
+			&types.TrackedImage{
+				Image:  reference,
+				Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+			},
+		},
+	}
 	mem := memory.NewMemoryCache()
 	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
@@ -175,12 +183,8 @@ func TestWatchAllTagsJob(t *testing.T) {
 		tagsToReturn: []string{"1.1.2", "1.1.3", "0.9.1"},
 	}
 
-	reference, _ := image.Parse("foo/bar:1.1.0")
-
 	details := &watchDetails{
-		trackedImage: &types.TrackedImage{
-			Image: reference,
-		},
+		trackedImage: fp.images[0],
 	}
 
 	job := NewWatchRepositoryTagsJob(providers, frc, details)
@@ -202,7 +206,15 @@ func TestWatchAllTagsJob(t *testing.T) {
 
 func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
 
-	fp := &fakeProvider{}
+	reference, _ := image.Parse("foo/bar:latest")
+	fp := &fakeProvider{
+		images: []*types.TrackedImage{
+			&types.TrackedImage{
+				Image:  reference,
+				Policy: policy.NewForcePolicy(true),
+			},
+		},
+	}
 	mem := memory.NewMemoryCache()
 	am := approvals.New(mem)
 	providers := provider.New([]provider.Provider{fp}, am)
@@ -211,12 +223,8 @@ func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
 		tagsToReturn: []string{"1.1.2", "1.1.3", "0.9.1"},
 	}
 
-	reference, _ := image.Parse("foo/bar:latest")
-
 	details := &watchDetails{
-		trackedImage: &types.TrackedImage{
-			Image: reference,
-		},
+		trackedImage: fp.images[0],
 	}
 
 	job := NewWatchRepositoryTagsJob(providers, frc, details)
@@ -245,6 +253,8 @@ func TestWatchMultipleTags(t *testing.T) {
 				Trigger:      types.TriggerTypePoll,
 				Provider:     "fp",
 				PollSchedule: types.KeelPollDefaultSchedule,
+
+				Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor),
 			},
 
 			&types.TrackedImage{
@@ -252,6 +262,7 @@ func TestWatchMultipleTags(t *testing.T) {
 				Image:        imgB,
 				Provider:     "fp",
 				PollSchedule: types.KeelPollDefaultSchedule,
+				Policy:       policy.NewSemverPolicy(policy.SemverPolicyTypeMajor),
 			},
 
 			&types.TrackedImage{
@@ -259,6 +270,7 @@ func TestWatchMultipleTags(t *testing.T) {
 				Image:        imgC,
 				Provider:     "fp",
 				PollSchedule: types.KeelPollDefaultSchedule,
+				Policy:       policy.NewForcePolicy(true),
 			},
 
 			&types.TrackedImage{
@@ -266,6 +278,7 @@ func TestWatchMultipleTags(t *testing.T) {
 				Image:        imgD,
 				Provider:     "fp",
 				PollSchedule: types.KeelPollDefaultSchedule,
+				Policy:       policy.NewForcePolicy(true),
 			},
 		},
 	}

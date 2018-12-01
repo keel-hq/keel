@@ -39,6 +39,10 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 
 	keelCfg, err := getKeelConfig(vals)
 	if err != nil {
+		if err == ErrPolicyNotSpecified {
+			// nothing to do
+			return plan, false, nil
+		}
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("provider.helm: failed to get keel configuration for release")

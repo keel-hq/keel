@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -43,6 +44,11 @@ func init() {
 	prometheus.MustRegister(helmVersionedUpdatesCounter)
 	prometheus.MustRegister(helmUnversionedUpdatesCounter)
 }
+
+// ErrPolicyNotSpecified helm related errors
+var (
+	ErrPolicyNotSpecified = errors.New("policy not specified")
+)
 
 // Manager - high level interface into helm provider related data used by
 // triggers
@@ -426,7 +432,7 @@ func getKeelConfig(vals chartutil.Values) (*KeelChartConfig, error) {
 	}
 
 	if r.Keel.Policy == "" {
-		return nil, fmt.Errorf("policy not specified")
+		return nil, ErrPolicyNotSpecified
 	}
 
 	cfg := r.Keel

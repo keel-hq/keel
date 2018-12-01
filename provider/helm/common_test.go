@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 	"k8s.io/helm/pkg/chartutil"
@@ -47,9 +48,9 @@ func Test_getImages(t *testing.T) {
 			},
 			want: []*types.TrackedImage{
 				&types.TrackedImage{
-					Image:                img,
-					Trigger:              types.TriggerTypePoll,
-					SemverPreReleaseTags: make(map[string]string),
+					Image:   img,
+					Trigger: types.TriggerTypePoll,
+					Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
 				},
 			},
 			wantErr: false,
