@@ -84,6 +84,9 @@ func (kc *KeelCmd) Start(ctx context.Context) error {
 	cmd := "keel"
 	args := []string{"--no-incluster", "--kubeconfig", getKubeConfig()}
 	c := exec.CommandContext(ctx, cmd, args...)
+	c.Env = []string{
+		"DEBUG=true",
+	}
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 
