@@ -1,13 +1,19 @@
 package policy
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver"
 )
 
 // SemverPolicyType - policy type
 type SemverPolicyType int
+
+var (
+	ErrNoMajorMinorPatchElementsFound = errors.New("No Major.Minor.Patch elements found")
+)
 
 // available policies
 const (
@@ -58,6 +64,11 @@ func (sp *SemverPolicy) Type() PolicyType { return PolicyTypeSemver }
 func shouldUpdate(spt SemverPolicyType, current, new string) (bool, error) {
 	if current == "latest" {
 		return true, nil
+	}
+
+	parts := strings.SplitN(new, ".", 3)
+	if len(parts) != 3 {
+		return false, ErrNoMajorMinorPatchElementsFound
 	}
 
 	currentVersion, err := semver.NewVersion(current)

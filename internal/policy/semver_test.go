@@ -176,6 +176,16 @@ func Test_shouldUpdate(t *testing.T) {
 			want:    false,
 			wantErr: false,
 		},
+		{
+			name: "number",
+			args: args{
+				current: "1.4.5",
+				new:     "3050",
+				spt:     SemverPolicyTypeAll,
+			},
+			want:    false,
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

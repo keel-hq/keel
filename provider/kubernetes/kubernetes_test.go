@@ -726,8 +726,8 @@ func TestProcessEventBuildNumber(t *testing.T) {
 		t.Errorf("got error while processing event: %s", err)
 	}
 
-	if fp.updated.Containers()[0].Image != repo.Name+":"+repo.Tag {
-		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Containers()[0].Image)
+	if fp.updated != nil {
+		t.Errorf("didn't expect to get updated containers, bot got: %s", fp.updated.Identifier)
 	}
 }
 
@@ -757,7 +757,7 @@ func TestEventSent(t *testing.T) {
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
 							v1.Container{
-								Image: "gcr.io/v2-namespace/hello-world:10",
+								Image: "gcr.io/v2-namespace/hello-world:10.0.0",
 							},
 						},
 					},
@@ -779,7 +779,7 @@ func TestEventSent(t *testing.T) {
 
 	repo := types.Repository{
 		Name: "gcr.io/v2-namespace/hello-world",
-		Tag:  "11",
+		Tag:  "11.0.0",
 	}
 
 	event := &types.Event{Repository: repo}
@@ -792,8 +792,8 @@ func TestEventSent(t *testing.T) {
 		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Containers()[0].Image)
 	}
 
-	if fs.sentEvent.Message != "Successfully updated deployment xxxx/deployment-1 10->11 (gcr.io/v2-namespace/hello-world:11)" {
-		t.Errorf("expected 'Successfully updated deployment xxxx/deployment-1 10->11 (gcr.io/v2-namespace/hello-world:11)' sent message, got: %s", fs.sentEvent.Message)
+	if fs.sentEvent.Message != "Successfully updated deployment xxxx/deployment-1 10.0.0->11.0.0 (gcr.io/v2-namespace/hello-world:11.0.0)" {
+		t.Errorf("expected 'Successfully updated deployment xxxx/deployment-1 10.0.0->11.0.0 (gcr.io/v2-namespace/hello-world:11.0.0)' sent message, got: %s", fs.sentEvent.Message)
 	}
 }
 
@@ -823,7 +823,7 @@ func TestEventSentWithReleaseNotes(t *testing.T) {
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
 							v1.Container{
-								Image: "gcr.io/v2-namespace/hello-world:10",
+								Image: "gcr.io/v2-namespace/hello-world:10.0.0",
 							},
 						},
 					},
@@ -845,7 +845,7 @@ func TestEventSentWithReleaseNotes(t *testing.T) {
 
 	repo := types.Repository{
 		Name: "gcr.io/v2-namespace/hello-world",
-		Tag:  "11",
+		Tag:  "11.0.0",
 	}
 
 	event := &types.Event{Repository: repo}
@@ -858,8 +858,8 @@ func TestEventSentWithReleaseNotes(t *testing.T) {
 		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Containers()[0].Image)
 	}
 
-	if fs.sentEvent.Message != "Successfully updated deployment xxxx/deployment-1 10->11 (gcr.io/v2-namespace/hello-world:11). Release notes: https://github.com/keel-hq/keel/releases" {
-		t.Errorf("expected 'Successfully updated deployment xxxx/deployment-1 10->11 (gcr.io/v2-namespace/hello-world:11). Release notes: https://github.com/keel-hq/keel/releases' sent message, got: %s", fs.sentEvent.Message)
+	if fs.sentEvent.Message != "Successfully updated deployment xxxx/deployment-1 10.0.0->11.0.0 (gcr.io/v2-namespace/hello-world:11.0.0). Release notes: https://github.com/keel-hq/keel/releases" {
+		t.Errorf("expected 'Successfully updated deployment xxxx/deployment-1 10.0.0->11.0.0 (gcr.io/v2-namespace/hello-world:11.0.0). Release notes: https://github.com/keel-hq/keel/releases' sent message, got: %s", fs.sentEvent.Message)
 	}
 }
 
