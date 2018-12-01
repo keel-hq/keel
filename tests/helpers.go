@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"k8s.io/api/core/v1"
@@ -88,7 +89,13 @@ func (kc *KeelCmd) Start(ctx context.Context) error {
 
 	kc.cmd = c
 
-	return c.Run()
+	err := c.Run()
+	if err != nil {
+		if strings.Contains(err.Error(), "killed") {
+			return nil
+		}
+	}
+	return err
 }
 
 func (kc *KeelCmd) Stop() error {
