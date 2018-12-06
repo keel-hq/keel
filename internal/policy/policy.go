@@ -92,6 +92,8 @@ func GetPolicy(policyName string, options *Options) Policy {
 		return ParseSemverPolicy(policyName)
 	case "force":
 		return NewForcePolicy(options.MatchTag)
+	case "", "never":
+		return &NilPolicy{}
 	}
 
 	log.Infof("policy.GetPolicy: unknown policy '%s', please check your configuration", policyName)
