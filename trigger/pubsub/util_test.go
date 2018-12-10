@@ -63,7 +63,7 @@ func TestClusterName(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
 
-	name, err := clusterName(ts.URL)
+	name, err := getClusterName(ts.URL)
 	if err != nil {
 		t.Errorf("unexpected error while getting cluster name")
 	}
@@ -75,9 +75,18 @@ func TestClusterName(t *testing.T) {
 
 func TestGetContainerRegistryURI(t *testing.T) {
 
-	name := containerRegistrySubName("project-1", "topic-1")
+	name := containerRegistrySubName("", "project-1", "topic-1")
 
 	if name != "keel-unknown-project-1-topic-1" {
+		t.Errorf("unexpected topic name: %s", name)
+	}
+}
+
+func TestGetContainerRegistryURIWithClusterNameSet(t *testing.T) {
+
+	name := containerRegistrySubName("testxxx", "project-1", "topic-1")
+
+	if name != "keel-testxxx-project-1-topic-1" {
 		t.Errorf("unexpected topic name: %s", name)
 	}
 }
