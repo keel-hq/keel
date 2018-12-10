@@ -53,6 +53,7 @@ const (
 	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
 	EnvTriggerPoll   = "POLL"   // set to 1 or something to enable poll trigger
 	EnvProjectID     = "PROJECT_ID"
+	EnvClusterName   = "CLUSTER_NAME"
 
 	EnvNamespace = "NAMESPACE" // Keel's namespace
 
@@ -298,7 +299,7 @@ func setupTriggers(ctx context.Context, providers provider.Providers, approvalsM
 			return
 		}
 
-		subManager := pubsub.NewDefaultManager(projectID, providers, ps)
+		subManager := pubsub.NewDefaultManager(os.Getenv(EnvClusterName), projectID, providers, ps)
 		go subManager.Start(ctx)
 	}
 
