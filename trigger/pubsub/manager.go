@@ -25,6 +25,11 @@ type DefaultManager struct {
 	// projectID is required to correctly set GCR subscriptions
 	projectID string
 
+	// clusterName is used to create unique names for the subscriptions. Each subscription
+	// has to have a unique name in order to receive all events (otherwise, if it is the same,
+	// only 1 keel instance will receive a GCR event after a push event)
+	clusterName string
+
 	// scanTick - scan interval in seconds, defaults to 60 seconds
 	scanTick int
 
@@ -39,11 +44,12 @@ type Subscriber interface {
 }
 
 // NewDefaultManager - creates new pubsub manager to create subscription for deployments
-func NewDefaultManager(projectID string, providers provider.Providers, subClient Subscriber) *DefaultManager {
+func NewDefaultManager(clusterName, projectID string, providers provider.Providers, subClient Subscriber) *DefaultManager {
 	return &DefaultManager{
 		providers:   providers,
 		client:      subClient,
 		projectID:   projectID,
+		clusterName: clusterName,
 		subscribers: make(map[string]context.Context),
 		mu:          &sync.Mutex{},
 		scanTick:    60,
@@ -116,7 +122,7 @@ func (s *DefaultManager) ensureSubscription(gcrURI string) {
 	if !ok {
 		ctx, cancel := context.WithCancel(s.ctx)
 		s.subscribers[gcrURI] = ctx
-		subName := containerRegistrySubName(s.projectID, gcrURI)
+		subName := containerRegistrySubName(s.clusterName, s.projectID, gcrURI)
 		go func() {
 			defer cancel()
 			err := s.client.Subscribe(s.ctx, gcrURI, subName)

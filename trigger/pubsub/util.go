@@ -11,23 +11,25 @@ import (
 // MetadataEndpoint - default metadata server for gcloud pubsub
 const MetadataEndpoint = "http://metadata/computeMetadata/v1/instance/attributes/cluster-name"
 
-func containerRegistrySubName(projectID, topic string) string {
-	cluster := "unknown"
-	clusterName, err := clusterName(MetadataEndpoint)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error":             err,
-			"metadata_endpoint": MetadataEndpoint,
-		}).Warn("trigger.pubsub.containerRegistrySubName: got error while retrieving cluster metadata, messages might be lost if more than one Keel instance is created")
-	} else {
-		cluster = clusterName
+func containerRegistrySubName(clusterName, projectID, topic string) string {
+
+	if clusterName == "" {
+		var err error
+		clusterName, err = getClusterName(MetadataEndpoint)
+		if err != nil {
+			clusterName = "unknown"
+			log.WithFields(log.Fields{
+				"error":             err,
+				"metadata_endpoint": MetadataEndpoint,
+			}).Warn("trigger.pubsub.containerRegistrySubName: got error while retrieving cluster metadata, messages might be lost if more than one Keel instance is created")
+		}
 	}
 
-	return "keel-" + cluster + "-" + projectID + "-" + topic
+	return "keel-" + clusterName + "-" + projectID + "-" + topic
 }
 
 // https://cloud.google.com/compute/docs/storing-retrieving-metadata
-func clusterName(metadataEndpoint string) (string, error) {
+func getClusterName(metadataEndpoint string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, metadataEndpoint, nil)
 	if err != nil {
 		return "", err

@@ -95,9 +95,6 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 				approval.Delta(),
 			)
 
-			// fmt.Println("requesting approval, identifier: ", plan.Resource.Namespace)
-			fmt.Println("requesting approval, identifier: ", identifier)
-
 			return false, p.approvalManager.Create(approval)
 		}
 
