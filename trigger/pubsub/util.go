@@ -17,12 +17,11 @@ func containerRegistrySubName(clusterName, projectID, topic string) string {
 		var err error
 		clusterName, err = getClusterName(MetadataEndpoint)
 		if err != nil {
+			clusterName = "unknown"
 			log.WithFields(log.Fields{
 				"error":             err,
 				"metadata_endpoint": MetadataEndpoint,
 			}).Warn("trigger.pubsub.containerRegistrySubName: got error while retrieving cluster metadata, messages might be lost if more than one Keel instance is created")
-		} else {
-			clusterName = "unknown"
 		}
 	}
 
