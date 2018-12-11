@@ -5,8 +5,6 @@ import (
 	"sync"
 
 	"github.com/keel-hq/keel/cache"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Cache struct {
@@ -59,11 +57,6 @@ func (c *Cache) List(prefix string) (map[string][]byte, error) {
 			dst := make([]byte, len(v))
 			copy(dst, v)
 			values[k] = dst
-
-			log.WithFields(log.Fields{
-				"KEY":   k,
-				"VALUE": string(dst),
-			}).Info("CACHE LIST")
 		}
 	}
 
