@@ -238,7 +238,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 			"registry":  image.Image.Registry(),
 			"image":     image.Image.Repository(),
 			"secrets":   image.Secrets,
-		}).Warn("secrets.defaultGetter.lookupSecrets: docker credentials were not found among secrets")
+		}).Warnf("secrets.defaultGetter.lookupSecrets: docker credentials were not found among secrets, is secret in the namespace '%s'?", image.Namespace)
 	}
 
 	return credentials, nil
