@@ -236,8 +236,10 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 	})
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
-			"image": ti.Image.String(),
+			"error":    err,
+			"image":    ti.Image.String(),
+			"username": creds.Username,
+			"password": strings.Repeat("*", len(creds.Password)),
 		}).Error("trigger.poll.RepositoryWatcher.addJob: failed to get image digest")
 		return err
 	}

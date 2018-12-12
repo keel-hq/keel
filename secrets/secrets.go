@@ -238,7 +238,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 			"registry":  image.Image.Registry(),
 			"image":     image.Image.Repository(),
 			"secrets":   image.Secrets,
-		}).Warn("secrets.defaultGetter.lookupSecrets: docker credentials were not found among secrets")
+		}).Warnf("secrets.defaultGetter.lookupSecrets: docker credentials were not found among secrets, is secret in the namespace '%s'?", image.Namespace)
 	}
 
 	return credentials, nil
@@ -248,31 +248,11 @@ func credentialsFromConfig(image *types.TrackedImage, cfg DockerCfg) (*types.Cre
 	credentials := &types.Credentials{}
 	found := false
 
-	imageRegistry, err := domainOnly(image.Image.Registry())
-	if err != nil {
-		log.WithFields(log.Fields{
-			"image":     image.Image.Repository(),
-			"namespace": image.Namespace,
-			"error":     err,
-		}).Error("secrets.credentialsFromConfig: failed to parse registry hostname")
-		return credentials, false
-	}
+	imageRegistry := image.Image.Registry()
 
 	// looking for our registry
 	for registry, auth := range cfg {
-		h, err := hostname(registry)
-
-		if err != nil {
-			log.WithFields(log.Fields{
-				"image":     image.Image.Repository(),
-				"namespace": image.Namespace,
-				"registry":  registry,
-				"error":     err,
-			}).Error("secrets.defaultGetter: failed to parse hostname")
-			continue
-		}
-
-		if h == imageRegistry {
+		if registryMatches(imageRegistry, registry) {
 			if auth.Username != "" && auth.Password != "" {
 				credentials.Username = auth.Username
 				credentials.Password = auth.Password
@@ -295,7 +275,6 @@ func credentialsFromConfig(image *types.TrackedImage, cfg DockerCfg) (*types.Cre
 					"image":     image.Image.Repository(),
 					"namespace": image.Namespace,
 					"registry":  registry,
-					"error":     err,
 				}).Warn("secrets.defaultGetter: secret doesn't have username, password and base64 encoded auth, skipping")
 				continue
 			}
@@ -344,12 +323,12 @@ func hostname(registry string) (string, error) {
 	return registry, nil
 }
 
-func domainOnly(registry string) (string, error) {
+func domainOnly(registry string) string {
 	if strings.Contains(registry, ":") {
-		return strings.Split(registry, ":")[0], nil
+		return strings.Split(registry, ":")[0]
 	}
 
-	return registry, nil
+	return registry
 }
 
 func decodeSecret(data []byte) (DockerCfg, error) {
