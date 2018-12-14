@@ -51,6 +51,10 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 	if err != nil {
 		if err == cache.ErrNotFound {
 
+			if plan.Config.ApprovalDeadline == 0 {
+				plan.Config.ApprovalDeadline = types.KeelApprovalDeadlineDefault
+			}
+
 			// creating new one
 			approval := &types.Approval{
 				Provider:       types.ProviderTypeHelm,
