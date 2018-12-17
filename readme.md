@@ -62,20 +62,20 @@ Prerequisites:
 You need to add this Chart repo to Helm:
 
 ```bash
-helm repo add keel-charts https://charts.keel.sh 
+helm repo add keel https://charts.keel.sh 
 helm repo update
 ```
 
 Install through Helm (with Helm provider enabled by default):
 
 ```bash
-helm upgrade --install keel --namespace=kube-system keel-charts/keel
+helm upgrade --install keel --namespace=kube-system keel/keel
 ```
 
 If you work mostly with regular Kubernetes manifests, you can install Keel without Helm provider support:
 
 ```bash
-helm upgrade --install keel --namespace=keel keel-charts/keel --set helmProvider.enabled="false" 
+helm upgrade --install keel --namespace=keel keel/keel --set helmProvider.enabled="false" 
 ```
 
 That's it, see [Configuration](https://github.com/keel-hq/keel#configuration) section now.
