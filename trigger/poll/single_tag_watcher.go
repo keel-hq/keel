@@ -51,6 +51,7 @@ func (j *WatchTagJob) Run() {
 	log.WithFields(log.Fields{
 		"current_digest": j.details.digest,
 		"new_digest":     currentDigest,
+		"registry_url":   reg,
 		"image":          j.details.trackedImage.Image.String(),
 	}).Debug("trigger.poll.WatchTagJob: checking digest")
 
