@@ -59,6 +59,20 @@ func TestParseRepo(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "myacr.azurecr.io/app:1.0.888",
+			args: args{remote: "myacr.azurecr.io/app:1.0.888"},
+			want: &Repository{
+				Name:       "app:1.0.888",
+				Repository: "myacr.azurecr.io/app",
+				Remote:     "myacr.azurecr.io/app:1.0.888",
+				Registry:   "myacr.azurecr.io",
+				ShortName:  "app",
+				Tag:        "1.0.888",
+				Scheme:     "https",
+			},
+			wantErr: false,
+		},
+		{
 			name: "localhost.localdomain/foo/bar:1.1",
 			args: args{remote: "localhost.localdomain/foo/bar:1.1"},
 			want: &Repository{

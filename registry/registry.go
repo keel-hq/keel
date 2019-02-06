@@ -34,9 +34,14 @@ type Client interface {
 
 // New - new registry client
 func New() *DefaultClient {
+	insecure := false
+	if os.Getenv(EnvInsecure) == "true" {
+		insecure = true
+	}
 	return &DefaultClient{
 		mu:         &sync.Mutex{},
 		registries: make(map[uint32]*registry.Registry),
+		insecure:   insecure,
 	}
 }
 
@@ -45,6 +50,7 @@ type DefaultClient struct {
 	// a map of registries to reuse for polling
 	mu         *sync.Mutex
 	registries map[uint32]*registry.Registry
+	insecure   bool
 }
 
 // Opts - registry client opts. If username & password are not supplied
@@ -94,6 +100,8 @@ func (c *DefaultClient) getRegistryClient(registryAddress, username, password st
 // Get - get repository
 func (c *DefaultClient) Get(opts Opts) (*Repository, error) {
 
+	// fallback to HTTP if the registry doesn't speak HTTPS https://github.com/keel-hq/keel/issues/331
+INIT_CLIENT:
 	hub, err := c.getRegistryClient(opts.Registry, opts.Username, opts.Password)
 	if err != nil {
 		return nil, err
@@ -101,6 +109,10 @@ func (c *DefaultClient) Get(opts Opts) (*Repository, error) {
 
 	tags, err := hub.Tags(opts.Name)
 	if err != nil {
+		if strings.Contains(err.Error(), "server gave HTTP response to HTTPS client") && strings.HasPrefix(opts.Registry, "https://") && c.insecure {
+			opts.Registry = strings.Replace(opts.Registry, "https://", "http://", 1)
+			goto INIT_CLIENT
+		}
 		return nil, err
 	}
 	repo := &Repository{
@@ -116,6 +128,8 @@ func (c *DefaultClient) Digest(opts Opts) (string, error) {
 		return "", ErrTagNotSupplied
 	}
 
+	// fallback to HTTP if the registry doesn't speak HTTPS https://github.com/keel-hq/keel/issues/331
+INIT_CLIENT:
 	hub, err := c.getRegistryClient(opts.Registry, opts.Username, opts.Password)
 	if err != nil {
 		return "", err
@@ -123,6 +137,10 @@ func (c *DefaultClient) Digest(opts Opts) (string, error) {
 
 	manifestDigest, err := hub.ManifestDigest(opts.Name, opts.Tag)
 	if err != nil {
+		if strings.Contains(err.Error(), "server gave HTTP response to HTTPS client") && strings.HasPrefix(opts.Registry, "https://") && c.insecure {
+			opts.Registry = strings.Replace(opts.Registry, "https://", "http://", 1)
+			goto INIT_CLIENT
+		}
 		return "", err
 	}
 

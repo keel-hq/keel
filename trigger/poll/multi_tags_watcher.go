@@ -56,8 +56,9 @@ func (j *WatchRepositoryTagsJob) Run() {
 
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
-			"image": j.details.trackedImage.Image.String(),
+			"error":        err,
+			"registry_url": reg,
+			"image":        j.details.trackedImage.Image.String(),
 		}).Error("trigger.poll.WatchRepositoryTagsJob: failed to get repository")
 		return
 	}
