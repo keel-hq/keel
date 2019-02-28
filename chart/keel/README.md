@@ -82,7 +82,7 @@ The following table lists has the main configurable parameters (polling, trigger
 | `polling.enabled`                 | Docker registries polling              | `true`                                                    |
 | `helmProvider.enabled`            | Enable/disable Helm provider           | `true`                                                    |
 | `gcr.enabled`                     | Enable/disable GCR Registry            | `false`                                                   |
-| `gcr.projectID`                   | GCP Project ID GCR belongs to          |                                                           |
+| `gcr.projectId`                   | GCP Project ID GCR belongs to          |                                                           |
 | `gcr.pubsub.enabled`              | Enable/disable GCP Pub/Sub trigger     | `false`                                                   |
 | `ecr.enabled`                     | Enable/disable AWS ECR Registry        | `false`                                                   |
 | `ecr.accessKeyId`                 | AWS_ACCESS_KEY_ID for ECR Registry     |                                                           |
