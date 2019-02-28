@@ -54,16 +54,16 @@ func (b *Bot) Configure(approvalsRespCh chan *bot.ApprovalResponse, botMessagesC
 	if os.Getenv(constants.EnvSlackToken) != "" {
 
 		b.name = "keel"
-		if os.Getenv(constants.EnvSlackBotName) != "" {
-			b.name = os.Getenv(constants.EnvSlackBotName)
+		if bootName := os.Getenv(constants.EnvSlackBotName); bootName != "" {
+			b.name = bootName
 		}
 
 		token := os.Getenv(constants.EnvSlackToken)
 		client := slack.New(token)
 
 		b.approvalsChannel = "general"
-		if os.Getenv(constants.EnvSlackApprovalsChannel) != "" {
-			b.approvalsChannel = os.Getenv(constants.EnvSlackApprovalsChannel)
+		if channel := os.Getenv(constants.EnvSlackApprovalsChannel); channel != "" {
+			b.approvalsChannel = channel
 		}
 
 		b.slackClient = client
