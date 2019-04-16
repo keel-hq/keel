@@ -155,3 +155,12 @@ podDisruptionBudget:
   enabled: false
   maxUnavailable: 1
   minAvailable: null
+
+# Google Cloud Ingress
+gcloudIngress:
+  enabled: false
+  allowHttp: true
+  managedCertificates:
+    enabled: false
+    domains:
+      - ""

@@ -142,6 +142,12 @@ spec:
               port: 9300
             initialDelaySeconds: 30
             timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 9300
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
           resources:
 {{ toYaml .Values.resources | indent 12 }}
 {{- if .Values.webhookRelay.enabled }}
