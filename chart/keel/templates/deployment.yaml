@@ -91,6 +91,13 @@ spec:
             - name: MATTERMOST_ENDPOINT
               value: "{{ .Values.mattermost.endpoint }}"
 {{- end }}
+{{- if .Values.basicauth.enabled }}
+            # Enable basic auth
+            - name: BASIC_AUTH_USER
+              value: "{{ .Values.basicauth.user }}"
+            - name: BASIC_AUTH_PASSWORD
+              value: "{{ .Values.basicauth.password }}"
+{{- end }}
 {{- if .Values.slack.enabled }}
             - name: SLACK_TOKEN
               value: "{{ .Values.slack.token }}"

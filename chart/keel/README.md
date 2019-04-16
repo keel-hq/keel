@@ -90,6 +90,9 @@ The following table lists has the main configurable parameters (polling, trigger
 | `ecr.region`                      | AWS_REGION for ECR Registry            |                                                           |
 | `webhook.enabled`                 | Enable/disable Webhook Notification    | `false`                                                   |
 | `webhook.endpoint`                | Remote webhook endpoint                |                                                           |
+| `basicauth.enabled`                   | Enable/disable Basic Auth on approvals       | `false`                                                   |
+| `basicauth.user`                   | Basic Auth username      |                                                    |
+| `basicauth.password`                   | Basic Auth password       |                                                    |
 | `slack.enabled`                   | Enable/disable Slack Notification      | `false`                                                   |
 | `slack.token`                     | Slack token                            |                                                           |
 | `slack.channel`                   | Slack channel                          |                                                           |
