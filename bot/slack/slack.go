@@ -63,7 +63,7 @@ func (b *Bot) Configure(approvalsRespCh chan *bot.ApprovalResponse, botMessagesC
 
 		b.approvalsChannel = "general"
 		if channel := os.Getenv(constants.EnvSlackApprovalsChannel); channel != "" {
-			b.approvalsChannel = channel
+			b.approvalsChannel = strings.TrimPrefix(channel, "#")
 		}
 
 		b.slackClient = client

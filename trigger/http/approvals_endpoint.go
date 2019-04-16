@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/cache"
 	"github.com/keel-hq/keel/types"
 )
@@ -25,23 +23,6 @@ const (
 )
 
 func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Request) {
-
-	// basic auth
-	if os.Getenv(constants.EnvBasicAuthUser) != "" && os.Getenv(constants.EnvBasicAuthPassword) != "" {
-
-		resp.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-
-		username, password, authOK := req.BasicAuth()
-		if authOK == false {
-			http.Error(resp, "Not authorized", 401)
-			return
-		}
-
-		if username != os.Getenv(constants.EnvBasicAuthUser) || password != os.Getenv(constants.EnvBasicAuthPassword) {
-			http.Error(resp, "Not authorized", 401)
-			return
-		}
-	}
 
 	// unknown lists all
 	approvals, err := s.approvalsManager.List()
@@ -67,23 +48,6 @@ func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Req
 
 func (s *TriggerServer) approvalApproveHandler(resp http.ResponseWriter, req *http.Request) {
 
-	// basic auth
-	if os.Getenv(constants.EnvBasicAuthUser) != "" && os.Getenv(constants.EnvBasicAuthPassword) != "" {
-
-		resp.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-
-		username, password, authOK := req.BasicAuth()
-		if authOK == false {
-			http.Error(resp, "Not authorized", 401)
-			return
-		}
-
-		if username != os.Getenv(constants.EnvBasicAuthUser) || password != os.Getenv(constants.EnvBasicAuthPassword) {
-			http.Error(resp, "Not authorized", 401)
-			return
-		}
-	}
-	
 	var ar approveRequest
 	dec := json.NewDecoder(req.Body)
 	defer req.Body.Close()

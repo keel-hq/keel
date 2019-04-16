@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -75,6 +75,8 @@ func deleteTestNamespace(namespace string) error {
 
 type KeelCmd struct {
 	cmd *exec.Cmd
+
+	env []string
 }
 
 func (kc *KeelCmd) Start(ctx context.Context) error {
@@ -87,6 +89,8 @@ func (kc *KeelCmd) Start(ctx context.Context) error {
 	c.Env = []string{
 		"DEBUG=true",
 	}
+	c.Env = append(c.Env, kc.env...)
+
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 
