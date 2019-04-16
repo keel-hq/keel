@@ -268,6 +268,8 @@ func setupTriggers(ctx context.Context, providers provider.Providers, approvalsM
 		Port:            types.KeelDefaultPort,
 		Providers:       providers,
 		ApprovalManager: approvalsManager,
+		Username:        os.Getenv(constants.EnvBasicAuthUser),
+		Password:        os.Getenv(constants.EnvBasicAuthPassword),
 	})
 
 	go func() {
