@@ -63,7 +63,6 @@ func NewTriggerServer(opts *Opts) *TriggerServer {
 func (s *TriggerServer) Start() error {
 
 	s.registerRoutes(s.router)
-	s.registerWebhookRoutes(s.router)
 
 	n := negroni.New(negroni.NewRecovery())
 	n.UseHandler(s.router)
@@ -107,6 +106,8 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalApproveHandler)).Methods("POST", "OPTIONS")
 
 	mux.Handle("/metrics", promhttp.Handler())
+
+	s.registerWebhookRoutes(mux)
 }
 
 func (s *TriggerServer) registerWebhookRoutes(mux *mux.Router) {
