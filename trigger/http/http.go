@@ -28,6 +28,10 @@ type Opts struct {
 	Providers provider.Providers
 
 	ApprovalManager approvals.Manager
+
+	// Username and password are used for basic auth
+	Username string
+	Password string
 }
 
 // TriggerServer - webhook trigger & healthcheck server
@@ -37,6 +41,10 @@ type TriggerServer struct {
 	port             int
 	server           *http.Server
 	router           *mux.Router
+
+	// basic auth
+	username string
+	password string
 }
 
 // NewTriggerServer - create new HTTP trigger based server
@@ -46,6 +54,8 @@ func NewTriggerServer(opts *Opts) *TriggerServer {
 		providers:        opts.Providers,
 		approvalsManager: opts.ApprovalManager,
 		router:           mux.NewRouter(),
+		username:         opts.Username,
+		password:         opts.Password,
 	}
 }
 
@@ -91,27 +101,25 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	mux.HandleFunc("/version", s.versionHandler).Methods("GET", "OPTIONS")
 
 	// approvals
-	mux.HandleFunc("/v1/approvals", s.approvalsHandler).Methods("GET", "OPTIONS")
+	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalsHandler)).Methods("GET", "OPTIONS")
 	// approving
-	mux.HandleFunc("/v1/approvals", s.approvalApproveHandler).Methods("POST", "OPTIONS")
+	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalApproveHandler)).Methods("POST", "OPTIONS")
 
-	// native webhooks handler
+	mux.Handle("/metrics", promhttp.Handler())
+
+	s.registerWebhookRoutes(mux)
+}
+
+func (s *TriggerServer) registerWebhookRoutes(mux *mux.Router) {
 	mux.HandleFunc("/v1/webhooks/native", s.nativeHandler).Methods("POST", "OPTIONS")
-
-	// dockerhub webhooks handler
 	mux.HandleFunc("/v1/webhooks/dockerhub", s.dockerHubHandler).Methods("POST", "OPTIONS")
-
-	// quay webhooks handler
 	mux.HandleFunc("/v1/webhooks/quay", s.quayHandler).Methods("POST", "OPTIONS")
-
 	mux.HandleFunc("/v1/webhooks/azure", s.azureHandler).Methods("POST", "OPTIONS")
 
 	// Docker registry notifications, used by Docker, Gitlab, Harbor
 	// https://docs.docker.com/registry/notifications/
 	//https://docs.gitlab.com/ee/administration/container_registry.html#configure-container-registry-notifications
 	mux.HandleFunc("/v1/webhooks/registry", s.registryNotificationHandler).Methods("POST", "OPTIONS")
-
-	mux.Handle("/metrics", promhttp.Handler())
 }
 
 func (s *TriggerServer) healthHandler(resp http.ResponseWriter, req *http.Request) {
@@ -134,4 +142,24 @@ func (s *TriggerServer) versionHandler(resp http.ResponseWriter, req *http.Reque
 
 func (s *TriggerServer) trigger(event types.Event) error {
 	return s.providers.Submit(event)
+}
+
+func (s *TriggerServer) requireAdminAuthorization(next http.HandlerFunc) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+
+		if s.username == "" && s.password == "" {
+			next(rw, r)
+			return
+		}
+
+		rw.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+
+		username, password, ok := r.BasicAuth()
+		if ok && username == s.username && password == s.password {
+			next(rw, r)
+			return
+		}
+
+		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+	}
 }

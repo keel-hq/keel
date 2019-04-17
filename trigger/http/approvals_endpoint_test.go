@@ -352,3 +352,108 @@ func TestReject(t *testing.T) {
 	}
 
 }
+
+func TestAuthListApprovalsA(t *testing.T) {
+
+	fp := &fakeProvider{}
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
+	providers := provider.New([]provider.Provider{fp}, am)
+	srv := NewTriggerServer(&Opts{
+		Providers:       providers,
+		ApprovalManager: am,
+		Username:        "user-1",
+		Password:        "secret",
+	})
+	srv.registerRoutes(srv.router)
+
+	err := am.Create(&types.Approval{
+		Identifier:     "123",
+		VotesRequired:  5,
+		NewVersion:     "2.0.0",
+		CurrentVersion: "1.0.0",
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create approval: %s", err)
+	}
+
+	// listing
+	req, err := http.NewRequest("GET", "/v1/approvals", nil)
+	if err != nil {
+		t.Fatalf("failed to create req: %s", err)
+	}
+
+	rec := httptest.NewRecorder()
+
+	srv.router.ServeHTTP(rec, req)
+	if rec.Code != 401 {
+		t.Errorf("expected 401 status code, got: %d", rec.Code)
+
+		t.Log(rec.Body.String())
+	}
+}
+
+func TestAuthListApprovalsB(t *testing.T) {
+
+	fp := &fakeProvider{}
+	mem := memory.NewMemoryCache()
+	am := approvals.New(mem)
+	providers := provider.New([]provider.Provider{fp}, am)
+	srv := NewTriggerServer(&Opts{
+		Providers:       providers,
+		ApprovalManager: am,
+		Username:        "user-1",
+		Password:        "secret",
+	})
+	srv.registerRoutes(srv.router)
+
+	err := am.Create(&types.Approval{
+		Identifier:     "123",
+		VotesRequired:  5,
+		NewVersion:     "2.0.0",
+		CurrentVersion: "1.0.0",
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create approval: %s", err)
+	}
+
+	// listing
+	req, err := http.NewRequest("GET", "/v1/approvals", nil)
+	if err != nil {
+		t.Fatalf("failed to create req: %s", err)
+	}
+
+	req.SetBasicAuth("user-1", "secret")
+
+	rec := httptest.NewRecorder()
+
+	srv.router.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Errorf("expected 200 status code, got: %d", rec.Code)
+
+		t.Log(rec.Body.String())
+	}
+
+	var approvals []*types.Approval
+
+	err = json.Unmarshal(rec.Body.Bytes(), &approvals)
+	if err != nil {
+		t.Fatalf("failed to unmarshal response into approvals: %s", err)
+	}
+
+	if len(approvals) != 1 {
+		t.Fatalf("expected to find 1 approval but found: %d", len(approvals))
+	}
+
+	if approvals[0].VotesRequired != 5 {
+		t.Errorf("unexpected votes required")
+	}
+	if approvals[0].NewVersion != "2.0.0" {
+		t.Errorf("unexpected new version: %s", approvals[0].NewVersion)
+	}
+	if approvals[0].CurrentVersion != "1.0.0" {
+		t.Errorf("unexpected current version: %s", approvals[0].CurrentVersion)
+	}
+}

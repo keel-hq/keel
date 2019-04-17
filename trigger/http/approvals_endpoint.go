@@ -23,6 +23,7 @@ const (
 )
 
 func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Request) {
+
 	// unknown lists all
 	approvals, err := s.approvalsManager.List()
 	if err != nil {

@@ -4,7 +4,7 @@
 
 image:
   repository: keelhq/keel
-  tag: 0.13.0
+  tag: 0.13.2
   pullPolicy: IfNotPresent
 
 # Enable insecure registries
@@ -67,6 +67,12 @@ hipchat:
 mattermost:
   enabled: false
   endpoint: ""
+
+# Basic auth on approvals
+basicauth:
+  enabled: false
+  user: ""
+  password: ""
 
 # Keel service
 # Enable to receive webhooks from Docker registries

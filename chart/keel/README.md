@@ -115,6 +115,9 @@ The following table lists has the main configurable parameters (polling, trigger
 | `gcloudIngress.allowHttp`                   | Enable/Disable ssl on Ingress          | `true`                                                    |
 | `gcloudIngress.managedCertificates.enabled` | Enable/Disable managed ssl on Gcloud   | `false`                                                   |
 | `gcloudIngress.managedCertificates.domains` | List of managed certificate domains    | `[]`                                                      |
+| `basicauth.enabled`                         | Enable/disable Basic Auth on approvals | `false`                                                   |
+| `basicauth.user`                            | Basic Auth username                    |                                                           |
+| `basicauth.password`                        | Basic Auth password                    |                                                           |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
