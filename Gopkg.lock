@@ -20,10 +20,22 @@
   version = "v0.3.0"
 
 [[projects]]
+  name = "github.com/Masterminds/goutils"
+  packages = ["."]
+  revision = "41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/Masterminds/semver"
   packages = ["."]
   revision = "15d8430ab86497c5c0da827b748823945e1cf1e1"
   version = "v1.4.0"
+
+[[projects]]
+  name = "github.com/Masterminds/sprig"
+  packages = ["."]
+  revision = "9f8fceff796fb9f4e992cd2bece016be0121ab74"
+  version = "2.19.0"
 
 [[projects]]
   name = "github.com/PuerkitoBio/purell"
@@ -92,6 +104,12 @@
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
+
+[[projects]]
+  name = "github.com/cyphar/filepath-securejoin"
+  packages = ["."]
+  revision = "a261ee33d7a517f054effbf451841abaafe3e0fd"
+  version = "v0.2.2"
 
 [[projects]]
   branch = "master"
@@ -234,6 +252,12 @@
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
 
 [[projects]]
+  name = "github.com/google/uuid"
+  packages = ["."]
+  revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
+  version = "v1.1.1"
+
+[[projects]]
   name = "github.com/googleapis/gax-go"
   packages = ["."]
   revision = "317e0006254c44a0ac427cc52a0e083ff0b9622f"
@@ -284,6 +308,12 @@
   name = "github.com/howeyc/gopass"
   packages = ["."]
   revision = "bf9dde6d0d2c004a008c27aaee91170c786f6db8"
+
+[[projects]]
+  name = "github.com/huandu/xstrings"
+  packages = ["."]
+  revision = "f02667b379e2fb5916c3cda2cf31e0eb885d79f8"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/imdario/mergo"
@@ -359,6 +389,12 @@
   packages = ["."]
   revision = "5f041e8faa004a95c88a202771f4cc3e991971e6"
   version = "v2.0.1"
+
+[[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
 
 [[projects]]
   name = "github.com/prometheus/client_golang"
@@ -447,7 +483,11 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
+  packages = [
+    "pbkdf2",
+    "scrypt",
+    "ssh/terminal"
+  ]
   revision = "91a49db82a88618983a78a06c1cbd4e00ab749ab"
 
 [[projects]]
@@ -579,6 +619,7 @@
     "encoding/proto",
     "grpclb/grpc_lb_v1/messages",
     "grpclog",
+    "health/grpc_health_v1",
     "internal",
     "keepalive",
     "metadata",
@@ -756,18 +797,23 @@
   name = "k8s.io/helm"
   packages = [
     "pkg/chartutil",
+    "pkg/engine",
     "pkg/helm",
     "pkg/ignore",
+    "pkg/manifest",
     "pkg/proto/hapi/chart",
     "pkg/proto/hapi/release",
     "pkg/proto/hapi/services",
     "pkg/proto/hapi/version",
+    "pkg/releaseutil",
+    "pkg/renderutil",
+    "pkg/storage/errors",
     "pkg/strvals",
     "pkg/sympath",
     "pkg/version"
   ]
-  revision = "6af75a8fd72e2aa18a2b278cfe5c7a1c5feca7f2"
-  version = "v2.8.1"
+  revision = "618447cbf203d147601b4b9bd7f8c37a5d39fbb4"
+  version = "v2.13.1"
 
 [[projects]]
   branch = "master"
@@ -778,6 +824,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "836569579f1c08cf25b2ca56afd8e16792f7f83bd9a467492cc73bb9901258bd"
+  inputs-digest = "d177625f1af0af974d02c9053e018b90e378621bbe68580bf0b186150631c86d"
   solver-name = "gps-cdcl"
   solver-version = 1
