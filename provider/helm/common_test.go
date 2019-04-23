@@ -115,8 +115,6 @@ keel:
   images:
   - repository: alertmanager.alertmanagerSpec.image.repository
     tag: alertmanager.alertmanagerSpec.image.tag
-  - repository: grafana.image.repository
-    tag: grafana.image.tag
   - repository: prometheusOperator.image.repository
     tag: prometheusOperator.image.tag
   - repository: prometheus.prometheusSpec.image.repository
