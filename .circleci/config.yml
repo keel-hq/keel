@@ -18,6 +18,7 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: make build
+      - run: go get github.com/mfridman/tparse
       - run: make test
   lint-scripts:
     docker:
