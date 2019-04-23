@@ -10,7 +10,7 @@ import (
 	"github.com/keel-hq/keel/types"
 
 	apps_v1 "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
@@ -1317,5 +1317,73 @@ func TestTrackedImages(t *testing.T) {
 
 	if imgs[0].Secrets[0] != "very-secret" {
 		t.Errorf("could not find image pull secret")
+	}
+}
+
+func TestTrackedImagesWithSecrets(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			v1.Namespace{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	deps := []*apps_v1.Deployment{
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-1",
+				Namespace: "xxxx",
+				Labels: map[string]string{
+					types.KeelPolicyLabel:               "all",
+					types.KeelImagePullSecretAnnotation: "foo-bar",
+				},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							v1.Container{
+								Image: "gcr.io/v2-namespace/hello-world:1.1",
+							},
+						},
+						ImagePullSecrets: []v1.LocalObjectReference{
+							v1.LocalObjectReference{
+								Name: "very-secret",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+	}
+
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	imgs, err := provider.TrackedImages()
+	if err != nil {
+		t.Errorf("failed to get image: %s", err)
+	}
+	if len(imgs) != 1 {
+		t.Errorf("expected to find 1 image, got: %d", len(imgs))
+	}
+
+	if imgs[0].Secrets[0] != "foo-bar" {
+		t.Errorf("expected foo-bar, got: %s", imgs[0].Secrets[0])
+	}
+	if imgs[0].Secrets[1] != "very-secret" {
+		t.Errorf("expected very-secret, got: %s", imgs[0].Secrets[1])
 	}
 }

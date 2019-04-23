@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors All rights reserved.
+Copyright The Helm Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ limitations under the License.
 package helm // import "k8s.io/helm/pkg/helm"
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -25,10 +26,15 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/proto/hapi/chart"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
 )
+
+// maxMsgSize use 20MB as the default message size limit.
+// grpc library default is 4MB
+const maxMsgSize = 1024 * 1024 * 20
 
 // Client manages client side of the Helm-Tiller protocol.
 type Client struct {
@@ -38,6 +44,8 @@ type Client struct {
 // NewClient creates a new client.
 func NewClient(opts ...Option) *Client {
 	var c Client
+	// set some sane defaults
+	c.Option(ConnectTimeout(5))
 	return c.Option(opts...)
 }
 
@@ -89,6 +97,7 @@ func (h *Client) InstallReleaseFromChart(chart *chart.Chart, ns string, opts ...
 	req.Namespace = ns
 	req.DryRun = reqOpts.dryRun
 	req.DisableHooks = reqOpts.disableHooks
+	req.DisableCrdHook = reqOpts.disableCRDHook
 	req.ReuseName = reqOpts.reuseName
 	ctx := NewContext()
 
@@ -293,7 +302,7 @@ func (h *Client) RunReleaseTest(rlsName string, opts ...ReleaseTestOption) (<-ch
 	return h.test(ctx, req)
 }
 
-// PingTiller pings the Tiller pod and ensure's that it is up and runnning
+// PingTiller pings the Tiller pod and ensures that it is up and running
 func (h *Client) PingTiller() error {
 	ctx := NewContext()
 	return h.ping(ctx)
@@ -303,13 +312,13 @@ func (h *Client) PingTiller() error {
 // are constructed here.
 func (h *Client) connect(ctx context.Context) (conn *grpc.ClientConn, err error) {
 	opts := []grpc.DialOption{
-		grpc.WithTimeout(5 * time.Second),
 		grpc.WithBlock(),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			// Send keepalive every 30 seconds to prevent the connection from
 			// getting closed by upstreams
 			Time: time.Duration(30) * time.Second,
 		}),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)),
 	}
 	switch {
 	case h.opts.useTLS:
@@ -317,13 +326,15 @@ func (h *Client) connect(ctx context.Context) (conn *grpc.ClientConn, err error)
 	default:
 		opts = append(opts, grpc.WithInsecure())
 	}
-	if conn, err = grpc.Dial(h.opts.host, opts...); err != nil {
+	ctx, cancel := context.WithTimeout(ctx, h.opts.connectTimeout)
+	defer cancel()
+	if conn, err = grpc.DialContext(ctx, h.opts.host, opts...); err != nil {
 		return nil, err
 	}
 	return conn, nil
 }
 
-// Executes tiller.ListReleases RPC.
+// list executes tiller.ListReleases RPC.
 func (h *Client) list(ctx context.Context, req *rls.ListReleasesRequest) (*rls.ListReleasesResponse, error) {
 	c, err := h.connect(ctx)
 	if err != nil {
@@ -336,11 +347,25 @@ func (h *Client) list(ctx context.Context, req *rls.ListReleasesRequest) (*rls.L
 	if err != nil {
 		return nil, err
 	}
-
-	return s.Recv()
+	var resp *rls.ListReleasesResponse
+	for {
+		r, err := s.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if resp == nil {
+			resp = r
+			continue
+		}
+		resp.Releases = append(resp.Releases, r.GetReleases()...)
+	}
+	return resp, nil
 }
 
-// Executes tiller.InstallRelease RPC.
+// install executes tiller.InstallRelease RPC.
 func (h *Client) install(ctx context.Context, req *rls.InstallReleaseRequest) (*rls.InstallReleaseResponse, error) {
 	c, err := h.connect(ctx)
 	if err != nil {
@@ -352,7 +377,7 @@ func (h *Client) install(ctx context.Context, req *rls.InstallReleaseRequest) (*
 	return rlc.InstallRelease(ctx, req)
 }
 
-// Executes tiller.UninstallRelease RPC.
+// delete executes tiller.UninstallRelease RPC.
 func (h *Client) delete(ctx context.Context, req *rls.UninstallReleaseRequest) (*rls.UninstallReleaseResponse, error) {
 	c, err := h.connect(ctx)
 	if err != nil {
@@ -364,7 +389,7 @@ func (h *Client) delete(ctx context.Context, req *rls.UninstallReleaseRequest) (
 	return rlc.UninstallRelease(ctx, req)
 }
 
-// Executes tiller.UpdateRelease RPC.
+// update executes tiller.UpdateRelease RPC.
 func (h *Client) update(ctx context.Context, req *rls.UpdateReleaseRequest) (*rls.UpdateReleaseResponse, error) {
 	c, err := h.connect(ctx)
 	if err != nil {
@@ -376,7 +401,7 @@ func (h *Client) update(ctx context.Context, req *rls.UpdateReleaseRequest) (*rl
 	return rlc.UpdateRelease(ctx, req)
 }
 
-// Executes tiller.RollbackRelease RPC.
+// rollback executes tiller.RollbackRelease RPC.
 func (h *Client) rollback(ctx context.Context, req *rls.RollbackReleaseRequest) (*rls.RollbackReleaseResponse, error) {
 	c, err := h.connect(ctx)
 	if err != nil {
@@ -388,7 +413,7 @@ func (h *Client) rollback(ctx context.Context, req *rls.RollbackReleaseRequest) 
 	return rlc.RollbackRelease(ctx, req)
 }
 
-// Executes tiller.GetReleaseStatus RPC.
+// status executes tiller.GetReleaseStatus RPC.
 func (h *Client) status(ctx context.Context, req *rls.GetReleaseStatusRequest) (*rls.GetReleaseStatusResponse, error) {
 	c, err := h.connect(ctx)
 	if err != nil {
@@ -400,7 +425,7 @@ func (h *Client) status(ctx context.Context, req *rls.GetReleaseStatusRequest) (
 	return rlc.GetReleaseStatus(ctx, req)
 }
 
-// Executes tiller.GetReleaseContent RPC.
+// content executes tiller.GetReleaseContent RPC.
 func (h *Client) content(ctx context.Context, req *rls.GetReleaseContentRequest) (*rls.GetReleaseContentResponse, error) {
 	c, err := h.connect(ctx)
 	if err != nil {
@@ -412,7 +437,7 @@ func (h *Client) content(ctx context.Context, req *rls.GetReleaseContentRequest)
 	return rlc.GetReleaseContent(ctx, req)
 }
 
-// Executes tiller.GetVersion RPC.
+// version executes tiller.GetVersion RPC.
 func (h *Client) version(ctx context.Context, req *rls.GetVersionRequest) (*rls.GetVersionResponse, error) {
 	c, err := h.connect(ctx)
 	if err != nil {
@@ -424,7 +449,7 @@ func (h *Client) version(ctx context.Context, req *rls.GetVersionRequest) (*rls.
 	return rlc.GetVersion(ctx, req)
 }
 
-// Executes tiller.GetHistory RPC.
+// history executes tiller.GetHistory RPC.
 func (h *Client) history(ctx context.Context, req *rls.GetHistoryRequest) (*rls.GetHistoryResponse, error) {
 	c, err := h.connect(ctx)
 	if err != nil {
@@ -436,7 +461,7 @@ func (h *Client) history(ctx context.Context, req *rls.GetHistoryRequest) (*rls.
 	return rlc.GetHistory(ctx, req)
 }
 
-// Executes tiller.TestRelease RPC.
+// test executes tiller.TestRelease RPC.
 func (h *Client) test(ctx context.Context, req *rls.TestReleaseRequest) (<-chan *rls.TestReleaseResponse, <-chan error) {
 	errc := make(chan error, 1)
 	c, err := h.connect(ctx)
@@ -474,7 +499,7 @@ func (h *Client) test(ctx context.Context, req *rls.TestReleaseRequest) (<-chan 
 	return ch, errc
 }
 
-// Executes tiller.Ping RPC.
+// ping executes tiller.Ping RPC.
 func (h *Client) ping(ctx context.Context) error {
 	c, err := h.connect(ctx)
 	if err != nil {
@@ -482,6 +507,17 @@ func (h *Client) ping(ctx context.Context) error {
 	}
 	defer c.Close()
 
-	rlc := rls.NewReleaseServiceClient(c)
-	return rlc.PingTiller(ctx)
+	healthClient := healthpb.NewHealthClient(c)
+	resp, err := healthClient.Check(ctx, &healthpb.HealthCheckRequest{Service: "Tiller"})
+	if err != nil {
+		return err
+	}
+	switch resp.GetStatus() {
+	case healthpb.HealthCheckResponse_SERVING:
+		return nil
+	case healthpb.HealthCheckResponse_NOT_SERVING:
+		return fmt.Errorf("tiller is not serving requests at this time, Please try again later")
+	default:
+		return fmt.Errorf("tiller healthcheck returned an unknown status")
+	}
 }

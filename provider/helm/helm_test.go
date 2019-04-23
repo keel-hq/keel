@@ -136,6 +136,52 @@ keel:
 	}
 }
 
+func TestGetChartPolicyFromProm(t *testing.T) {
+
+	fakeImpl := &fakeImplementer{
+		listReleasesResponse: &rls.ListReleasesResponse{
+			Releases: []*hapi_release5.Release{
+				&hapi_release5.Release{
+					Name: "release-1",
+					Chart: &chart.Chart{
+						Values:   &chart.Config{Raw: promChartValues},
+						Metadata: &chart.Metadata{Name: "app-x"},
+					},
+					Config: &chart.Config{Raw: ""},
+				},
+			},
+		},
+	}
+
+	releases, err := fakeImpl.ListReleases()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	policyFound := false
+
+	for _, release := range releases.Releases {
+
+		vals, err := values(release.Chart, release.Config)
+		if err != nil {
+			t.Fatalf("failed to get values: %s", err)
+		}
+
+		cfg, err := getKeelConfig(vals)
+		if err != nil {
+			t.Errorf("failed to get image paths: %s", err)
+		}
+
+		if cfg.Plc.Name() == policy.SemverPolicyTypeAll.String() {
+			policyFound = true
+		}
+	}
+
+	if !policyFound {
+		t.Errorf("policy not found")
+	}
+}
+
 func TestGetTrackedReleases(t *testing.T) {
 
 	chartVals := `
@@ -479,7 +525,7 @@ keel:
   images:
     - repository: image.repository
       tag: image.tag
-
+      imagePullSecret: such-secret
 `
 	valuesPoll, _ := chartutil.ReadValues([]byte(valuesPollStr))
 
@@ -525,7 +571,7 @@ keel:
 				Trigger:      types.TriggerTypePoll,
 				PollSchedule: "@every 30m",
 				Images: []ImageDetails{
-					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag", ImagePullSecret: "such-secret"},
 				},
 				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor),
 			},

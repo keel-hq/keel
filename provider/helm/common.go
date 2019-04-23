@@ -50,6 +50,10 @@ func getImages(vals chartutil.Values) ([]*types.TrackedImage, error) {
 			Policy:       keelCfg.Plc,
 		}
 
+		if imageDetails.ImagePullSecret != "" {
+			trackedImage.Secrets = append(trackedImage.Secrets, imageDetails.ImagePullSecret)
+		}
+
 		images = append(images, trackedImage)
 	}
 

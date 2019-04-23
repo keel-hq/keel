@@ -116,10 +116,11 @@ type KeelChartConfig struct {
 
 // ImageDetails - image details
 type ImageDetails struct {
-	RepositoryPath string `json:"repository"`
-	TagPath        string `json:"tag"`
-	DigestPath     string `json:"digest"`
-	ReleaseNotes   string `json:"releaseNotes"`
+	RepositoryPath  string `json:"repository"`
+	TagPath         string `json:"tag"`
+	DigestPath      string `json:"digest"`
+	ReleaseNotes    string `json:"releaseNotes"`
+	ImagePullSecret string `json:"imagePullSecret"`
 }
 
 // Provider - helm provider, responsible for managing release updates
@@ -215,7 +216,8 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 
 		for _, img := range releaseImages {
 			img.Meta = map[string]string{
-				"selector": selector,
+				"selector":      selector,
+				"helm.sh/chart": fmt.Sprintf("%s-%s", release.Chart.Metadata.Name, release.Chart.Metadata.Version),
 			}
 			img.Namespace = release.Namespace
 			img.Provider = ProviderName
