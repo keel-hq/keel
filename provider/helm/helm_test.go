@@ -525,7 +525,7 @@ keel:
   images:
     - repository: image.repository
       tag: image.tag
-
+      imagePullSecret: such-secret
 `
 	valuesPoll, _ := chartutil.ReadValues([]byte(valuesPollStr))
 
@@ -571,7 +571,7 @@ keel:
 				Trigger:      types.TriggerTypePoll,
 				PollSchedule: "@every 30m",
 				Images: []ImageDetails{
-					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag", ImagePullSecret: "such-secret"},
 				},
 				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor),
 			},
