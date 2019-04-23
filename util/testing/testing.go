@@ -1,12 +1,14 @@
 package testing
 
 import (
+	"fmt"
+
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
 	apps_v1 "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
@@ -20,7 +22,7 @@ type FakeK8sImplementer struct {
 	// stores value of an updated deployment
 	Updated *k8s.GenericResource
 
-	AvailableSecret *v1.Secret
+	AvailableSecret map[string]*v1.Secret
 
 	AvailablePods *v1.PodList
 	DeletedPods   []*v1.Pod
@@ -55,7 +57,11 @@ func (i *FakeK8sImplementer) Secret(namespace, name string) (*v1.Secret, error) 
 	if i.Error != nil {
 		return nil, i.Error
 	}
-	return i.AvailableSecret, nil
+	s, ok := i.AvailableSecret[name]
+	if !ok {
+		return nil, fmt.Errorf("secret %s not found", name)
+	}
+	return s, nil
 }
 
 // Pods - available pods
