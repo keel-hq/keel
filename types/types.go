@@ -19,6 +19,8 @@ const KeelDefaultPort = 9300
 // KeelPolicyLabel - keel update policies (version checking)
 const KeelPolicyLabel = "keel.sh/policy"
 
+const KeelImagePullSecretAnnotation = "keel.sh/imagePullSecret"
+
 // KeelTriggerLabel - trigger label is used to specify custom trigger types
 // for example keel.sh/trigger=poll would signal poll trigger to start watching for repository
 // changes

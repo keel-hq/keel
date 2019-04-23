@@ -9,7 +9,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/rusenask/cron"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -126,6 +126,25 @@ func (p *Provider) Stop() {
 	close(p.stop)
 }
 
+func getImagePullSecretFromMeta(labels map[string]string, annotations map[string]string) string {
+
+	searchKey := strings.ToLower(types.KeelImagePullSecretAnnotation)
+
+	for k, v := range labels {
+		if strings.ToLower(k) == searchKey {
+			return v
+		}
+	}
+
+	for k, v := range annotations {
+		if strings.ToLower(k) == searchKey {
+			return v
+		}
+	}
+
+	return ""
+}
+
 // TrackedImages returns a list of tracked images.
 func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 	var trackedImages []*types.TrackedImage
@@ -158,7 +177,15 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 
 		// trigger type, we only care for "poll" type triggers
 		trigger := policies.GetTriggerPolicy(labels, annotations)
-		secrets := gr.GetImagePullSecrets()
+
+		// getting image pull secrets
+		var secrets []string
+		specifiedSecret := getImagePullSecretFromMeta(labels, annotations)
+		if specifiedSecret != "" {
+			secrets = append(secrets, specifiedSecret)
+		}
+		secrets = append(secrets, gr.GetImagePullSecrets()...)
+
 		images := gr.GetImages()
 		for _, img := range images {
 			ref, err := image.Parse(img)
