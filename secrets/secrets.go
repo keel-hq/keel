@@ -155,7 +155,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 			continue
 		}
 
-		dockerCfg := make(DockerCfg)
+		var dockerCfg DockerCfg
 
 		switch secret.Type {
 		case v1.SecretTypeDockercfg:
@@ -222,6 +222,11 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 		creds, found := credentialsFromConfig(image, dockerCfg)
 		if found {
 			return creds, nil
+		} else {
+			log.WithFields(log.Fields{
+				"secret_ref": secretRef,
+				"image":      image.Image.String(),
+			}).Warn("secrets.defaultGetter: registry not found among secrets")
 		}
 	}
 
@@ -240,7 +245,7 @@ func (g *DefaultGetter) getCredentialsFromSecret(image *types.TrackedImage) (*ty
 			"registry":  image.Image.Registry(),
 			"image":     image.Image.Repository(),
 			"secrets":   image.Secrets,
-		}).Warnf("secrets.defaultGetter.lookupSecrets: docker credentials were not found among secrets, is secret in the namespace '%s'?", image.Namespace)
+		}).Errorf("secrets.defaultGetter.lookupSecrets: docker credentials were not found among secrets, is secret in the namespace '%s'?", image.Namespace)
 	}
 
 	return credentials, nil
