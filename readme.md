@@ -127,7 +127,7 @@ To test Keel while developing:
 Get a test parser (makes output nice):
 
 ```bash
-make get-tparse
+go get github.com/mfridman/tparse
 ```
 
 To run unit tests:
