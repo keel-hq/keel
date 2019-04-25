@@ -77,43 +77,47 @@ The command removes all the Kubernetes components associated with the chart and 
 
 The following table lists has the main configurable parameters (polling, triggers, notifications, service) of the _Keel_ chart and they apply to both Kubernetes and Helm providers:
 
-| Parameter                         | Description                            | Default                                                   |
-| --------------------------------- | -------------------------------------- | --------------------------------------------------------- |
-| `polling.enabled`                 | Docker registries polling              | `true`                                                    |
-| `helmProvider.enabled`            | Enable/disable Helm provider           | `true`                                                    |
-| `gcr.enabled`                     | Enable/disable GCR Registry            | `false`                                                   |
-| `gcr.projectId`                   | GCP Project ID GCR belongs to          |                                                           |
-| `gcr.pubsub.enabled`              | Enable/disable GCP Pub/Sub trigger     | `false`                                                   |
-| `ecr.enabled`                     | Enable/disable AWS ECR Registry        | `false`                                                   |
-| `ecr.accessKeyId`                 | AWS_ACCESS_KEY_ID for ECR Registry     |                                                           |
-| `ecr.secretAccessKey`             | AWS_SECRET_ACCESS_KEY for ECR Registry |                                                           |
-| `ecr.region`                      | AWS_REGION for ECR Registry            |                                                           |
-| `webhook.enabled`                 | Enable/disable Webhook Notification    | `false`                                                   |
-| `webhook.endpoint`                | Remote webhook endpoint                |                                                           |
-| `basicauth.enabled`                   | Enable/disable Basic Auth on approvals       | `false`                                                   |
-| `basicauth.user`                   | Basic Auth username      |                                                    |
-| `basicauth.password`                   | Basic Auth password       |                                                    |
-| `slack.enabled`                   | Enable/disable Slack Notification      | `false`                                                   |
-| `slack.token`                     | Slack token                            |                                                           |
-| `slack.channel`                   | Slack channel                          |                                                           |
-| `slack.approvalsChannel`          | Slack channel for approvals            |                                                           |
-| `service.enabled`                 | Enable/disable Keel service            | `false`                                                   |
-| `service.type`                    | Keel service type                      | `LoadBalancer`                                            |
-| `service.externalPort`            | Keel service port                      | `9300`                                                    |
-| `webhookRelay.enabled`            | Enable/disable WebhookRelay integration| `false`                                                   |
-| `webhookRelay.key`                | WebhookRelay key                       |                                                           |
-| `webhookRelay.secret`             | WebhookRelay secret                    |                                                           |
-| `webhookRelay.bucket`             | WebhookRelay bucket                    |                                                           |
-| `rbac.enabled`                    | Enable/disable RBAC installation       | `false`                                                   |
-| `hipchat.enabled`                 | Enable/disable hipchat integration     | `false`                                                   |
-| `hipchat.token`                   | Hipchat token                          |                                                           |
-| `hipchat.channel`                 | Hipchat channel                        |                                                           |
-| `hipchat.approvalsChannel`        | Hipchat channel for approvals          |                                                           |
-| `hipchat.botName`                 | Name of the Hipchat bot                |                                                           |
-| `hipchat.userName`                | Hipchat username in Jabber format      |                                                           |
-| `hipchat.password`                | Hipchat password for approvals user    |                                                           |
-| `googleApplicationCredentials`    | GCP Service account key configurable   |                                                           |
-| `notificationLevel`               | Keel notification level                | `info`                                                    |
+| Parameter                                   | Description                            | Default                                                   |
+| ------------------------------------------- | -------------------------------------- | --------------------------------------------------------- |
+| `polling.enabled`                           | Docker registries polling              | `true`                                                    |
+| `helmProvider.enabled`                      | Enable/disable Helm provider           | `true`                                                    |
+| `gcr.enabled`                               | Enable/disable GCR Registry            | `false`                                                   |
+| `gcr.projectId`                             | GCP Project ID GCR belongs to          |                                                           |
+| `gcr.pubsub.enabled`                        | Enable/disable GCP Pub/Sub trigger     | `false`                                                   |
+| `ecr.enabled`                               | Enable/disable AWS ECR Registry        | `false`                                                   |
+| `ecr.accessKeyId`                           | AWS_ACCESS_KEY_ID for ECR Registry     |                                                           |
+| `ecr.secretAccessKey`                       | AWS_SECRET_ACCESS_KEY for ECR Registry |                                                           |
+| `ecr.region`                                | AWS_REGION for ECR Registry            |                                                           |
+| `webhook.enabled`                           | Enable/disable Webhook Notification    | `false`                                                   |
+| `webhook.endpoint`                          | Remote webhook endpoint                |                                                           |
+| `slack.enabled`                             | Enable/disable Slack Notification      | `false`                                                   |
+| `slack.token`                               | Slack token                            |                                                           |
+| `slack.channel`                             | Slack channel                          |                                                           |
+| `slack.approvalsChannel`                    | Slack channel for approvals            |                                                           |
+| `service.enable`                            | Enable/disable Keel service            | `false`                                                   |
+| `service.type`                              | Keel service type                      | `LoadBalancer`                                            |
+| `service.externalPort`                      | Keel service port                      | `9300`                                                    |
+| `webhookRelay.enabled`                      | Enable/disable WebhookRelay integration| `false`                                                   |
+| `webhookRelay.key`                          | WebhookRelay key                       |                                                           |
+| `webhookRelay.secret`                       | WebhookRelay secret                    |                                                           |
+| `webhookRelay.bucket`                       | WebhookRelay bucket                    |                                                           |
+| `rbac.enabled`                              | Enable/disable RBAC installation       | `false`                                                   |
+| `hipchat.enabled`                           | Enable/disable hipchat integration     | `false`                                                   |
+| `hipchat.token`                             | Hipchat token                          |                                                           |
+| `hipchat.channel`                           | Hipchat channel                        |                                                           |
+| `hipchat.approvalsChannel`                  | Hipchat channel for approvals          |                                                           |
+| `hipchat.botName`                           | Name of the Hipchat bot                |                                                           |
+| `hipchat.userName`                          | Hipchat username in Jabber format      |                                                           |
+| `hipchat.password`                          | Hipchat password for approvals user    |                                                           |
+| `googleApplicationCredentials`              | GCP Service account key configurable   |                                                           |
+| `hipchat.password`                          | Hipchat password for approvals user    |                                                           |
+| `gcloudIngress.enabled`                     | Configure Google Cloud Ingress         | `false`                                                   |
+| `gcloudIngress.allowHttp`                   | Enable/Disable ssl on Ingress          | `true`                                                    |
+| `gcloudIngress.managedCertificates.enabled` | Enable/Disable managed ssl on Gcloud   | `false`                                                   |
+| `gcloudIngress.managedCertificates.domains` | List of managed certificate domains    | `[]`                                                      |
+| `basicauth.enabled`                         | Enable/disable Basic Auth on approvals | `false`                                                   |
+| `basicauth.user`                            | Basic Auth username                    |                                                           |
+| `basicauth.password`                        | Basic Auth password                    |                                                           |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
