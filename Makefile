@@ -17,8 +17,6 @@ compress:
 	upx --brute cmd/keel/release/keel-linux-arm
 	upx --brute cmd/keel/release/keel-linux-aarch64
 
-build-binaries: export GO111MODULE=on
-build-binaries: export GOPROXY=https://gocenter.io
 build-binaries:
 	go get github.com/mitchellh/gox
 	@echo "++ Building keel binaries"
@@ -45,27 +43,17 @@ aarch64:
 
 arm: build-binaries	compress fetch-certs armhf aarch64
 
-test: export GO111MODULE=on
-test: export GOPROXY=https://gocenter.io
-test: get-tparse
+test:
 	# go test -v `go list ./... | egrep -v /tests`
 	go test -json -v `go list ./... | egrep -v /tests` -cover | tparse -all -smallscreen
 
-build: export GO111MODULE=on
-build: export GOPROXY=https://gocenter.io
-build: export CGO_ENABLED=0
-build: export GOOS=linux
-build: get-mods
+build:
 	@echo "++ Building keel"
-	cd cmd/keel && go build -a -tags netgo -ldflags "$(LDFLAGS) -w -s" -o keel .
+	CGO_ENABLED=0 GOOS=linux cd cmd/keel && go build -a -tags netgo -ldflags "$(LDFLAGS) -w -s" -o keel .
 
-install: export GO111MODULE=on
-install: export GOPROXY=https://gocenter.io
-install: export CGO_ENABLED=0
-install: export GOOS=linux
-install: get-mods
+install:
 	@echo "++ Installing keel"
-	go install -ldflags "$(LDFLAGS)" github.com/keel-hq/keel/cmd/keel	
+	CGO_ENABLED=0 GOOS=linux go install -ldflags "$(LDFLAGS)" github.com/keel-hq/keel/cmd/keel	
 
 image:
 	docker build -t keelhq/keel:alpha -f Dockerfile .
@@ -80,18 +68,5 @@ alpha: image
 gen-deploy:
 	deployment/scripts/gen-deploy.sh
 
-e2e: export GO111MODULE=on
-e2e: export GOPROXY=https://gocenter.io
-e2e: get-tparse
 e2e: install
 	cd tests && go test
-
-get-mods: export GO111MODULE=on
-get-mods: export GOPROXY=https://gocenter.io
-get-mods:
-	go mod download
-
-get-tparse: export GO111MODULE=on
-get-tparse: export GOPROXY=https://gocenter.io
-get-tparse:
-	go get github.com/mfridman/tparse
