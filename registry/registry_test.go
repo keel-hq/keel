@@ -7,6 +7,8 @@ import (
 
 	"github.com/keel-hq/keel/constants"
 
+	"github.com/rusenask/docker-registry-client/registry"
+
 	"fmt"
 	"os"
 	"testing"
@@ -302,3 +304,15 @@ var tagsResp = `{
 	  "master-3945"
 	]
   }`
+
+	func TestGetDockerHubManyTags(t *testing.T) {
+		client := registry.New("https://quay.io", "", "")
+		tags, err := client.Tags("coreos/prometheus-operator")
+		if err != nil {
+			t.Errorf("error while getting repo: %s", err)
+		}
+		fmt.Println(tags)
+	}
+	
+
+	
