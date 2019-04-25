@@ -3,8 +3,10 @@ package registry
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 )
 
 var (
@@ -31,6 +33,7 @@ func (registry *Registry) getJson(url string, response interface{}) error {
 // next page URL while updating pointed-to variable with a parsed JSON
 // value. When there are no more pages it returns `ErrNoMorePages`.
 func (registry *Registry) getPaginatedJson(url string, response interface{}) (string, error) {
+	fmt.Println("getting: ", url)
 	resp, err := registry.Client.Get(url)
 	if err != nil {
 		return "", err
@@ -42,7 +45,16 @@ func (registry *Registry) getPaginatedJson(url string, response interface{}) (st
 	if err != nil {
 		return "", err
 	}
-	return getNextLink(resp)
+	next, err := getNextLink(resp)
+	if err != nil {
+		return "", err
+	}
+
+	if !strings.HasPrefix(next, registry.URL) {
+		next = registry.URL + next
+	}
+
+	return next, nil
 }
 
 // Matches an RFC 5988 (https://tools.ietf.org/html/rfc5988#section-5)
