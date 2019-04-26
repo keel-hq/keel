@@ -40,16 +40,37 @@ func (p *Provider) updateComplete(plan *UpdatePlan) error {
 	return p.approvalManager.Delete(getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion))
 }
 
-func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error) {
-	labels := plan.Resource.GetLabels()
+func getInt(key string, labels map[string]string, annotations map[string]string) (int, error) {
 
-	minApprovalsStr, ok := labels[types.KeelMinimumApprovalsLabel]
-	if !ok {
-		// no approvals required - passing
-		return true, nil
+	var (
+		valStr string
+		ok     bool
+	)
+
+	valStr, ok = labels[key]
+	if ok {
+		valInt, err := strconv.Atoi(valStr)
+		if err != nil {
+			return 0, err
+		}
+		return valInt, nil
 	}
 
-	minApprovals, err := strconv.Atoi(minApprovalsStr)
+	valStr, ok = annotations[key]
+	if ok {
+		valInt, err := strconv.Atoi(valStr)
+		if err != nil {
+			return 0, err
+		}
+		return valInt, nil
+	}
+
+	return 0, nil
+}
+
+func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error) {
+
+	minApprovals, err := getInt(types.KeelMinimumApprovalsLabel, plan.Resource.GetLabels(), plan.Resource.GetAnnotations())
 	if err != nil {
 		return false, err
 	}
@@ -58,15 +79,16 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 		return true, nil
 	}
 
-	deadline := types.KeelApprovalDeadlineDefault
-
 	// deadline
-	deadlineStr, ok := labels[types.KeelApprovalDeadlineLabel]
-	if ok {
-		d, err := strconv.Atoi(deadlineStr)
-		if err == nil {
-			deadline = d
-		}
+	deadline := types.KeelApprovalDeadlineDefault
+	d, err := getInt(types.KeelApprovalDeadlineLabel, plan.Resource.GetLabels(), plan.Resource.GetAnnotations())
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":    err,
+			"resource": plan.Resource.GetName(),
+		}).Warn("failed to parse approvals deadline, using default value")
+	} else if d != 0 {
+		deadline = d
 	}
 
 	identifier := getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion)
