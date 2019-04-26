@@ -2,6 +2,7 @@ package slack
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/version"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -55,6 +57,21 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		"name":     "slack",
 		"channels": s.channels,
 	}).Info("extension.notification.slack: sender configured")
+
+	err := s.Send(types.EventNotification{
+		Message:   fmt.Sprintf("Keel has started. Version: %s", version.GetKeelVersion().Version),
+		CreatedAt: time.Now(),
+		Type:      types.NotificationSystemEvent,
+		Level:     types.LevelInfo,
+		Channels:  s.channels,
+	})
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":    err,
+			"name":     "slack",
+			"channels": s.channels,
+		}).Error("extension.notification.slack: failed to set greeting message")
+	}
 
 	return true, nil
 }
