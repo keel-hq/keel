@@ -22,7 +22,6 @@ import (
 // SlackImplementer - implementes slack HTTP functionality, used to
 // send messages with attachments
 type SlackImplementer interface {
-	// PostMessage(channel, text string, params slack.PostMessageParameters) (string, string, error)
 	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
 }
 

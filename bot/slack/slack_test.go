@@ -64,24 +64,29 @@ func (p *fakeProvider) GetName() string {
 
 type postedMessage struct {
 	channel string
-	text    string
-	params  slack.PostMessageParameters
+	// text    string
+	msg []slack.MsgOption
 }
 
 type fakeSlackImplementer struct {
 	postedMessages []postedMessage
 }
 
-func (i *fakeSlackImplementer) PostMessage(channel, text string, params slack.PostMessageParameters) (string, string, error) {
+// func (i *fakeSlackImplementer) PostMessage(channel, text string, params slack.PostMessageParameters) (string, string, error) {
+func (i *fakeSlackImplementer) PostMessage(channelID string, options ...slack.MsgOption) (string, string, error) {
 	i.postedMessages = append(i.postedMessages, postedMessage{
-		channel: channel,
-		text:    text,
-		params:  params,
+		channel: channelID,
+		// text:    text,
+
+		msg: options,
 	})
 	return "", "", nil
 }
 
 func TestBotRequest(t *testing.T) {
+
+	os.Setenv(constants.EnvSlackToken, "")
+
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache()
@@ -123,6 +128,9 @@ func TestBotRequest(t *testing.T) {
 }
 
 func TestProcessApprovedResponse(t *testing.T) {
+
+	os.Setenv(constants.EnvSlackToken, "")
+
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache()
@@ -164,6 +172,9 @@ func TestProcessApprovedResponse(t *testing.T) {
 }
 
 func TestProcessApprovalReply(t *testing.T) {
+
+	os.Setenv(constants.EnvSlackToken, "")
+
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache()
@@ -223,12 +234,15 @@ func TestProcessApprovalReply(t *testing.T) {
 	}
 
 	if len(fi.postedMessages) != 1 {
-		t.Errorf("expected to find one message")
+		t.Errorf("expected to find one message, found: %d", len(fi.postedMessages))
 	}
 
 }
 
 func TestProcessRejectedReply(t *testing.T) {
+
+	os.Setenv(constants.EnvSlackToken, "")
+
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
 	mem := memory.NewMemoryCache()
@@ -274,6 +288,8 @@ func TestProcessRejectedReply(t *testing.T) {
 		Text:   fmt.Sprintf("%s %s", b.RejectResponseKeyword, identifier),
 	}
 
+	t.Logf("rejecting with: '%s'", fmt.Sprintf("%s %s", b.RejectResponseKeyword, identifier))
+
 	time.Sleep(1 * time.Second)
 
 	updated, err := am.Get(identifier)
@@ -292,7 +308,7 @@ func TestProcessRejectedReply(t *testing.T) {
 	fmt.Println(updated.Status())
 
 	if len(fi.postedMessages) != 1 {
-		t.Errorf("expected to find one message")
+		t.Errorf("expected to find one message, got: %d", len(fi.postedMessages))
 	}
 
 }
