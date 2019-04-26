@@ -64,7 +64,7 @@ func (s *sender) Send(event types.EventNotification) error {
 	params.Username = s.botName
 	params.IconURL = constants.KeelLogoURL
 
-	params.Attachments = []slack.Attachment{
+	attachements := []slack.Attachment{
 		slack.Attachment{
 			Fallback: event.Message,
 			Color:    event.Level.Color(),
@@ -85,8 +85,13 @@ func (s *sender) Send(event types.EventNotification) error {
 		chans = event.Channels
 	}
 
+	var mgsOpts []slack.MsgOption
+
+	mgsOpts = append(mgsOpts, slack.MsgOptionPostMessageParameters(params))
+	mgsOpts = append(mgsOpts, slack.MsgOptionAttachments(attachements...))
+
 	for _, channel := range chans {
-		_, _, err := s.slackClient.PostMessage(channel, "", params)
+		_, _, err := s.slackClient.PostMessage(channel, mgsOpts...)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":   err,
