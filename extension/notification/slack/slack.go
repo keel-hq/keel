@@ -92,7 +92,7 @@ func (s *sender) Send(event types.EventNotification) error {
 					Short: false,
 				},
 			},
-			Footer: "keel.sh",
+			Footer: fmt.Sprintf("https://keel.sh %s", version.GetKeelVersion().Version),
 			Ts:     json.Number(strconv.Itoa(int(event.CreatedAt.Unix()))),
 		},
 	}
