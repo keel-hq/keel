@@ -49,9 +49,9 @@
   name = "github.com/gorilla/mux"
   version = "1.4.0"
 
-[[constraint]]
-  name = "github.com/nlopes/slack"
-  version = "0.1.0"
+# [[constraint]]
+#   name = "github.com/nlopes/slack"
+#   version = "0.1.0"
 
 [[constraint]]
   name = "github.com/rusenask/cron"
