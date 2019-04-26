@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -217,7 +218,7 @@ func (bm *BotManager) handleBotMessage(m *BotMessage) string {
 		"command": command,
 	}).Debug("handleMessage: bot couldn't recognise command")
 
-	return ""
+	return fmt.Sprintf("unknown command '%s'", command)
 }
 
 // UnregisterBot removes a Sender with a particular name from the list.
