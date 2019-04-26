@@ -262,6 +262,8 @@ const (
 	// Helm notification types
 	NotificationPreReleaseUpdate
 	NotificationReleaseUpdate
+
+	NotificationSystemEvent
 )
 
 func (n Notification) String() string {
@@ -278,6 +280,8 @@ func (n Notification) String() string {
 		return "preparing release update"
 	case NotificationReleaseUpdate:
 		return "release update"
+	case NotificationSystemEvent:
+		return "system event"
 	default:
 		return "unknown"
 	}
