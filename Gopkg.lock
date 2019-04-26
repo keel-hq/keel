@@ -286,6 +286,12 @@
   version = "v1.6.1"
 
 [[projects]]
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d"
+  version = "v1.4.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/gregjones/httpcache"
   packages = [
@@ -368,9 +374,12 @@
 
 [[projects]]
   name = "github.com/nlopes/slack"
-  packages = ["."]
-  revision = "c86337c0ef2486a15edd804355d9c73d2f2caed1"
-  version = "v0.1.0"
+  packages = [
+    ".",
+    "slackutilsx"
+  ]
+  revision = "a7deeca7935c178aa865249bab511daf816288ba"
+  version = "v0.5.0"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -501,8 +510,7 @@
     "idna",
     "internal/timeseries",
     "lex/httplex",
-    "trace",
-    "websocket"
+    "trace"
   ]
   revision = "22ae77b79946ea320088417e4d50825671d82d57"
 
@@ -824,6 +832,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d177625f1af0af974d02c9053e018b90e378621bbe68580bf0b186150631c86d"
+  inputs-digest = "11564076fa7d2cccba96e2eebaf19978756aae3f9efbac4375c27c26960c1de1"
   solver-name = "gps-cdcl"
   solver-version = 1

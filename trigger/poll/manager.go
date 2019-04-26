@@ -71,7 +71,6 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 }
 
 func (s *DefaultManager) scan(ctx context.Context) error {
-	log.Debug("trigger.poll.manager: performing scan")
 	trackedImages, err := s.providers.TrackedImages()
 	if err != nil {
 		return err

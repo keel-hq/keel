@@ -108,10 +108,6 @@ func (p *DefaultProviders) TrackedImages() ([]*types.TrackedImage, error) {
 		trackedImages = append(trackedImages, ti...)
 	}
 
-	log.WithFields(log.Fields{
-		"images": trackedImages,
-	}).Debug("tracked images")
-
 	return trackedImages, nil
 }
 

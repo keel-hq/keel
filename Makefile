@@ -70,3 +70,6 @@ gen-deploy:
 
 e2e: install
 	cd tests && go test
+
+run: install
+	DEBUG=true keel --no-incluster

@@ -22,7 +22,7 @@ import (
 // SlackImplementer - implementes slack HTTP functionality, used to
 // send messages with attachments
 type SlackImplementer interface {
-	PostMessage(channel, text string, params slack.PostMessageParameters) (string, string, error)
+	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
 }
 
 // Bot - main slack bot container
@@ -158,7 +158,7 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 	params := slack.NewPostMessageParameters()
 	params.Username = b.name
 
-	params.Attachments = []slack.Attachment{
+	attachements := []slack.Attachment{
 		slack.Attachment{
 			Fallback: message,
 			Color:    color,
@@ -168,7 +168,12 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 		},
 	}
 
-	_, _, err := b.slackHTTPClient.PostMessage(b.approvalsChannel, "", params)
+	var mgsOpts []slack.MsgOption
+
+	mgsOpts = append(mgsOpts, slack.MsgOptionPostMessageParameters(params))
+	mgsOpts = append(mgsOpts, slack.MsgOptionAttachments(attachements...))
+
+	_, _, err := b.slackHTTPClient.PostMessage(b.approvalsChannel, mgsOpts...)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -177,24 +182,21 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 	return err
 }
 
-// TODO(k): cache results in a map or get this info on startup. Although
-// if channel was then recreated (unlikely), we would miss results
+// checking if message was received in approvals channel
 func (b *Bot) isApprovalsChannel(event *slack.MessageEvent) bool {
 
-	info := b.slackRTM.GetInfo()
-
-	for _, ch := range info.Channels {
-		if ch.ID == event.Channel && ch.Name == b.approvalsChannel {
-			return true
-		}
+	channel, err := b.slackClient.GetChannelInfo(event.Channel)
+	if err != nil {
+		log.WithError(err).Errorf("channel with ID %s could not be retrieved", event.Channel)
+		return false
 	}
 
-	// checking private channels
-	for _, gr := range info.Groups {
-		if gr.ID == event.Channel && gr.Name == b.approvalsChannel {
-			return true
-		}
+	log.Debugf("checking if approvals channel: %s==%s", channel.Name, b.approvalsChannel)
+	if channel.Name == b.approvalsChannel {
+		return true
 	}
+
+	log.Debugf("message was received not on approvals channel (%s)", channel.Name)
 
 	return false
 }
@@ -218,15 +220,18 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 
 	eventText = b.trimBot(eventText)
 
+	approval, ok := bot.IsApproval(event.User, eventText)
 	// only accepting approvals from approvals channel
-	if b.isApprovalsChannel(event) {
-		approval, ok := bot.IsApproval(event.User, eventText)
-		if ok {
-			b.approvalsRespCh <- approval
-			return
-		}
-	} else {
-		log.Warnf("not approvals channel: %s", event.Channel)
+	if ok && b.isApprovalsChannel(event) {
+		b.approvalsRespCh <- approval
+		return
+	} else if ok {
+		log.WithFields(log.Fields{
+			"received_on":    event.Channel,
+			"approvals_chan": b.approvalsChannel,
+		}).Warnf("message was received not in approvals channel: %s", event.Channel)
+		b.Respond(fmt.Sprintf("please use approvals channel '%s'", b.approvalsChannel), event.Channel)
+		return
 	}
 
 	b.botMessagesChannel <- &bot.BotMessage{
