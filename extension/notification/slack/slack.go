@@ -58,8 +58,15 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		"channels": s.channels,
 	}).Info("extension.notification.slack: sender configured")
 
+	var msg string
+	if version.GetKeelVersion().Version != "" {
+		msg = fmt.Sprintf("Keel has started. Version: %s", version.GetKeelVersion().Version)
+	} else {
+		msg = fmt.Sprintf("Keel has started. Revision: %s", version.GetKeelVersion().Revision)
+	}
+
 	err := s.Send(types.EventNotification{
-		Message:   fmt.Sprintf("Keel has started. Version: %s", version.GetKeelVersion().Version),
+		Message:   msg,
 		CreatedAt: time.Now(),
 		Type:      types.NotificationSystemEvent,
 		Level:     types.LevelInfo,
