@@ -240,17 +240,38 @@ func (b *Bot) handleMessage(event *slack.MessageEvent) {
 		Channel: event.Channel,
 		Name:    "slack",
 	}
-	return
 }
 
 func (b *Bot) Respond(text string, channel string) {
-	b.slackRTM.SendMessage(b.slackRTM.NewOutgoingMessage(formatAsSnippet(text), channel))
+
+	// if message is short, replying directly via slack RTM
+	if len(text) < 3000 {
+		b.slackRTM.SendMessage(b.slackRTM.NewOutgoingMessage(formatAsSnippet(text), channel))
+		return
+	}
+
+	// longer messages are getting uploaded as files
+
+	f := slack.FileUploadParameters{
+		Filename: "keel response",
+		Content:  text,
+		Filetype: "text",
+		Channels: []string{channel},
+	}
+
+	_, err := b.slackClient.UploadFile(f)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Respond: failed to send message")
+	}
 }
 
 func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
 	prefixes := []string{
 		b.msgPrefix,
-		"keel",
+		b.name,
+		// "kel",
 	}
 
 	for _, p := range prefixes {

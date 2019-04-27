@@ -386,7 +386,6 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 
 		plc := policy.GetPolicyFromLabelsOrAnnotations(labels, annotations)
 		if plc.Type() == policy.PolicyTypeNone {
-			log.Debugf("no policy defined, skipping: %s, labels: %s, annotations: %s", resource.Identifier, labels, annotations)
 			continue
 		}
 
