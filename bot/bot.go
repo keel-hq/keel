@@ -204,6 +204,10 @@ func (bm *BotManager) handleCommand(eventText string) string {
 func (bm *BotManager) handleBotMessage(m *BotMessage) string {
 	command := m.Message
 
+	if command == "" {
+		return ""
+	}
+
 	if responseLines, ok := BotEventTextToResponse[command]; ok {
 		return strings.Join(responseLines, "\n")
 	}
@@ -216,7 +220,7 @@ func (bm *BotManager) handleBotMessage(m *BotMessage) string {
 		"user":    m.User,
 		"bot":     m.Name,
 		"command": command,
-	}).Debug("handleMessage: bot couldn't recognise command")
+	}).Debug("handleMessage: bot couldn't recognize command")
 
 	return fmt.Sprintf("unknown command '%s'", command)
 }
