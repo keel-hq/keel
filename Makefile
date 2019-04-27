@@ -44,7 +44,7 @@ aarch64:
 arm: build-binaries	compress fetch-certs armhf aarch64
 
 test:
-	# go test -v `go list ./... | egrep -v /tests`
+	go get github.com/mfridman/tparse
 	go test -json -v `go list ./... | egrep -v /tests` -cover | tparse -all -smallscreen
 
 build:
