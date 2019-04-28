@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -65,6 +68,8 @@ func (s *TriggerServer) Start() error {
 	s.registerRoutes(s.router)
 
 	n := negroni.New(negroni.NewRecovery())
+	// n.UseHandler(negroni.HandlerFunc(corsHeadersMiddleware))
+	n.Use(negroni.HandlerFunc(corsHeadersMiddleware))
 	n.UseHandler(s.router)
 
 	s.server = &http.Server{
@@ -100,10 +105,16 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	// version handler
 	mux.HandleFunc("/version", s.versionHandler).Methods("GET", "OPTIONS")
 
+	// auth
+	mux.HandleFunc("/v1/user/info", s.requireAdminAuthorization(s.userInfoHandler)).Methods("GET", "OPTIONS")
+	mux.HandleFunc("/v1/user/logout", s.requireAdminAuthorization(s.logoutHandler)).Methods("GET", "OPTIONS")
+
 	// approvals
 	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalsHandler)).Methods("GET", "OPTIONS")
-	// approving
+	// approving/rejecting
 	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalApproveHandler)).Methods("POST", "OPTIONS")
+
+	mux.HandleFunc("/v1/tracked", s.requireAdminAuthorization(s.trackedHandler)).Methods("GET", "OPTIONS")
 
 	mux.Handle("/metrics", promhttp.Handler())
 
@@ -162,4 +173,93 @@ func (s *TriggerServer) requireAdminAuthorization(next http.HandlerFunc) http.Ha
 
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 	}
+}
+
+func response(obj interface{}, statusCode int, err error, resp http.ResponseWriter, req *http.Request) {
+	// Check for an error
+
+	if err != nil {
+
+		code := 500
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "Permission denied") {
+			code = 403
+		}
+		resp.WriteHeader(code)
+		resp.Write([]byte(err.Error()))
+		return
+	}
+
+	// Write out the JSON object
+	if obj != nil {
+
+		resp.Header().Set("Content-Type", "application/json")
+		resp.WriteHeader(statusCode)
+
+		// Set up the pipe to write data directly into the Reader.
+		pr, pw := io.Pipe()
+
+		// Write JSON-encoded data to the Writer end of the pipe.
+		// Write in a separate concurrent goroutine, and remember
+		// to Close the PipeWriter, to signal to the paired PipeReader
+		// that we’re done writing.
+		go func() {
+			pw.CloseWithError(json.NewEncoder(pw).Encode(obj))
+		}()
+
+		io.Copy(resp, pr)
+
+		// encoding/json library has a specific bug(feature) to turn empty slices into json null object,
+		// let's make an empty array instead
+		// resp.Write(buf)
+	}
+}
+
+// corsHeadersMiddleware - cors middleware
+func corsHeadersMiddleware(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	rw.Header().Set("Access-Control-Allow-Headers",
+		"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+	rw.Header().Set("Access-Control-Expose-Headers", "Authorization")
+	rw.Header().Set("Access-Control-Request-Headers", "Authorization")
+
+	if r.Method == "OPTIONS" {
+		rw.WriteHeader(200)
+		return
+	}
+
+	next(rw, r)
+}
+
+type UserInfo struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Username      string `json:"username"`
+	Avatar        string `json:"avatar"`
+	Status        int    `json:"status"`
+	LastLoginIP   string `json:"last_login_ip"`
+	LastLoginTime int64  `json:"last_login_time"`
+	RoleID        string `json:"role_id"`
+}
+
+func (s *TriggerServer) userInfoHandler(resp http.ResponseWriter, req *http.Request) {
+	ui := UserInfo{
+		ID:            "1",
+		Name:          s.username,
+		Avatar:        "",
+		Status:        1,
+		LastLoginIP:   "",
+		LastLoginTime: time.Now().Unix(),
+		RoleID:        "admin",
+	}
+
+	response(&ui, 200, nil, resp, req)
+}
+
+func (s *TriggerServer) logoutHandler(resp http.ResponseWriter, req *http.Request) {
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{}`))
 }
