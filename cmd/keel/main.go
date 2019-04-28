@@ -14,6 +14,7 @@ import (
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/pkg/http"
 
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/credentialshelper"
@@ -25,7 +26,6 @@ import (
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/registry"
 	"github.com/keel-hq/keel/secrets"
-	"github.com/keel-hq/keel/trigger/http"
 	"github.com/keel-hq/keel/trigger/poll"
 	"github.com/keel-hq/keel/trigger/pubsub"
 	"github.com/keel-hq/keel/types"
