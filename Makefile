@@ -72,4 +72,7 @@ e2e: install
 	cd tests && go test
 
 run: install
+	keel --no-incluster
+
+run-debug: install
 	DEBUG=true keel --no-incluster
