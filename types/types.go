@@ -385,21 +385,21 @@ func (t ProviderType) String() string {
 // Approval used to store and track updates
 type Approval struct {
 	// Provider name - Kubernetes/Helm
-	Provider ProviderType `json:"provider,omitempty"`
+	Provider ProviderType `json:"provider"`
 
 	// Identifier is used to inform user about specific
 	// Helm release or k8s deployment
 	// ie: k8s <namespace>/<deployment name>
 	//     helm: <namespace>/<release name>
-	Identifier string `json:"identifier,omitempty"`
+	Identifier string `json:"identifier"`
 
 	// Event that triggered evaluation
-	Event *Event `json:"event,omitempty"`
+	Event *Event `json:"event"`
 
-	Message string `json:"message,omitempty"`
+	Message string `json:"message"`
 
-	CurrentVersion string `json:"currentVersion,omitempty"`
-	NewVersion     string `json:"newVersion,omitempty"`
+	CurrentVersion string `json:"currentVersion"`
+	NewVersion     string `json:"newVersion"`
 
 	// Digest is used to verify that images are the ones that got the approvals.
 	// If digest doesn't match for the image, votes are reset.
@@ -407,26 +407,26 @@ type Approval struct {
 
 	// Requirements for the update such as number of votes
 	// and deadline
-	VotesRequired int `json:"votesRequired,omitempty"`
-	VotesReceived int `json:"votesReceived,omitempty"`
+	VotesRequired int `json:"votesRequired"`
+	VotesReceived int `json:"votesReceived"`
 
 	// Voters is a list of voter
 	// IDs for audit
-	Voters []string `json:"voters,omitempty"`
+	Voters []string `json:"voters"`
 
 	// Explicitly rejected approval
 	// can be set directly by user
 	// so even if deadline is not reached approval
 	// could be turned down
-	Rejected bool `json:"rejected,omitempty"`
+	Rejected bool `json:"rejected"`
 
 	// Deadline for this request
-	Deadline time.Time `json:"deadline,omitempty"`
+	Deadline time.Time `json:"deadline"`
 
 	// When this approval was created
-	CreatedAt time.Time `json:"createdAt,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
 	// WHen this approval was updated
-	UpdatedAt time.Time `json:"updatedAt,omitempty"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // ApprovalStatus - approval status type used in approvals
