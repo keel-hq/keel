@@ -15,7 +15,7 @@ type Credentials struct {
 type TrackedImage struct {
 	Image        *image.Reference  `json:"image"`
 	Trigger      TriggerType       `json:"trigger"`
-	PollSchedule string            `json:"poll_schedule"`
+	PollSchedule string            `json:"pollSchedule"`
 	Provider     string            `json:"provider"`
 	Namespace    string            `json:"namespace"`
 	Secrets      []string          `json:"secrets"`
