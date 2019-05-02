@@ -16,7 +16,9 @@ import (
 	"github.com/urfave/negroni"
 
 	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/provider"
+	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/version"
 
@@ -35,10 +37,17 @@ type Opts struct {
 	// Username and password are used for basic auth
 	Username string
 	Password string
+
+	GRC *k8s.GenericResourceCache
+
+	KubernetesClient kubernetes.Implementer
 }
 
 // TriggerServer - webhook trigger & healthcheck server
 type TriggerServer struct {
+	grc              *k8s.GenericResourceCache
+	kubernetesClient kubernetes.Implementer
+
 	providers        provider.Providers
 	approvalsManager approvals.Manager
 	port             int
@@ -54,6 +63,8 @@ type TriggerServer struct {
 func NewTriggerServer(opts *Opts) *TriggerServer {
 	return &TriggerServer{
 		port:             opts.Port,
+		grc:              opts.GRC,
+		kubernetesClient: opts.KubernetesClient,
 		providers:        opts.Providers,
 		approvalsManager: opts.ApprovalManager,
 		router:           mux.NewRouter(),
@@ -114,6 +125,12 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	// approving/rejecting
 	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalApproveHandler)).Methods("POST", "OPTIONS")
 
+	// available resources
+	mux.HandleFunc("/v1/resources", s.requireAdminAuthorization(s.resourcesHandler)).Methods("GET", "OPTIONS")
+
+	mux.HandleFunc("/v1/policies", s.requireAdminAuthorization(s.policyUpdateHandler)).Methods("PUT", "OPTIONS")
+
+	// tracked images
 	mux.HandleFunc("/v1/tracked", s.requireAdminAuthorization(s.trackedHandler)).Methods("GET", "OPTIONS")
 
 	mux.Handle("/metrics", promhttp.Handler())
@@ -262,4 +279,8 @@ func (s *TriggerServer) logoutHandler(resp http.ResponseWriter, req *http.Reques
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{}`))
+}
+
+type APIResponse struct {
+	Status string `json:"status"`
 }
