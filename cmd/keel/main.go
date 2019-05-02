@@ -182,7 +182,7 @@ func main() {
 	credentialshelper.RegisterCredentialsHelper("secrets", ch)
 
 	// trigger setup
-	teardownTriggers := setupTriggers(ctx, providers, approvalsManager)
+	teardownTriggers := setupTriggers(ctx, providers, approvalsManager, &t.GenericResourceCache, implementer)
 
 	bot.Run(implementer, approvalsManager)
 
@@ -261,15 +261,17 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
 // should go through all providers (or not if there is a reason) and submit events)
-func setupTriggers(ctx context.Context, providers provider.Providers, approvalsManager approvals.Manager) (teardown func()) {
+func setupTriggers(ctx context.Context, providers provider.Providers, approvalsManager approvals.Manager, grc *k8s.GenericResourceCache, k8sClient kubernetes.Implementer) (teardown func()) {
 
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{
-		Port:            types.KeelDefaultPort,
-		Providers:       providers,
-		ApprovalManager: approvalsManager,
-		Username:        os.Getenv(constants.EnvBasicAuthUser),
-		Password:        os.Getenv(constants.EnvBasicAuthPassword),
+		Port:             types.KeelDefaultPort,
+		GRC:              grc,
+		KubernetesClient: k8sClient,
+		Providers:        providers,
+		ApprovalManager:  approvalsManager,
+		Username:         os.Getenv(constants.EnvBasicAuthUser),
+		Password:         os.Getenv(constants.EnvBasicAuthPassword),
 	})
 
 	go func() {
