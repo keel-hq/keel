@@ -37,8 +37,8 @@ spec:
               mountPath: /data
 {{- end}}
 {{- if .Values.googleApplicationCredentials }}
-            - name: google
-              mountPath: "/google"
+            - name: secret
+              mountPath: "/secret"
               readOnly: true
 {{- end }}
           env:
@@ -48,7 +48,7 @@ spec:
                   fieldPath: metadata.namespace
 {{- if .Values.googleApplicationCredentials }}
             - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: /google/google-application-credentials.json
+              value: /secret/google-application-credentials.json
 {{- end }}
 {{- if .Values.polling.enabled }}
             # Enable polling
@@ -82,11 +82,6 @@ spec:
             # Enable AWS ECR
             - name: AWS_ACCESS_KEY_ID
               value: "{{ .Values.ecr.accessKeyId }}"
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "keel.name" . }}-aws-ecr
-                  key: secretAccessKey
             - name: AWS_REGION
               value: "{{ .Values.ecr.region }}"
 {{- end }}
@@ -111,12 +106,8 @@ spec:
             # Enable basic auth
             - name: BASIC_AUTH_USER
               value: "{{ .Values.basicauth.user }}"
-            - name: BASIC_AUTH_PASSWORD
-              value: "{{ .Values.basicauth.password }}"
 {{- end }}
 {{- if .Values.slack.enabled }}
-            - name: SLACK_TOKEN
-              value: "{{ .Values.slack.token }}"
             - name: SLACK_CHANNELS
               value: "{{ .Values.slack.channel }}"
             - name: SLACK_APPROVALS_CHANNEL
@@ -128,8 +119,6 @@ spec:
 {{- end }}
 {{- if .Values.hipchat.enabled }}
             # Enable hipchat approvials and notification
-            - name: HIPCHAT_TOKEN
-              value: "{{ .Values.hipchat.token }}"
             - name: HIPCHAT_CHANNELS
               value: "{{ .Values.hipchat.channel }}"
             - name: HIPCHAT_APPROVALS_CHANNEL
@@ -138,8 +127,6 @@ spec:
               value: "{{ .Values.hipchat.botName }}"
             - name: HIPCHAT_APPROVALS_USER_NAME
               value: "{{ .Values.hipchat.userName }}"
-            - name: HIPCHAT_APPROVALS_PASSWORT
-              value: "{{ .Values.hipchat.password }}"
 {{- end }}
             - name: NOTIFICATION_LEVEL
               value: "{{ .Values.notificationLevel }}"
@@ -157,6 +144,9 @@ spec:
             - name: AWS_REGION
               value: "{{ .Values.aws.region }}"
 {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secret.name | default (template "keel.fullname" .) }}
           ports:
             - containerPort: 9300
           livenessProbe:
@@ -214,7 +204,7 @@ spec:
     {{- end }}
 {{- if .Values.googleApplicationCredentials }}
       volumes:
-        - name: google
+        - name: secret
           secret:
-            secretName: {{ template "keel.name" . }}-google
+            secretName: {{ .Values.secret.name | default (template "keel.fullname" .) }}
 {{- end }}
