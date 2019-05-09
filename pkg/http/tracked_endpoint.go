@@ -5,10 +5,11 @@ import "net/http"
 type trackedImage struct {
 	Image        string `json:"image"`
 	Trigger      string `json:"trigger"`
-	PollSchedule string `json:"poll_schedule"`
+	PollSchedule string `json:"pollSchedule"`
 	Provider     string `json:"provider"`
 	Namespace    string `json:"namespace"`
 	Policy       string `json:"policy"`
+	Registry     string `json:"registry"`
 }
 
 func (s *TriggerServer) trackedHandler(resp http.ResponseWriter, req *http.Request) {
@@ -24,6 +25,7 @@ func (s *TriggerServer) trackedHandler(resp http.ResponseWriter, req *http.Reque
 			Provider:     img.Provider,
 			Namespace:    img.Namespace,
 			Policy:       img.Policy.Name(),
+			Registry:     img.Image.Registry(),
 		})
 	}
 
