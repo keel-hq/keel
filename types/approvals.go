@@ -9,6 +9,7 @@ import (
 )
 
 type GetApprovalQuery struct {
+	ID         string
 	Identifier string
 	// Rejected   bool
 	Archived bool

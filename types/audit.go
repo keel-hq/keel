@@ -13,6 +13,7 @@ const (
 	AuditActionApprovalApproved = "approved"
 	AuditActionApprovalRejected = "rejected"
 	AuditActionApprovalExpired  = "expired"
+	AuditActionApprovalArchived = "archived"
 
 	// audit specific resource kinds (others are set by
 	// providers, ie: deployment, daemonset, helm chart)

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/keel-hq/keel/cache"
+	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/types"
 
 	log "github.com/sirupsen/logrus"
@@ -37,7 +37,7 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 
 // updateComplete is called after we successfully update resource
 func (p *Provider) updateComplete(plan *UpdatePlan) error {
-	return p.approvalManager.Delete(getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion))
+	return p.approvalManager.Archive(getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion))
 }
 
 func getInt(key string, labels map[string]string, annotations map[string]string) (int, error) {
@@ -96,7 +96,7 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 	// checking for existing approval
 	existing, err := p.approvalManager.Get(identifier)
 	if err != nil {
-		if err == cache.ErrNotFound {
+		if err == store.ErrRecordNotFound {
 
 			// creating new one
 			approval := &types.Approval{

@@ -297,12 +297,19 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 	for _, plan := range plans {
 
 		p.sender.Send(types.EventNotification{
-			Name:      "update release",
-			Message:   fmt.Sprintf("Preparing to update release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", ")),
-			CreatedAt: time.Now(),
-			Type:      types.NotificationPreReleaseUpdate,
-			Level:     types.LevelDebug,
-			Channels:  plan.Config.NotificationChannels,
+			ResourceKind: "chart",
+			Identifier:   fmt.Sprintf("%s/%s/%s", "chart", plan.Namespace, plan.Name),
+			Name:         "update release",
+			Message:      fmt.Sprintf("Preparing to update release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", ")),
+			CreatedAt:    time.Now(),
+			Type:         types.NotificationPreReleaseUpdate,
+			Level:        types.LevelDebug,
+			Channels:     plan.Config.NotificationChannels,
+			Metadata: map[string]string{
+				"provider":  p.GetName(),
+				"namespace": plan.Namespace,
+				"name":      plan.Name,
+			},
 		})
 
 		err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values)
@@ -314,12 +321,19 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 			}).Error("provider.helm: failed to apply plan")
 
 			p.sender.Send(types.EventNotification{
-				Name:      "update release",
-				Message:   fmt.Sprintf("Release update failed %s/%s %s->%s (%s), error: %s", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "), err),
-				CreatedAt: time.Now(),
-				Type:      types.NotificationReleaseUpdate,
-				Level:     types.LevelError,
-				Channels:  plan.Config.NotificationChannels,
+				ResourceKind: "chart",
+				Identifier:   fmt.Sprintf("%s/%s/%s", "chart", plan.Namespace, plan.Name),
+				Name:         "update release",
+				Message:      fmt.Sprintf("Release update failed %s/%s %s->%s (%s), error: %s", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "), err),
+				CreatedAt:    time.Now(),
+				Type:         types.NotificationReleaseUpdate,
+				Level:        types.LevelError,
+				Channels:     plan.Config.NotificationChannels,
+				Metadata: map[string]string{
+					"provider":  p.GetName(),
+					"namespace": plan.Namespace,
+					"name":      plan.Name,
+				},
 			})
 			continue
 		}
@@ -341,12 +355,19 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 		}
 
 		p.sender.Send(types.EventNotification{
-			Name:      "update release",
-			Message:   msg,
-			CreatedAt: time.Now(),
-			Type:      types.NotificationReleaseUpdate,
-			Level:     types.LevelSuccess,
-			Channels:  plan.Config.NotificationChannels,
+			ResourceKind: "chart",
+			Identifier:   fmt.Sprintf("%s/%s/%s", "chart", plan.Namespace, plan.Name),
+			Name:         "update release",
+			Message:      msg,
+			CreatedAt:    time.Now(),
+			Type:         types.NotificationReleaseUpdate,
+			Level:        types.LevelSuccess,
+			Channels:     plan.Config.NotificationChannels,
+			Metadata: map[string]string{
+				"provider":  p.GetName(),
+				"namespace": plan.Namespace,
+				"name":      plan.Name,
+			},
 		})
 
 	}

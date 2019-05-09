@@ -275,12 +275,19 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		notificationChannels := types.ParseEventNotificationChannels(annotations)
 
 		p.sender.Send(types.EventNotification{
-			Name:      "preparing to update resource",
-			Message:   fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", ")),
-			CreatedAt: time.Now(),
-			Type:      types.NotificationPreDeploymentUpdate,
-			Level:     types.LevelDebug,
-			Channels:  notificationChannels,
+			ResourceKind: resource.Kind(),
+			Identifier:   resource.Identifier,
+			Name:         "preparing to update resource",
+			Message:      fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", ")),
+			CreatedAt:    time.Now(),
+			Type:         types.NotificationPreDeploymentUpdate,
+			Level:        types.LevelDebug,
+			Channels:     notificationChannels,
+			Metadata: map[string]string{
+				"provider":  p.GetName(),
+				"namespace": resource.GetNamespace(),
+				"name":      resource.GetName(),
+			},
 		})
 
 		var err error
@@ -302,12 +309,19 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 			}).Error("provider.kubernetes: got error while updating resource")
 
 			p.sender.Send(types.EventNotification{
-				Name:      "update resource",
-				Message:   fmt.Sprintf("%s %s/%s update %s->%s failed, error: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, err),
-				CreatedAt: time.Now(),
-				Type:      types.NotificationDeploymentUpdate,
-				Level:     types.LevelError,
-				Channels:  notificationChannels,
+				Name:         "update resource",
+				ResourceKind: resource.Kind(),
+				Identifier:   resource.Identifier,
+				Message:      fmt.Sprintf("%s %s/%s update %s->%s failed, error: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, err),
+				CreatedAt:    time.Now(),
+				Type:         types.NotificationDeploymentUpdate,
+				Level:        types.LevelError,
+				Channels:     notificationChannels,
+				Metadata: map[string]string{
+					"provider":  p.GetName(),
+					"namespace": resource.GetNamespace(),
+					"name":      resource.GetName(),
+				},
 			})
 
 			continue
@@ -332,12 +346,19 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		}
 
 		p.sender.Send(types.EventNotification{
-			Name:      "update resource",
-			Message:   msg,
-			CreatedAt: time.Now(),
-			Type:      types.NotificationDeploymentUpdate,
-			Level:     types.LevelSuccess,
-			Channels:  notificationChannels,
+			ResourceKind: resource.Kind(),
+			Identifier:   resource.Identifier,
+			Name:         "update resource",
+			Message:      msg,
+			CreatedAt:    time.Now(),
+			Type:         types.NotificationDeploymentUpdate,
+			Level:        types.LevelSuccess,
+			Channels:     notificationChannels,
+			Metadata: map[string]string{
+				"provider":  p.GetName(),
+				"namespace": resource.GetNamespace(),
+				"name":      resource.GetName(),
+			},
 		})
 
 		log.WithFields(log.Fields{

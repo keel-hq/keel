@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/keel-hq/keel/cache"
+	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/types"
 
 	log "github.com/sirupsen/logrus"
@@ -36,7 +36,7 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 
 // updateComplete is called after we successfully update resource
 func (p *Provider) updateComplete(plan *UpdatePlan) error {
-	return p.approvalManager.Delete(getIdentifier(plan.Namespace, plan.Name, plan.NewVersion))
+	return p.approvalManager.Archive(getIdentifier(plan.Namespace, plan.Name, plan.NewVersion))
 }
 
 func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error) {
@@ -49,7 +49,7 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 	// checking for existing approval
 	existing, err := p.approvalManager.Get(identifier)
 	if err != nil {
-		if err == cache.ErrNotFound {
+		if err == store.ErrRecordNotFound {
 
 			if plan.Config.ApprovalDeadline == 0 {
 				plan.Config.ApprovalDeadline = types.KeelApprovalDeadlineDefault
