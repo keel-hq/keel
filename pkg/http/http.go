@@ -17,6 +17,7 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/internal/k8s"
+	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/types"
@@ -41,6 +42,8 @@ type Opts struct {
 	GRC *k8s.GenericResourceCache
 
 	KubernetesClient kubernetes.Implementer
+
+	Store store.Store
 }
 
 // TriggerServer - webhook trigger & healthcheck server
@@ -53,6 +56,8 @@ type TriggerServer struct {
 	port             int
 	server           *http.Server
 	router           *mux.Router
+
+	store store.Store
 
 	// basic auth
 	username string
@@ -70,6 +75,7 @@ func NewTriggerServer(opts *Opts) *TriggerServer {
 		router:           mux.NewRouter(),
 		username:         opts.Username,
 		password:         opts.Password,
+		store:            opts.Store,
 	}
 }
 
@@ -132,6 +138,8 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 
 	// tracked images
 	mux.HandleFunc("/v1/tracked", s.requireAdminAuthorization(s.trackedHandler)).Methods("GET", "OPTIONS")
+	mux.HandleFunc("/v1/audit", s.requireAdminAuthorization(s.adminAuditLogHandler)).Methods("GET", "OPTIONS")
+	mux.HandleFunc("/v1/stats", s.requireAdminAuthorization(s.statsHandler)).Methods("GET", "OPTIONS")
 
 	mux.Handle("/metrics", promhttp.Handler())
 
