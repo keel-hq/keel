@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/keel-hq/keel/cache"
+	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/types"
 )
 
 type approveRequest struct {
+	ID         string `json:"id"`
 	Voter      string `json:"voter"`
 	Identifier string `json:"identifier"`
 	Action     string `json:"action"` // defaults to approve
@@ -20,12 +21,13 @@ const (
 	actionApprove = "approve"
 	actionReject  = "reject"
 	actionDelete  = "delete"
+	actionArchive = "archive"
 )
 
 func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Request) {
 
-	// unknown lists all
-	approvals, err := s.approvalsManager.List()
+	// lists all (both archived)
+	approvals, err := s.store.ListApprovals(&types.GetApprovalQuery{})
 	if err != nil {
 		fmt.Fprintf(resp, "%s", err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -71,7 +73,7 @@ func (s *TriggerServer) approvalApproveHandler(resp http.ResponseWriter, req *ht
 	case actionReject:
 		approval, err = s.approvalsManager.Reject(ar.Identifier)
 		if err != nil {
-			if err == cache.ErrNotFound {
+			if err == store.ErrRecordNotFound {
 				http.Error(resp, fmt.Sprintf("approval '%s' not found", ar.Identifier), http.StatusNotFound)
 				return
 			}
@@ -80,9 +82,19 @@ func (s *TriggerServer) approvalApproveHandler(resp http.ResponseWriter, req *ht
 			return
 		}
 	case actionDelete:
+		// deleting it
+		err := s.approvalsManager.Delete(&types.Approval{
+			ID: ar.ID,
+		})
+		if err != nil {
+			fmt.Fprintf(resp, "%s", err)
+			resp.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	case actionArchive:
 		approval, err = s.approvalsManager.Get(ar.Identifier)
 		if err != nil {
-			if err == cache.ErrNotFound {
+			if err == store.ErrRecordNotFound {
 				http.Error(resp, fmt.Sprintf("approval '%s' not found", ar.Identifier), http.StatusNotFound)
 				return
 			}
@@ -91,8 +103,10 @@ func (s *TriggerServer) approvalApproveHandler(resp http.ResponseWriter, req *ht
 			return
 		}
 
+		approval.Archived = true
+
 		// deleting it
-		err := s.approvalsManager.Delete(ar.Identifier)
+		err := s.approvalsManager.Archive(ar.Identifier)
 		if err != nil {
 			fmt.Fprintf(resp, "%s", err)
 			resp.WriteHeader(http.StatusInternalServerError)
@@ -103,7 +117,7 @@ func (s *TriggerServer) approvalApproveHandler(resp http.ResponseWriter, req *ht
 		// "" or "approve"
 		approval, err = s.approvalsManager.Approve(ar.Identifier, ar.Voter)
 		if err != nil {
-			if err == cache.ErrNotFound {
+			if err == store.ErrRecordNotFound {
 				http.Error(resp, fmt.Sprintf("approval '%s' not found", ar.Identifier), http.StatusNotFound)
 				return
 			}
