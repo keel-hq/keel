@@ -13,8 +13,10 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/bot"
-	"github.com/keel-hq/keel/cache/memory"
+	// "github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/pkg/http"
+	"github.com/keel-hq/keel/pkg/store"
+	"github.com/keel-hq/keel/pkg/store/sql"
 
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/credentialshelper"
@@ -32,6 +34,7 @@ import (
 	"github.com/keel-hq/keel/version"
 
 	// notification extensions
+	"github.com/keel-hq/keel/extension/notification/auditor"
 	_ "github.com/keel-hq/keel/extension/notification/hipchat"
 	_ "github.com/keel-hq/keel/extension/notification/mattermost"
 	_ "github.com/keel-hq/keel/extension/notification/slack"
@@ -96,6 +99,22 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
+
+	sqlStore, err := sql.New(sql.Opts{
+		DatabaseType: "sqlite3",
+		URI:          "keel.db",
+	})
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to initialize database")
+		os.Exit(1)
+	}
+
+	// registering auditor to log events
+	auditLogger := auditor.New(sqlStore)
+	notification.RegisterSender("auditor", auditLogger)
+
 	// setting up triggers
 	ctx, cancel := netContext.WithCancel(context.Background())
 	defer cancel()
@@ -118,7 +137,7 @@ func main() {
 	}
 	sender := notification.New(ctx)
 
-	_, err := sender.Configure(notifCfg)
+	_, err = sender.Configure(notifCfg)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -157,13 +176,22 @@ func main() {
 	k8s.WatchDaemonSets(&g, implementer.Client(), wl, buf)
 	k8s.WatchCronJobs(&g, implementer.Client(), wl, buf)
 
-	approvalsCache := memory.NewMemoryCache()
-	approvalsManager := approvals.New(approvalsCache)
+	// approvalsCache := memory.NewMemoryCache()
+	approvalsManager := approvals.New(&approvals.Opts{
+		// Cache: approvalsCache,
+		Store: sqlStore,
+	})
 
 	go approvalsManager.StartExpiryService(ctx)
 
 	// setting up providers
-	providers := setupProviders(implementer, sender, approvalsManager, &t.GenericResourceCache)
+	providers := setupProviders(&ProviderOpts{
+		k8sImplementer:   implementer,
+		sender:           sender,
+		approvalsManager: approvalsManager,
+		grc:              &t.GenericResourceCache,
+		store:            sqlStore,
+	})
 
 	// registering secrets based credentials helper
 	dockerConfig := make(secrets.DockerCfg)
@@ -182,7 +210,14 @@ func main() {
 	credentialshelper.RegisterCredentialsHelper("secrets", ch)
 
 	// trigger setup
-	teardownTriggers := setupTriggers(ctx, providers, approvalsManager, &t.GenericResourceCache, implementer)
+	// teardownTriggers := setupTriggers(ctx, providers, approvalsManager, &t.GenericResourceCache, implementer)
+	teardownTriggers := setupTriggers(ctx, &TriggerOpts{
+		providers:        providers,
+		approvalsManager: approvalsManager,
+		grc:              &t.GenericResourceCache,
+		k8sClient:        implementer,
+		store:            sqlStore,
+	})
 
 	bot.Run(implementer, approvalsManager)
 
@@ -215,12 +250,20 @@ func main() {
 	g.Run()
 }
 
+type ProviderOpts struct {
+	k8sImplementer   kubernetes.Implementer
+	sender           notification.Sender
+	approvalsManager approvals.Manager
+	grc              *k8s.GenericResourceCache
+	store            store.Store
+}
+
 // setupProviders - setting up available providers. New providers should be initialised here and added to
 // provider map
-func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.Sender, approvalsManager approvals.Manager, grc *k8s.GenericResourceCache) (providers provider.Providers) {
+func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 	var enabledProviders []provider.Provider
 
-	k8sProvider, err := kubernetes.NewProvider(k8sImplementer, sender, approvalsManager, grc)
+	k8sProvider, err := kubernetes.NewProvider(opts.k8sImplementer, opts.sender, opts.approvalsManager, opts.grc)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -240,7 +283,7 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 	if os.Getenv(EnvHelmProvider) == "1" {
 		tillerAddr := os.Getenv(EnvHelmTillerAddress)
 		helmImplementer := helm.NewHelmImplementer(tillerAddr)
-		helmProvider := helm.NewProvider(helmImplementer, sender, approvalsManager)
+		helmProvider := helm.NewProvider(helmImplementer, opts.sender, opts.approvalsManager)
 
 		go func() {
 			err := helmProvider.Start()
@@ -254,22 +297,32 @@ func setupProviders(k8sImplementer kubernetes.Implementer, sender notification.S
 		enabledProviders = append(enabledProviders, helmProvider)
 	}
 
-	providers = provider.New(enabledProviders, approvalsManager)
+	providers = provider.New(enabledProviders, opts.approvalsManager)
 
 	return providers
 }
 
+type TriggerOpts struct {
+	providers        provider.Providers
+	approvalsManager approvals.Manager
+	grc              *k8s.GenericResourceCache
+	k8sClient        kubernetes.Implementer
+	store            store.Store
+}
+
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
 // should go through all providers (or not if there is a reason) and submit events)
-func setupTriggers(ctx context.Context, providers provider.Providers, approvalsManager approvals.Manager, grc *k8s.GenericResourceCache, k8sClient kubernetes.Implementer) (teardown func()) {
+// func setupTriggers(ctx context.Context, providers provider.Providers, approvalsManager approvals.Manager, grc *k8s.GenericResourceCache, k8sClient kubernetes.Implementer) (teardown func()) {
+func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{
 		Port:             types.KeelDefaultPort,
-		GRC:              grc,
-		KubernetesClient: k8sClient,
-		Providers:        providers,
-		ApprovalManager:  approvalsManager,
+		GRC:              opts.grc,
+		KubernetesClient: opts.k8sClient,
+		Providers:        opts.providers,
+		ApprovalManager:  opts.approvalsManager,
+		Store:            opts.store,
 		Username:         os.Getenv(constants.EnvBasicAuthUser),
 		Password:         os.Getenv(constants.EnvBasicAuthPassword),
 	})
@@ -294,7 +347,7 @@ func setupTriggers(ctx context.Context, providers provider.Providers, approvalsM
 
 		ps, err := pubsub.NewPubsubSubscriber(&pubsub.Opts{
 			ProjectID: projectID,
-			Providers: providers,
+			Providers: opts.providers,
 		})
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -303,15 +356,15 @@ func setupTriggers(ctx context.Context, providers provider.Providers, approvalsM
 			return
 		}
 
-		subManager := pubsub.NewDefaultManager(os.Getenv(EnvClusterName), projectID, providers, ps)
+		subManager := pubsub.NewDefaultManager(os.Getenv(EnvClusterName), projectID, opts.providers, ps)
 		go subManager.Start(ctx)
 	}
 
 	if os.Getenv(EnvTriggerPoll) != "0" {
 
 		registryClient := registry.New()
-		watcher := poll.NewRepositoryWatcher(providers, registryClient)
-		pollManager := poll.NewPollManager(providers, watcher)
+		watcher := poll.NewRepositoryWatcher(opts.providers, registryClient)
+		pollManager := poll.NewPollManager(opts.providers, watcher)
 
 		// start poll manager, will finish with ctx
 		go watcher.Start(ctx)
