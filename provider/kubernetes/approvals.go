@@ -96,7 +96,14 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 	// checking for existing approval
 	existing, err := p.approvalManager.Get(identifier)
 	if err != nil {
+
 		if err == store.ErrRecordNotFound {
+			// if approval doesn't exist and trigger wasn't existing approval fulfillment -
+			// create a new one, otherwise if several deployments rely on the same image, it would just be
+			// requesting approvals in a loop
+			if event.TriggerName == types.TriggerTypeApproval.String() {
+				return false, nil
+			}
 
 			// creating new one
 			approval := &types.Approval{

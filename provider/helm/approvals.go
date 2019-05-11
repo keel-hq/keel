@@ -51,6 +51,13 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 	if err != nil {
 		if err == store.ErrRecordNotFound {
 
+			// if approval doesn't exist and trigger wasn't existing approval fulfillment -
+			// create a new one, otherwise if several deployments rely on the same image, it would just be
+			// requesting approvals in a loop
+			if event.TriggerName == types.TriggerTypeApproval.String() {
+				return false, nil
+			}
+
 			if plan.Config.ApprovalDeadline == 0 {
 				plan.Config.ApprovalDeadline = types.KeelApprovalDeadlineDefault
 			}
