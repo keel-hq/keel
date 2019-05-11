@@ -67,6 +67,7 @@ func (p *DefaultProviders) subscribeToApproved() {
 	for {
 		select {
 		case approval := <-approvedCh:
+			approval.Event.TriggerName = types.TriggerTypeApproval.String()
 			p.Submit(*approval.Event)
 		case <-p.stopCh:
 			cancel()
