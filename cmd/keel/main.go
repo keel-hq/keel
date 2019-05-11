@@ -13,6 +13,7 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/bot"
+
 	// "github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/pkg/http"
 	"github.com/keel-hq/keel/pkg/store"
@@ -53,13 +54,11 @@ import (
 
 // gcloud pubsub related config
 const (
-	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
-	EnvTriggerPoll   = "POLL"   // set to 1 or something to enable poll trigger
-	EnvProjectID     = "PROJECT_ID"
-	EnvClusterName   = "CLUSTER_NAME"
-
-	EnvNamespace = "NAMESPACE" // Keel's namespace
-
+	EnvTriggerPubSub     = "PUBSUB" // set to 1 or something to enable pub/sub trigger
+	EnvTriggerPoll       = "POLL"   // set to 0 to disable poll trigger
+	EnvProjectID         = "PROJECT_ID"
+	EnvClusterName       = "CLUSTER_NAME"
+	EnvDataDir           = "DATA_DIR"
 	EnvHelmProvider      = "HELM_PROVIDER"  // helm provider
 	EnvHelmTillerAddress = "TILLER_ADDRESS" // helm provider
 
@@ -99,10 +98,14 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	dataDir := "/data"
+	if os.Getenv(EnvDataDir) != "" {
+		dataDir = os.Getenv(EnvDataDir)
+	}
 
 	sqlStore, err := sql.New(sql.Opts{
 		DatabaseType: "sqlite3",
-		URI:          "keel.db",
+		URI:          filepath.Join(dataDir, "keel.db"),
 	})
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -110,6 +113,10 @@ func main() {
 		}).Error("failed to initialize database")
 		os.Exit(1)
 	}
+	log.WithFields(log.Fields{
+		"database_path": filepath.Join(dataDir, "keel.db"),
+		"type":          "sqlite3",
+	}).Info("initializing database")
 
 	// registering auditor to log events
 	auditLogger := auditor.New(sqlStore)
