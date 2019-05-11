@@ -25,6 +25,7 @@ helmProvider:
 gcr:
   enabled: false
   projectId: ""
+  clusterName: ""
   pubSub:
     enabled: false
 
