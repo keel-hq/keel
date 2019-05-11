@@ -146,8 +146,9 @@ type TriggerType int
 
 // Available trigger types
 const (
-	TriggerTypeDefault TriggerType = iota // default policy is to wait for external triggers
-	TriggerTypePoll                       // poll policy sets up watchers for the affected repositories
+	TriggerTypeDefault  TriggerType = iota // default policy is to wait for external triggers
+	TriggerTypePoll                        // poll policy sets up watchers for the affected repositories
+	TriggerTypeApproval                    // fulfilled approval requests trigger events
 )
 
 func (t TriggerType) String() string {
@@ -156,6 +157,8 @@ func (t TriggerType) String() string {
 		return "default"
 	case TriggerTypePoll:
 		return "poll"
+	case TriggerTypeApproval:
+		return "approval"
 	default:
 		return "default"
 	}
