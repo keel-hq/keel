@@ -251,7 +251,7 @@ func (m *DefaultManager) Approve(identifier, voter string) (*types.Approval, err
 		return nil, err
 	}
 
-	for _, v := range existing.Voters {
+	for _, v := range existing.GetVoters() {
 		if v == voter {
 			// nothing to do, same voter
 			return existing, nil

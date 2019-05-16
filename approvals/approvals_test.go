@@ -2,17 +2,48 @@ package approvals
 
 import (
 	"context"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/keel-hq/keel/cache/memory"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
+
+	// "github.com/keel-hq/keel/cache/memory"
+	// "github.com/dotmesh-io/gateway/pkg/store/sql"
+	"github.com/keel-hq/keel/pkg/store/sql"
 	"github.com/keel-hq/keel/types"
 )
 
-func TestCreateApproval(t *testing.T) {
-	mem := memory.NewMemoryCache()
+func NewTestingUtils() (*sql.SQLStore, func()) {
+	dir, err := ioutil.TempDir("", "whstoretest")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tmpfn := filepath.Join(dir, "gorm.db")
+	// defer
+	store, err := sql.New(sql.Opts{DatabaseType: "sqlite3", URI: tmpfn})
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	am := New(mem)
+	teardown := func() {
+		os.RemoveAll(dir) // clean up
+	}
+
+	return store, teardown
+}
+
+func TestCreateApproval(t *testing.T) {
+
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := New(&Opts{
+		Store: store,
+	})
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -37,9 +68,12 @@ func TestCreateApproval(t *testing.T) {
 }
 
 func TestDeleteApproval(t *testing.T) {
-	mem := memory.NewMemoryCache()
+	store, teardown := NewTestingUtils()
+	defer teardown()
 
-	am := New(mem)
+	am := New(&Opts{
+		Store: store,
+	})
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -53,7 +87,12 @@ func TestDeleteApproval(t *testing.T) {
 		t.Fatalf("failed to create approval: %s", err)
 	}
 
-	err = am.Delete("xxx/app-1")
+	stored, err := am.Get("xxx/app-1")
+	if err != nil {
+		t.Fatalf("didn't find approval: %s", err)
+	}
+
+	err = am.Delete(stored)
 	if err != nil {
 		t.Errorf("failed to delete approval: %s", err)
 	}
@@ -66,9 +105,12 @@ func TestDeleteApproval(t *testing.T) {
 }
 
 func TestUpdateApproval(t *testing.T) {
-	mem := memory.NewMemoryCache()
+	store, teardown := NewTestingUtils()
+	defer teardown()
 
-	am := New(mem)
+	am := New(&Opts{
+		Store: store,
+	})
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -123,9 +165,12 @@ func TestUpdateApproval(t *testing.T) {
 }
 
 func TestUpdateApprovalRejected(t *testing.T) {
-	mem := memory.NewMemoryCache()
+	store, teardown := NewTestingUtils()
+	defer teardown()
 
-	am := New(mem)
+	am := New(&Opts{
+		Store: store,
+	})
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -147,6 +192,8 @@ func TestUpdateApprovalRejected(t *testing.T) {
 		t.Fatalf("failed to create approval: %s", err)
 	}
 
+	created, _ := am.Get("xxx/app-1")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ch, err := am.SubscribeApproved(ctx)
@@ -156,6 +203,7 @@ func TestUpdateApprovalRejected(t *testing.T) {
 
 	// rejecting
 	err = am.Update(&types.Approval{
+		ID:             created.ID,
 		Provider:       types.ProviderTypeKubernetes,
 		Identifier:     "xxx/app-1",
 		CurrentVersion: "1.2.3",
@@ -177,6 +225,7 @@ func TestUpdateApprovalRejected(t *testing.T) {
 
 	// sending vote
 	err = am.Update(&types.Approval{
+		ID:             created.ID,
 		Provider:       types.ProviderTypeKubernetes,
 		Identifier:     "xxx/app-1",
 		CurrentVersion: "1.2.3",
@@ -207,9 +256,12 @@ func TestUpdateApprovalRejected(t *testing.T) {
 }
 
 func TestApprove(t *testing.T) {
-	mem := memory.NewMemoryCache()
+	store, teardown := NewTestingUtils()
+	defer teardown()
 
-	am := New(mem)
+	am := New(&Opts{
+		Store: store,
+	})
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -238,10 +290,12 @@ func TestApprove(t *testing.T) {
 }
 
 func TestApproveTwiceSameVoter(t *testing.T) {
-	mem := memory.NewMemoryCache()
+	store, teardown := NewTestingUtils()
+	defer teardown()
 
-	am := New(mem)
-
+	am := New(&Opts{
+		Store: store,
+	})
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
 		Identifier:     "xxx/app-1:1.2.5",
@@ -271,9 +325,12 @@ func TestApproveTwiceSameVoter(t *testing.T) {
 }
 
 func TestApproveTwoVoters(t *testing.T) {
-	mem := memory.NewMemoryCache()
+	store, teardown := NewTestingUtils()
+	defer teardown()
 
-	am := New(mem)
+	am := New(&Opts{
+		Store: store,
+	})
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -304,9 +361,12 @@ func TestApproveTwoVoters(t *testing.T) {
 }
 
 func TestReject(t *testing.T) {
-	mem := memory.NewMemoryCache()
+	store, teardown := NewTestingUtils()
+	defer teardown()
 
-	am := New(mem)
+	am := New(&Opts{
+		Store: store,
+	})
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
@@ -335,9 +395,12 @@ func TestReject(t *testing.T) {
 }
 
 func TestExpire(t *testing.T) {
-	mem := memory.NewMemoryCache()
+	store, teardown := NewTestingUtils()
+	defer teardown()
 
-	am := New(mem)
+	am := New(&Opts{
+		Store: store,
+	})
 
 	err := am.Create(&types.Approval{
 		Provider:       types.ProviderTypeKubernetes,
