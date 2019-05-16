@@ -426,3 +426,48 @@ func TestExpire(t *testing.T) {
 		t.Errorf("expected approval to be deleted but didn't get an error")
 	}
 }
+
+func TestGetArchived(t *testing.T) {
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := New(&Opts{
+		Store: store,
+	})
+
+	err := am.Create(&types.Approval{
+		Provider:       types.ProviderTypeKubernetes,
+		Identifier:     "xxx/app-1",
+		CurrentVersion: "1.2.3",
+		NewVersion:     "1.2.5",
+		Archived:       true,
+		VotesRequired:  2,
+		VotesReceived:  0,
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create first approval: %s", err)
+	}
+
+	err = am.Create(&types.Approval{
+		Provider:       types.ProviderTypeKubernetes,
+		Identifier:     "xxx/app-1",
+		CurrentVersion: "1.2.3",
+		NewVersion:     "1.2.5",
+		Archived:       false,
+		VotesRequired:  2,
+		VotesReceived:  0,
+	})
+
+	if err != nil {
+		t.Fatalf("failed to create  second (not archived )approval: %s", err)
+	}
+
+	secondStore, err := am.Get("xxx/app-1")
+	if err != nil {
+		t.Errorf("expected approval to be deleted but didn't get an error")
+	}
+	if secondStore.Archived {
+		t.Errorf("didn't expect approval to be archived")
+	}
+}
