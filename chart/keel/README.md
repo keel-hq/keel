@@ -88,27 +88,32 @@ The following table lists has the main configurable parameters (polling, trigger
 | `ecr.accessKeyId`                           | AWS_ACCESS_KEY_ID for ECR Registry     |                                                           |
 | `ecr.secretAccessKey`                       | AWS_SECRET_ACCESS_KEY for ECR Registry |                                                           |
 | `ecr.region`                                | AWS_REGION for ECR Registry            |                                                           |
+| `insecureRegistry`                          | Enable/disable insecure registries     | `false`                                                   |
 | `webhook.enabled`                           | Enable/disable Webhook Notification    | `false`                                                   |
 | `webhook.endpoint`                          | Remote webhook endpoint                |                                                           |
 | `slack.enabled`                             | Enable/disable Slack Notification      | `false`                                                   |
+| `slack.botName`                             | Name of the Slack bot                  |                                                           |
 | `slack.token`                               | Slack token                            |                                                           |
 | `slack.channel`                             | Slack channel                          |                                                           |
 | `slack.approvalsChannel`                    | Slack channel for approvals            |                                                           |
 | `service.enable`                            | Enable/disable Keel service            | `false`                                                   |
 | `service.type`                              | Keel service type                      | `LoadBalancer`                                            |
 | `service.externalPort`                      | Keel service port                      | `9300`                                                    |
+| `service.clusterIP`                         | Keel service clusterIP                 |                                                           |
 | `webhookRelay.enabled`                      | Enable/disable WebhookRelay integration| `false`                                                   |
 | `webhookRelay.key`                          | WebhookRelay key                       |                                                           |
 | `webhookRelay.secret`                       | WebhookRelay secret                    |                                                           |
 | `webhookRelay.bucket`                       | WebhookRelay bucket                    |                                                           |
-| `rbac.enabled`                              | Enable/disable RBAC installation       | `false`                                                   |
-| `hipchat.enabled`                           | Enable/disable hipchat integration     | `false`                                                   |
+| `rbac.enabled`                              | Enable/disable RBAC installation       | `true`                                                    |
+| `hipchat.enabled`                           | Enable/disable Hipchat integration     | `false`                                                   |
 | `hipchat.token`                             | Hipchat token                          |                                                           |
 | `hipchat.channel`                           | Hipchat channel                        |                                                           |
 | `hipchat.approvalsChannel`                  | Hipchat channel for approvals          |                                                           |
 | `hipchat.botName`                           | Name of the Hipchat bot                |                                                           |
 | `hipchat.userName`                          | Hipchat username in Jabber format      |                                                           |
 | `hipchat.password`                          | Hipchat password for approvals user    |                                                           |
+| `mattermost.enabled`                        | Enable/disable Mattermost integration  | `false`                                                   |
+| `mattermost.endpoint`                       | Mattermost API endpoint                |                                                           |
 | `googleApplicationCredentials`              | GCP Service account key configurable   |                                                           |
 | `hipchat.password`                          | Hipchat password for approvals user    |                                                           |
 | `gcloudIngress.enabled`                     | Configure Google Cloud Ingress         | `false`                                                   |
