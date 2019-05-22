@@ -15,6 +15,7 @@ import (
 	"github.com/keel-hq/keel/bot"
 
 	// "github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/pkg/auth"
 	"github.com/keel-hq/keel/pkg/http"
 	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/pkg/store/sql"
@@ -322,6 +323,12 @@ type TriggerOpts struct {
 // func setupTriggers(ctx context.Context, providers provider.Providers, approvalsManager approvals.Manager, grc *k8s.GenericResourceCache, k8sClient kubernetes.Implementer) (teardown func()) {
 func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 
+	authenticator := auth.New(&auth.Opts{
+		Username: os.Getenv(constants.EnvBasicAuthUser),
+		Password: os.Getenv(constants.EnvBasicAuthPassword),
+		Secret:   []byte(os.Getenv(constants.EnvTokenSecret)),
+	})
+
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{
 		Port:             types.KeelDefaultPort,
@@ -330,8 +337,7 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 		Providers:        opts.providers,
 		ApprovalManager:  opts.approvalsManager,
 		Store:            opts.store,
-		Username:         os.Getenv(constants.EnvBasicAuthUser),
-		Password:         os.Getenv(constants.EnvBasicAuthPassword),
+		Authenticator:    authenticator,
 	})
 
 	go func() {
