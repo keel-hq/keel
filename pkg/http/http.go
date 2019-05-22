@@ -17,6 +17,7 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/internal/k8s"
+	"github.com/keel-hq/keel/pkg/auth"
 	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/provider/kubernetes"
@@ -35,9 +36,10 @@ type Opts struct {
 
 	ApprovalManager approvals.Manager
 
+	Authenticator auth.Authenticator
 	// Username and password are used for basic auth
-	Username string
-	Password string
+	// Username string
+	// Password string
 
 	GRC *k8s.GenericResourceCache
 
@@ -57,11 +59,12 @@ type TriggerServer struct {
 	server           *http.Server
 	router           *mux.Router
 
-	store store.Store
+	store         store.Store
+	authenticator auth.Authenticator
 
 	// basic auth
-	username string
-	password string
+	// username string
+	// password string
 }
 
 // NewTriggerServer - create new HTTP trigger based server
@@ -73,9 +76,10 @@ func NewTriggerServer(opts *Opts) *TriggerServer {
 		providers:        opts.Providers,
 		approvalsManager: opts.ApprovalManager,
 		router:           mux.NewRouter(),
-		username:         opts.Username,
-		password:         opts.Password,
-		store:            opts.Store,
+		authenticator:    opts.Authenticator,
+		// username:         opts.Username,
+		// password:         opts.Password,
+		store: opts.Store,
 	}
 }
 
@@ -123,13 +127,18 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 	mux.HandleFunc("/version", s.versionHandler).Methods("GET", "OPTIONS")
 
 	// auth
-	mux.HandleFunc("/v1/user/info", s.requireAdminAuthorization(s.userInfoHandler)).Methods("GET", "OPTIONS")
-	mux.HandleFunc("/v1/user/logout", s.requireAdminAuthorization(s.logoutHandler)).Methods("GET", "OPTIONS")
+	mux.HandleFunc("/v1/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
+	mux.HandleFunc("/v1/auth/info", s.requireAdminAuthorization(s.userInfoHandler)).Methods("GET", "OPTIONS")
+	mux.HandleFunc("/v1/auth/user", s.requireAdminAuthorization(s.userInfoHandler)).Methods("GET", "OPTIONS")
+	mux.HandleFunc("/v1/auth/logout", s.requireAdminAuthorization(s.logoutHandler)).Methods("POST", "GET", "OPTIONS")
+	mux.HandleFunc("/v1/auth/refresh", s.requireAdminAuthorization(s.refreshHandler)).Methods("GET", "OPTIONS")
 
 	// approvals
 	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalsHandler)).Methods("GET", "OPTIONS")
 	// approving/rejecting
 	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalApproveHandler)).Methods("POST", "OPTIONS")
+	// updating required approvals count
+	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalSetHandler)).Methods("PUT", "OPTIONS")
 
 	// available resources
 	mux.HandleFunc("/v1/resources", s.requireAdminAuthorization(s.resourcesHandler)).Methods("GET", "OPTIONS")
@@ -178,26 +187,6 @@ func (s *TriggerServer) versionHandler(resp http.ResponseWriter, req *http.Reque
 
 func (s *TriggerServer) trigger(event types.Event) error {
 	return s.providers.Submit(event)
-}
-
-func (s *TriggerServer) requireAdminAuthorization(next http.HandlerFunc) http.HandlerFunc {
-	return func(rw http.ResponseWriter, r *http.Request) {
-
-		if s.username == "" && s.password == "" {
-			next(rw, r)
-			return
-		}
-
-		rw.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-
-		username, password, ok := r.BasicAuth()
-		if ok && username == s.username && password == s.password {
-			next(rw, r)
-			return
-		}
-
-		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-	}
 }
 
 func response(obj interface{}, statusCode int, err error, resp http.ResponseWriter, req *http.Request) {
@@ -270,9 +259,12 @@ type UserInfo struct {
 }
 
 func (s *TriggerServer) userInfoHandler(resp http.ResponseWriter, req *http.Request) {
+
+	user := auth.GetAccountFromCtx(req.Context())
+
 	ui := UserInfo{
 		ID:            "1",
-		Name:          s.username,
+		Name:          user.Username,
 		Avatar:        "",
 		Status:        1,
 		LastLoginIP:   "",
@@ -281,12 +273,6 @@ func (s *TriggerServer) userInfoHandler(resp http.ResponseWriter, req *http.Requ
 	}
 
 	response(&ui, 200, nil, resp, req)
-}
-
-func (s *TriggerServer) logoutHandler(resp http.ResponseWriter, req *http.Request) {
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{}`))
 }
 
 type APIResponse struct {
