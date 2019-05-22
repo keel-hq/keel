@@ -98,12 +98,14 @@ LEFT   JOIN (
 //    GROUP  BY 1
 //    ) b USING (day);`
 
+const auditDays = 31
+
 func (s *SQLStore) AuditStatistics(query *types.AuditLogStatsQuery) ([]types.AuditLogStats, error) {
 
 	var logs []*types.AuditLog
 	err := s.db.Order("created_at desc").
 		Where("action in (?)", []string{"approved", "rejected", "deployment update", "release update"}).
-		Where("created_at > ?", time.Now().Add(time.Hour*24*7*-1)).
+		Where("created_at > ?", time.Now().Add(time.Hour*24*auditDays*-1)).
 		Find(&logs).Error
 	if err != nil {
 		return nil, err
@@ -113,16 +115,16 @@ func (s *SQLStore) AuditStatistics(query *types.AuditLogStatsQuery) ([]types.Aud
 		return fmt.Sprintf("%d-%d-%d", day.Year(), day.Month(), day.Day())
 	}
 
-	// generate 7 days map of YYYY-MM-DD
+	// generate X days map of YYYY-MM-DD
 	days := make(map[string]types.AuditLogStats)
-	for i := 0; i < 7; i++ {
+	for i := 0; i < auditDays; i++ {
 		day := getTime(time.Now().Add(time.Duration(-i) * time.Hour * 24))
 		days[day] = types.AuditLogStats{Date: day}
 	}
 
 	for _, l := range logs {
+		fmt.Println(l.Action)
 		key := getTime(l.CreatedAt)
-		log.Infof("Getting key: %s", key)
 		switch l.Action {
 		case types.NotificationDeploymentUpdate.String(), types.NotificationReleaseUpdate.String():
 			entry, ok := days[key]
@@ -135,8 +137,14 @@ func (s *SQLStore) AuditStatistics(query *types.AuditLogStatsQuery) ([]types.Aud
 			entry.Updates = entry.Updates + 1
 			days[key] = entry
 		case types.AuditActionApprovalApproved:
+			fmt.Println("approved found")
 			entry := days[key]
 			entry.Approved++
+			days[key] = entry
+		case types.AuditActionApprovalRejected:
+			entry := days[key]
+			entry.Rejected++
+			days[key] = entry
 		}
 
 	}
@@ -144,12 +152,8 @@ func (s *SQLStore) AuditStatistics(query *types.AuditLogStatsQuery) ([]types.Aud
 	var stats []types.AuditLogStats
 
 	for _, v := range days {
-
-		log.Infof("mapping day: %s", v.Date)
 		stats = append(stats, v)
 	}
-
-	fmt.Println(stats)
 
 	for _, s := range stats {
 		fmt.Println(s.Date)
