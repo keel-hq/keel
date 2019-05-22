@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/keel-hq/keel/types"
 )
 
@@ -13,10 +12,6 @@ type resourcePolicyUpdateRequest struct {
 	Policy     string `json:"policy"`
 	Identifier string `json:"identifier"`
 	Provider   string `json:"provider"`
-}
-
-func getIdentifier(req *http.Request) string {
-	return mux.Vars(req)["identifier"]
 }
 
 func (s *TriggerServer) policyUpdateHandler(resp http.ResponseWriter, req *http.Request) {
@@ -39,17 +34,17 @@ func (s *TriggerServer) policyUpdateHandler(resp http.ResponseWriter, req *http.
 	for _, v := range s.grc.Values() {
 		if v.Identifier == policyRequest.Identifier {
 
+			labels := v.GetLabels()
+			delete(labels, types.KeelPolicyLabel)
+			v.SetLabels(labels)
+
 			ann := v.GetAnnotations()
 			ann[types.KeelPolicyLabel] = policyRequest.Policy
 
 			v.SetAnnotations(ann)
 
 			err := s.kubernetesClient.Update(v)
-			// if err != nil {
-			// 	resp.WriteHeader(http.StatusInternalServerError)
-			// 	fmt.Fprintf(resp, "%s", err)
-			// 	return
-			// }
+
 			response(&APIResponse{Status: "updated"}, 200, err, resp, req)
 			return
 		}
