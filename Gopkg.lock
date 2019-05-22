@@ -127,6 +127,15 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/dgrijalva/jwt-go"
+  packages = [
+    ".",
+    "request"
+  ]
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
+
+[[projects]]
   name = "github.com/docker/distribution"
   packages = [
     ".",
@@ -473,12 +482,6 @@
   name = "github.com/rusenask/docker-registry-client"
   packages = ["registry"]
   revision = "f41c43a13c3852213e225cc2476800c8f734d777"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/rusenask/k8s-kv"
-  packages = ["kv"]
-  revision = "5ab96be4b86adb4019ac7d1456463be6c1b11e15"
 
 [[projects]]
   name = "github.com/ryanuber/go-glob"
@@ -853,6 +856,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "eb9113cab8fc8102136ecf4e58b810dc8ab16c83d0a3eb3a633ba0e8a19c8eaf"
+  inputs-digest = "7b13eb129f741b4dd6ebb79c7d0a97566b6a6e7abf7967f78368bd0a64c2f731"
   solver-name = "gps-cdcl"
   solver-version = 1
