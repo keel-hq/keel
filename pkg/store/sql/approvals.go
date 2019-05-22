@@ -37,14 +37,20 @@ func (s *SQLStore) UpdateApproval(approval *types.Approval) error {
 }
 
 func (s *SQLStore) GetApproval(q *types.GetApprovalQuery) (*types.Approval, error) {
-	result := types.Approval{}
-	err := s.db.Where(&types.Approval{
-		ID:         q.ID,
-		Identifier: q.Identifier,
-		Archived:   q.Archived,
-		// Rejected:   q.Rejected,
-	}).First(&result).Error
+	var result types.Approval
+	var err error
+	if q.ID == "" {
+		err = s.db.Where("identifier = ? AND archived = ?", q.Identifier, q.Archived).First(&result).Error
+	} else {
+		err = s.db.Where(&types.Approval{
+			ID:         q.ID,
+			Identifier: q.Identifier,
+			Archived:   q.Archived,
+			// Rejected:   q.Rejected,
+		}).First(&result).Error
+	}
 	if err == gorm.ErrRecordNotFound {
+
 		return nil, store.ErrRecordNotFound
 	}
 
