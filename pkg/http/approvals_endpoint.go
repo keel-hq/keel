@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/types"
@@ -46,6 +47,67 @@ func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Req
 	}
 
 	resp.Write(bts)
+}
+
+type resourceApprovalsUpdateRequest struct {
+	Identifier    string `json:"identifier"`
+	Provider      string `json:"provider"`
+	VotesRequired int    `json:"votesRequired"`
+}
+
+// approvalSetHandler allows to set/remove approvals for resources
+func (s *TriggerServer) approvalSetHandler(resp http.ResponseWriter, req *http.Request) {
+
+	var approvalUpdateRequest resourceApprovalsUpdateRequest
+	dec := json.NewDecoder(req.Body)
+	defer req.Body.Close()
+
+	err := dec.Decode(&approvalUpdateRequest)
+	if err != nil {
+		resp.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(resp, "%s", err)
+		return
+	}
+
+	if approvalUpdateRequest.VotesRequired < 0 || approvalUpdateRequest.VotesRequired > 100 {
+		http.Error(resp, "votesRequired should be between 0 and 100", http.StatusBadRequest)
+		return
+	}
+
+	switch approvalUpdateRequest.Provider {
+	case types.ProviderTypeKubernetes.String():
+		// ok
+	default:
+		http.Error(resp, "unsupported provider", http.StatusBadRequest)
+		return
+	}
+
+	if approvalUpdateRequest.Identifier == "" {
+		http.Error(resp, "identifier cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	for _, v := range s.grc.Values() {
+		if v.Identifier == approvalUpdateRequest.Identifier {
+
+			labels := v.GetLabels()
+			delete(labels, types.KeelMinimumApprovalsLabel)
+			v.SetLabels(labels)
+
+			ann := v.GetAnnotations()
+			ann[types.KeelMinimumApprovalsLabel] = strconv.Itoa(approvalUpdateRequest.VotesRequired)
+
+			v.SetAnnotations(ann)
+
+			err := s.kubernetesClient.Update(v)
+
+			response(&APIResponse{Status: "updated"}, 200, err, resp, req)
+			return
+		}
+	}
+
+	resp.WriteHeader(http.StatusNotFound)
+	fmt.Fprintf(resp, "resource with identifier '%s' not found", approvalUpdateRequest.Identifier)
 }
 
 func (s *TriggerServer) approvalApproveHandler(resp http.ResponseWriter, req *http.Request) {
