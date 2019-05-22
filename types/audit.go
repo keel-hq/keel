@@ -66,6 +66,7 @@ type AuditLogQuery struct {
 }
 
 type AuditLogStatsQuery struct {
+	Days int
 }
 
 type AuditLogStats struct {
