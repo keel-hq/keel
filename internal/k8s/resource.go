@@ -303,3 +303,65 @@ func (r *GenericResource) UpdateContainer(index int, image string) {
 		updateCronJobContainer(obj, index, image)
 	}
 }
+
+type Status struct {
+	// Total number of non-terminated pods targeted by this deployment (their labels match the selector).
+	// +optional
+	Replicas int32 `json:"replicas"`
+
+	// Total number of non-terminated pods targeted by this deployment that have the desired template spec.
+	// +optional
+	UpdatedReplicas int32 `json:"updatedReplicas"`
+
+	// Total number of ready pods targeted by this deployment.
+	// +optional
+	ReadyReplicas int32 `json:"readyReplicas"`
+
+	// Total number of available pods (ready for at least minReadySeconds) targeted by this deployment.
+	// +optional
+	AvailableReplicas int32 `json:"availableReplicas"`
+
+	// Total number of unavailable pods targeted by this deployment. This is the total number of
+	// pods that are still required for the deployment to have 100% available capacity. They may
+	// either be pods that are running but not yet available or pods that still have not been created.
+	// +optional
+	UnavailableReplicas int32 `json:"unavailableReplica"`
+}
+
+func (r *GenericResource) GetStatus() Status {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		return Status{
+			Replicas:            obj.Status.Replicas,
+			UpdatedReplicas:     obj.Status.UpdatedReplicas,
+			ReadyReplicas:       obj.Status.ReadyReplicas,
+			AvailableReplicas:   obj.Status.AvailableReplicas,
+			UnavailableReplicas: obj.Status.UnavailableReplicas,
+		}
+	case *apps_v1.StatefulSet:
+		return Status{
+			Replicas:            obj.Status.Replicas,
+			UpdatedReplicas:     obj.Status.UpdatedReplicas,
+			ReadyReplicas:       obj.Status.ReadyReplicas,
+			AvailableReplicas:   obj.Status.CurrentReplicas,
+			UnavailableReplicas: 0, // N/A
+		}
+	case *apps_v1.DaemonSet:
+		return Status{
+			Replicas:            obj.Status.DesiredNumberScheduled,
+			UpdatedReplicas:     obj.Status.UpdatedNumberScheduled,
+			ReadyReplicas:       obj.Status.NumberReady,
+			AvailableReplicas:   obj.Status.NumberAvailable,
+			UnavailableReplicas: obj.Status.NumberUnavailable,
+		}
+	case *v1beta1.CronJob:
+		return Status{
+			Replicas:            int32(len(obj.Status.Active)),
+			UpdatedReplicas:     0,
+			ReadyReplicas:       0,
+			AvailableReplicas:   0,
+			UnavailableReplicas: 0,
+		}
+	}
+	return Status{}
+}
