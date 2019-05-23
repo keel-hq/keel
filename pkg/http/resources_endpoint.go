@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/policy"
 )
 
@@ -16,6 +17,7 @@ type resource struct {
 	Images      []string          `json:"images"`
 	Labels      map[string]string `json:"labels"`
 	Annotations map[string]string `json:"annotations"`
+	Status      k8s.Status        `json:"status"`
 }
 
 func (s *TriggerServer) resourcesHandler(resp http.ResponseWriter, req *http.Request) {
@@ -38,6 +40,7 @@ func (s *TriggerServer) resourcesHandler(resp http.ResponseWriter, req *http.Req
 			Labels:      v.GetLabels(),
 			Annotations: v.GetAnnotations(),
 			Images:      v.GetImages(),
+			Status:      v.GetStatus(),
 		})
 	}
 
