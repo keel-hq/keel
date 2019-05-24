@@ -34,6 +34,8 @@ type AuthResponse struct {
 }
 
 type Authenticator interface {
+	// indicates whether authentication is enabled
+	Enabled() bool
 	Authenticate(req *AuthRequest) (*AuthResponse, error)
 	GenerateToken(u User) (*AuthResponse, error)
 }
@@ -67,6 +69,10 @@ type DefaultAuthenticator struct {
 var (
 	ErrUnauthorized = errors.New("unauthorized")
 )
+
+func (a *DefaultAuthenticator) Enabled() bool {
+	return a.opts.Username != "" && a.opts.Password != ""
+}
 
 func (a *DefaultAuthenticator) Authenticate(req *AuthRequest) (*AuthResponse, error) {
 

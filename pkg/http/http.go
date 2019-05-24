@@ -121,38 +121,44 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 		DebugHandler{}.AddRoutes(mux)
 	}
 
+	s.registerWebhookRoutes(mux)
+
 	// health endpoint for k8s to be happy
 	mux.HandleFunc("/healthz", s.healthHandler).Methods("GET", "OPTIONS")
 	// version handler
 	mux.HandleFunc("/version", s.versionHandler).Methods("GET", "OPTIONS")
 
-	// auth
-	mux.HandleFunc("/v1/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
-	mux.HandleFunc("/v1/auth/info", s.requireAdminAuthorization(s.userInfoHandler)).Methods("GET", "OPTIONS")
-	mux.HandleFunc("/v1/auth/user", s.requireAdminAuthorization(s.userInfoHandler)).Methods("GET", "OPTIONS")
-	mux.HandleFunc("/v1/auth/logout", s.requireAdminAuthorization(s.logoutHandler)).Methods("POST", "GET", "OPTIONS")
-	mux.HandleFunc("/v1/auth/refresh", s.requireAdminAuthorization(s.refreshHandler)).Methods("GET", "OPTIONS")
-
-	// approvals
-	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalsHandler)).Methods("GET", "OPTIONS")
-	// approving/rejecting
-	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalApproveHandler)).Methods("POST", "OPTIONS")
-	// updating required approvals count
-	mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalSetHandler)).Methods("PUT", "OPTIONS")
-
-	// available resources
-	mux.HandleFunc("/v1/resources", s.requireAdminAuthorization(s.resourcesHandler)).Methods("GET", "OPTIONS")
-
-	mux.HandleFunc("/v1/policies", s.requireAdminAuthorization(s.policyUpdateHandler)).Methods("PUT", "OPTIONS")
-
-	// tracked images
-	mux.HandleFunc("/v1/tracked", s.requireAdminAuthorization(s.trackedHandler)).Methods("GET", "OPTIONS")
-	mux.HandleFunc("/v1/audit", s.requireAdminAuthorization(s.adminAuditLogHandler)).Methods("GET", "OPTIONS")
-	mux.HandleFunc("/v1/stats", s.requireAdminAuthorization(s.statsHandler)).Methods("GET", "OPTIONS")
-
 	mux.Handle("/metrics", promhttp.Handler())
 
-	s.registerWebhookRoutes(mux)
+	if s.authenticator.Enabled() {
+		log.Info("authentication enabled, setting up admin HTTP handlers")
+		// auth
+		mux.HandleFunc("/v1/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
+		mux.HandleFunc("/v1/auth/info", s.requireAdminAuthorization(s.userInfoHandler)).Methods("GET", "OPTIONS")
+		mux.HandleFunc("/v1/auth/user", s.requireAdminAuthorization(s.userInfoHandler)).Methods("GET", "OPTIONS")
+		mux.HandleFunc("/v1/auth/logout", s.requireAdminAuthorization(s.logoutHandler)).Methods("POST", "GET", "OPTIONS")
+		mux.HandleFunc("/v1/auth/refresh", s.requireAdminAuthorization(s.refreshHandler)).Methods("GET", "OPTIONS")
+
+		// approvals
+		mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalsHandler)).Methods("GET", "OPTIONS")
+		// approving/rejecting
+		mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalApproveHandler)).Methods("POST", "OPTIONS")
+		// updating required approvals count
+		mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalSetHandler)).Methods("PUT", "OPTIONS")
+
+		// available resources
+		mux.HandleFunc("/v1/resources", s.requireAdminAuthorization(s.resourcesHandler)).Methods("GET", "OPTIONS")
+
+		mux.HandleFunc("/v1/policies", s.requireAdminAuthorization(s.policyUpdateHandler)).Methods("PUT", "OPTIONS")
+
+		// tracked images
+		mux.HandleFunc("/v1/tracked", s.requireAdminAuthorization(s.trackedHandler)).Methods("GET", "OPTIONS")
+		mux.HandleFunc("/v1/audit", s.requireAdminAuthorization(s.adminAuditLogHandler)).Methods("GET", "OPTIONS")
+		mux.HandleFunc("/v1/stats", s.requireAdminAuthorization(s.statsHandler)).Methods("GET", "OPTIONS")
+	} else {
+		log.Info("authentication is not enabled, admin HTTP handlers are not initialized")
+	}
+
 }
 
 func (s *TriggerServer) registerWebhookRoutes(mux *mux.Router) {
