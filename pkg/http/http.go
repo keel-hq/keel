@@ -37,15 +37,14 @@ type Opts struct {
 	ApprovalManager approvals.Manager
 
 	Authenticator auth.Authenticator
-	// Username and password are used for basic auth
-	// Username string
-	// Password string
 
 	GRC *k8s.GenericResourceCache
 
 	KubernetesClient kubernetes.Implementer
 
 	Store store.Store
+
+	UIDir string
 }
 
 // TriggerServer - webhook trigger & healthcheck server
@@ -62,9 +61,7 @@ type TriggerServer struct {
 	store         store.Store
 	authenticator auth.Authenticator
 
-	// basic auth
-	// username string
-	// password string
+	uiDir string
 }
 
 // NewTriggerServer - create new HTTP trigger based server
@@ -77,9 +74,8 @@ func NewTriggerServer(opts *Opts) *TriggerServer {
 		approvalsManager: opts.ApprovalManager,
 		router:           mux.NewRouter(),
 		authenticator:    opts.Authenticator,
-		// username:         opts.Username,
-		// password:         opts.Password,
-		store: opts.Store,
+		store:            opts.Store,
+		uiDir:            opts.UIDir,
 	}
 }
 
@@ -92,6 +88,10 @@ func (s *TriggerServer) Start() error {
 	// n.UseHandler(negroni.HandlerFunc(corsHeadersMiddleware))
 	n.Use(negroni.HandlerFunc(corsHeadersMiddleware))
 	n.UseHandler(s.router)
+
+	// if s.uiDir != "" {
+	// 	n.Use(negroni.NewStatic(http.Dir(s.uiDir)))
+	// }
 
 	s.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.port),
@@ -153,8 +153,22 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 
 		// tracked images
 		mux.HandleFunc("/v1/tracked", s.requireAdminAuthorization(s.trackedHandler)).Methods("GET", "OPTIONS")
+		mux.HandleFunc("/v1/tracked", s.requireAdminAuthorization(s.trackSetHandler)).Methods("PUT", "OPTIONS")
+
+		// status
 		mux.HandleFunc("/v1/audit", s.requireAdminAuthorization(s.adminAuditLogHandler)).Methods("GET", "OPTIONS")
 		mux.HandleFunc("/v1/stats", s.requireAdminAuthorization(s.statsHandler)).Methods("GET", "OPTIONS")
+
+		if s.uiDir != "" {
+			// Serve static assets directly.
+			mux.PathPrefix("/css/").Handler(http.FileServer(http.Dir(s.uiDir)))
+			mux.PathPrefix("/assets/").Handler(http.FileServer(http.Dir(s.uiDir)))
+			mux.PathPrefix("/js/").Handler(http.FileServer(http.Dir(s.uiDir)))
+			mux.PathPrefix("/img/").Handler(http.FileServer(http.Dir(s.uiDir)))
+			mux.PathPrefix("/loading/").Handler(http.FileServer(http.Dir(s.uiDir)))
+
+			mux.PathPrefix("/").HandlerFunc(indexHandler(s.uiDir))
+		}
 	} else {
 		log.Info("authentication is not enabled, admin HTTP handlers are not initialized")
 	}
@@ -283,4 +297,12 @@ func (s *TriggerServer) userInfoHandler(resp http.ResponseWriter, req *http.Requ
 
 type APIResponse struct {
 	Status string `json:"status"`
+}
+
+func indexHandler(uiDir string) func(w http.ResponseWriter, r *http.Request) {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, uiDir+"/index.html")
+	}
+
+	return http.HandlerFunc(fn)
 }

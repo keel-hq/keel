@@ -6,8 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/keel-hq/keel/types"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // CreateAuditLog - create new audit log entry
@@ -123,13 +121,11 @@ func (s *SQLStore) AuditStatistics(query *types.AuditLogStatsQuery) ([]types.Aud
 	}
 
 	for _, l := range logs {
-		fmt.Println(l.Action)
 		key := getTime(l.CreatedAt)
 		switch l.Action {
 		case types.NotificationDeploymentUpdate.String(), types.NotificationReleaseUpdate.String():
 			entry, ok := days[key]
 			if !ok {
-				log.Errorf("day %s not found", key)
 				days[key] = types.AuditLogStats{
 					Updates: 1,
 				}
@@ -137,7 +133,6 @@ func (s *SQLStore) AuditStatistics(query *types.AuditLogStatsQuery) ([]types.Aud
 			entry.Updates = entry.Updates + 1
 			days[key] = entry
 		case types.AuditActionApprovalApproved:
-			fmt.Println("approved found")
 			entry := days[key]
 			entry.Approved++
 			days[key] = entry
@@ -153,10 +148,6 @@ func (s *SQLStore) AuditStatistics(query *types.AuditLogStatsQuery) ([]types.Aud
 
 	for _, v := range days {
 		stats = append(stats, v)
-	}
-
-	for _, s := range stats {
-		fmt.Println(s.Date)
 	}
 
 	return stats, err

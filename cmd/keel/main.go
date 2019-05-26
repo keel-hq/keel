@@ -62,6 +62,7 @@ const (
 	EnvDataDir           = "DATA_DIR"
 	EnvHelmProvider      = "HELM_PROVIDER"  // helm provider
 	EnvHelmTillerAddress = "TILLER_ADDRESS" // helm provider
+	EnvUIDir             = "UI_DIR"
 
 	// EnvDefaultDockerRegistryCfg - default registry configuration that can be passed into
 	// keel for polling trigger
@@ -81,6 +82,7 @@ func main() {
 
 	inCluster := kingpin.Flag("incluster", "use in cluster configuration (defaults to 'true'), use '--no-incluster' if running outside of the cluster").Default("true").Bool()
 	kubeconfig := kingpin.Flag("kubeconfig", "path to kubeconfig (if not in running inside a cluster)").Default(filepath.Join(os.Getenv("HOME"), ".kube", "config")).String()
+	uiDir := kingpin.Flag("ui-dir", "path to web UI static files").Default("").Envar(EnvUIDir).String()
 
 	kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version(ver.Version)
 	kingpin.CommandLine.Help = "Automated Kubernetes deployment updates. Learn more on https://keel.sh."
@@ -225,6 +227,7 @@ func main() {
 		grc:              &t.GenericResourceCache,
 		k8sClient:        implementer,
 		store:            sqlStore,
+		uiDir:            *uiDir,
 	})
 
 	bot.Run(implementer, approvalsManager)
@@ -316,6 +319,7 @@ type TriggerOpts struct {
 	grc              *k8s.GenericResourceCache
 	k8sClient        kubernetes.Implementer
 	store            store.Store
+	uiDir            string
 }
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
@@ -338,6 +342,7 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 		ApprovalManager:  opts.approvalsManager,
 		Store:            opts.store,
 		Authenticator:    authenticator,
+		UIDir:            opts.uiDir,
 	})
 
 	go func() {
