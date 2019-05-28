@@ -2,7 +2,7 @@ JOBDATE		?= $(shell date -u +%Y-%m-%dT%H%M%SZ)
 GIT_REVISION	= $(shell git rev-parse --short HEAD)
 VERSION		?= $(shell git describe --tags --abbrev=0)
 
-LDFLAGS		+= -s -w
+LDFLAGS		+= -linkmode external -extldflags -static
 LDFLAGS		+= -X github.com/keel-hq/keel/version.Version=$(VERSION)
 LDFLAGS		+= -X github.com/keel-hq/keel/version.Revision=$(GIT_REVISION)
 LDFLAGS		+= -X github.com/keel-hq/keel/version.BuildDate=$(JOBDATE)
@@ -53,7 +53,8 @@ build:
 
 install:
 	@echo "++ Installing keel"
-	GOOS=linux go install -ldflags "$(LDFLAGS)" github.com/keel-hq/keel/cmd/keel	
+	# CGO_ENABLED=0 GOOS=linux go install -ldflags "$(LDFLAGS)" github.com/keel-hq/keel/cmd/keel	
+	GOOS=linux go install -ldflags "-linkmode external -extldflags -static" github.com/keel-hq/keel/cmd/keel	
 
 image:
 	docker build -t keelhq/keel:alpha -f Dockerfile .
@@ -72,7 +73,18 @@ e2e: install
 	cd tests && go test
 
 run: install
-	keel --no-incluster
+	keel --no-incluster --ui-dir ../../rusenask/keel-ui/dist
+
+lint-ui:
+	cd ui && yarn 
+	yarn run lint --no-fix && yarn run build
+
+run-ui:
+	cd ui && yarn run serve
+
+build-ui:
+	docker build -t keelhq/keel:ui -f Dockerfile .
+	docker push keelhq/keel:ui
 
 run-debug: install
 	DEBUG=true keel --no-incluster
