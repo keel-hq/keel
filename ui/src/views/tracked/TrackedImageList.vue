@@ -19,9 +19,9 @@
       :bordered="false"
       title="Tracked Images"
     >
-      <div slot="extra">         
+      <div slot="extra">
         <a-radio-group>
-          <a-radio-button @click="refresh()">Refresh</a-radio-button>          
+          <a-radio-button @click="refresh()">Refresh</a-radio-button>
         </a-radio-group>
         <a-input-search @search="onSearch" @change="onSearchChange" style="margin-left: 16px; width: 272px;" />
       </div>
@@ -93,12 +93,12 @@ export default {
       this.filter = value
     },
     onSearchChange (e) {
-      this.filter =  e.target._value
+      this.filter = e.target._value
     },
 
-    filtered () {      
+    filtered () {
       if (this.filter === '') {
-      return this.images
+        return this.images
       }
       const filter = this.filter
       return this.images.reduce(function (filtered, image) {
@@ -134,7 +134,7 @@ export default {
         message: 'Updating..',
         description: `fetching tracked images`
       })
-    },
+    }
   }
 }
 </script>

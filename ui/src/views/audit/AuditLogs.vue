@@ -1,5 +1,5 @@
 <template>
-  <div  class="page-header-index-wide">
+  <div class="page-header-index-wide">
     <a-card :bordered="false">
       <a-row>
         <a-col :sm="8" :xs="24">
@@ -20,23 +20,23 @@
       title="Audit Logs">
 
       <!-- table -->
-      <a-table 
+      <a-table
         :columns="columns"
         :dataSource="logs"
         :pagination="true"
         :loading="loading"
-        
+
         :rowKey="log => log.id"
-        size="middle">        
-        <span slot="created" slot-scope="text, log">          
+        size="middle">
+        <span slot="created" slot-scope="text, log">
           {{ log.createdAt | time }}
-        </span>       
+        </span>
         <span slot="metadata" slot-scope="text, log">
-          <a-tag v-for="(item, key, index) in log.metadata" color="blue" :key="index">            
-            {{key}}: {{item}}
+          <a-tag v-for="(item, key, index) in log.metadata" color="blue" :key="index">
+            {{ key }}: {{ item }}
           </a-tag>
-          
-        </span>       
+
+        </span>
       </a-table>
     </a-card>
   </div>
@@ -44,7 +44,6 @@
 
 <script>
 import HeadInfo from '@/components/tools/HeadInfo'
-import { mapActions } from 'vuex'
 
 export default {
   name: 'AuditLogs',
@@ -57,45 +56,45 @@ export default {
         title: 'Time',
         dataIndex: 'createdAt',
         key: 'createdAt',
-        scopedSlots: { customRender: 'created' },
+        scopedSlots: { customRender: 'created' }
       }, {
         title: 'Action',
         dataIndex: 'action',
-        key: 'action',
+        key: 'action'
       }, {
         title: 'Resource Kind',
         dataIndex: 'resourceKind',
-        key: 'resourceKind',
+        key: 'resourceKind'
       }, {
         title: 'Identifier',
         dataIndex: 'identifier',
-        key: 'identifier',
+        key: 'identifier'
       }, {
         title: 'Metadata',
         key: 'metadata',
         dataIndex: 'metadata',
         width: 400,
-        scopedSlots: { customRender: 'metadata' },
+        scopedSlots: { customRender: 'metadata' }
       }],
       loading: false,
       logs: [],
       pagination: {},
       tablePagination: {
         current: 1
-      },
+      }
     }
   },
 
   watch: {
     '$store.state.audit.audit_logs' (logs) {
       this.logs = logs
-    },   
+    },
     '$store.state.audit.pagination' (pagination) {
       this.pagination = pagination
     },
     '$store.state.audit.loading' (loading) {
       this.loading = loading
-    }   
+    }
   },
 
   activated () {
@@ -119,22 +118,22 @@ export default {
       }
       this.$store.dispatch('GetAuditLogs', query)
     },
-    
+
     getLastEvent () {
       if (this.logs.length > 0) {
-          let timestamp = this.logs[0].createdAt
-          return new Date(timestamp).toLocaleDateString(undefined, {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          })
+        const timestamp = this.logs[0].createdAt
+        return new Date(timestamp).toLocaleDateString(undefined, {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
       }
       return '-'
-    } 
-    
+    }
+
   }
 }
 </script>

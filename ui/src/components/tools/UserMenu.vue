@@ -62,22 +62,19 @@ export default {
         title: 'Logout',
         content: 'Are you sure want to logout ?',
         onOk () {
-
           return that.$auth.logout({
-              makeRequest: true,
-              params: {}, // data: {} in axios
-              success: function () {
-                that.LogoutSuccess({})
-              },
-              error: function () {},
-              redirect: '/login',
-              // etc...
-          });
+            makeRequest: true,
+            params: {}, // data: {} in axios
+            success: function () {
+              that.LogoutSuccess({})
+            },
+            error: function () {},
+            redirect: '/login'
+            // etc...
+          })
 
           // return that.Logout({}).then(() => {
           // })
-
-            
 
           //   window.location.reload()
           // }).catch(err => {

@@ -156,8 +156,8 @@
           >Copy Settings</a-button>
           <a-alert type="warning" :style="{ marginTop: '24px' }">
             <span slot="message">
-              The configuration bar is only used in the development environment for preview, 
-              the production environment will not be displayed, 
+              The configuration bar is only used in the development environment for preview,
+              the production environment will not be displayed,
               please manually modify the configuration file.
               <a href="https://github.com/sendya/ant-design-pro-vue/blob/master/src/config/defaultSettings.js" target="_blank">src/config/defaultSettings.js</a>
             </span>

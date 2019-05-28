@@ -1,7 +1,6 @@
 import Vue from 'vue'
 import store from '@/store/'
 import {
-  MODE,
   ACCESS_TOKEN,
   DEFAULT_COLOR,
   DEFAULT_THEME,
@@ -15,15 +14,8 @@ import {
   DEFAULT_MULTI_TAB
 } from '@/store/mutation-types'
 import config from '@/config/defaultSettings'
-import darkModeConfig from '@/config/defaultDarkModeSettings'
 
 export default function Initializer () {
-  // overwrite
-  // if (Vue.ls.get(MODE, 'light') === 'dark') {
-  //   console.log('overwriting default mode with darkmode')
-  //   config = darkModeConfig
-  // }
-
   store.commit('SET_SIDEBAR_TYPE', Vue.ls.get(SIDEBAR_TYPE, true))
   store.commit('TOGGLE_THEME', Vue.ls.get(DEFAULT_THEME, config.navTheme))
   store.commit('TOGGLE_LAYOUT_MODE', Vue.ls.get(DEFAULT_LAYOUT_MODE, config.layout))

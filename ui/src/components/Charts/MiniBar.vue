@@ -32,7 +32,7 @@ const scale = [{
 export default {
   name: 'MiniBar',
   data () {
-    return {      
+    return {
       tooltip,
       scale,
       height: 100

@@ -1,5 +1,5 @@
 <template>
-  <div  class="page-header-index-wide">
+  <div class="page-header-index-wide">
     <a-card :bordered="false">
       <a-row>
         <a-col :sm="8" :xs="24">
@@ -15,63 +15,66 @@
     </a-card>
 
     <a-card
-        style="margin-top: 24px"
-        :bordered="false"
-        title="Approvals">
+      style="margin-top: 24px"
+      :bordered="false"
+      title="Approvals">
 
-        <div slot="extra">         
-          <a-radio-group>
-            <a-radio-button @click="refresh()">Refresh</a-radio-button>          
-          </a-radio-group>
-          <a-input-search @search="onSearch" @change="onSearchChange" style="margin-left: 16px; width: 272px;" />
-        </div>
+      <div slot="extra">
+        <a-radio-group>
+          <a-radio-button @click="refresh()">Refresh</a-radio-button>
+        </a-radio-group>
+        <a-input-search @search="onSearch" @change="onSearchChange" style="margin-left: 16px; width: 272px;" />
+      </div>
 
-        <!-- table -->
-        <a-table 
-          :columns="columns" 
-          :dataSource="filtered()"
-          :rowKey="approval => approval.id"
-          size="middle">
-          >
+      <!-- table -->
+      <a-table
+        :columns="columns"
+        :dataSource="filtered()"
+        :rowKey="approval => approval.id"
+        size="middle">
+        >
         <span slot="updated" slot-scope="text, log">
-        {{ log.updatedAt | time }}
+          {{ log.updatedAt | time }}
         </span>
         <span slot="delta" slot-scope="text, approval">
-            {{ approval.currentVersion }} -> {{ approval.newVersion }}
+          {{ approval.currentVersion }} -> {{ approval.newVersion }}
         </span>
         <span slot="votes" slot-scope="text, approval">
-            {{ approval.votesReceived }}/{{ approval.votesRequired }}
+          {{ approval.votesReceived }}/{{ approval.votesRequired }}
 
         </span>
         <span slot="status" slot-scope="text, approval">
           <span v-if="approval.archived">
-             Archived
-             <a-progress :percent="100" :showInfo="false"  />
+            Archived
+            <a-progress :percent="100" :showInfo="false" />
           </span>
           <span v-else-if="approval.rejected">
-             Rejected
-             <a-progress :percent="100" :showInfo="false" status="exception" />
+            Rejected
+            <a-progress :percent="100" :showInfo="false" status="exception" />
           </span>
           <span v-else-if="approval.votesReceived == approval.votesRequired">Complete
-            <a-progress :percent="100"  :showInfo="false"/>
+            <a-progress :percent="100" :showInfo="false"/>
           </span>
           <span v-else>Collecting...
             <a-progress :percent="getProgress(approval)" :showInfo="false" status="active" />
-          </span>                                
+          </span>
         </span>
         <!-- deadline countdown -->
         <span slot="deadline" slot-scope="text, approval">
-            <span v-if="isComplete(approval)">-</span>
-            <a-tooltip v-else :title="approval.deadline" slot="action">
-              <count-down :target="deadline(approval)" />
-            </a-tooltip>
+          <span v-if="isComplete(approval)">-</span>
+          <a-tooltip v-else :title="approval.deadline" slot="action">
+            <count-down :target="deadline(approval)" />
+          </a-tooltip>
         </span>
         <span slot="action" slot-scope="text, approval">
-          <a-button size="small" type="primary" icon="like" 
+          <a-button
+            size="small"
+            type="primary"
+            icon="like"
             :disabled="isComplete(approval)"
-            :loading="approval._loading" 
+            :loading="approval._loading"
             @click="approve(approval)"
-            >
+          >
           </a-button>
           <a-divider type="vertical" />
           <!-- reject -->
@@ -82,7 +85,7 @@
             :disabled="isComplete(approval)"
             :loading="approval._loading"
             @click="reject(approval)"
-          >            
+          >
           </a-button>
           <a-divider type="vertical" />
           <!-- archive -->
@@ -96,7 +99,7 @@
               :loading="approval._loading"
               @click="archive(approval)"
             >
-          </a-button>
+            </a-button>
           </a-tooltip>
           <a-divider type="vertical" />
           <!-- delete approval -->
@@ -107,7 +110,7 @@
               icon="delete"
               :loading="approval._loading"
               @click="remove(approval)"
-            >            
+            >
             </a-button>
           </a-tooltip>
         </span>
@@ -176,7 +179,7 @@ export default {
     '$store.state.approvals.approvals' (approvals) {
       this.approvals = approvals
     }
-  }, 
+  },
 
   activated () {
     this.$store.dispatch('GetApprovals')
@@ -187,12 +190,12 @@ export default {
       this.filter = value
     },
     onSearchChange (e) {
-      this.filter =  e.target._value
+      this.filter = e.target._value
     },
 
-    filtered () {      
+    filtered () {
       if (this.filter === '') {
-      return this.approvals
+        return this.approvals
       }
       const filter = this.filter
       return this.approvals.reduce(function (filtered, approval) {
@@ -235,7 +238,7 @@ export default {
     },
 
     approve (approval) {
-      let that = this
+      const that = this
       this.$confirm({
         title: 'Confirm update',
         content: `are you sure want to approve update for ${approval.identifier}?`,
@@ -244,11 +247,11 @@ export default {
         },
         onCancel () {
         }
-      })      
+      })
     },
 
     remove (approval) {
-      let that = this
+      const that = this
       this.$confirm({
         title: 'Confirm deletion',
         content: `are you sure want to delete approval ${approval.identifier}?`,
@@ -261,7 +264,7 @@ export default {
     },
 
     archive (approval) {
-      let that = this
+      const that = this
       this.$confirm({
         title: 'Confirm archive',
         content: `are you sure want to archive approval ${approval.identifier}?`,

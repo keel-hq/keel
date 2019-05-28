@@ -1,12 +1,12 @@
 <template>
   <div class="footer">
-    <div class="links">     
+    <div class="links">
       <a
         href="https://github.com/keel-hq/keel"
         target="_blank"
       >
         <a-icon type="github" />
-      </a>    
+      </a>
     </div>
     <div class="copyright">
       Copyright

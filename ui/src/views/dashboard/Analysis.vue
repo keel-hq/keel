@@ -6,20 +6,20 @@
           <a-tooltip title="Resources observed by Kubernetes provider" slot="action">
             <a-icon type="info-circle-o" />
           </a-tooltip>
-         
+
           <template slot="footer">Managed by Keel: <span>{{ $store.getters.resourcesManaged.length }}</span></template>
         </chart-card>
       </a-col>
       <a-col :sm="24" :md="12" :xl="6" :style="{ marginBottom: '24px' }">
         <chart-card :loading="loading" title="Total pods in cluster" :total="$store.getters.totalPods | NumberFormat">
           <trend :reverseColor="true" flag="up" style="margin-right: 16px;">
-              <span slot="term">Healthy</span>
-              {{ $store.getters.totalAvailablePods }}
-            </trend>
-            <trend :reverseColor="true" flag="down">
-              <span slot="term">Unavailable</span>
-              {{ $store.getters.totalUnavailablePods }}
-            </trend>
+            <span slot="term">Healthy</span>
+            {{ $store.getters.totalAvailablePods }}
+          </trend>
+          <trend :reverseColor="true" flag="down">
+            <span slot="term">Unavailable</span>
+            {{ $store.getters.totalUnavailablePods }}
+          </trend>
           <template slot="footer">Percent up:<span> {{ percentUp() | round(2) }}%</span></template>
         </chart-card>
       </a-col>
@@ -31,7 +31,7 @@
           <div>
             <mini-bar :data="$store.getters.updateStats"/>
           </div>
-          <template slot="footer">Average <span>{{ $store.state.stats.totalUpdatesThisPeriod/4 | round(0,0)}}</span> updates per week</template>
+          <template slot="footer">Average <span>{{ $store.state.stats.totalUpdatesThisPeriod/4 | round(0,0) }}</span> updates per week</template>
         </chart-card>
       </a-col>
       <a-col :sm="24" :md="12" :xl="6" :style="{ marginBottom: '24px' }">
@@ -65,11 +65,11 @@
     >
       <span v-if="policyUnderChange === 'glob'">
         <div class="meta-content" slot="description">
-          Use wildcards to match tags. Policy <strong>glob:build-*"</strong> would 
-          match tags such as <strong>build-1</strong>, <strong>build-2</strong>, 
+          Use wildcards to match tags. Policy <strong>glob:build-*"</strong> would
+          match tags such as <strong>build-1</strong>, <strong>build-2</strong>,
           <strong>build-commit-id-5</strong>:
         </div>
-        <a-input addonBefore="glob:" placeholder="build-*" v-model="policyInput" />      
+        <a-input addonBefore="glob:" placeholder="build-*" v-model="policyInput" />
 
       </span>
 
@@ -77,30 +77,30 @@
         <div class="meta-content" slot="description">
           Use regular expressions to match versions, regexp syntax can be found
           here: <a href="https://github.com/google/re2/wiki/Syntax" target="_blank">https://github.com/google/re2/wiki/Syntax</a>.
-        </div>        
-         <a-input  addonBefore="regexp:" placeholder="^([a-zA-Z]+)$" v-model="policyInput" />
+        </div>
+        <a-input addonBefore="regexp:" placeholder="^([a-zA-Z]+)$" v-model="policyInput" />
       </span>
-     
+
     </a-modal>
-    
+
     <!-- <a-row :gutter="24"> -->
     <a-card
       style="margin-top: 24px margin-bot: 24px"
       :bordered="false"
       title="Kubernetes Cluster Resources">
 
-      <div slot="extra">         
+      <div slot="extra">
         <a-radio-group>
-          <a-radio-button @click="refresh()">Refresh</a-radio-button>          
+          <a-radio-button @click="refresh()">Refresh</a-radio-button>
         </a-radio-group>
         <a-input-search @search="onSearch" @change="onSearchChange" style="margin-left: 16px; width: 272px;" />
       </div>
       <!-- table -->
       <a-table
         :rowKey="resource => resource.identifier"
-        :columns="columns" 
+        :columns="columns"
         :dataSource="filtered()"
-        
+
         size="middle">
         <!-- resource kind/name -->
         <span slot="name" slot-scope="text, resource">
@@ -111,33 +111,39 @@
             <template slot="title">
               <span>Currently {{ resource.status.availableReplicas }} pods are available out of {{ resource.status.replicas }} desired</span>
             </template>
-            <a-badge v-if="availabilityOK(resource)" status="success" :text="getAvailability(resource)"/>            
-            <a-badge v-else status="warning" :text="getAvailability(resource)"/>            
+            <a-badge v-if="availabilityOK(resource)" status="success" :text="getAvailability(resource)"/>
+            <a-badge v-else status="warning" :text="getAvailability(resource)"/>
           </a-tooltip>
-          
+
         </span>
         <!-- update policies -->
         <span slot="policy" slot-scope="text, resource">
-          <a-badge v-if="resource.policy === 'nil policy'" status="default" text="none" />    
+          <a-badge v-if="resource.policy === 'nil policy'" status="default" text="none" />
           <a-badge v-else status="success" :text="resource.policy"/>
         </span>
-        <span slot="approvals" slot-scope="text, resource">          
-          {{ resource._required_approvals ? resource._required_approvals : '-' }}          
+        <span slot="approvals" slot-scope="text, resource">
+          {{ resource._required_approvals ? resource._required_approvals : '-' }}
         </span>
         <!-- labels -->
-        <span slot="labels" slot-scope="text, resource">        
-          <a-tag v-for="(item, key, index) in resource._keel_opts" color="blue" :key="index">            
-            {{key}}: {{item}}
-          </a-tag>    
+        <span slot="labels" slot-scope="text, resource">
+          <a-tag v-for="(item, key, index) in resource._keel_opts" color="blue" :key="index">
+            {{ key }}: {{ item }}
+          </a-tag>
         </span>
-        <span slot="images" slot-scope="text, resource">       
-          <a-tag v-for="(item, index) in resource.images" :key="index">                      
+        <span slot="images" slot-scope="text, resource">
+          <a-tag v-for="(item, index) in resource.images" :key="index">
             {{ item }}
-          </a-tag>    
+          </a-tag>
         </span>
-         <!-- actions -->
-        <span slot="action" slot-scope="text, resource">                   
-          <a-button size="small" type="primary" icon="pause" :disabled="resource.policy === 'nil policy'" :loading="resource._loading" @click="setPolicy(resource, 'never')">
+        <!-- actions -->
+        <span slot="action" slot-scope="text, resource">
+          <a-button
+            size="small"
+            type="primary"
+            icon="pause"
+            :disabled="resource.policy === 'nil policy'"
+            :loading="resource._loading"
+            @click="setPolicy(resource, 'never')">
             Pause
           </a-button>
           &nbsp;
@@ -157,21 +163,21 @@
           </a-dropdown>
           &nbsp;
           <a-tooltip placement="top" >
-          <a-button-group>
-            <a-button size="small" type="primary" icon="up" @click="setApproval(resource, true)"></a-button>
-            <a-button size="small" type="primary" icon="down" @click="setApproval(resource, false)"></a-button>
-          </a-button-group> 
+            <a-button-group>
+              <a-button size="small" type="primary" icon="up" @click="setApproval(resource, true)"></a-button>
+              <a-button size="small" type="primary" icon="down" @click="setApproval(resource, false)"></a-button>
+            </a-button-group>
           </a-tooltip>
           &nbsp;
           <a-tooltip placement="top" >
             <template slot="title">
               <span>Enable or disable active registry polling for the images (defaults to polling every minute)</span>
             </template>
-          <!-- poll control -->
-          <a-switch :checked="resource._trigger_poll" @click='toggleTracking(resource)' :disabled="resource.policy === 'nil policy'" >
-            <a-icon type="sync" slot="checkedChildren"/>
-            <a-icon type="disconnect" slot="unCheckedChildren"/>
-          </a-switch>
+            <!-- poll control -->
+            <a-switch :checked="resource._trigger_poll" @click="toggleTracking(resource)" :disabled="resource.policy === 'nil policy'" >
+              <a-icon type="sync" slot="checkedChildren"/>
+              <a-icon type="disconnect" slot="unCheckedChildren"/>
+            </a-switch>
           </a-tooltip>
         </span>
       </a-table>
@@ -181,7 +187,6 @@
 </template>
 
 <script>
-import moment from 'moment'
 import { ChartCard, MiniArea, MiniBar, MiniProgress, RankList, Bar, Trend, NumberInfo, MiniSmoothArea } from '@/components'
 import { mixinDevice } from '@/utils/mixin'
 
@@ -209,51 +214,51 @@ export default {
       columns: [{
         title: 'Namespace',
         dataIndex: 'namespace',
-        key: 'namespace',       
+        key: 'namespace'
       }, {
         dataIndex: 'name',
         key: 'name',
         title: 'Name',
-        scopedSlots: { customRender: 'name' },
+        scopedSlots: { customRender: 'name' }
       }, {
         dataIndex: 'pods',
         key: 'pods',
         title: 'Pods',
-        scopedSlots: { customRender: 'pods' },
+        scopedSlots: { customRender: 'pods' }
       }, {
         title: 'Policy',
         dataIndex: 'policy',
         // width: 120,
         key: 'policy',
-        scopedSlots: { customRender: 'policy' },
+        scopedSlots: { customRender: 'policy' }
       }, {
         title: 'Required Approvals',
-        dataIndex: 'approvals',        
+        dataIndex: 'approvals',
         key: 'approvals',
-        scopedSlots: { customRender: 'approvals' },
+        scopedSlots: { customRender: 'approvals' }
       }, {
         title: 'Images',
         key: 'images',
         dataIndex: 'images',
         width: 180,
-        scopedSlots: { customRender: 'images' },
+        scopedSlots: { customRender: 'images' }
       }, {
         title: 'Keel Labels & Annotations',
         key: 'labels',
         dataIndex: 'labels',
         width: 230,
-        scopedSlots: { customRender: 'labels' },
+        scopedSlots: { customRender: 'labels' }
       }, {
         title: 'Policy & Approvals Control',
         key: 'action',
         // fixed: 'right',
-        scopedSlots: { customRender: 'action' },
+        scopedSlots: { customRender: 'action' }
       }],
 
       // glob/regexp policy settings
       confirmLoading: false,
       visible: false,
-      policyInput :'',
+      policyInput: '',
       policyUnderChange: '',
       resourceUnderPolicyChange: {}
     }
@@ -264,7 +269,7 @@ export default {
     }, 500)
   },
 
-  activated () {    
+  activated () {
     this.fetchData()
   },
 
@@ -283,12 +288,12 @@ export default {
       this.filter = value
     },
     onSearchChange (e) {
-      this.filter =  e.target._value
+      this.filter = e.target._value
     },
 
-    filtered () {      
+    filtered () {
       if (this.filter === '') {
-      return this.resources
+        return this.resources
       }
       const filter = this.filter
       return this.resources.reduce(function (filtered, resource) {
@@ -320,14 +325,14 @@ export default {
     },
 
     setPolicy (resource, policy) {
-      let payload = {
+      const payload = {
         identifier: resource.identifier,
         policy: policy,
-        provider: resource.provider,
+        provider: resource.provider
       }
       this.$store.dispatch('SetResourcePolicy', payload).then(() => {
-        let error = this.$store.state.resources.error
-        if (error  === null) {
+        const error = this.$store.state.resources.error
+        if (error === null) {
           this.$notification.success({
             message: 'Policy updated!',
             description: `${resource.kind} ${resource.name} policy set to ${policy}!`
@@ -338,16 +343,16 @@ export default {
             description: `Error: ${error.body}`,
             duration: 4
           })
-        }       
+        }
         this.$store.dispatch('GetResources')
-      })      
+      })
     },
 
     toggleTracking (resource) {
-      let payload = {
+      const payload = {
         identifier: resource.identifier,
-        provider: resource.provider,
-      }      
+        provider: resource.provider
+      }
 
       if (!resource._trigger_poll) {
         payload.trigger = 'poll'
@@ -356,8 +361,8 @@ export default {
       }
 
       this.$store.dispatch('SetTracking', payload).then(() => {
-        let error = this.$store.state.tracked.error
-        if (error  === null) {
+        const error = this.$store.state.tracked.error
+        if (error === null) {
           this.$notification.success({
             message: 'Image tracking updated!',
             description: `${resource.kind} ${resource.name} trigget set to ${payload.trigger}!`
@@ -368,18 +373,18 @@ export default {
             description: `Error: ${error.body}`,
             duration: 4
           })
-        }       
+        }
         this.$store.dispatch('GetResources')
       })
     },
 
     setApproval (resource, increase) {
-      let payload = {
-        identifier: encodeURI(resource.identifier),        
-        provider: resource.provider,
+      const payload = {
+        identifier: encodeURI(resource.identifier),
+        provider: resource.provider
       }
 
-      const current = resource.annotations["keel.sh/approvals"]
+      const current = resource.annotations['keel.sh/approvals']
       if (increase) {
         // increasing approvals count
         if (current) {
@@ -397,8 +402,8 @@ export default {
       }
 
       this.$store.dispatch('SetApproval', payload).then(() => {
-        let error = this.$store.state.approvals.error
-        if (error  === null) {
+        const error = this.$store.state.approvals.error
+        if (error === null) {
           this.$notification.success({
             message: 'Resource approvals updated!',
             description: `${resource.kind} ${resource.name} approvals set to ${payload.votesRequired}!`
@@ -409,9 +414,9 @@ export default {
             description: `Error: ${error.body}`,
             duration: 4
           })
-        }       
+        }
         this.$store.dispatch('GetResources')
-      })      
+      })
     },
 
     refresh () {
@@ -431,18 +436,18 @@ export default {
     startPolling () {
       this.timer = setInterval(this.fetchData, 2500)
     },
-    
+
     stopPolling () {
       clearInterval(this.timer)
     },
 
     handleSetMenuClick (e) {
-      console.log('click', e);
+      console.log('click', e)
     },
 
     showPolicyModal (resource, policyName) {
       this.policyUnderChange = policyName
-      this.resourceUnderPolicyChange = resource      
+      this.resourceUnderPolicyChange = resource
       this.visible = true
     },
 
@@ -455,7 +460,7 @@ export default {
         policy = 'glob:' + this.policyInput
       } else if (this.policyUnderChange === 'regexp') {
         policy = 'regexp:' + this.policyInput
-      }      
+      }
       this.visible = false
       this.confirmLoading = false
       this.setPolicy(this.resourceUnderPolicyChange, policy)
@@ -464,7 +469,7 @@ export default {
       this.resourceUnderPolicyChange = {}
     },
     handleCancel (e) {
-      console.log('Clicked cancel button');
+      console.log('Clicked cancel button')
       this.visible = false
       this.policyUnderChange = ''
       this.resourceUnderPolicyChange = {}
@@ -479,11 +484,11 @@ export default {
     },
 
     percentUp () {
-      if (this.$store.getters.totalPods == 0) {
+      if (this.$store.getters.totalPods === 0) {
         return 0
       }
 
-      let p = 100 - (this.$store.getters.totalUnavailablePods * 100) / this.$store.getters.totalPods
+      const p = 100 - (this.$store.getters.totalUnavailablePods * 100) / this.$store.getters.totalPods
 
       return p
     }

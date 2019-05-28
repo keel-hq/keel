@@ -18,7 +18,7 @@ export default {
       locale: enUS
     }
   },
-  mounted () {   
+  mounted () {
   },
 
   methods: {

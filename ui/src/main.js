@@ -70,7 +70,12 @@ Vue.filter('round', function (value, decimals) {
 
 Vue.router = router
 
-Vue.http.options.root = `http://localhost:9300/v1`
+// dev setup
+if (process.env.NODE_ENV === 'production') {
+  Vue.http.options.root = `${window.location.protocol}//${window.location.host}/v1`
+} else {
+  Vue.http.options.root = `http://localhost:9300/v1`
+}
 
 Vue.use(require('@websanova/vue-auth'), {
   auth: require('@websanova/vue-auth/drivers/auth/bearer.js'),

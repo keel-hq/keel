@@ -44,7 +44,7 @@
           :loading="state.loginBtn"
           :disabled="state.loginBtn"
         >Login</a-button>
-      </a-form-item>       
+      </a-form-item>
     </a-form>
 
     <two-step-captcha
@@ -57,16 +57,8 @@
 </template>
 
 <script>
-import md5 from 'md5'
-import TwoStepCaptcha from '@/components/tools/TwoStepCaptcha'
-import { mapActions } from 'vuex'
-import { timeFix } from '@/utils/util'
-import { getSmsCaptcha, get2step } from '@/api/login'
 
 export default {
-  components: {
-    TwoStepCaptcha
-  },
   data () {
     return {
       customActiveKey: 'tab1',
@@ -87,7 +79,6 @@ export default {
   },
 
   methods: {
-    ...mapActions(['Login', 'Logout']),
     // handler
     handleUsernameOrEmail (rule, value, callback) {
       const { state } = this
@@ -108,8 +99,7 @@ export default {
       const {
         form: { validateFields },
         state,
-        customActiveKey,
-        Login
+        customActiveKey
       } = this
 
       state.loginBtn = true
@@ -155,13 +145,11 @@ export default {
           this.$notification.success({
             message: 'Login successful!',
             description: `Loading data..`
-          })          
+          })
         })
         .catch(err => this.requestFailed(err))
-        .finally(() => {                    
+        .finally(() => {
         })
-      
-      
     },
     requestFailed (err) {
       console.log(err)
