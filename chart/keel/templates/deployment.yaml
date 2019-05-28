@@ -86,6 +86,13 @@ spec:
             - name: AWS_REGION
               value: "{{ .Values.ecr.region }}"
 {{- end }}
+{{- if .Values.dockerRegistry.enabled }}
+            - name: DOCKER_REGISTRY_CFG
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.dockerRegistry.name }}
+                  key: {{ .Values.dockerRegistry.key }}
+{{- end }}
 {{- if .Values.webhook.enabled }}
             # Enable webhook endpoint
             - name: WEBHOOK_ENDPOINT

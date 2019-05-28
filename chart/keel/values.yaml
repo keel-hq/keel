@@ -171,3 +171,8 @@ gcloudIngress:
     enabled: false
     domains:
       - ""
+
+dockerRegistry:
+  enabled: false
+  name: ""
+  key: ""

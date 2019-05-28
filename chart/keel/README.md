@@ -123,6 +123,9 @@ The following table lists has the main configurable parameters (polling, trigger
 | `basicauth.enabled`                         | Enable/disable Basic Auth on approvals | `false`                                                   |
 | `basicauth.user`                            | Basic Auth username                    |                                                           |
 | `basicauth.password`                        | Basic Auth password                    |                                                           |
+| `dockerRegistry.enabled`                    | Docker registry secret enabled.        | `false`                                                   |
+| `dockerRegistry.name`                       | Docker registry secret name            |                                                           |
+| `dockerRegistry.key`                        | Docker registry secret key             |                                                           |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
