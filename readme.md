@@ -58,7 +58,7 @@ Support Keel's development by:
 
 ### Warp speed quick start
 
-To achieve warp speed, we will be using [sunstone.dev](https://about.sunstone.dev) service and Minikube. 
+To achieve warp speed, we will be using [sunstone.dev](https://about.sunstone.dev) service and [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/). 
 
 Start Minikube:
 
