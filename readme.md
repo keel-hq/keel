@@ -83,7 +83,7 @@ http://192.168.99.100:3199
 Keel can work together with [webhook relay tunnels](https://webhookrelay.com). To deploy Keel with Webhook Relay sidecar you will need to get [a token](https://my.webhookrelay.com/tokens), then pre-create [a tunnel](https://my.webhookrelay.com/tunnels) and:
 
 ```
-kubectl apply -f https://sunstone.dev/keel?namespace=default&tag=ui&username=admin&password=admin&relay_key=TOKEN_KEY&relay_secret=TOKEN_SECRET&relay_tunnel=TUNNEL_NAME&tag=latest
+kubectl apply -f https://sunstone.dev/keel?namespace=default&username=admin&password=admin&relay_key=TOKEN_KEY&relay_secret=TOKEN_SECRET&relay_tunnel=TUNNEL_NAME&tag=latest
 ```
 
 Now, you can access Keel remotely. 
