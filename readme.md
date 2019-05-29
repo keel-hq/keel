@@ -56,7 +56,31 @@ Support Keel's development by:
 * Star this repository
 * [Follow on Twitter](https://twitter.com/keel_hq)
 
-### Lightning quick start
+### Warp speed quick start
+
+To achieve warp speed, we will be using [sunstone.dev](https://about.sunstone.dev) service and Minikube. 
+
+Start Minikube:
+
+
+```bash
+minikube start
+```
+
+Install customized Keel (feel free to change credentials, namespace and version tag) straight from your `kubectl`.
+
+```bash
+# To override default latest semver tag, add &tag=x.x.x query argument to the URL below
+kubectl apply -f https://sunstone.dev/raw.githubusercontent.com/keel-hq/keel/feature/ui/deployment/deployment-template.yaml?namespace=default&username=admin&password=admin
+# and get Keel IP:
+minikube service --namespace default keel --url
+http://192.168.99.100:3199
+```
+
+Open it in your browser. UI will let you
+
+
+### Helm quick start
 
 Prerequisites:
 
