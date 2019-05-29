@@ -7,13 +7,10 @@ import (
 
 	apps_v1 "k8s.io/api/apps/v1"
 	v1beta1 "k8s.io/api/batch/v1beta1"
+	v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	// core_v1 "k8s.io/api/core/v1"
-	// "k8s.io/api/core/v1"
-
-	"k8s.io/api/core/v1"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -24,14 +21,9 @@ import (
 // Implementer - thing wrapper around currently used k8s APIs
 type Implementer interface {
 	Namespaces() (*v1.NamespaceList, error)
-
-	// Deployment(namespace, name string) (*v1beta1.Deployment, error)
 	Deployments(namespace string) (*apps_v1.DeploymentList, error)
-	// Update(deployment *v1beta1.Deployment) error
 	Update(obj *k8s.GenericResource) error
-
 	Secret(namespace, name string) (*v1.Secret, error)
-
 	Pods(namespace, labelSelector string) (*v1.PodList, error)
 	DeletePod(namespace, name string, opts *meta_v1.DeleteOptions) error
 

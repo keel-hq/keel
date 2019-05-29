@@ -127,6 +127,15 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/dgrijalva/jwt-go"
+  packages = [
+    ".",
+    "request"
+  ]
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
+
+[[projects]]
   name = "github.com/docker/distribution"
   packages = [
     ".",
@@ -328,6 +337,21 @@
   version = "0.3.2"
 
 [[projects]]
+  name = "github.com/jinzhu/gorm"
+  packages = [
+    ".",
+    "dialects/sqlite"
+  ]
+  revision = "29cb2a42d2a41e5ae449435e1c9277d47115775c"
+  version = "v1.9.5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/jinzhu/inflection"
+  packages = ["."]
+  revision = "04140366298a54a039076d798123ffa108fff46c"
+
+[[projects]]
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
   revision = "0b12d6b5"
@@ -353,6 +377,12 @@
     "jwriter"
   ]
   revision = "32fa128f234d041f196a9f3e0fea5ac9772c08e1"
+
+[[projects]]
+  name = "github.com/mattn/go-sqlite3"
+  packages = ["."]
+  revision = "c7c4067b79cc51e6dfdcef5c702e74b1e0fa7c75"
+  version = "v1.10.0"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -452,12 +482,6 @@
   name = "github.com/rusenask/docker-registry-client"
   packages = ["registry"]
   revision = "f41c43a13c3852213e225cc2476800c8f734d777"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/rusenask/k8s-kv"
-  packages = ["kv"]
-  revision = "5ab96be4b86adb4019ac7d1456463be6c1b11e15"
 
 [[projects]]
   name = "github.com/ryanuber/go-glob"
@@ -832,6 +856,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "11564076fa7d2cccba96e2eebaf19978756aae3f9efbac4375c27c26960c1de1"
+  inputs-digest = "7b13eb129f741b4dd6ebb79c7d0a97566b6a6e7abf7967f78368bd0a64c2f731"
   solver-name = "gps-cdcl"
   solver-version = 1

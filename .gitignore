@@ -4,3 +4,4 @@ deployment.yml
 hack/deployment-norbac.yaml
 hack/deployment-rbac.yaml
 hack/deployment-norbac-helm.yaml
+.vscode

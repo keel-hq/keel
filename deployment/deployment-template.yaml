@@ -1,0 +1,248 @@
+---
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: "{{ .namespace | default "keel" }}"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keel
+  namespace: "{{ .namespace | default "keel" }}"
+  labels:
+    app: keel
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: keel
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - watch
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - watch
+      - list
+  - apiGroups:
+      - ""
+      - extensions
+      - apps
+      - batch
+    resources:
+      - pods
+      - replicasets
+      - replicationcontrollers
+      - statefulsets
+      - deployments
+      - daemonsets
+      - jobs
+      - cronjobs
+    verbs:
+      - get
+      - delete # required to delete pods during force upgrade of the same tag
+      - watch
+      - list
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - create
+      - update
+
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: keel
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: keel
+subjects:
+  - kind: ServiceAccount
+    name: keel
+    namespace: "{{ .namespace | default "keel" }}"
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: keel
+  namespace: "{{ .namespace | default "keel" }}"
+  labels:
+    app: keel
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 9300
+      targetPort: 9300
+      protocol: TCP
+      name: keel
+  selector:
+    app: keel
+  sessionAffinity: None
+
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: keel
+  namespace: "{{ .namespace | default "keel" }}"
+  labels:
+    app: keel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keel
+  template:
+    metadata:
+      labels:
+        app: keel
+    spec:
+      serviceAccountName: keel
+      containers:
+        {{ if .relay_key }}
+        - name: webhookrelayd
+          image: "webhookrelay/webhookrelayd:latest"
+          imagePullPolicy: Always
+          {{ if .relay_tunnel}}
+          command: ["/relayd", "--mode", "tunnel", "--tunnels", "{{ .relay_tunnel }}"]
+          {{ else }}
+          command: ["/relayd"]
+          {{ end}}
+          env:
+            - name: KEY
+              value: {{ .relay_key }}
+            - name: SECRET
+              value: {{ .relay_secret }}
+            {{ if .relay_bucket }}
+            - name: BUCKET
+              value: "{{ .relay_bucket }}"
+            {{ end }}
+        {{ end }}
+        - name: keel
+          # Note that we use appVersion to get images tag.
+          image: "keelhq/keel:{{ .tag | latestRegistrySemver "keelhq/keel" }}"
+          imagePullPolicy: Always
+          command: ["/bin/keel"]
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            # Enable GCR with pub/sub support
+            - name: PROJECT_ID
+              value: ""
+            - name: PUBSUB
+              value: "{{ .pubsub }}" # Set to '1' or 'true' to enable GCR pubsub
+            # Basic auth (to enable UI/API)
+            - name: BASIC_AUTH_USER
+              value: {{ .username }}
+            - name: BASIC_AUTH_PASSWORD
+              value: {{ .password }}
+            # Helm configuration
+            {{ if.tiller_address }} 
+            - name: HELM_PROVIDER
+              value: "1"
+            - name: TILLER_ADDRESS
+              value: "{{ .tiller_address }}"
+            {{ end}}
+            # Enable AWS ECR
+            - name: AWS_ACCESS_KEY_ID
+              value: ""
+            - name: AWS_SECRET_ACCESS_KEY
+              value: ""
+            - name: AWS_REGION
+              value: ""
+            # Enable webhook endpoint
+            - name: WEBHOOK_ENDPOINT
+              value: ""
+            # Enable mattermost endpoint
+            - name: MATTERMOST_ENDPOINT
+              value: ""
+            - name: SLACK_TOKEN
+              value: "{{ .slack_token }}"
+            - name: SLACK_CHANNELS
+              value: "{{ .slack_channel | default "general" }}"
+            - name: SLACK_APPROVALS_CHANNEL
+              value: "{{ .slack_approvals_channel | default "general" }}"
+            - name: SLACK_BOT_NAME
+              value: "{{ .bot_name | default "keel" }}"
+            # Enable hipchat approvials and notification
+            - name: HIPCHAT_TOKEN
+              value: ""
+            - name: HIPCHAT_CHANNELS
+              value: ""
+            - name: HIPCHAT_APPROVALS_CHANNEL
+              value: ""
+            - name: HIPCHAT_APPROVALS_BOT_NAME
+              value: ""
+            - name: HIPCHAT_APPROVALS_USER_NAME
+              value: ""
+            - name: HIPCHAT_APPROVALS_PASSWORT
+              value: ""
+            - name: NOTIFICATION_LEVEL
+              value: "info"
+            # Enable insecure registries
+            - name: INSECURE_REGISTRY
+              value: "true"
+          ports:
+            - containerPort: 9300
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9300
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+      {{ if.volume_name }}        
+          volumeMounts:
+          - mountPath: /data
+            name: keel-data   # must match the name of the volume
+      # Provision a fresh volume for the pod
+      volumes:        
+        - name: keel-data
+          gcePersistentDisk:
+            # This disk must already exist. Check Readme
+            pdName: {{ .volume_name | default "keel-data" }}
+            fsType: ext4        
+      {{ end }}
+
+---
+# Source: keel/templates/pod-disruption-budget.yaml
+
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: keel
+  namespace: "{{ .namespace | default "keel" }}"
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: keel

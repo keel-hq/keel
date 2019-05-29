@@ -16,6 +16,13 @@ steps:
   commands:
     - make install
 
+- name: build-ui
+  image: node:9.11.1-alpine
+  commands:
+    - cd ui
+    - yarn
+    - yarn run lint --no-fix
+
 - name: publish-image  
   image: plugins/docker
   settings:

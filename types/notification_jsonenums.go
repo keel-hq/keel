@@ -15,6 +15,9 @@ var (
 		"NotificationDeploymentUpdate":    NotificationDeploymentUpdate,
 		"NotificationPreReleaseUpdate":    NotificationPreReleaseUpdate,
 		"NotificationReleaseUpdate":       NotificationReleaseUpdate,
+		"NotificationSystemEvent":         NotificationSystemEvent,
+		"NotificationUpdateApproved":      NotificationUpdateApproved,
+		"NotificationUpdateRejected":      NotificationUpdateRejected,
 	}
 
 	_NotificationValueToName = map[Notification]string{
@@ -24,6 +27,9 @@ var (
 		NotificationDeploymentUpdate:    "NotificationDeploymentUpdate",
 		NotificationPreReleaseUpdate:    "NotificationPreReleaseUpdate",
 		NotificationReleaseUpdate:       "NotificationReleaseUpdate",
+		NotificationSystemEvent:         "NotificationSystemEvent",
+		NotificationUpdateApproved:      "NotificationUpdateApproved",
+		NotificationUpdateRejected:      "NotificationUpdateRejected",
 	}
 )
 
@@ -37,6 +43,9 @@ func init() {
 			interface{}(NotificationDeploymentUpdate).(fmt.Stringer).String():    NotificationDeploymentUpdate,
 			interface{}(NotificationPreReleaseUpdate).(fmt.Stringer).String():    NotificationPreReleaseUpdate,
 			interface{}(NotificationReleaseUpdate).(fmt.Stringer).String():       NotificationReleaseUpdate,
+			interface{}(NotificationSystemEvent).(fmt.Stringer).String():         NotificationSystemEvent,
+			interface{}(NotificationUpdateApproved).(fmt.Stringer).String():      NotificationUpdateApproved,
+			interface{}(NotificationUpdateRejected).(fmt.Stringer).String():      NotificationUpdateRejected,
 		}
 	}
 }

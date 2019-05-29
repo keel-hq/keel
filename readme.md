@@ -56,7 +56,39 @@ Support Keel's development by:
 * Star this repository
 * [Follow on Twitter](https://twitter.com/keel_hq)
 
-### Lightning quick start
+### Warp speed quick start
+
+To achieve warp speed, we will be using [sunstone.dev](https://about.sunstone.dev) service and Minikube. 
+
+Start Minikube:
+
+
+```bash
+minikube start
+```
+
+Install customized Keel (feel free to change credentials, namespace and version tag) straight from your `kubectl`.
+
+```bash
+# To override default latest semver tag, add &tag=x.x.x query argument to the URL below
+kubectl apply -f https://sunstone.dev/raw.githubusercontent.com/keel-hq/keel/feature/ui/deployment/deployment-template.yaml?namespace=default&username=admin&password=admin
+# and get Keel IP:
+minikube service --namespace default keel --url
+http://192.168.99.100:3199
+```
+
+### Creating remotely accessible Keel instance
+
+Keel can work together with [webhook relay tunnels](https://webhookrelay.com). To deploy Keel with Webhook Relay sidecar you will need to get [a token](https://my.webhookrelay.com/tokens), then pre-create [a tunnel](https://my.webhookrelay.com/tunnels) and:
+
+```
+kubectl apply -f https://sunstone.dev/raw.githubusercontent.com/keel-hq/keel/feature/ui/deployment/deployment-template.yaml\?namespace\=default\&tag\=ui\&username\=admin\&password\=admin\&relay_key=TOKEN_KEY&relay_secret=TOKEN_SECRET&relay_tunnel=TUNNEL_NAME
+```
+
+Now, you can access Keel remotely. 
+
+
+### Helm quick start
 
 Prerequisites:
 
@@ -117,7 +149,7 @@ Before starting to work on some big or medium features - raise an issue [here](h
 
 ### Developing Keel
 
-If you wish to work on Keel itself, you will need Go 1.9+ installed. Make sure you put Keel into correct Gopath and `go build` (dependency management is done through [dep](https://github.com/golang/dep)). 
+If you wish to work on Keel itself, you will need Go 1.12+ installed. Make sure you put Keel into correct Gopath and `go build` (dependency management is done through [dep](https://github.com/golang/dep)). 
 
 To test Keel while developing:
 

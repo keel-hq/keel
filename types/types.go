@@ -1,13 +1,15 @@
 // Package types holds most of the types used across Keel
 //go:generate jsonenums -type=Notification
 //go:generate jsonenums -type=Level
-//go:generate jsonenums -type=PolicyType
 //go:generate jsonenums -type=TriggerType
 //go:generate jsonenums -type=ProviderType
 package types
 
 import (
 	"bytes"
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -58,17 +60,6 @@ const KeelApprovalDeadlineDefault = 24
 // KeelReleasePage - optional release notes URL passed on with notification
 const KeelReleaseNotesURL = "keel.sh/releaseNotes"
 
-// KeelPodDeleteDelay - optional delay betwen killing pods
-// during force deploy
-// const KeelPodDeleteDelay = "keel.sh/forceDelay"
-
-//KeelPodMaxDelay defines maximum delay in seconds between deleting pods
-// const KeelPodMaxDelay int64 = 600
-
-// KeelPodTerminationGracePeriod - optional grace period during
-// pod termination
-// const KeelPodTerminationGracePeriod = "keel.sh/gracePeriod"
-
 // Repository - represents main docker repository fields that
 // keel cares about
 type Repository struct {
@@ -98,6 +89,27 @@ type Event struct {
 	CreatedAt  time.Time  `json:"createdAt,omitempty"`
 	// optional field to identify trigger
 	TriggerName string `json:"triggerName,omitempty"`
+}
+
+func (e *Event) Value() (driver.Value, error) {
+	j, err := json.Marshal(e)
+	return j, err
+}
+
+func (e *Event) Scan(src interface{}) error {
+	source, ok := src.([]byte)
+	if !ok {
+		return errors.New("type assertion .([]byte) failed.")
+	}
+
+	var event Event
+	if err := json.Unmarshal(source, &event); err != nil {
+		return err
+	}
+
+	*e = event
+
+	return nil
 }
 
 // Version - version container
@@ -134,8 +146,9 @@ type TriggerType int
 
 // Available trigger types
 const (
-	TriggerTypeDefault TriggerType = iota // default policy is to wait for external triggers
-	TriggerTypePoll                       // poll policy sets up watchers for the affected repositories
+	TriggerTypeDefault  TriggerType = iota // default policy is to wait for external triggers
+	TriggerTypePoll                        // poll policy sets up watchers for the affected repositories
+	TriggerTypeApproval                    // fulfilled approval requests trigger events
 )
 
 func (t TriggerType) String() string {
@@ -144,6 +157,8 @@ func (t TriggerType) String() string {
 		return "default"
 	case TriggerTypePoll:
 		return "poll"
+	case TriggerTypeApproval:
+		return "approval"
 	default:
 		return "default"
 	}
@@ -160,14 +175,18 @@ func ParseTrigger(trigger string) TriggerType {
 
 // EventNotification notification used for sending
 type EventNotification struct {
-	Name      string       `json:"name"`
-	Message   string       `json:"message"`
-	CreatedAt time.Time    `json:"createdAt"`
-	Type      Notification `json:"type"`
-	Level     Level        `json:"level"`
+	Name         string       `json:"name"`
+	Message      string       `json:"message"`
+	CreatedAt    time.Time    `json:"createdAt"`
+	Type         Notification `json:"type"`
+	Level        Level        `json:"level"`
+	ResourceKind string       `json:"resourceKind"`
+	Identifier   string       `json:"identifier"`
 	// Channels is an optional variable to override
 	// default channel(-s) when performing an update
 	Channels []string `json:"-"`
+
+	Metadata map[string]string `json:"metadata"`
 }
 
 // ParseEventNotificationChannels - parses deployment annotations  or chart config
@@ -196,57 +215,6 @@ func ParseReleaseNotesURL(annotations map[string]string) string {
 	return annotations[KeelReleaseNotesURL]
 }
 
-// ParsePodDeleteDelay - parses pod delete delay time in seconds
-// from a given map of annotations
-// func ParsePodDeleteDelay(annotations map[string]string) int64 {
-// 	delay := int64(0)
-// 	if annotations == nil {
-// 		return delay
-// 	}
-// 	delayStr, ok := annotations[KeelPodDeleteDelay]
-// 	if !ok {
-// 		return delay
-// 	}
-
-// 	g, err := strconv.Atoi(delayStr)
-// 	if err != nil {
-// 		return delay
-// 	}
-
-// 	if g < 1 {
-// 		return delay
-// 	}
-
-// 	if int64(g) > KeelPodMaxDelay {
-// 		return KeelPodMaxDelay
-// 	}
-// 	return int64(g)
-
-// }
-
-// // ParsePodTerminationGracePeriod - parses pod termination time in seconds
-// // from a given map of annotations
-// func ParsePodTerminationGracePeriod(annotations map[string]string) int64 {
-// 	grace := int64(5)
-// 	if annotations == nil {
-// 		return grace
-// 	}
-// 	graceStr, ok := annotations[KeelPodTerminationGracePeriod]
-// 	if ok {
-
-// 		g, err := strconv.Atoi(graceStr)
-// 		if err != nil {
-// 			return grace
-// 		}
-
-// 		if g > 0 && g < 600 {
-// 			return int64(g)
-// 		}
-// 	}
-
-// 	return grace
-// }
-
 // Notification - notification types used by notifier
 type Notification int
 
@@ -264,6 +232,9 @@ const (
 	NotificationReleaseUpdate
 
 	NotificationSystemEvent
+
+	NotificationUpdateApproved
+	NotificationUpdateRejected
 )
 
 func (n Notification) String() string {
@@ -282,6 +253,10 @@ func (n Notification) String() string {
 		return "release update"
 	case NotificationSystemEvent:
 		return "system event"
+	case NotificationUpdateApproved:
+		return "update approved"
+	case NotificationUpdateRejected:
+		return "update rejected "
 	default:
 		return "unknown"
 	}
@@ -380,100 +355,4 @@ func (t ProviderType) String() string {
 	default:
 		return ""
 	}
-}
-
-// Approval used to store and track updates
-type Approval struct {
-	// Provider name - Kubernetes/Helm
-	Provider ProviderType `json:"provider,omitempty"`
-
-	// Identifier is used to inform user about specific
-	// Helm release or k8s deployment
-	// ie: k8s <namespace>/<deployment name>
-	//     helm: <namespace>/<release name>
-	Identifier string `json:"identifier,omitempty"`
-
-	// Event that triggered evaluation
-	Event *Event `json:"event,omitempty"`
-
-	Message string `json:"message,omitempty"`
-
-	CurrentVersion string `json:"currentVersion,omitempty"`
-	NewVersion     string `json:"newVersion,omitempty"`
-
-	// Digest is used to verify that images are the ones that got the approvals.
-	// If digest doesn't match for the image, votes are reset.
-	Digest string `json:"digest"`
-
-	// Requirements for the update such as number of votes
-	// and deadline
-	VotesRequired int `json:"votesRequired,omitempty"`
-	VotesReceived int `json:"votesReceived,omitempty"`
-
-	// Voters is a list of voter
-	// IDs for audit
-	Voters []string `json:"voters,omitempty"`
-
-	// Explicitly rejected approval
-	// can be set directly by user
-	// so even if deadline is not reached approval
-	// could be turned down
-	Rejected bool `json:"rejected,omitempty"`
-
-	// Deadline for this request
-	Deadline time.Time `json:"deadline,omitempty"`
-
-	// When this approval was created
-	CreatedAt time.Time `json:"createdAt,omitempty"`
-	// WHen this approval was updated
-	UpdatedAt time.Time `json:"updatedAt,omitempty"`
-}
-
-// ApprovalStatus - approval status type used in approvals
-// to determine whether it was rejected/approved or still pending
-type ApprovalStatus int
-
-// Available approval status types
-const (
-	ApprovalStatusUnknown ApprovalStatus = iota
-	ApprovalStatusPending
-	ApprovalStatusApproved
-	ApprovalStatusRejected
-)
-
-func (s ApprovalStatus) String() string {
-	switch s {
-	case ApprovalStatusPending:
-		return "pending"
-	case ApprovalStatusApproved:
-		return "approved"
-	case ApprovalStatusRejected:
-		return "rejected"
-	default:
-		return "unknown"
-	}
-}
-
-// Status - returns current approval status
-func (a *Approval) Status() ApprovalStatus {
-	if a.Rejected {
-		return ApprovalStatusRejected
-	}
-
-	if a.VotesReceived >= a.VotesRequired {
-		return ApprovalStatusApproved
-	}
-
-	return ApprovalStatusPending
-}
-
-// Expired - checks if approval is already expired
-func (a *Approval) Expired() bool {
-	return a.Deadline.Before(time.Now())
-}
-
-// Delta of what's changed
-// ie: webhookrelay/webhook-demo:0.15.0 -> webhookrelay/webhook-demo:0.16.0
-func (a *Approval) Delta() string {
-	return fmt.Sprintf("%s -> %s", a.CurrentVersion, a.NewVersion)
 }
