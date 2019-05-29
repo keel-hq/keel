@@ -77,7 +77,15 @@ minikube service --namespace default keel --url
 http://192.168.99.100:3199
 ```
 
-Open it in your browser. UI will let you
+### Creating remotely accessible Keel instance
+
+Keel can work together with [webhook relay tunnels](https://webhookrelay.com). To deploy Keel with Webhook Relay sidecar you will need to get [a token](https://my.webhookrelay.com/tokens), then pre-create [a tunnel](https://my.webhookrelay.com/tunnels) and:
+
+```
+kubectl apply -f https://sunstone.dev/raw.githubusercontent.com/keel-hq/keel/feature/ui/deployment/deployment-template.yaml\?namespace\=default\&tag\=ui\&username\=admin\&password\=admin\&relay_key=TOKEN_KEY&relay_secret=TOKEN_SECRET&relay_tunnel=TUNNEL_NAME
+```
+
+Now, you can access Keel remotely. 
 
 
 ### Helm quick start
