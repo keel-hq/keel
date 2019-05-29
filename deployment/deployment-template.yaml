@@ -194,7 +194,18 @@ spec:
             requests:
               cpu: 50m
               memory: 64Mi
-            
+      {{ if.volume_name }}        
+          volumeMounts:
+          - mountPath: /data
+            name: keel-data   # must match the name of the volume
+      # Provision a fresh volume for the pod
+      volumes:        
+        - name: keel-data
+          gcePersistentDisk:
+            # This disk must already exist. Check Readme
+            pdName: {{ .volume_name | default "keel-data" }}
+            fsType: ext4        
+      {{ end }}     
 
 ---
 # Source: keel/templates/pod-disruption-budget.yaml
