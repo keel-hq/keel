@@ -120,6 +120,28 @@ spec:
     spec:
       serviceAccountName: keel
       containers:
+        {{ if .relay_key }}
+        - name: webhookrelayd
+          image: "webhookrelay/webhookrelayd:latest"
+          imagePullPolicy: Always
+          {{ if .relay_tunnel}}
+          command: ["/relayd", "--mode", "tunnel"]
+          {{ else }}
+          command: ["/relayd"]
+          {{ end}}
+          env:
+            - name: KEY
+              value: {{ .relay_key }}
+            - name: SECRET
+              value: {{ .relay_secret }}
+            {{ if .relay_bucket }}
+            - name: BUCKET
+              value: "{{ .relay_bucket }}"
+            {{ else if .relay_tunnel }}
+            - name: TUNNEL
+              value: "{{ .relay_tunnel }}"
+            {{ end }}
+        {{ end }}
         - name: keel
           # Note that we use appVersion to get images tag.
           image: "keelhq/keel:{{ .tag | latestRegistrySemver "keelhq/keel" }}"
@@ -140,6 +162,13 @@ spec:
               value: {{ .username }}
             - name: BASIC_AUTH_PASSWORD
               value: {{ .password }}
+            # Helm configuration
+            {{ if.tiller_address }} 
+            - name: HELM_PROVIDER
+              value: "1"
+            - name: TILLER_ADDRESS
+              value: "{{ .tiller_address }}"
+            {{ end}}
             # Enable AWS ECR
             - name: AWS_ACCESS_KEY_ID
               value: ""
@@ -205,7 +234,7 @@ spec:
             # This disk must already exist. Check Readme
             pdName: {{ .volume_name | default "keel-data" }}
             fsType: ext4        
-      {{ end }}     
+      {{ end }}
 
 ---
 # Source: keel/templates/pod-disruption-budget.yaml
