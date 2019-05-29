@@ -19,7 +19,8 @@ steps:
 - name: build-ui
   image: node:9.11.1-alpine
   commands:
-    - make lint-ui
+    - cd ui && yarn
+    - cd ui && yarn run lint --no-fix
 
 - name: publish-image  
   image: plugins/docker
