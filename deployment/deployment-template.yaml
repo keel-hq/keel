@@ -125,7 +125,7 @@ spec:
           image: "webhookrelay/webhookrelayd:latest"
           imagePullPolicy: Always
           {{ if .relay_tunnel}}
-          command: ["/relayd", "--mode", "tunnel"]
+          command: ["/relayd", "--mode", "tunnel", "--tunnels", "{{ .relay_tunnel }}"]
           {{ else }}
           command: ["/relayd"]
           {{ end}}
@@ -137,9 +137,6 @@ spec:
             {{ if .relay_bucket }}
             - name: BUCKET
               value: "{{ .relay_bucket }}"
-            {{ else if .relay_tunnel }}
-            - name: TUNNEL
-              value: "{{ .relay_tunnel }}"
             {{ end }}
         {{ end }}
         - name: keel
