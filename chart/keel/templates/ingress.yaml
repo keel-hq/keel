@@ -53,7 +53,7 @@ spec:
           - path: {{ . }}
             backend:
               serviceName: {{ $fullName }}
-              servicePort: http
+              servicePort: keel
         {{- end }}
   {{- end }}
 {{- end }}
