@@ -10,7 +10,7 @@ metadata:
 spec:
   domains:
     {{- range .Values.gcloud.managedCertificates.domains }}
-    - {{ . | title }}
+    - {{ . }}
     {{- end }}
 {{- end }}
 ---
@@ -34,6 +34,11 @@ metadata:
     networking.gke.io/managed-certificates: {{ $fullName }}
   {{- end }}
 spec:
+{{- if not .Values.ingress.hosts }}
+  backend:
+    serviceName: {{ $fullName }}
+    servicePort: keel
+{{- end }}
 {{- if .Values.ingress.tls }}
   tls:
   {{- range .Values.ingress.tls }}
@@ -44,6 +49,7 @@ spec:
       secretName: {{ .secretName }}
   {{- end }}
 {{- end }}
+{{- if .Values.ingress.hosts }}
   rules:
   {{- range .Values.ingress.hosts }}
     - host: {{ .host | quote }}
@@ -56,4 +62,5 @@ spec:
               servicePort: keel
         {{- end }}
   {{- end }}
+{{- end }}
 {{- end }}
