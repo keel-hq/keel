@@ -190,3 +190,7 @@ dockerRegistry:
   name: ""
   key: ""
 
+persistance:
+  enable: false
+  storageClass: "-"
+  size: 1Gi

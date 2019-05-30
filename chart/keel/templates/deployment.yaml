@@ -1,4 +1,4 @@
-apiVersion: apps/v1beta2
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "keel.fullname" . }}
@@ -31,8 +31,12 @@ spec:
           image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/keel"]
-{{- if .Values.googleApplicationCredentials }}
           volumeMounts:
+{{- if .Values.persistance.enable}}
+            - name: storage-logs
+              mountPath: /data
+{{- end}}
+{{- if .Values.googleApplicationCredentials }}
             - name: google
               mountPath: "/google"
               readOnly: true
@@ -190,6 +194,12 @@ spec:
           resources:
 {{ toYaml .Values.resources | indent 12 }}
 {{- end }}
+{{- if .Values.persistance.enable }}
+      volumes:
+        - name: storage-logs
+          persistentVolumeClaim:
+            claimName: {{ template "keel.fullname" . }}
+{{- end}}
     {{- with .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}

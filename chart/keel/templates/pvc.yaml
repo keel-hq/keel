@@ -1,0 +1,18 @@
+{{- if .Values.persistance.enable }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "keel.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "keel.name" . }}
+    helm.sh/chart: {{ include "keel.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  storageClassName: "{{ .Values.persistance.storageClass }}"
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: "{{ .Values.persistance.size }}"
+{{- end}}
