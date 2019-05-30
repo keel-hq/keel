@@ -116,10 +116,13 @@ The following table lists has the main configurable parameters (polling, trigger
 | `mattermost.endpoint`                       | Mattermost API endpoint                |                                                           |
 | `googleApplicationCredentials`              | GCP Service account key configurable   |                                                           |
 | `hipchat.password`                          | Hipchat password for approvals user    |                                                           |
-| `gcloudIngress.enabled`                     | Configure Google Cloud Ingress         | `false`                                                   |
-| `gcloudIngress.allowHttp`                   | Enable/Disable ssl on Ingress          | `true`                                                    |
-| `gcloudIngress.managedCertificates.enabled` | Enable/Disable managed ssl on Gcloud   | `false`                                                   |
-| `gcloudIngress.managedCertificates.domains` | List of managed certificate domains    | `[]`                                                      |
+| `gcloud.managedCertificates.enabled`        | Enable/Disable managed ssl on Gcloud   | `false`                                                   |
+| `gcloud.managedCertificates.domains`        | List of managed certificate domains    | `[]`                                                      |
+| `ingress.enabled`                           | Enables Ingress                        | `false`                                                   |
+| `ingress.annotations`                       | Ingress annotations                    | `{}`                                                      |
+| `ingress.labels`                            | Ingress labels                         | `{}`                                                      |
+| `ingress.hosts`                             | Ingress accepted hosts                 | `[]`                                                      |
+| `ingress.tls`                               | Ingress TLS configuration              | `[]`                                                      |
 | `basicauth.enabled`                         | Enable/disable Basic Auth on approvals | `false`                                                   |
 | `basicauth.user`                            | Basic Auth username                    |                                                           |
 | `basicauth.password`                        | Basic Auth password                    |                                                           |
