@@ -67,6 +67,7 @@ func (p *DefaultProviders) subscribeToApproved() {
 	for {
 		select {
 		case approval := <-approvedCh:
+			approval.Event.TriggerName = types.TriggerTypeApproval.String()
 			p.Submit(*approval.Event)
 		case <-p.stopCh:
 			cancel()
@@ -107,10 +108,6 @@ func (p *DefaultProviders) TrackedImages() ([]*types.TrackedImage, error) {
 		}
 		trackedImages = append(trackedImages, ti...)
 	}
-
-	log.WithFields(log.Fields{
-		"images": trackedImages,
-	}).Debug("tracked images")
 
 	return trackedImages, nil
 }

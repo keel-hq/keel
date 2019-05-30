@@ -14,7 +14,11 @@
   
   <a href="https://img.shields.io/docker/pulls/keelhq/keel.svg">
     <img src="https://img.shields.io/docker/pulls/keelhq/keel.svg" alt="Docker Pulls">
-  </a>   
+  </a>
+
+  <a href="https://drone-kr.webrelay.io/keel-hq/keel">
+    <img src="https://drone-kr.webrelay.io/api/badges/keel-hq/keel/status.svg" alt="Drone Status">
+  </a>
 </p>
 
 # Keel - automated Kubernetes deployments for the rest of us
@@ -52,7 +56,40 @@ Support Keel's development by:
 * Star this repository
 * [Follow on Twitter](https://twitter.com/keel_hq)
 
-### Lightning quick start
+### Warp speed quick start
+
+To achieve warp speed, we will be using [sunstone.dev](https://about.sunstone.dev) service and [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/). 
+
+Start Minikube:
+
+```bash
+minikube start
+```
+
+Install customized Keel (feel free to change credentials, namespace and version tag) straight from your `kubectl`.
+
+```bash
+# To override default latest semver tag, add &tag=x.x.x query argument to the URL below
+kubectl apply -f https://sunstone.dev/keel?namespace=default&username=admin&password=admin&tag=latest
+# and get Keel IP:
+minikube service --namespace default keel --url
+http://192.168.99.100:3199
+```
+
+> We are overriding default latest semver tag with **latest** since it has the new UI. If you want to use latest semver, just remove the `&tag=latest` part from the URL.
+
+### Creating remotely accessible Keel instance
+
+Keel can work together with [webhook relay tunnels](https://webhookrelay.com). To deploy Keel with Webhook Relay sidecar you will need to get [a token](https://my.webhookrelay.com/tokens), then pre-create [a tunnel](https://my.webhookrelay.com/tunnels) and:
+
+```
+kubectl apply -f https://sunstone.dev/keel?namespace=default&username=admin&password=admin&relay_key=TOKEN_KEY&relay_secret=TOKEN_SECRET&relay_tunnel=TUNNEL_NAME&tag=latest
+```
+
+Now, you can access Keel remotely. 
+
+
+### Helm quick start
 
 Prerequisites:
 
@@ -113,7 +150,7 @@ Before starting to work on some big or medium features - raise an issue [here](h
 
 ### Developing Keel
 
-If you wish to work on Keel itself, you will need Go 1.9+ installed. Make sure you put Keel into correct Gopath and `go build` (dependency management is done through [dep](https://github.com/golang/dep)). 
+If you wish to work on Keel itself, you will need Go 1.12+ installed. Make sure you put Keel into correct Gopath and `go build` (dependency management is done through [dep](https://github.com/golang/dep)). 
 
 To test Keel while developing:
 

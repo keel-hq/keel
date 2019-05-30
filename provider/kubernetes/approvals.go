@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/keel-hq/keel/cache"
+	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/types"
 
 	log "github.com/sirupsen/logrus"
@@ -37,19 +37,40 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 
 // updateComplete is called after we successfully update resource
 func (p *Provider) updateComplete(plan *UpdatePlan) error {
-	return p.approvalManager.Delete(getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion))
+	return p.approvalManager.Archive(getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion))
+}
+
+func getInt(key string, labels map[string]string, annotations map[string]string) (int, error) {
+
+	var (
+		valStr string
+		ok     bool
+	)
+
+	valStr, ok = labels[key]
+	if ok {
+		valInt, err := strconv.Atoi(valStr)
+		if err != nil {
+			return 0, err
+		}
+		return valInt, nil
+	}
+
+	valStr, ok = annotations[key]
+	if ok {
+		valInt, err := strconv.Atoi(valStr)
+		if err != nil {
+			return 0, err
+		}
+		return valInt, nil
+	}
+
+	return 0, nil
 }
 
 func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error) {
-	labels := plan.Resource.GetLabels()
 
-	minApprovalsStr, ok := labels[types.KeelMinimumApprovalsLabel]
-	if !ok {
-		// no approvals required - passing
-		return true, nil
-	}
-
-	minApprovals, err := strconv.Atoi(minApprovalsStr)
+	minApprovals, err := getInt(types.KeelMinimumApprovalsLabel, plan.Resource.GetLabels(), plan.Resource.GetAnnotations())
 	if err != nil {
 		return false, err
 	}
@@ -58,15 +79,16 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 		return true, nil
 	}
 
-	deadline := types.KeelApprovalDeadlineDefault
-
 	// deadline
-	deadlineStr, ok := labels[types.KeelApprovalDeadlineLabel]
-	if ok {
-		d, err := strconv.Atoi(deadlineStr)
-		if err == nil {
-			deadline = d
-		}
+	deadline := types.KeelApprovalDeadlineDefault
+	d, err := getInt(types.KeelApprovalDeadlineLabel, plan.Resource.GetLabels(), plan.Resource.GetAnnotations())
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":    err,
+			"resource": plan.Resource.GetName(),
+		}).Warn("failed to parse approvals deadline, using default value")
+	} else if d != 0 {
+		deadline = d
 	}
 
 	identifier := getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion)
@@ -74,7 +96,14 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 	// checking for existing approval
 	existing, err := p.approvalManager.Get(identifier)
 	if err != nil {
-		if err == cache.ErrNotFound {
+
+		if err == store.ErrRecordNotFound {
+			// if approval doesn't exist and trigger wasn't existing approval fulfillment -
+			// create a new one, otherwise if several deployments rely on the same image, it would just be
+			// requesting approvals in a loop
+			if event.TriggerName == types.TriggerTypeApproval.String() {
+				return false, nil
+			}
 
 			// creating new one
 			approval := &types.Approval{

@@ -68,6 +68,11 @@ spec:
               value: "{{ .Values.gcr.projectId }}"
             - name: PUBSUB
               value: "1"
+  {{- if .Values.gcr.clusterName }}
+            # Customize the cluster name, mainly useful when outside of GKE
+            - name: CLUSTER_NAME
+              value: "{{ .Values.gcr.clusterName }}"
+  {{- end }}
 {{- end }}
 {{- if .Values.ecr.enabled }}
             # Enable AWS ECR
@@ -80,6 +85,13 @@ spec:
                   key: secretAccessKey
             - name: AWS_REGION
               value: "{{ .Values.ecr.region }}"
+{{- end }}
+{{- if .Values.dockerRegistry.enabled }}
+            - name: DOCKER_REGISTRY_CFG
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.dockerRegistry.name }}
+                  key: {{ .Values.dockerRegistry.key }}
 {{- end }}
 {{- if .Values.webhook.enabled }}
             # Enable webhook endpoint

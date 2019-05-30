@@ -6,9 +6,9 @@ import (
 
 // Reference is an opaque object that include identifier such as a name, tag, repository, registry, etc...
 type Reference struct {
-	named  Named
-	tag    string
-	scheme string // registry scheme, i.e. http, https
+	named  Named  `json:"named"`
+	tag    string `json:"tag"`
+	scheme string `json:"scheme"` // registry scheme, i.e. http, https
 }
 
 func (r Reference) String() string {

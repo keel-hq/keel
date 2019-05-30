@@ -2,6 +2,7 @@ package slack
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/version"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -56,6 +58,28 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		"channels": s.channels,
 	}).Info("extension.notification.slack: sender configured")
 
+	var msg string
+	if version.GetKeelVersion().Version != "" {
+		msg = fmt.Sprintf("Keel has started. Version: %s", version.GetKeelVersion().Version)
+	} else {
+		msg = fmt.Sprintf("Keel has started. Revision: %s", version.GetKeelVersion().Revision)
+	}
+
+	err := s.Send(types.EventNotification{
+		Message:   msg,
+		CreatedAt: time.Now(),
+		Type:      types.NotificationSystemEvent,
+		Level:     types.LevelInfo,
+		Channels:  s.channels,
+	})
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":    err,
+			"name":     "slack",
+			"channels": s.channels,
+		}).Error("extension.notification.slack: failed to set greeting message")
+	}
+
 	return true, nil
 }
 
@@ -64,7 +88,7 @@ func (s *sender) Send(event types.EventNotification) error {
 	params.Username = s.botName
 	params.IconURL = constants.KeelLogoURL
 
-	params.Attachments = []slack.Attachment{
+	attachements := []slack.Attachment{
 		slack.Attachment{
 			Fallback: event.Message,
 			Color:    event.Level.Color(),
@@ -75,7 +99,7 @@ func (s *sender) Send(event types.EventNotification) error {
 					Short: false,
 				},
 			},
-			Footer: "keel.sh",
+			Footer: fmt.Sprintf("https://keel.sh %s", version.GetKeelVersion().Version),
 			Ts:     json.Number(strconv.Itoa(int(event.CreatedAt.Unix()))),
 		},
 	}
@@ -85,8 +109,13 @@ func (s *sender) Send(event types.EventNotification) error {
 		chans = event.Channels
 	}
 
+	var mgsOpts []slack.MsgOption
+
+	mgsOpts = append(mgsOpts, slack.MsgOptionPostMessageParameters(params))
+	mgsOpts = append(mgsOpts, slack.MsgOptionAttachments(attachements...))
+
 	for _, channel := range chans {
-		_, _, err := s.slackClient.PostMessage(channel, "", params)
+		_, _, err := s.slackClient.PostMessage(channel, mgsOpts...)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":   err,

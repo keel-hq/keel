@@ -44,16 +44,6 @@ func GetPolicyFromLabelsOrAnnotations(labels map[string]string, annotations map[
 	}
 
 	return GetPolicy(policyNameL, &Options{MatchTag: getMatchTag(labels)})
-
-	// switch policyName {
-	// case "all", "major", "minor", "patch":
-	// 	return ParseSemverPolicy(policyName)
-	// case "force":
-	// 	matchTag := getMatchTag(labels)
-	// 	return NewForcePolicy(matchTag)
-	// default:
-	// 	return &NilPolicy{}
-	// }
 }
 
 // Options - additional options when parsing policy

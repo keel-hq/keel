@@ -13,22 +13,23 @@ type Credentials struct {
 
 // TrackedImage - tracked image data+metadata
 type TrackedImage struct {
-	Image        *image.Reference
-	Trigger      TriggerType
-	PollSchedule string
-	Provider     string
-	Namespace    string
-	Secrets      []string
-	Meta         map[string]string // metadata supplied by providers
+	Image        *image.Reference  `json:"image"`
+	Trigger      TriggerType       `json:"trigger"`
+	PollSchedule string            `json:"pollSchedule"`
+	Provider     string            `json:"provider"`
+	Namespace    string            `json:"namespace"`
+	Secrets      []string          `json:"secrets"`
+	Meta         map[string]string `json:"meta"` // metadata supplied by providers
 	// a list of pre-release tags, ie: 1.0.0-dev, 1.5.0-prod get translated into
 	// dev, prod
 	// combined semver tags
-	Tags   []string
-	Policy Policy
+	Tags   []string `json:"tags"`
+	Policy Policy   `json:"policy"`
 }
 
 type Policy interface {
 	ShouldUpdate(current, new string) (bool, error)
+	Name() string
 }
 
 func (i TrackedImage) String() string {

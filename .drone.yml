@@ -1,0 +1,45 @@
+kind: pipeline
+name: default
+
+workspace:
+  base: /go
+  path: src/github.com/keel-hq/keel
+
+steps:
+- name: unit-test
+  image: golang:1.12.0
+  commands:
+    - make test
+
+- name: build
+  image: golang:1.12.0
+  commands:
+    - make install
+
+- name: build-ui
+  image: node:9.11.1-alpine
+  commands:
+    - cd ui
+    - yarn
+    - yarn run lint --no-fix
+
+- name: publish-image  
+  image: plugins/docker
+  settings:
+    repo: keelhq/keel
+    auto_tag: true
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+
+- name: slack
+  image: plugins/slack
+  when:
+    status: [ success, failure ]
+  settings:
+    webhook:
+      from_secret: slack_url
+    channel: general
+    username: drone
+    icon_url: https://i.pinimg.com/originals/51/29/a4/5129a48ddad9e8408d2757dd10eb836f.jpg

@@ -4,7 +4,7 @@
 
 image:
   repository: keelhq/keel
-  tag: 0.13.2
+  tag: 0.14.2
   pullPolicy: IfNotPresent
 
 # Enable insecure registries
@@ -25,6 +25,7 @@ helmProvider:
 gcr:
   enabled: false
   projectId: ""
+  clusterName: ""
   pubSub:
     enabled: false
 
@@ -183,3 +184,9 @@ ingress:
 #    - secretName: chart-example-tls
 #      hosts:
 #        - chart-example.local
+
+dockerRegistry:
+  enabled: false
+  name: ""
+  key: ""
+

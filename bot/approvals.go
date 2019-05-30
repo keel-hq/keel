@@ -170,7 +170,11 @@ func IsApproval(eventUser string, eventText string) (resp *ApprovalResponse, ok 
 }
 
 func RemoveApprovalHandler(identifier string, approvalsManager approvals.Manager) string {
-	err := approvalsManager.Delete(identifier)
+	approval, err := approvalsManager.Get(identifier)
+	if err != nil {
+		return fmt.Sprintf("approval with identifier '%s' was not found", identifier)
+	}
+	err = approvalsManager.Delete(approval)
 	if err != nil {
 		return fmt.Sprintf("failed to remove '%s' approval: %s.", identifier, err)
 	}
