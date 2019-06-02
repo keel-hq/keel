@@ -227,11 +227,6 @@ func (p *Provider) startInternal() error {
 	for {
 		select {
 		case event := <-p.events:
-			log.WithFields(log.Fields{
-				"repository": event.Repository.Name,
-				"tag":        event.Repository.Tag,
-				"registry":   event.Repository.Host,
-			}).Info("provider.kubernetes: processing event")
 			_, err := p.processEvent(event)
 			if err != nil {
 				log.WithFields(log.Fields{
