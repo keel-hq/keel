@@ -54,7 +54,7 @@ build:
 install:
 	@echo "++ Installing keel"
 	# CGO_ENABLED=0 GOOS=linux go install -ldflags "$(LDFLAGS)" github.com/keel-hq/keel/cmd/keel	
-	GOOS=linux go install -ldflags "-linkmode external -extldflags -static" github.com/keel-hq/keel/cmd/keel	
+	GOOS=linux go install -ldflags "$(LDFLAGS)" github.com/keel-hq/keel/cmd/keel	
 
 image:
 	docker build -t keelhq/keel:alpha -f Dockerfile .
