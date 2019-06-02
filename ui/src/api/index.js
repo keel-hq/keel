@@ -27,36 +27,3 @@ export default {
       .catch((error) => Promise.reject(error))
   }
 }
-
-// import { axios } from '@/utils/request'
-
-// export default {
-//   get (url, request) {
-//     return axios({
-//       url: url,
-//       method: 'get',
-//       data: request
-//     })
-//   },
-//   put (url, request) {
-//     return axios({
-//       url: url,
-//       method: 'put',
-//       data: request
-//     })
-//   },
-//   post (url, request) {
-//     return axios({
-//       url: url,
-//       method: 'post',
-//       data: request
-//     })
-//   },
-//   delete (url, request) {
-//     return axios({
-//       url: url,
-//       method: 'delete',
-//       data: request
-//     })
-//   }
-// }
