@@ -49,10 +49,6 @@
   name = "github.com/gorilla/mux"
   version = "1.4.0"
 
-# [[constraint]]
-#   name = "github.com/nlopes/slack"
-#   version = "0.1.0"
-
 [[constraint]]
   name = "github.com/rusenask/cron"
   version = "1.1.0"
@@ -62,13 +58,8 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/docker/distribution"
-  # branch = "master"
+  name = "github.com/docker/distribution"  
   revision = "6fca8d6e6713acbdf3f9ca40cf6370fc5ee5ee53"  
-
-[[constraint]]
-  name = "github.com/rusenask/k8s-kv"
-  branch = "master"
 
 [[constraint]]
   name = "github.com/tbruyelle/hipchat-go"
