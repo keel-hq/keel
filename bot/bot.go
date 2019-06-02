@@ -204,7 +204,8 @@ func (bm *BotManager) handleCommand(eventText string) string {
 func (bm *BotManager) handleBotMessage(m *BotMessage) string {
 	command := m.Message
 
-	if command == "" {
+	switch command {
+	case "", "has joined the channel":
 		return ""
 	}
 
