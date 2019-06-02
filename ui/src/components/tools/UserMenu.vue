@@ -64,7 +64,7 @@ export default {
         onOk () {
           return that.$auth.logout({
             makeRequest: true,
-            params: {}, // data: {} in axios
+            params: {}, // data: {}
             success: function () {
               that.LogoutSuccess({})
             },
@@ -72,17 +72,6 @@ export default {
             redirect: '/login'
             // etc...
           })
-
-          // return that.Logout({}).then(() => {
-          // })
-
-          //   window.location.reload()
-          // }).catch(err => {
-          //   that.$message.error({
-          //     title: 'Logout error',
-          //     description: err.message
-          //   })
-          // })
         },
         onCancel () {
         }

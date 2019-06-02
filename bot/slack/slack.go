@@ -123,26 +123,16 @@ func (b *Bot) startInternal() error {
 			switch ev := msg.Data.(type) {
 			case *slack.HelloEvent:
 				// Ignore hello
-
 			case *slack.ConnectedEvent:
-				// fmt.Println("Infos:", ev.Info)
-				// fmt.Println("Connection counter:", ev.ConnectionCount)
-				// Replace #general with your Channel ID
-				// b.slackRTM.SendMessage(b.slackRTM.NewOutgoingMessage("Hello world", "#general"))
-
+				// nothing to do
 			case *slack.MessageEvent:
 				b.handleMessage(ev)
 			case *slack.PresenceChangeEvent:
-				// fmt.Printf("Presence Change: %v\n", ev)
-
-			// case *slack.LatencyReport:
-			// 	fmt.Printf("Current latency: %v\n", ev.Value)
-
+				// nothing to do
 			case *slack.RTMError:
-				fmt.Printf("Error: %s\n", ev.Error())
-
+				log.Error("Error: %s", ev.Error())
 			case *slack.InvalidAuthEvent:
-				fmt.Printf("Invalid credentials")
+				log.Error("Invalid credentials")
 				return fmt.Errorf("invalid credentials")
 
 			default:
@@ -176,7 +166,8 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 	_, _, err := b.slackHTTPClient.PostMessage(b.approvalsChannel, mgsOpts...)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"error":             err,
+			"approvals_channel": b.approvalsChannel,
 		}).Error("bot.postMessage: failed to send message")
 	}
 	return err
@@ -187,6 +178,14 @@ func (b *Bot) isApprovalsChannel(event *slack.MessageEvent) bool {
 
 	channel, err := b.slackClient.GetChannelInfo(event.Channel)
 	if err != nil {
+		// looking for private channel
+		conv, err := b.slackRTM.GetConversationInfo(event.Channel, true)
+		if err != nil {
+			log.Errorf("couldn't find amongst private conversations: %s", err)
+		} else if conv.Name == b.approvalsChannel {
+			return true
+		}
+
 		log.WithError(err).Errorf("channel with ID %s could not be retrieved", event.Channel)
 		return false
 	}

@@ -60,7 +60,7 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 
 	var msg string
 	if version.GetKeelVersion().Version != "" {
-		msg = fmt.Sprintf("Keel has started. Version: %s", version.GetKeelVersion().Version)
+		msg = fmt.Sprintf("Keel has started. Version: '%s'. Revision: %s", version.GetKeelVersion().Version, version.GetKeelVersion().Revision)
 	} else {
 		msg = fmt.Sprintf("Keel has started. Revision: %s", version.GetKeelVersion().Revision)
 	}

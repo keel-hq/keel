@@ -71,15 +71,6 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 			continue
 		}
 
-		// TODO: investigate whether this still makes sense as now we can always set matchTag=true for poll triggers
-		// if poll trigger is used, also checking for matching versions
-		// if _, ok := annotations[types.KeelPollScheduleAnnotation]; ok {
-		// 	if repo.Tag != containerImageRef.Tag() {
-		// 		fmt.Printf("tags different, not updating (%s != %s) \n", eventRepoRef.Tag(), containerImageRef.Tag())
-		// 		continue
-		// 	}
-		// }
-
 		// updating spec template annotations
 		setUpdateTime(resource)
 
@@ -95,15 +86,6 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 		updatePlan.CurrentVersion = containerImageRef.Tag()
 		updatePlan.NewVersion = repo.Tag
 		updatePlan.Resource = resource
-
-		log.WithFields(log.Fields{
-			"parsed_image":     containerImageRef.Remote(),
-			"raw_image_name":   c.Image,
-			"target_image":     repo.Name,
-			"target_image_tag": repo.Tag,
-			"policy":           plc.Name(),
-		}).Info("provider.kubernetes: impacted deployment container found")
-
 	}
 
 	return updatePlan, shouldUpdateDeployment, nil

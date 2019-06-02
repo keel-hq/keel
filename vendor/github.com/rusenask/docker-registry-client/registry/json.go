@@ -3,7 +3,6 @@ package registry
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -33,7 +32,6 @@ func (registry *Registry) getJson(url string, response interface{}) error {
 // next page URL while updating pointed-to variable with a parsed JSON
 // value. When there are no more pages it returns `ErrNoMorePages`.
 func (registry *Registry) getPaginatedJson(url string, response interface{}) (string, error) {
-	fmt.Println("getting: ", url)
 	resp, err := registry.Client.Get(url)
 	if err != nil {
 		return "", err

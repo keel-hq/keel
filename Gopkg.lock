@@ -481,7 +481,7 @@
   branch = "master"
   name = "github.com/rusenask/docker-registry-client"
   packages = ["registry"]
-  revision = "f41c43a13c3852213e225cc2476800c8f734d777"
+  revision = "dbc5904921003f26df43c7dbdb1cf856212dd39b"
 
 [[projects]]
   name = "github.com/ryanuber/go-glob"
