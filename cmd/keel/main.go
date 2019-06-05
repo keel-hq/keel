@@ -335,14 +335,15 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 
 	// setting up generic http webhook server
 	whs := http.NewTriggerServer(&http.Opts{
-		Port:             types.KeelDefaultPort,
-		GRC:              opts.grc,
-		KubernetesClient: opts.k8sClient,
-		Providers:        opts.providers,
-		ApprovalManager:  opts.approvalsManager,
-		Store:            opts.store,
-		Authenticator:    authenticator,
-		UIDir:            opts.uiDir,
+		Port:                  types.KeelDefaultPort,
+		GRC:                   opts.grc,
+		KubernetesClient:      opts.k8sClient,
+		Providers:             opts.providers,
+		ApprovalManager:       opts.approvalsManager,
+		Store:                 opts.store,
+		Authenticator:         authenticator,
+		UIDir:                 opts.uiDir,
+		AuthenticatedWebhooks: os.Getenv(constants.EnvAuthenticatedWebhooks) == "true",
 	})
 
 	go func() {
