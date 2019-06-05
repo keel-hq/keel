@@ -38,6 +38,7 @@ const EnvNotificationLevel = "NOTIFICATION_LEVEL"
 // Basic Auth - User / Password
 const EnvBasicAuthUser = "BASIC_AUTH_USER"
 const EnvBasicAuthPassword = "BASIC_AUTH_PASSWORD"
+const EnvAuthenticatedWebhooks = "AUTHENTICATED_WEBHOOKS"
 const EnvTokenSecret = "TOKEN_SECRET"
 
 // KeelLogoURL - is a logo URL for bot icon
