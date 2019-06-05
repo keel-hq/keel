@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"net/http"
 
-	"github.com/keel-hq/keel/approvals"
-	"github.com/keel-hq/keel/cache/memory"
-	"github.com/keel-hq/keel/provider"
-
 	"net/http/httptest"
 	"testing"
 )
@@ -36,11 +32,8 @@ var fakeAzureWebhook = `{
 func TestAzureWebhookHandler(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
-	providers := provider.New([]provider.Provider{fp}, am)
-	srv := NewTriggerServer(&Opts{Providers: providers})
-	srv.registerRoutes(srv.router)
+	srv, teardown := NewTestingServer(fp)
+	defer teardown()
 
 	req, err := http.NewRequest("POST", "/v1/webhooks/azure", bytes.NewBuffer([]byte(fakeAzureWebhook)))
 	if err != nil {

@@ -144,6 +144,12 @@ func (s *TriggerServer) approvalApproveHandler(resp http.ResponseWriter, req *ht
 			return
 		}
 	case actionDelete:
+		if ar.Identifier != "" && ar.ID == "" {
+			existing, err := s.approvalsManager.Get(ar.Identifier)
+			if err == nil {
+				ar.ID = existing.ID
+			}
+		}
 		// deleting it
 		err := s.approvalsManager.Delete(&types.Approval{
 			ID: ar.ID,

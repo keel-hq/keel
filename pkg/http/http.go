@@ -45,6 +45,8 @@ type Opts struct {
 	Store store.Store
 
 	UIDir string
+
+	AuthenticatedWebhooks bool
 }
 
 // TriggerServer - webhook trigger & healthcheck server
@@ -62,20 +64,23 @@ type TriggerServer struct {
 	authenticator auth.Authenticator
 
 	uiDir string
+
+	authenticatedWebhooks bool
 }
 
 // NewTriggerServer - create new HTTP trigger based server
 func NewTriggerServer(opts *Opts) *TriggerServer {
 	return &TriggerServer{
-		port:             opts.Port,
-		grc:              opts.GRC,
-		kubernetesClient: opts.KubernetesClient,
-		providers:        opts.Providers,
-		approvalsManager: opts.ApprovalManager,
-		router:           mux.NewRouter(),
-		authenticator:    opts.Authenticator,
-		store:            opts.Store,
-		uiDir:            opts.UIDir,
+		port:                  opts.Port,
+		grc:                   opts.GRC,
+		kubernetesClient:      opts.KubernetesClient,
+		providers:             opts.Providers,
+		approvalsManager:      opts.ApprovalManager,
+		router:                mux.NewRouter(),
+		authenticator:         opts.Authenticator,
+		store:                 opts.Store,
+		uiDir:                 opts.UIDir,
+		authenticatedWebhooks: opts.AuthenticatedWebhooks,
 	}
 }
 
@@ -85,13 +90,8 @@ func (s *TriggerServer) Start() error {
 	s.registerRoutes(s.router)
 
 	n := negroni.New(negroni.NewRecovery())
-	// n.UseHandler(negroni.HandlerFunc(corsHeadersMiddleware))
 	n.Use(negroni.HandlerFunc(corsHeadersMiddleware))
 	n.UseHandler(s.router)
-
-	// if s.uiDir != "" {
-	// 	n.Use(negroni.NewStatic(http.Dir(s.uiDir)))
-	// }
 
 	s.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.port),
@@ -176,15 +176,28 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 }
 
 func (s *TriggerServer) registerWebhookRoutes(mux *mux.Router) {
-	mux.HandleFunc("/v1/webhooks/native", s.nativeHandler).Methods("POST", "OPTIONS")
-	mux.HandleFunc("/v1/webhooks/dockerhub", s.dockerHubHandler).Methods("POST", "OPTIONS")
-	mux.HandleFunc("/v1/webhooks/quay", s.quayHandler).Methods("POST", "OPTIONS")
-	mux.HandleFunc("/v1/webhooks/azure", s.azureHandler).Methods("POST", "OPTIONS")
 
-	// Docker registry notifications, used by Docker, Gitlab, Harbor
-	// https://docs.docker.com/registry/notifications/
-	//https://docs.gitlab.com/ee/administration/container_registry.html#configure-container-registry-notifications
-	mux.HandleFunc("/v1/webhooks/registry", s.registryNotificationHandler).Methods("POST", "OPTIONS")
+	if s.authenticatedWebhooks {
+		mux.HandleFunc("/v1/webhooks/native", s.requireAdminAuthorization(s.nativeHandler)).Methods("POST", "OPTIONS")
+		mux.HandleFunc("/v1/webhooks/dockerhub", s.requireAdminAuthorization(s.dockerHubHandler)).Methods("POST", "OPTIONS")
+		mux.HandleFunc("/v1/webhooks/quay", s.requireAdminAuthorization(s.quayHandler)).Methods("POST", "OPTIONS")
+		mux.HandleFunc("/v1/webhooks/azure", s.requireAdminAuthorization(s.azureHandler)).Methods("POST", "OPTIONS")
+
+		// Docker registry notifications, used by Docker, Gitlab, Harbor
+		// https://docs.docker.com/registry/notifications/
+		//https://docs.gitlab.com/ee/administration/container_registry.html#configure-container-registry-notifications
+		mux.HandleFunc("/v1/webhooks/registry", s.registryNotificationHandler).Methods("POST", "OPTIONS")
+	} else {
+		mux.HandleFunc("/v1/webhooks/native", s.nativeHandler).Methods("POST", "OPTIONS")
+		mux.HandleFunc("/v1/webhooks/dockerhub", s.dockerHubHandler).Methods("POST", "OPTIONS")
+		mux.HandleFunc("/v1/webhooks/quay", s.quayHandler).Methods("POST", "OPTIONS")
+		mux.HandleFunc("/v1/webhooks/azure", s.azureHandler).Methods("POST", "OPTIONS")
+
+		// Docker registry notifications, used by Docker, Gitlab, Harbor
+		// https://docs.docker.com/registry/notifications/
+		//https://docs.gitlab.com/ee/administration/container_registry.html#configure-container-registry-notifications
+		mux.HandleFunc("/v1/webhooks/registry", s.registryNotificationHandler).Methods("POST", "OPTIONS")
+	}
 }
 
 func (s *TriggerServer) healthHandler(resp http.ResponseWriter, req *http.Request) {
