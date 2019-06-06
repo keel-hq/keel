@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/keel-hq/keel/approvals"
-	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/pkg/auth"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/types"
 )
@@ -16,10 +17,25 @@ import (
 func TestListApprovals(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	authenticator := auth.New(&auth.Opts{
+		Username: "admin",
+		Password: "pass",
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
-	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv := NewTriggerServer(&Opts{
+		Providers:       providers,
+		ApprovalManager: am,
+		Authenticator:   authenticator,
+		Store:           store,
+	})
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
@@ -38,6 +54,8 @@ func TestListApprovals(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
+
+	req.SetBasicAuth("admin", "pass")
 
 	rec := httptest.NewRecorder()
 
@@ -72,10 +90,25 @@ func TestListApprovals(t *testing.T) {
 
 func TestDeleteApproval(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	authenticator := auth.New(&auth.Opts{
+		Username: "admin",
+		Password: "pass",
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
-	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv := NewTriggerServer(&Opts{
+		Providers:       providers,
+		ApprovalManager: am,
+		Authenticator:   authenticator,
+		Store:           store,
+	})
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
@@ -95,6 +128,8 @@ func TestDeleteApproval(t *testing.T) {
 		t.Fatalf("failed to create req: %s", err)
 	}
 
+	req.SetBasicAuth("admin", "pass")
+
 	rec := httptest.NewRecorder()
 
 	srv.router.ServeHTTP(rec, req)
@@ -104,18 +139,32 @@ func TestDeleteApproval(t *testing.T) {
 		t.Log(rec.Body.String())
 	}
 
-	_, err = am.Get("dev/whd-dev:0.0.15")
+	deleted, err := am.Get("dev/whd-dev:0.0.15")
 	if err == nil {
-		t.Errorf("expected approval to be deleted")
+		t.Errorf("expected approval to be deleted, got ident: %s", deleted.Identifier)
 	}
 }
 
 func TestApprove(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+	authenticator := auth.New(&auth.Opts{
+		Username: "admin",
+		Password: "pass",
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
-	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv := NewTriggerServer(&Opts{
+		Providers:       providers,
+		ApprovalManager: am,
+		Authenticator:   authenticator,
+		Store:           store,
+	})
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
@@ -134,6 +183,7 @@ func TestApprove(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
+	req.SetBasicAuth("admin", "pass")
 
 	rec := httptest.NewRecorder()
 
@@ -153,17 +203,32 @@ func TestApprove(t *testing.T) {
 		t.Errorf("expected to find one voter")
 	}
 
-	if approved.Voters[0] != "foo" {
-		t.Errorf("unexpected voter: %s", approved.Voters[0])
+	voters := approved.GetVoters()
+	if voters[0] != "foo" {
+		t.Errorf("unexpected voter: %s", voters[0])
 	}
 }
 
 func TestApproveNotFound(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+	authenticator := auth.New(&auth.Opts{
+		Username: "admin",
+		Password: "pass",
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
-	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv := NewTriggerServer(&Opts{
+		Providers:       providers,
+		ApprovalManager: am,
+		Authenticator:   authenticator,
+		Store:           store,
+	})
 	srv.registerRoutes(srv.router)
 
 	// listing
@@ -171,6 +236,7 @@ func TestApproveNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
+	req.SetBasicAuth("admin", "pass")
 
 	rec := httptest.NewRecorder()
 
@@ -184,10 +250,24 @@ func TestApproveNotFound(t *testing.T) {
 
 func TestApproveGarbageRequest(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+	authenticator := auth.New(&auth.Opts{
+		Username: "admin",
+		Password: "pass",
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
-	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv := NewTriggerServer(&Opts{
+		Providers:       providers,
+		ApprovalManager: am,
+		Authenticator:   authenticator,
+		Store:           store,
+	})
 	srv.registerRoutes(srv.router)
 
 	// listing
@@ -195,6 +275,8 @@ func TestApproveGarbageRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
+
+	req.SetBasicAuth("admin", "pass")
 
 	rec := httptest.NewRecorder()
 
@@ -208,10 +290,24 @@ func TestApproveGarbageRequest(t *testing.T) {
 
 func TestSameVoter(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+	authenticator := auth.New(&auth.Opts{
+		Username: "admin",
+		Password: "pass",
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
-	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv := NewTriggerServer(&Opts{
+		Providers:       providers,
+		ApprovalManager: am,
+		Authenticator:   authenticator,
+		Store:           store,
+	})
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
@@ -220,7 +316,7 @@ func TestSameVoter(t *testing.T) {
 		NewVersion:     "2.0.0",
 		CurrentVersion: "1.0.0",
 		VotesReceived:  1,
-		Voters:         []string{"foo"},
+		Voters:         map[string]interface{}{"foo": time.Now()},
 	})
 
 	if err != nil {
@@ -232,6 +328,7 @@ func TestSameVoter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
+	req.SetBasicAuth("admin", "pass")
 
 	rec := httptest.NewRecorder()
 
@@ -251,16 +348,33 @@ func TestSameVoter(t *testing.T) {
 		t.Errorf("expected to find one voter")
 	}
 
-	if approved.Voters[0] != "foo" {
-		t.Errorf("unexpected voter: %s", approved.Voters[0])
+	voters := approved.GetVoters()
+
+	if voters[0] != "foo" {
+		t.Errorf("unexpected voter: %s", voters[0])
 	}
 }
+
 func TestDifferentVoter(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+	authenticator := auth.New(&auth.Opts{
+		Username: "admin",
+		Password: "pass",
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
-	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv := NewTriggerServer(&Opts{
+		Providers:       providers,
+		ApprovalManager: am,
+		Authenticator:   authenticator,
+		Store:           store,
+	})
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
@@ -269,7 +383,7 @@ func TestDifferentVoter(t *testing.T) {
 		NewVersion:     "2.0.0",
 		CurrentVersion: "1.0.0",
 		VotesReceived:  1,
-		Voters:         []string{"bar"},
+		Voters:         map[string]interface{}{"bar": time.Now()},
 	})
 
 	if err != nil {
@@ -281,6 +395,7 @@ func TestDifferentVoter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
+	req.SetBasicAuth("admin", "pass")
 
 	rec := httptest.NewRecorder()
 
@@ -300,20 +415,36 @@ func TestDifferentVoter(t *testing.T) {
 		t.Errorf("expected to find 2 voters")
 	}
 
-	if approved.Voters[0] != "bar" {
-		t.Errorf("unexpected voter: %s", approved.Voters[0])
+	voters := approved.GetVoters()
+
+	if voters[0] != "bar" {
+		t.Errorf("unexpected voter: %s", voters[0])
 	}
-	if approved.Voters[1] != "foo" {
-		t.Errorf("unexpected voter: %s", approved.Voters[0])
+	if voters[1] != "foo" {
+		t.Errorf("unexpected voter: %s", voters[0])
 	}
 }
 
 func TestReject(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+	authenticator := auth.New(&auth.Opts{
+		Username: "admin",
+		Password: "pass",
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
-	srv := NewTriggerServer(&Opts{Providers: providers, ApprovalManager: am})
+	srv := NewTriggerServer(&Opts{
+		Providers:       providers,
+		ApprovalManager: am,
+		Authenticator:   authenticator,
+		Store:           store,
+	})
 	srv.registerRoutes(srv.router)
 
 	err := am.Create(&types.Approval{
@@ -332,6 +463,8 @@ func TestReject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
+
+	req.SetBasicAuth("admin", "pass")
 
 	rec := httptest.NewRecorder()
 
@@ -356,14 +489,23 @@ func TestReject(t *testing.T) {
 func TestAuthListApprovalsA(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	authenticator := auth.New(&auth.Opts{
+		Username: "user-1",
+		Password: " secret",
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{
 		Providers:       providers,
 		ApprovalManager: am,
-		Username:        "user-1",
-		Password:        "secret",
+		Authenticator:   authenticator,
 	})
 	srv.registerRoutes(srv.router)
 
@@ -397,14 +539,24 @@ func TestAuthListApprovalsA(t *testing.T) {
 func TestAuthListApprovalsB(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := NewTestingUtils()
+	defer teardown()
+
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	authenticator := auth.New(&auth.Opts{
+		Username: "user-1",
+		Password: "secret",
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 	srv := NewTriggerServer(&Opts{
 		Providers:       providers,
 		ApprovalManager: am,
-		Username:        "user-1",
-		Password:        "secret",
+		Authenticator:   authenticator,
+		Store:           store,
 	})
 	srv.registerRoutes(srv.router)
 

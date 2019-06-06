@@ -5,10 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/keel-hq/keel/approvals"
-	"github.com/keel-hq/keel/cache/memory"
-	"github.com/keel-hq/keel/provider"
 )
 
 var fakeRegistryNotificationWebhook = `{
@@ -48,11 +44,8 @@ var fakeRegistryNotificationWebhook = `{
 func TestRegistryNotificationsHandler(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
-	providers := provider.New([]provider.Provider{fp}, am)
-	srv := NewTriggerServer(&Opts{Providers: providers})
-	srv.registerRoutes(srv.router)
+	srv, teardown := NewTestingServer(fp)
+	defer teardown()
 
 	req, err := http.NewRequest("POST", "/v1/webhooks/registry", bytes.NewBuffer([]byte(fakeRegistryNotificationWebhook)))
 	if err != nil {

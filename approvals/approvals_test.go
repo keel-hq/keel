@@ -11,8 +11,6 @@ import (
 
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 
-	// "github.com/keel-hq/keel/cache/memory"
-	// "github.com/dotmesh-io/gateway/pkg/store/sql"
 	"github.com/keel-hq/keel/pkg/store/sql"
 	"github.com/keel-hq/keel/types"
 )
