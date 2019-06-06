@@ -415,13 +415,13 @@ func TestDifferentVoter(t *testing.T) {
 		t.Errorf("expected to find 2 voters")
 	}
 
-	voters := approved.GetVoters()
-
-	if voters[0] != "bar" {
-		t.Errorf("unexpected voter: %s", voters[0])
+	_, fooFound := approved.Voters["foo"]
+	if !fooFound {
+		t.Errorf("expected to find 'foo' voter")
 	}
-	if voters[1] != "foo" {
-		t.Errorf("unexpected voter: %s", voters[0])
+	_, barFound := approved.Voters["bar"]
+	if !barFound {
+		t.Errorf("expected to find 'bar' voter")
 	}
 }
 
