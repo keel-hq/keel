@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://keel.sh" target="_blank"><img width="100"src="https://keel.sh/images/logo.png"></a>
+  <a href="https://keel.sh" target="_blank"><img width="100"src="https://keel.sh/img/logo.png"></a>
 </p>
 
 <p align="center">
@@ -120,7 +120,7 @@ That's it, see [Configuration](https://github.com/keel-hq/keel#configuration) se
 ### Quick Start
 
 <p align="center">
-  <a href="https://keel.sh" target="_blank"><img width="700"src="https://keel.sh/images/keel-workflow.png"></a>
+  <a href="https://keel.sh" target="_blank"><img width="700"src="https://keel.sh/img/keel_high_level.png"></a>
 </p>
 
 A step-by-step guide to install Keel on your Kubernetes cluster is viewable on the Keel website:
@@ -131,9 +131,32 @@ A step-by-step guide to install Keel on your Kubernetes cluster is viewable on t
 
 Once Keel is deployed, you only need to specify update policy on your deployment file or Helm chart:
 
-<p align="center">
-  <a href="https://keel.sh/v1/guide/" target="_blank"><img width="700"src="https://keel.sh/images/keel-minimal-configuration.png"></a>
-</p>
+```yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata: 
+  name: wd
+  namespace: default
+  labels: 
+    name: "wd"
+  annotations:
+    keel.sh/policy: minor # <-- policy name according to https://semver.org/
+    keel.sh/trigger: poll # <-- actively query registry, otherwise defaults to webhooks
+spec:
+  template:
+    metadata:
+      name: wd
+      labels:
+        app: wd        
+    spec:
+      containers:                    
+        - image: karolisr/webhook-demo:0.0.8
+          imagePullPolicy: Always            
+          name: wd
+          command: ["/bin/webhook-demo"]
+          ports:
+            - containerPort: 8090
+```
 
 No additional configuration is required. Enabling continuous delivery for your workloads has never been this easy!
 
