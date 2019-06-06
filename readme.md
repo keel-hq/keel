@@ -38,9 +38,9 @@ Keel provides several key features:
 
 * __Automatic [Google Container Registry](https://cloud.google.com/container-registry/) configuration__ - Keel automatically sets up topic and subscriptions for your deployment images by periodically scanning your environment.
 
-* __[Native, DockerHub, Quay and Azure container registry webhooks](https://keel.sh/v1/guide/documentation.html#Triggers) support__ -  once webhook is received impacted deployments will be identified and updated.
+* __[Native, DockerHub, Quay and Azure container registry webhooks](https://keel.sh/docs/#triggers) support__ -  once webhook is received impacted deployments will be identified and updated.
 
-*  __[Polling](https://keel.sh/v1/guide/documentation.html#Polling)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for new tags (if current tag is semver) or same tag SHA digest change (ie: `latest`).
+*  __[Polling](https://keel.sh/docs/#polling)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for new tags (if current tag is semver) or same tag SHA digest change (ie: `latest`).
 
 * __Notifications__ - out of the box Keel has Slack, Hipchat, Mattermost and standard webhook notifications, more info [here](https://keel.sh/v1/guide/documentation.html#Notifications)
 
@@ -125,7 +125,7 @@ That's it, see [Configuration](https://github.com/keel-hq/keel#configuration) se
 
 A step-by-step guide to install Keel on your Kubernetes cluster is viewable on the Keel website:
 
-[https://keel.sh/v1/guide/quick-start.html](https://keel.sh/v1/guide/quick-start.html)
+[https://keel.sh/examples/#example-1-push-to-deploy](https://keel.sh/examples/#example-1-push-to-deploy)
 
 ### Configuration
 
@@ -141,12 +141,18 @@ No additional configuration is required. Enabling continuous delivery for your w
 
 Documentation is viewable on the Keel Website:
 
-[https://keel.sh/v1/guide/documentation](https://keel.sh/v1/guide/documentation)
+[https://keel.sh/docs/#introduction](https://keel.sh/docs/#introduction)
 
 
 ### Contributing
 
-Before starting to work on some big or medium features - raise an issue [here](https://github.com/keel-hq/keel/issues) so we can coordinate our efforts.
+Before starting to work on some big or medium features - raise an issue [here](https://github.com/keel-hq/keel/issues) so we can coordinate our efforts. 
+
+We use pull requests, so:
+
+1. Fork this repository
+2. Create a branch on your local copy with a sensible name
+3. Push to your fork and open a pull request
 
 ### Developing Keel
 
@@ -182,6 +188,6 @@ Prerequisites:
 
 Once prerequisites are ready:
 
-```
+```bash
 make e2e
 ```
