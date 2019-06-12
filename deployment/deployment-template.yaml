@@ -151,7 +151,7 @@ spec:
                   fieldPath: metadata.namespace
             # Enable GCR with pub/sub support
             - name: PROJECT_ID
-              value: ""
+              value: "{{ .project_id }}"
             - name: PUBSUB
               value: "{{ .pubsub }}" # Set to '1' or 'true' to enable GCR pubsub
             # Basic auth (to enable UI/API)
