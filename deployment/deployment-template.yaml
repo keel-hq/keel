@@ -160,7 +160,7 @@ spec:
             - name: BASIC_AUTH_PASSWORD
               value: {{ .password }}
             - name: AUTHENTICATED_WEBHOOKS
-              value: {{ .authenticated_webhooks | default "false" }}
+              value: "{{ .authenticated_webhooks | default "false" }}"
             # Helm configuration
             {{ if.tiller_address }} 
             - name: HELM_PROVIDER
