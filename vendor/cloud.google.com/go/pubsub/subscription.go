@@ -1,4 +1,4 @@
-// Copyright 2016 Google Inc. All Rights Reserved.
+// Copyright 2016 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package pubsub
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -23,15 +24,20 @@ import (
 	"time"
 
 	"cloud.google.com/go/iam"
-	"golang.org/x/net/context"
+	"cloud.google.com/go/internal/optional"
+	"github.com/golang/protobuf/ptypes"
+	durpb "github.com/golang/protobuf/ptypes/duration"
+	gax "github.com/googleapis/gax-go/v2"
 	"golang.org/x/sync/errgroup"
+	pb "google.golang.org/genproto/googleapis/pubsub/v1"
+	fmpb "google.golang.org/genproto/protobuf/field_mask"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
 
 // Subscription is a reference to a PubSub subscription.
 type Subscription struct {
-	s service
+	c *Client
 
 	// The fully qualified identifier for the subscription, in the format "projects/<projid>/subscriptions/<name>"
 	name string
@@ -45,13 +51,14 @@ type Subscription struct {
 
 // Subscription creates a reference to a subscription.
 func (c *Client) Subscription(id string) *Subscription {
-	return newSubscription(c.s, fmt.Sprintf("projects/%s/subscriptions/%s", c.projectID, id))
+	return c.SubscriptionInProject(id, c.projectID)
 }
 
-func newSubscription(s service, name string) *Subscription {
+// SubscriptionInProject creates a reference to a subscription in a given project.
+func (c *Client) SubscriptionInProject(id, projectID string) *Subscription {
 	return &Subscription{
-		s:    s,
-		name: name,
+		c:    c,
+		name: fmt.Sprintf("projects/%s/subscriptions/%s", projectID, id),
 	}
 }
 
@@ -72,16 +79,25 @@ func (s *Subscription) ID() string {
 
 // Subscriptions returns an iterator which returns all of the subscriptions for the client's project.
 func (c *Client) Subscriptions(ctx context.Context) *SubscriptionIterator {
+	it := c.subc.ListSubscriptions(ctx, &pb.ListSubscriptionsRequest{
+		Project: c.fullyQualifiedProjectName(),
+	})
 	return &SubscriptionIterator{
-		s:    c.s,
-		next: c.s.listProjectSubscriptions(ctx, c.fullyQualifiedProjectName()),
+		c: c,
+		next: func() (string, error) {
+			sub, err := it.Next()
+			if err != nil {
+				return "", err
+			}
+			return sub.Name, nil
+		},
 	}
 }
 
 // SubscriptionIterator is an iterator that returns a series of subscriptions.
 type SubscriptionIterator struct {
-	s    service
-	next nextStringFunc
+	c    *Client
+	next func() (string, error)
 }
 
 // Next returns the next subscription. If there are no more subscriptions, iterator.Done will be returned.
@@ -90,7 +106,7 @@ func (subs *SubscriptionIterator) Next() (*Subscription, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newSubscription(subs.s, subName), nil
+	return &Subscription{c: subs.c, name: subName}, nil
 }
 
 // PushConfig contains configuration for subscriptions that operate in push mode.
@@ -102,7 +118,14 @@ type PushConfig struct {
 	Attributes map[string]string
 }
 
-// Subscription config contains the configuration of a subscription.
+func (pc *PushConfig) toProto() *pb.PushConfig {
+	return &pb.PushConfig{
+		Attributes:   pc.Attributes,
+		PushEndpoint: pc.Endpoint,
+	}
+}
+
+// SubscriptionConfig describes the configuration of a subscription.
 type SubscriptionConfig struct {
 	Topic      *Topic
 	PushConfig PushConfig
@@ -115,13 +138,80 @@ type SubscriptionConfig struct {
 
 	// Whether to retain acknowledged messages. If true, acknowledged messages
 	// will not be expunged until they fall out of the RetentionDuration window.
-	retainAckedMessages bool
+	RetainAckedMessages bool
 
-	// How long to retain messages in backlog, from the time of publish. If RetainAckedMessages is true,
-	// this duration affects the retention of acknowledged messages,
-	// otherwise only unacknowledged messages are retained.
+	// How long to retain messages in backlog, from the time of publish. If
+	// RetainAckedMessages is true, this duration affects the retention of
+	// acknowledged messages, otherwise only unacknowledged messages are retained.
 	// Defaults to 7 days. Cannot be longer than 7 days or shorter than 10 minutes.
-	retentionDuration time.Duration
+	RetentionDuration time.Duration
+
+	// Expiration policy specifies the conditions for a subscription's expiration.
+	// A subscription is considered active as long as any connected subscriber is
+	// successfully consuming messages from the subscription or is issuing
+	// operations on the subscription. If `expiration_policy` is not set, a
+	// *default policy* with `ttl` of 31 days will be used. The minimum allowed
+	// value for `expiration_policy.ttl` is 1 day.
+	//
+	// It is EXPERIMENTAL and subject to change or removal without notice.
+	ExpirationPolicy time.Duration
+
+	// The set of labels for the subscription.
+	Labels map[string]string
+}
+
+func (cfg *SubscriptionConfig) toProto(name string) *pb.Subscription {
+	var pbPushConfig *pb.PushConfig
+	if cfg.PushConfig.Endpoint != "" || len(cfg.PushConfig.Attributes) != 0 {
+		pbPushConfig = &pb.PushConfig{
+			Attributes:   cfg.PushConfig.Attributes,
+			PushEndpoint: cfg.PushConfig.Endpoint,
+		}
+	}
+	var retentionDuration *durpb.Duration
+	if cfg.RetentionDuration != 0 {
+		retentionDuration = ptypes.DurationProto(cfg.RetentionDuration)
+	}
+	return &pb.Subscription{
+		Name:                     name,
+		Topic:                    cfg.Topic.name,
+		PushConfig:               pbPushConfig,
+		AckDeadlineSeconds:       trunc32(int64(cfg.AckDeadline.Seconds())),
+		RetainAckedMessages:      cfg.RetainAckedMessages,
+		MessageRetentionDuration: retentionDuration,
+		Labels:                   cfg.Labels,
+		ExpirationPolicy:         expirationPolicyToProto(cfg.ExpirationPolicy),
+	}
+}
+
+func protoToSubscriptionConfig(pbSub *pb.Subscription, c *Client) (SubscriptionConfig, error) {
+	rd := time.Hour * 24 * 7
+	var err error
+	if pbSub.MessageRetentionDuration != nil {
+		rd, err = ptypes.Duration(pbSub.MessageRetentionDuration)
+		if err != nil {
+			return SubscriptionConfig{}, err
+		}
+	}
+	var expirationPolicy time.Duration
+	if ttl := pbSub.ExpirationPolicy.GetTtl(); ttl != nil {
+		expirationPolicy, err = ptypes.Duration(ttl)
+		if err != nil {
+			return SubscriptionConfig{}, err
+		}
+	}
+	return SubscriptionConfig{
+		Topic:       newTopic(c, pbSub.Topic),
+		AckDeadline: time.Second * time.Duration(pbSub.AckDeadlineSeconds),
+		PushConfig: PushConfig{
+			Endpoint:   pbSub.PushConfig.PushEndpoint,
+			Attributes: pbSub.PushConfig.Attributes,
+		},
+		RetainAckedMessages: pbSub.RetainAckedMessages,
+		RetentionDuration:   rd,
+		Labels:              pbSub.Labels,
+		ExpirationPolicy:    expirationPolicy,
+	}, nil
 }
 
 // ReceiveSettings configure the Receive method.
@@ -131,8 +221,9 @@ type ReceiveSettings struct {
 	// automatically extend the ack deadline for each message.
 	//
 	// The Subscription will automatically extend the ack deadline of all
-	// fetched Messages for the duration specified. Automatic deadline
-	// extension may be disabled by specifying a duration less than 1.
+	// fetched Messages up to the duration specified. Automatic deadline
+	// extension beyond the initial receipt may be disabled by specifying a
+	// duration less than 0.
 	MaxExtension time.Duration
 
 	// MaxOutstandingMessages is the maximum number of unprocessed messages
@@ -159,7 +250,37 @@ type ReceiveSettings struct {
 	// function passed to Receive on them. To limit the number of messages being
 	// processed concurrently, set MaxOutstandingMessages.
 	NumGoroutines int
+
+	// If Synchronous is true, then no more than MaxOutstandingMessages will be in
+	// memory at one time. (In contrast, when Synchronous is false, more than
+	// MaxOutstandingMessages may have been received from the service and in memory
+	// before being processed.) MaxOutstandingBytes still refers to the total bytes
+	// processed, rather than in memory. NumGoroutines is ignored.
+	// The default is false.
+	Synchronous bool
 }
+
+// For synchronous receive, the time to wait if we are already processing
+// MaxOutstandingMessages. There is no point calling Pull and asking for zero
+// messages, so we pause to allow some message-processing callbacks to finish.
+//
+// The wait time is large enough to avoid consuming significant CPU, but
+// small enough to provide decent throughput. Users who want better
+// throughput should not be using synchronous mode.
+//
+// Waiting might seem like polling, so it's natural to think we could do better by
+// noticing when a callback is finished and immediately calling Pull. But if
+// callbacks finish in quick succession, this will result in frequent Pull RPCs that
+// request a single message, which wastes network bandwidth. Better to wait for a few
+// callbacks to finish, so we make fewer RPCs fetching more messages.
+//
+// This value is unexported so the user doesn't have another knob to think about. Note that
+// it is the same value as the one used for nackTicker, so it matches this client's
+// idea of a duration that is short, but not so short that we perform excessive RPCs.
+const synchronousWaitTime = 100 * time.Millisecond
+
+// This is a var so that tests can change it.
+var minAckDeadline = 10 * time.Second
 
 // DefaultReceiveSettings holds the default values for ReceiveSettings.
 var DefaultReceiveSettings = ReceiveSettings{
@@ -171,31 +292,56 @@ var DefaultReceiveSettings = ReceiveSettings{
 
 // Delete deletes the subscription.
 func (s *Subscription) Delete(ctx context.Context) error {
-	return s.s.deleteSubscription(ctx, s.name)
+	return s.c.subc.DeleteSubscription(ctx, &pb.DeleteSubscriptionRequest{Subscription: s.name})
 }
 
 // Exists reports whether the subscription exists on the server.
 func (s *Subscription) Exists(ctx context.Context) (bool, error) {
-	return s.s.subscriptionExists(ctx, s.name)
+	_, err := s.c.subc.GetSubscription(ctx, &pb.GetSubscriptionRequest{Subscription: s.name})
+	if err == nil {
+		return true, nil
+	}
+	if grpc.Code(err) == codes.NotFound {
+		return false, nil
+	}
+	return false, err
 }
 
 // Config fetches the current configuration for the subscription.
 func (s *Subscription) Config(ctx context.Context) (SubscriptionConfig, error) {
-	conf, topicName, err := s.s.getSubscriptionConfig(ctx, s.name)
+	pbSub, err := s.c.subc.GetSubscription(ctx, &pb.GetSubscriptionRequest{Subscription: s.name})
 	if err != nil {
 		return SubscriptionConfig{}, err
 	}
-	conf.Topic = &Topic{
-		s:    s.s,
-		name: topicName,
+	cfg, err := protoToSubscriptionConfig(pbSub, s.c)
+	if err != nil {
+		return SubscriptionConfig{}, err
 	}
-	return conf, nil
+	return cfg, nil
 }
 
 // SubscriptionConfigToUpdate describes how to update a subscription.
 type SubscriptionConfigToUpdate struct {
 	// If non-nil, the push config is changed.
 	PushConfig *PushConfig
+
+	// If non-zero, the ack deadline is changed.
+	AckDeadline time.Duration
+
+	// If set, RetainAckedMessages is changed.
+	RetainAckedMessages optional.Bool
+
+	// If non-zero, RetentionDuration is changed.
+	RetentionDuration time.Duration
+
+	// If non-zero, Expiration is changed.
+	ExpirationPolicy time.Duration
+
+	// If non-nil, the current set of labels is completely
+	// replaced by the new set.
+	// This field has beta status. It is not subject to the stability guarantee
+	// and may change.
+	Labels map[string]string
 }
 
 // Update changes an existing subscription according to the fields set in cfg.
@@ -203,17 +349,85 @@ type SubscriptionConfigToUpdate struct {
 //
 // Update returns an error if no fields were modified.
 func (s *Subscription) Update(ctx context.Context, cfg SubscriptionConfigToUpdate) (SubscriptionConfig, error) {
-	if cfg.PushConfig == nil {
+	req := s.updateRequest(&cfg)
+	if err := cfg.validate(); err != nil {
+		return SubscriptionConfig{}, fmt.Errorf("pubsub: UpdateSubscription %v", err)
+	}
+	if len(req.UpdateMask.Paths) == 0 {
 		return SubscriptionConfig{}, errors.New("pubsub: UpdateSubscription call with nothing to update")
 	}
-	if err := s.s.modifyPushConfig(ctx, s.name, *cfg.PushConfig); err != nil {
+	rpsub, err := s.c.subc.UpdateSubscription(ctx, req)
+	if err != nil {
 		return SubscriptionConfig{}, err
 	}
-	return s.Config(ctx)
+	return protoToSubscriptionConfig(rpsub, s.c)
 }
 
+func (s *Subscription) updateRequest(cfg *SubscriptionConfigToUpdate) *pb.UpdateSubscriptionRequest {
+	psub := &pb.Subscription{Name: s.name}
+	var paths []string
+	if cfg.PushConfig != nil {
+		psub.PushConfig = cfg.PushConfig.toProto()
+		paths = append(paths, "push_config")
+	}
+	if cfg.AckDeadline != 0 {
+		psub.AckDeadlineSeconds = trunc32(int64(cfg.AckDeadline.Seconds()))
+		paths = append(paths, "ack_deadline_seconds")
+	}
+	if cfg.RetainAckedMessages != nil {
+		psub.RetainAckedMessages = optional.ToBool(cfg.RetainAckedMessages)
+		paths = append(paths, "retain_acked_messages")
+	}
+	if cfg.RetentionDuration != 0 {
+		psub.MessageRetentionDuration = ptypes.DurationProto(cfg.RetentionDuration)
+		paths = append(paths, "message_retention_duration")
+	}
+	if cfg.ExpirationPolicy != 0 {
+		psub.ExpirationPolicy = expirationPolicyToProto(cfg.ExpirationPolicy)
+		paths = append(paths, "expiration_policy")
+	}
+	if cfg.Labels != nil {
+		psub.Labels = cfg.Labels
+		paths = append(paths, "labels")
+	}
+	return &pb.UpdateSubscriptionRequest{
+		Subscription: psub,
+		UpdateMask:   &fmpb.FieldMask{Paths: paths},
+	}
+}
+
+const (
+	// The minimum expiration policy duration is 1 day as per:
+	//    https://github.com/googleapis/googleapis/blob/51145ff7812d2bb44c1219d0b76dac92a8bd94b2/google/pubsub/v1/pubsub.proto#L606-L607
+	minExpirationPolicy = 24 * time.Hour
+
+	// If an expiration policy is not specified, the default of 31 days is used as per:
+	//    https://github.com/googleapis/googleapis/blob/51145ff7812d2bb44c1219d0b76dac92a8bd94b2/google/pubsub/v1/pubsub.proto#L605-L606
+	defaultExpirationPolicy = 31 * 24 * time.Hour
+)
+
+func (cfg *SubscriptionConfigToUpdate) validate() error {
+	if cfg == nil || cfg.ExpirationPolicy == 0 {
+		return nil
+	}
+	if policy, min := cfg.ExpirationPolicy, minExpirationPolicy; policy < min {
+		return fmt.Errorf("invalid expiration policy(%q) < minimum(%q)", policy, min)
+	}
+	return nil
+}
+
+func expirationPolicyToProto(expirationPolicy time.Duration) *pb.ExpirationPolicy {
+	if expirationPolicy == 0 {
+		return nil
+	}
+	return &pb.ExpirationPolicy{
+		Ttl: ptypes.DurationProto(expirationPolicy),
+	}
+}
+
+// IAM returns the subscription's IAM handle.
 func (s *Subscription) IAM() *iam.Handle {
-	return s.s.iamHandle(s.name)
+	return iam.InternalNewHandle(s.c.subc.Connection(), s.name)
 }
 
 // CreateSubscription creates a new subscription on a topic.
@@ -250,8 +464,11 @@ func (c *Client) CreateSubscription(ctx context.Context, id string, cfg Subscrip
 	}
 
 	sub := c.Subscription(id)
-	err := c.s.createSubscription(ctx, sub.name, cfg)
-	return sub, err
+	_, err := c.subc.CreateSubscription(ctx, cfg.toProto(sub.name))
+	if err != nil {
+		return nil, err
+	}
+	return sub, nil
 }
 
 var errReceiveInProgress = errors.New("pubsub: Receive already in progress for this subscription")
@@ -278,7 +495,8 @@ var errReceiveInProgress = errors.New("pubsub: Receive already in progress for t
 // The context passed to f will be canceled when ctx is Done or there is a
 // fatal service error.
 //
-// Receive will automatically extend the ack deadline of all fetched Messages for the
+// Receive will send an ack deadline extension on message receipt, then
+// automatically extend the ack deadline of all fetched Messages up to the
 // period specified by s.ReceiveSettings.MaxExtension.
 //
 // Each Subscription may have only one invocation of Receive active at a time.
@@ -292,13 +510,6 @@ func (s *Subscription) Receive(ctx context.Context, f func(context.Context, *Mes
 	s.mu.Unlock()
 	defer func() { s.mu.Lock(); s.receiveActive = false; s.mu.Unlock() }()
 
-	config, err := s.Config(ctx)
-	if err != nil {
-		if grpc.Code(err) == codes.Canceled {
-			return nil
-		}
-		return err
-	}
 	maxCount := s.ReceiveSettings.MaxOutstandingMessages
 	if maxCount == 0 {
 		maxCount = DefaultReceiveSettings.MaxOutstandingMessages
@@ -314,15 +525,20 @@ func (s *Subscription) Receive(ctx context.Context, f func(context.Context, *Mes
 		// If MaxExtension is negative, disable automatic extension.
 		maxExt = 0
 	}
-	numGoroutines := s.ReceiveSettings.NumGoroutines
-	if numGoroutines < 1 {
+	var numGoroutines int
+	switch {
+	case s.ReceiveSettings.Synchronous:
+		numGoroutines = 1
+	case s.ReceiveSettings.NumGoroutines >= 1:
+		numGoroutines = s.ReceiveSettings.NumGoroutines
+	default:
 		numGoroutines = DefaultReceiveSettings.NumGoroutines
 	}
 	// TODO(jba): add tests that verify that ReceiveSettings are correctly processed.
 	po := &pullOptions{
 		maxExtension: maxExt,
 		maxPrefetch:  trunc32(int64(maxCount)),
-		ackDeadline:  config.AckDeadline,
+		synchronous:  s.ReceiveSettings.Synchronous,
 	}
 	fc := newFlowController(maxCount, maxBytes)
 
@@ -341,13 +557,10 @@ func (s *Subscription) receive(ctx context.Context, po *pullOptions, fc *flowCon
 	// Cancel a sub-context when we return, to kick the context-aware callbacks
 	// and the goroutine below.
 	ctx2, cancel := context.WithCancel(ctx)
-	// Call stop when Receive's context is done.
-	// Stop will block until all outstanding messages have been acknowledged
-	// or there was a fatal service error.
 	// The iterator does not use the context passed to Receive. If it did, canceling
 	// that context would immediately stop the iterator without waiting for unacked
 	// messages.
-	iter := newMessageIterator(context.Background(), s.s, s.name, po)
+	iter := newMessageIterator(s.c.subc, s.name, po)
 
 	// We cannot use errgroup from Receive here. Receive might already be calling group.Wait,
 	// and group.Wait cannot be called concurrently with group.Go. We give each receive() its
@@ -358,6 +571,9 @@ func (s *Subscription) receive(ctx context.Context, po *pullOptions, fc *flowCon
 	wg.Add(1)
 	go func() {
 		<-ctx2.Done()
+		// Call stop when Receive's context is done.
+		// Stop will block until all outstanding messages have been acknowledged
+		// or there was a fatal service error.
 		iter.stop()
 		wg.Done()
 	}()
@@ -365,7 +581,29 @@ func (s *Subscription) receive(ctx context.Context, po *pullOptions, fc *flowCon
 
 	defer cancel()
 	for {
-		msgs, err := iter.receive()
+		var maxToPull int32 // maximum number of messages to pull
+		if po.synchronous {
+			if po.maxPrefetch < 0 {
+				// If there is no limit on the number of messages to pull, use a reasonable default.
+				maxToPull = 1000
+			} else {
+				// Limit the number of messages in memory to MaxOutstandingMessages
+				// (here, po.maxPrefetch). For each message currently in memory, we have
+				// called fc.acquire but not fc.release: this is fc.count(). The next
+				// call to Pull should fetch no more than the difference between these
+				// values.
+				maxToPull = po.maxPrefetch - int32(fc.count())
+				if maxToPull <= 0 {
+					// Wait for some callbacks to finish.
+					if err := gax.Sleep(ctx, synchronousWaitTime); err != nil {
+						// Return nil if the context is done, not err.
+						return nil
+					}
+					continue
+				}
+			}
+		}
+		msgs, err := iter.receive(maxToPull)
 		if err == io.EOF {
 			return nil
 		}
@@ -380,26 +618,28 @@ func (s *Subscription) receive(ctx context.Context, po *pullOptions, fc *flowCon
 				for _, m := range msgs[i:] {
 					m.Nack()
 				}
+				// Return nil if the context is done, not err.
 				return nil
+			}
+			old := msg.doneFunc
+			msgLen := len(msg.Data)
+			msg.doneFunc = func(ackID string, ack bool, receiveTime time.Time) {
+				defer fc.release(msgLen)
+				old(ackID, ack, receiveTime)
 			}
 			wg.Add(1)
 			go func() {
-				// TODO(jba): call release when the message is available for GC.
-				// This considers the message to be released when
-				// f is finished, but f may ack early or not at all.
 				defer wg.Done()
-				defer fc.release(len(msg.Data))
 				f(ctx2, msg)
 			}()
 		}
 	}
 }
 
-// TODO(jba): remove when we delete messageIterator.
 type pullOptions struct {
 	maxExtension time.Duration
 	maxPrefetch  int32
-	// ackDeadline is the default ack deadline for the subscription. Not
-	// configurable.
-	ackDeadline time.Duration
+	// If true, use unary Pull instead of StreamingPull, and never pull more
+	// than maxPrefetch messages.
+	synchronous bool
 }
