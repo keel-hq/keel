@@ -59,14 +59,15 @@ import (
 
 // gcloud pubsub related config
 const (
-	EnvTriggerPubSub     = "PUBSUB" // set to 1 or something to enable pub/sub trigger
-	EnvTriggerPoll       = "POLL"   // set to 0 to disable poll trigger
-	EnvProjectID         = "PROJECT_ID"
-	EnvClusterName       = "CLUSTER_NAME"
-	EnvDataDir           = "XDG_DATA_HOME"
-	EnvHelmProvider      = "HELM_PROVIDER"  // helm provider
-	EnvHelmTillerAddress = "TILLER_ADDRESS" // helm provider
-	EnvUIDir             = "UI_DIR"
+	EnvTriggerPubSub       = "PUBSUB" // set to 1 or something to enable pub/sub trigger
+	EnvTriggerPoll         = "POLL"   // set to 0 to disable poll trigger
+	EnvProjectID           = "PROJECT_ID"
+	EnvClusterName         = "CLUSTER_NAME"
+	EnvDataDir             = "XDG_DATA_HOME"
+	EnvHelmProvider        = "HELM_PROVIDER"    // helm provider
+	EnvHelmTillerAddress   = "TILLER_ADDRESS"   // helm provider
+	EnvHelmTillerNamespace = "TILLER_NAMESPACE" // helm provider
+	EnvUIDir               = "UI_DIR"
 
 	// EnvDefaultDockerRegistryCfg - default registry configuration that can be passed into
 	// keel for polling trigger
@@ -300,18 +301,26 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 
 	enabledProviders = append(enabledProviders, k8sProvider)
 
-	if os.Getenv(EnvHelmProvider) == "1" {
+	if os.Getenv(EnvHelmProvider) == "1" || os.Getenv(EnvHelmProvider) == "true" {
 
-		tillerTunnel, err := portforwarder.New("kube-system", opts.k8sClient, opts.config)
+		if os.Getenv(EnvHelmTillerAddress) != "" {
+			log.Warnf("Environment variable %s is deprecated, use %s environment variable to set tiller's namespace (defaults to 'kube-system')", EnvHelmTillerAddress, EnvHelmTillerNamespace)
+		}
+
+		tillerNamespace := "kube-system"
+		if os.Getenv(EnvHelmTillerNamespace) != "" {
+			tillerNamespace = os.Getenv(EnvHelmTillerNamespace)
+		}
+
+		tillerTunnel, err := portforwarder.New(tillerNamespace, opts.k8sClient, opts.config)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
 			}).Fatal("failed to setup Tiller tunnel")
 		}
 
-		// tillerAddr := os.Getenv(EnvHelmTillerAddress)
 		tillerAddr := fmt.Sprintf("127.0.0.1:%d", tillerTunnel.Local)
-		log.Info("created local tunnel using local port: '%d'\n", tillerTunnel.Local)
+		log.Infof("created local tunnel using local port: '%d'", tillerTunnel.Local)
 		helmImplementer := helm.NewHelmImplementer(tillerAddr)
 		helmProvider := helm.NewProvider(helmImplementer, opts.sender, opts.approvalsManager)
 
