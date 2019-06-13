@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -10,6 +11,9 @@ import (
 
 	netContext "golang.org/x/net/context"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	kube "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/helm/pkg/helm/portforwarder"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/bot"
@@ -201,6 +205,8 @@ func main() {
 		approvalsManager: approvalsManager,
 		grc:              &t.GenericResourceCache,
 		store:            sqlStore,
+		k8sClient:        implementer.Client(),
+		config:           implementer.Config(),
 	})
 
 	// registering secrets based credentials helper
@@ -267,6 +273,9 @@ type ProviderOpts struct {
 	approvalsManager approvals.Manager
 	grc              *k8s.GenericResourceCache
 	store            store.Store
+
+	k8sClient kube.Interface
+	config    *rest.Config
 }
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
@@ -292,7 +301,17 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 	enabledProviders = append(enabledProviders, k8sProvider)
 
 	if os.Getenv(EnvHelmProvider) == "1" {
-		tillerAddr := os.Getenv(EnvHelmTillerAddress)
+
+		tillerTunnel, err := portforwarder.New("kube-system", opts.k8sClient, opts.config)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Fatal("failed to setup Tiller tunnel")
+		}
+
+		// tillerAddr := os.Getenv(EnvHelmTillerAddress)
+		tillerAddr := fmt.Sprintf("127.0.0.1:%d", tillerTunnel.Local)
+		log.Info("created local tunnel using local port: '%d'\n", tillerTunnel.Local)
 		helmImplementer := helm.NewHelmImplementer(tillerAddr)
 		helmProvider := helm.NewProvider(helmImplementer, opts.sender, opts.approvalsManager)
 
