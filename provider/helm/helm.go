@@ -176,7 +176,9 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		return nil, err
 	}
 
-	for _, release := range releaseList.Releases {
+	releases := releaseList.GetReleases()
+
+	for _, release := range releases {
 		// getting configuration
 		vals, err := values(release.Chart, release.Config)
 		if err != nil {
@@ -267,7 +269,9 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 		return nil, err
 	}
 
-	for _, release := range releaseList.Releases {
+	releases := releaseList.GetReleases()
+
+	for _, release := range releases {
 
 		// plan, update, err := checkRelease(newVersion, &event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
 		plan, update, err := checkRelease(&event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
