@@ -17,9 +17,9 @@ polling:
 
 # Helm provider support
 helmProvider:
-  enabled: true  
+  enabled: true
   tillerNamespace: "kube-system"
-  # optional Tiller address (if portforwarder tunnel doesn't work), 
+  # optional Tiller address (if portforwarder tunnel doesn't work),
   # if you are using default configuration, setting it to
   # 'tiller-deploy.tiller.svc.cluster.local:44134' is usually fine
   tillerAddress: ''
