@@ -65,6 +65,8 @@ spec:
               value: "1"
             - name: TILLER_NAMESPACE
               value: "{{ .Values.helmProvider.tillerNamespace }}"
+            - name: TILLER_ADDRESS
+              value: "{{ .Values.helmProvider.tillerAddress }}"
 {{- end }}
 {{- if .Values.gcr.enabled }}
             # Enable GCR with pub/sub support
