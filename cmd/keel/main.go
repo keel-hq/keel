@@ -303,24 +303,28 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 
 	if os.Getenv(EnvHelmProvider) == "1" || os.Getenv(EnvHelmProvider) == "true" {
 
+		var tillerAddr string
+
 		if os.Getenv(EnvHelmTillerAddress) != "" {
-			log.Warnf("Environment variable %s is deprecated, use %s environment variable to set tiller's namespace (defaults to 'kube-system')", EnvHelmTillerAddress, EnvHelmTillerNamespace)
+			tillerAddr = os.Getenv(EnvHelmTillerAddress)
+			log.Infof("Tiller address specified: %s", tillerAddr)
+		} else {
+			tillerNamespace := "kube-system"
+			if os.Getenv(EnvHelmTillerNamespace) != "" {
+				tillerNamespace = os.Getenv(EnvHelmTillerNamespace)
+			}
+
+			tillerTunnel, err := portforwarder.New(tillerNamespace, opts.k8sClient, opts.config)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Fatal("failed to setup Tiller tunnel")
+			}
+
+			tillerAddr = fmt.Sprintf("127.0.0.1:%d", tillerTunnel.Local)
+			log.Infof("created local tunnel using local port: '%d'", tillerTunnel.Local)
 		}
 
-		tillerNamespace := "kube-system"
-		if os.Getenv(EnvHelmTillerNamespace) != "" {
-			tillerNamespace = os.Getenv(EnvHelmTillerNamespace)
-		}
-
-		tillerTunnel, err := portforwarder.New(tillerNamespace, opts.k8sClient, opts.config)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Fatal("failed to setup Tiller tunnel")
-		}
-
-		tillerAddr := fmt.Sprintf("127.0.0.1:%d", tillerTunnel.Local)
-		log.Infof("created local tunnel using local port: '%d'", tillerTunnel.Local)
 		helmImplementer := helm.NewHelmImplementer(tillerAddr)
 		helmProvider := helm.NewProvider(helmImplementer, opts.sender, opts.approvalsManager)
 
