@@ -60,6 +60,7 @@ rules:
       - ""
     resources:
       - configmaps
+      - pods/portforward
     verbs:
       - get
       - create
