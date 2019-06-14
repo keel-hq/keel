@@ -63,8 +63,8 @@ spec:
             # Enable/disable Helm provider
             - name: HELM_PROVIDER
               value: "1"
-            - name: TILLER_ADDRESS
-              value: "{{ .Values.helmProvider.tillerAddress }}"
+            - name: TILLER_NAMESPACE
+              value: "{{ .Values.helmProvider.tillerNamespace }}"
 {{- end }}
 {{- if .Values.gcr.enabled }}
             # Enable GCR with pub/sub support
