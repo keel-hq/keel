@@ -129,6 +129,8 @@ The following table lists has the main configurable parameters (polling, trigger
 | `dockerRegistry.enabled`                    | Docker registry secret enabled.        | `false`                                                   |
 | `dockerRegistry.name`                       | Docker registry secret name            |                                                           |
 | `dockerRegistry.key`                        | Docker registry secret key             |                                                           |
+| `secret.name`                               | Secret name                            |       `                                                   |
+| `secret.create`                             | Create secret                          |  true                                                     |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
