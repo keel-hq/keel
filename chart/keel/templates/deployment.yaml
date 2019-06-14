@@ -146,7 +146,7 @@ spec:
 {{- end }}
           envFrom:
             - secretRef:
-                name: {{ .Values.secret.name | default (template "keel.fullname" .) }}
+                name: {{ .Values.secret.name | default (include "keel.fullname" .) }}
           ports:
             - containerPort: 9300
           livenessProbe:
@@ -206,5 +206,5 @@ spec:
       volumes:
         - name: secret
           secret:
-            secretName: {{ .Values.secret.name | default (template "keel.fullname" .) }}
+            secretName: {{ .Values.secret.name | default (include "keel.fullname" .) }}
 {{- end }}
