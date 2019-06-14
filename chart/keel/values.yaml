@@ -17,8 +17,10 @@ polling:
 
 # Helm provider support
 helmProvider:
-  enabled: true
+  enabled: true  
   tillerNamespace: "kube-system"
+  # optional Tiller address (if portforwarder tunnel doesn't work) 
+  tillerAddress: ''
 
 # Google Container Registry
 # GCP Project ID
