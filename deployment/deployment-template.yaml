@@ -163,11 +163,11 @@ spec:
             - name: AUTHENTICATED_WEBHOOKS
               value: "{{ .authenticated_webhooks | default "false" }}"
             # Helm configuration
-            {{ if.tiller_address }} 
+            {{ if.tiller_namespace }} 
             - name: HELM_PROVIDER
               value: "1"
-            - name: TILLER_ADDRESS
-              value: "{{ .tiller_address }}"
+            - name: TILLER_NAMESPACE
+              value: "{{ .tiller_namespace }}"
             {{ end}}
             # Enable AWS ECR
             - name: AWS_ACCESS_KEY_ID
