@@ -358,7 +358,7 @@ func (scope *Scope) Raw(sql string) *Scope {
 
 // Exec perform generated SQL
 func (scope *Scope) Exec() *Scope {
-	defer scope.trace(NowFunc())
+	defer scope.trace(scope.db.nowFunc())
 
 	if !scope.HasError() {
 		if result, err := scope.SQLDB().Exec(scope.SQL, scope.SQLVars...); scope.Err(err) == nil {
@@ -402,7 +402,7 @@ func (scope *Scope) InstanceGet(name string) (interface{}, bool) {
 // Begin start a transaction
 func (scope *Scope) Begin() *Scope {
 	if db, ok := scope.SQLDB().(sqlDb); ok {
-		if tx, err := db.Begin(); err == nil {
+		if tx, err := db.Begin(); scope.Err(err) == nil {
 			scope.db.db = interface{}(tx).(SQLCommon)
 			scope.InstanceSet("gorm:started_transaction", true)
 		}
@@ -872,7 +872,7 @@ func (scope *Scope) callCallbacks(funcs []*func(s *Scope)) *Scope {
 	return scope
 }
 
-func convertInterfaceToMap(values interface{}, withIgnoredField bool) map[string]interface{} {
+func convertInterfaceToMap(values interface{}, withIgnoredField bool, db *DB) map[string]interface{} {
 	var attrs = map[string]interface{}{}
 
 	switch value := values.(type) {
@@ -880,7 +880,7 @@ func convertInterfaceToMap(values interface{}, withIgnoredField bool) map[string
 		return value
 	case []interface{}:
 		for _, v := range value {
-			for key, value := range convertInterfaceToMap(v, withIgnoredField) {
+			for key, value := range convertInterfaceToMap(v, withIgnoredField, db) {
 				attrs[key] = value
 			}
 		}
@@ -893,7 +893,7 @@ func convertInterfaceToMap(values interface{}, withIgnoredField bool) map[string
 				attrs[ToColumnName(key.Interface().(string))] = reflectValue.MapIndex(key).Interface()
 			}
 		default:
-			for _, field := range (&Scope{Value: values}).Fields() {
+			for _, field := range (&Scope{Value: values, db: db}).Fields() {
 				if !field.IsBlank && (withIgnoredField || !field.IsIgnored) {
 					attrs[field.DBName] = field.Field.Interface()
 				}
@@ -905,12 +905,12 @@ func convertInterfaceToMap(values interface{}, withIgnoredField bool) map[string
 
 func (scope *Scope) updatedAttrsWithValues(value interface{}) (results map[string]interface{}, hasUpdate bool) {
 	if scope.IndirectValue().Kind() != reflect.Struct {
-		return convertInterfaceToMap(value, false), true
+		return convertInterfaceToMap(value, false, scope.db), true
 	}
 
 	results = map[string]interface{}{}
 
-	for key, value := range convertInterfaceToMap(value, true) {
+	for key, value := range convertInterfaceToMap(value, true, scope.db) {
 		if field, ok := scope.FieldByName(key); ok && scope.changeableField(field) {
 			if _, ok := value.(*expr); ok {
 				hasUpdate = true
@@ -932,7 +932,7 @@ func (scope *Scope) updatedAttrsWithValues(value interface{}) (results map[strin
 }
 
 func (scope *Scope) row() *sql.Row {
-	defer scope.trace(NowFunc())
+	defer scope.trace(scope.db.nowFunc())
 
 	result := &RowQueryResult{}
 	scope.InstanceSet("row_query_result", result)
@@ -942,7 +942,7 @@ func (scope *Scope) row() *sql.Row {
 }
 
 func (scope *Scope) rows() (*sql.Rows, error) {
-	defer scope.trace(NowFunc())
+	defer scope.trace(scope.db.nowFunc())
 
 	result := &RowsQueryResult{}
 	scope.InstanceSet("row_query_result", result)
@@ -982,6 +982,10 @@ func (scope *Scope) pluck(column string, value interface{}) *Scope {
 	if dest.Kind() != reflect.Slice {
 		scope.Err(fmt.Errorf("results should be a slice, not %s", dest.Kind()))
 		return scope
+	}
+
+	if dest.Len() > 0 {
+		dest.Set(reflect.Zero(dest.Type()))
 	}
 
 	if query, ok := scope.Search.selects["query"]; !ok || !scope.isQueryForColumn(query, column) {
@@ -1190,7 +1194,7 @@ func (scope *Scope) createTable() *Scope {
 }
 
 func (scope *Scope) dropTable() *Scope {
-	scope.Raw(fmt.Sprintf("DROP TABLE %v%s", scope.QuotedTableName(), scope.getTableOptions())).Exec()
+	scope.Raw(fmt.Sprintf("DROP TABLE %v", scope.QuotedTableName())).Exec()
 	return scope
 }
 
@@ -1284,7 +1288,8 @@ func (scope *Scope) autoIndex() *Scope {
 				if name == "INDEX" || name == "" {
 					name = scope.Dialect().BuildKeyName("idx", scope.TableName(), field.DBName)
 				}
-				indexes[name] = append(indexes[name], field.DBName)
+				name, column := scope.Dialect().NormalizeIndexAndColumn(name, field.DBName)
+				indexes[name] = append(indexes[name], column)
 			}
 		}
 
@@ -1295,7 +1300,8 @@ func (scope *Scope) autoIndex() *Scope {
 				if name == "UNIQUE_INDEX" || name == "" {
 					name = scope.Dialect().BuildKeyName("uix", scope.TableName(), field.DBName)
 				}
-				uniqueIndexes[name] = append(uniqueIndexes[name], field.DBName)
+				name, column := scope.Dialect().NormalizeIndexAndColumn(name, field.DBName)
+				uniqueIndexes[name] = append(uniqueIndexes[name], column)
 			}
 		}
 	}

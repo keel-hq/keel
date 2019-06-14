@@ -1,4 +1,4 @@
-// Copyright 2016 Google Inc. All Rights Reserved.
+// Copyright 2016 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package pubsub
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -24,20 +25,22 @@ import (
 
 	"cloud.google.com/go/iam"
 	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/context"
+	gax "github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/support/bundler"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
+	fmpb "google.golang.org/genproto/protobuf/field_mask"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 const (
-	// The maximum number of messages that can be in a single publish request, as
-	// determined by the PubSub service.
+	// MaxPublishRequestCount is the maximum number of messages that can be in
+	// a single publish request, as defined by the PubSub service.
 	MaxPublishRequestCount = 1000
 
-	// The maximum size of a single publish request in bytes, as determined by the PubSub service.
+	// MaxPublishRequestBytes is the maximum size of a single publish request
+	// in bytes, as defined by the PubSub service.
 	MaxPublishRequestBytes = 1e7
-
-	maxInt = int(^uint(0) >> 1)
 )
 
 // ErrOversizedMessage indicates that a message's size exceeds MaxPublishRequestBytes.
@@ -47,7 +50,7 @@ var ErrOversizedMessage = bundler.ErrOversizedItem
 //
 // The methods of Topic are safe for use by multiple goroutines.
 type Topic struct {
-	s service
+	c *Client
 	// The fully qualified identifier for the topic, in the format "projects/<projid>/topics/<name>"
 	name string
 
@@ -58,11 +61,6 @@ type Topic struct {
 	mu      sync.RWMutex
 	stopped bool
 	bundler *bundler.Bundler
-
-	wg sync.WaitGroup
-
-	// Channel for message bundles to be published. Close to indicate that Stop was called.
-	bundlec chan []*bundledMessage
 }
 
 // PublishSettings control the bundling of published messages.
@@ -79,11 +77,18 @@ type PublishSettings struct {
 	ByteThreshold int
 
 	// The number of goroutines that invoke the Publish RPC concurrently.
+	//
 	// Defaults to a multiple of GOMAXPROCS.
 	NumGoroutines int
 
 	// The maximum time that the client will attempt to publish a bundle of messages.
 	Timeout time.Duration
+
+	// The maximum number of bytes that the Bundler will keep in memory before
+	// returning ErrOverflow.
+	//
+	// Defaults to DefaultPublishSettings.BufferedByteLimit.
+	BufferedByteLimit int
 }
 
 // DefaultPublishSettings holds the default values for topics' PublishSettings.
@@ -92,6 +97,10 @@ var DefaultPublishSettings = PublishSettings{
 	CountThreshold: 100,
 	ByteThreshold:  1e6,
 	Timeout:        60 * time.Second,
+	// By default, limit the bundler to 10 times the max message size. The number 10 is
+	// chosen as a reasonable amount of messages in the worst case whilst still
+	// capping the number to a low enough value to not OOM users.
+	BufferedByteLimit: 10 * MaxPublishRequestBytes,
 }
 
 // CreateTopic creates a new topic.
@@ -102,8 +111,11 @@ var DefaultPublishSettings = PublishSettings{
 // If the topic already exists an error will be returned.
 func (c *Client) CreateTopic(ctx context.Context, id string) (*Topic, error) {
 	t := c.Topic(id)
-	err := c.s.createTopic(ctx, t.name)
-	return t, err
+	_, err := c.pubc.CreateTopic(ctx, &pb.Topic{Name: t.name})
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
 }
 
 // Topic creates a reference to a topic in the client's project.
@@ -123,33 +135,119 @@ func (c *Client) Topic(id string) *Topic {
 //
 // Avoid creating many Topic instances if you use them to publish.
 func (c *Client) TopicInProject(id, projectID string) *Topic {
-	return newTopic(c.s, fmt.Sprintf("projects/%s/topics/%s", projectID, id))
+	return newTopic(c, fmt.Sprintf("projects/%s/topics/%s", projectID, id))
 }
 
-func newTopic(s service, name string) *Topic {
-	// bundlec is unbuffered. A buffer would occupy memory not
-	// accounted for by the bundler, so BufferedByteLimit would be a lie:
-	// the actual memory consumed would be higher.
+func newTopic(c *Client, name string) *Topic {
 	return &Topic{
-		s:               s,
+		c:               c,
 		name:            name,
 		PublishSettings: DefaultPublishSettings,
-		bundlec:         make(chan []*bundledMessage),
+	}
+}
+
+// TopicConfig describes the configuration of a topic.
+type TopicConfig struct {
+	// The set of labels for the topic.
+	Labels map[string]string
+	// The topic's message storage policy.
+	MessageStoragePolicy MessageStoragePolicy
+}
+
+// TopicConfigToUpdate describes how to update a topic.
+type TopicConfigToUpdate struct {
+	// If non-nil, the current set of labels is completely
+	// replaced by the new set.
+	// This field has beta status. It is not subject to the stability guarantee
+	// and may change.
+	Labels map[string]string
+}
+
+func protoToTopicConfig(pbt *pb.Topic) TopicConfig {
+	return TopicConfig{
+		Labels:               pbt.Labels,
+		MessageStoragePolicy: protoToMessageStoragePolicy(pbt.MessageStoragePolicy),
+	}
+}
+
+// MessageStoragePolicy constrains how messages published to the topic may be stored. It
+// is determined when the topic is created based on the policy configured at
+// the project level.
+type MessageStoragePolicy struct {
+	// The list of GCP regions where messages that are published to the topic may
+	// be persisted in storage. Messages published by publishers running in
+	// non-allowed GCP regions (or running outside of GCP altogether) will be
+	// routed for storage in one of the allowed regions. An empty list indicates a
+	// misconfiguration at the project or organization level, which will result in
+	// all Publish operations failing.
+	AllowedPersistenceRegions []string
+}
+
+func protoToMessageStoragePolicy(msp *pb.MessageStoragePolicy) MessageStoragePolicy {
+	if msp == nil {
+		return MessageStoragePolicy{}
+	}
+	return MessageStoragePolicy{AllowedPersistenceRegions: msp.AllowedPersistenceRegions}
+}
+
+// Config returns the TopicConfig for the topic.
+func (t *Topic) Config(ctx context.Context) (TopicConfig, error) {
+	pbt, err := t.c.pubc.GetTopic(ctx, &pb.GetTopicRequest{Topic: t.name})
+	if err != nil {
+		return TopicConfig{}, err
+	}
+	return protoToTopicConfig(pbt), nil
+}
+
+// Update changes an existing topic according to the fields set in cfg. It returns
+// the new TopicConfig.
+//
+// Any call to Update (even with an empty TopicConfigToUpdate) will update the
+// MessageStoragePolicy for the topic from the organization's settings.
+func (t *Topic) Update(ctx context.Context, cfg TopicConfigToUpdate) (TopicConfig, error) {
+	req := t.updateRequest(cfg)
+	if len(req.UpdateMask.Paths) == 0 {
+		return TopicConfig{}, errors.New("pubsub: UpdateTopic call with nothing to update")
+	}
+	rpt, err := t.c.pubc.UpdateTopic(ctx, req)
+	if err != nil {
+		return TopicConfig{}, err
+	}
+	return protoToTopicConfig(rpt), nil
+}
+
+func (t *Topic) updateRequest(cfg TopicConfigToUpdate) *pb.UpdateTopicRequest {
+	pt := &pb.Topic{Name: t.name}
+	paths := []string{"message_storage_policy"} // always fetch
+	if cfg.Labels != nil {
+		pt.Labels = cfg.Labels
+		paths = append(paths, "labels")
+	}
+	return &pb.UpdateTopicRequest{
+		Topic:      pt,
+		UpdateMask: &fmpb.FieldMask{Paths: paths},
 	}
 }
 
 // Topics returns an iterator which returns all of the topics for the client's project.
 func (c *Client) Topics(ctx context.Context) *TopicIterator {
+	it := c.pubc.ListTopics(ctx, &pb.ListTopicsRequest{Project: c.fullyQualifiedProjectName()})
 	return &TopicIterator{
-		s:    c.s,
-		next: c.s.listProjectTopics(ctx, c.fullyQualifiedProjectName()),
+		c: c,
+		next: func() (string, error) {
+			topic, err := it.Next()
+			if err != nil {
+				return "", err
+			}
+			return topic.Name, nil
+		},
 	}
 }
 
 // TopicIterator is an iterator that returns a series of topics.
 type TopicIterator struct {
-	s    service
-	next nextStringFunc
+	c    *Client
+	next func() (string, error)
 }
 
 // Next returns the next topic. If there are no more topics, iterator.Done will be returned.
@@ -158,10 +256,10 @@ func (tps *TopicIterator) Next() (*Topic, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newTopic(tps.s, topicName), nil
+	return newTopic(tps.c, topicName), nil
 }
 
-// ID returns the unique idenfier of the topic within its project.
+// ID returns the unique identifier of the topic within its project.
 func (t *Topic) ID() string {
 	slash := strings.LastIndex(t.name, "/")
 	if slash == -1 {
@@ -178,7 +276,7 @@ func (t *Topic) String() string {
 
 // Delete deletes the topic.
 func (t *Topic) Delete(ctx context.Context) error {
-	return t.s.deleteTopic(ctx, t.name)
+	return t.c.pubc.DeleteTopic(ctx, &pb.DeleteTopicRequest{Topic: t.name})
 }
 
 // Exists reports whether the topic exists on the server.
@@ -186,21 +284,31 @@ func (t *Topic) Exists(ctx context.Context) (bool, error) {
 	if t.name == "_deleted-topic_" {
 		return false, nil
 	}
-
-	return t.s.topicExists(ctx, t.name)
+	_, err := t.c.pubc.GetTopic(ctx, &pb.GetTopicRequest{Topic: t.name})
+	if err == nil {
+		return true, nil
+	}
+	if grpc.Code(err) == codes.NotFound {
+		return false, nil
+	}
+	return false, err
 }
 
+// IAM returns the topic's IAM handle.
 func (t *Topic) IAM() *iam.Handle {
-	return t.s.iamHandle(t.name)
+	return iam.InternalNewHandle(t.c.pubc.Connection(), t.name)
 }
 
 // Subscriptions returns an iterator which returns the subscriptions for this topic.
+//
+// Some of the returned subscriptions may belong to a project other than t.
 func (t *Topic) Subscriptions(ctx context.Context) *SubscriptionIterator {
-	// NOTE: zero or more Subscriptions that are ultimately returned by this
-	// Subscriptions iterator may belong to a different project to t.
+	it := t.c.pubc.ListTopicSubscriptions(ctx, &pb.ListTopicSubscriptionsRequest{
+		Topic: t.name,
+	})
 	return &SubscriptionIterator{
-		s:    t.s,
-		next: t.s.listTopicSubscriptions(ctx, t.name),
+		c:    t.c,
+		next: it.Next,
 	}
 }
 
@@ -234,9 +342,6 @@ func (t *Topic) Publish(ctx context.Context, msg *Message) *PublishResult {
 
 	// TODO(jba) [from bcmills] consider using a shared channel per bundle
 	// (requires Bundler API changes; would reduce allocations)
-	// The call to Add should never return an error because the bundler's
-	// BufferedByteLimit is set to maxInt; we do not perform any flow
-	// control in the client.
 	err := t.bundler.Add(&bundledMessage{msg, r}, msg.size)
 	if err != nil {
 		r.set("", err)
@@ -244,7 +349,7 @@ func (t *Topic) Publish(ctx context.Context, msg *Message) *PublishResult {
 	return r
 }
 
-// Send all remaining published messages and stop goroutines created for handling
+// Stop sends all remaining published messages and stop goroutines created for handling
 // publishing. Returns once all outstanding messages have been sent or have
 // failed to be sent.
 func (t *Topic) Stop() {
@@ -256,10 +361,6 @@ func (t *Topic) Stop() {
 		return
 	}
 	t.bundler.Flush()
-	// At this point, all pending bundles have been published and the bundler's
-	// goroutines have exited, so it is OK for this goroutine to close bundlec.
-	close(t.bundlec)
-	t.wg.Wait()
 }
 
 // A PublishResult holds the result from a call to Publish.
@@ -315,32 +416,16 @@ func (t *Topic) initBundler() {
 		return
 	}
 
-	// TODO(jba): use a context detached from the one passed to NewClient.
-	ctx := context.TODO()
-	// Unless overridden, run several goroutines per CPU to call the Publish RPC.
-	n := t.PublishSettings.NumGoroutines
-	if n <= 0 {
-		n = 25 * runtime.GOMAXPROCS(0)
-	}
 	timeout := t.PublishSettings.Timeout
-	t.wg.Add(n)
-	for i := 0; i < n; i++ {
-		go func() {
-			defer t.wg.Done()
-			for b := range t.bundlec {
-				bctx := ctx
-				cancel := func() {}
-				if timeout != 0 {
-					bctx, cancel = context.WithTimeout(ctx, timeout)
-				}
-				t.publishMessageBundle(bctx, b)
-				cancel()
-			}
-		}()
-	}
 	t.bundler = bundler.NewBundler(&bundledMessage{}, func(items interface{}) {
-		t.bundlec <- items.([]*bundledMessage)
-
+		// TODO(jba): use a context detached from the one passed to NewClient.
+		ctx := context.TODO()
+		if timeout != 0 {
+			var cancel func()
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
+		t.publishMessageBundle(ctx, items.([]*bundledMessage))
 	})
 	t.bundler.DelayThreshold = t.PublishSettings.DelayThreshold
 	t.bundler.BundleCountThreshold = t.PublishSettings.CountThreshold
@@ -348,21 +433,41 @@ func (t *Topic) initBundler() {
 		t.bundler.BundleCountThreshold = MaxPublishRequestCount
 	}
 	t.bundler.BundleByteThreshold = t.PublishSettings.ByteThreshold
-	t.bundler.BufferedByteLimit = maxInt
+
+	bufferedByteLimit := DefaultPublishSettings.BufferedByteLimit
+	if t.PublishSettings.BufferedByteLimit > 0 {
+		bufferedByteLimit = t.PublishSettings.BufferedByteLimit
+	}
+	t.bundler.BufferedByteLimit = bufferedByteLimit
+
 	t.bundler.BundleByteLimit = MaxPublishRequestBytes
+	// Unless overridden, allow many goroutines per CPU to call the Publish RPC concurrently.
+	// The default value was determined via extensive load testing (see the loadtest subdirectory).
+	if t.PublishSettings.NumGoroutines > 0 {
+		t.bundler.HandlerLimit = t.PublishSettings.NumGoroutines
+	} else {
+		t.bundler.HandlerLimit = 25 * runtime.GOMAXPROCS(0)
+	}
 }
 
 func (t *Topic) publishMessageBundle(ctx context.Context, bms []*bundledMessage) {
-	msgs := make([]*Message, len(bms))
+	pbMsgs := make([]*pb.PubsubMessage, len(bms))
 	for i, bm := range bms {
-		msgs[i], bm.msg = bm.msg, nil // release bm.msg for GC
+		pbMsgs[i] = &pb.PubsubMessage{
+			Data:       bm.msg.Data,
+			Attributes: bm.msg.Attributes,
+		}
+		bm.msg = nil // release bm.msg for GC
 	}
-	ids, err := t.s.publishMessages(ctx, t.name, msgs)
+	res, err := t.c.pubc.Publish(ctx, &pb.PublishRequest{
+		Topic:    t.name,
+		Messages: pbMsgs,
+	}, gax.WithGRPCOptions(grpc.MaxCallSendMsgSize(maxSendRecvBytes)))
 	for i, bm := range bms {
 		if err != nil {
 			bm.res.set("", err)
 		} else {
-			bm.res.set(ids[i], nil)
+			bm.res.set(res.MessageIds[i], nil)
 		}
 	}
 }
