@@ -100,6 +100,13 @@ webhookRelay:
     tag: latest
     pullPolicy: IfNotPresent
 
+# Use a secret file to define passwords and tokens of third parties.
+secret:
+  # Leave blank to use `keel.fullname`
+  name: ""
+  # Set to false to manage your own secret file, with terraform for example.
+  create: true
+
 # Keel self-update
 # uncomment lines below if you want Keel to automaticly
 # self-update to the latest release version
