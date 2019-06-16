@@ -4,8 +4,8 @@
 
 image:
   repository: keelhq/keel
-  tag: 0.14.3-rc1
-  pullPolicy: IfNotPresent
+  tag: 0.15.0-rc1
+  pullPolicy: Always
 
 # Enable insecure registries
 insecureRegistry: false
@@ -116,7 +116,7 @@ secret:
 # self-update to the latest release version
 keel:
   # keel policy (all/major/minor/patch/force)
-  policy: all
+  policy: patch
   # trigger type, defaults to events such as pubsub, webhooks
   trigger: poll
   # polling schedule
