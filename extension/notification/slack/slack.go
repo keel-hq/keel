@@ -58,26 +58,29 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		"channels": s.channels,
 	}).Info("extension.notification.slack: sender configured")
 
-	var msg string
-	if version.GetKeelVersion().Version != "" {
-		msg = fmt.Sprintf("Keel has started. Version: '%s'. Revision: %s", version.GetKeelVersion().Version, version.GetKeelVersion().Revision)
-	} else {
-		msg = fmt.Sprintf("Keel has started. Revision: %s", version.GetKeelVersion().Revision)
-	}
+	if os.Getenv("DEBUG") != "" {
+		var msg string
+		if version.GetKeelVersion().Version != "" {
+			msg = fmt.Sprintf("Keel has started. Version: '%s'. Revision: %s", version.GetKeelVersion().Version, version.GetKeelVersion().Revision)
+		} else {
+			msg = fmt.Sprintf("Keel has started. Revision: %s", version.GetKeelVersion().Revision)
+		}
 
-	err := s.Send(types.EventNotification{
-		Message:   msg,
-		CreatedAt: time.Now(),
-		Type:      types.NotificationSystemEvent,
-		Level:     types.LevelInfo,
-		Channels:  s.channels,
-	})
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error":    err,
-			"name":     "slack",
-			"channels": s.channels,
-		}).Error("extension.notification.slack: failed to set greeting message")
+		err := s.Send(types.EventNotification{
+			Message:   msg,
+			CreatedAt: time.Now(),
+			Type:      types.NotificationSystemEvent,
+			Level:     types.LevelInfo,
+			Channels:  s.channels,
+		})
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":    err,
+				"name":     "slack",
+				"channels": s.channels,
+			}).Error("extension.notification.slack: failed to set greeting message")
+		}
+
 	}
 
 	return true, nil
