@@ -102,7 +102,7 @@ func main() {
 		"arch":       ver.Arch,
 	}).Info("keel starting...")
 
-	if os.Getenv(EnvDebug) != "" {
+	if os.Getenv(EnvDebug) == "true" {
 		log.SetLevel(log.DebugLevel)
 	}
 
