@@ -19,6 +19,10 @@
   <a href="https://drone-kr.webrelay.io/keel-hq/keel">
     <img src="https://drone-kr.webrelay.io/api/badges/keel-hq/keel/status.svg" alt="Drone Status">
   </a>
+  
+  <a href="https://www.boss.dev/issues/repo/keel-hq/keel">
+    <img src="https://img.shields.io/endpoint.svg?url=https://api.boss.dev/badge/enabled/keel-hq/keel&style=flat" alt="Boss Bounty Badge">
+  </a> 
 </p>
 
 # Keel - automated Kubernetes deployments for the rest of us
