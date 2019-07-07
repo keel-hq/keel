@@ -18,7 +18,6 @@ import (
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/bot"
 
-	// "github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/pkg/auth"
 	"github.com/keel-hq/keel/pkg/http"
 	"github.com/keel-hq/keel/pkg/store"
@@ -191,9 +190,7 @@ func main() {
 	k8s.WatchDaemonSets(&g, implementer.Client(), wl, buf)
 	k8s.WatchCronJobs(&g, implementer.Client(), wl, buf)
 
-	// approvalsCache := memory.NewMemoryCache()
 	approvalsManager := approvals.New(&approvals.Opts{
-		// Cache: approvalsCache,
 		Store: sqlStore,
 	})
 
@@ -227,7 +224,6 @@ func main() {
 	credentialshelper.RegisterCredentialsHelper("secrets", ch)
 
 	// trigger setup
-	// teardownTriggers := setupTriggers(ctx, providers, approvalsManager, &t.GenericResourceCache, implementer)
 	teardownTriggers := setupTriggers(ctx, &TriggerOpts{
 		providers:        providers,
 		approvalsManager: approvalsManager,
@@ -356,7 +352,6 @@ type TriggerOpts struct {
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
 // should go through all providers (or not if there is a reason) and submit events)
-// func setupTriggers(ctx context.Context, providers provider.Providers, approvalsManager approvals.Manager, grc *k8s.GenericResourceCache, k8sClient kubernetes.Implementer) (teardown func()) {
 func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 
 	authenticator := auth.New(&auth.Opts{
