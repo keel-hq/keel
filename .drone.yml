@@ -17,7 +17,7 @@ steps:
     K8S_VERSION: v1.11.3
   commands:
     - echo "Get kind binary..."   
-    - curl -Lo kind https://storage.googleapis.com/rimusz-ci-artifacts/kind && chmod +x kind && sudo mv kind /usr/local/bin/
+    - curl -Lo kind https://storage.googleapis.com/rimusz-ci-artifacts/kind && chmod +x kind && mv kind /usr/local/bin/
     - echo "Download kubectl..."
     - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${K8S_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
     - echo
