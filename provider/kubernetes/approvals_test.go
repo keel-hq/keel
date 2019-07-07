@@ -52,7 +52,8 @@ func TestCheckRequestedApproval(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	approver := approver()
+	approver, teardown := approver()
+	defer teardown()
 	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
@@ -127,7 +128,8 @@ func TestCheckRequestedApprovalAnnotation(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	approver := approver()
+	approver, teardown := approver()
+	defer teardown()
 	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
@@ -204,7 +206,8 @@ func TestApprovedCheck(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	approver := approver()
+	approver, teardown := approver()
+	defer teardown()
 	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
@@ -284,7 +287,8 @@ func TestApprovalsCleanup(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	approver := approver()
+	approver, teardown := approver()
+	defer teardown()
 	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
@@ -331,7 +335,8 @@ func TestApprovalsCleanup(t *testing.T) {
 		t.Fatalf("failed to get a list of approvals: %s", err)
 	}
 
-	if len(approvals) != 0 {
-		t.Errorf("expected to find 0 but found %d", len(approvals))
+	if len(approvals) != 1 && !approvals[0].Archived {
+		t.Errorf("expected to find 1 archived approval but found %d", len(approvals))
+		t.Logf("approval status: %v, identifier: %s", approvals[0].Archived, approvals[0].Identifier)
 	}
 }

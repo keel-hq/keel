@@ -329,7 +329,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 				"name":      resource.Name,
 				"kind":      resource.Kind(),
 				"namespace": resource.Namespace,
-			}).Warn("provider.kubernetes: got error while resetting approvals counter after successful update")
+			}).Warn("provider.kubernetes: got error while archiving approvals counter after successful update")
 		}
 
 		var msg string
@@ -340,7 +340,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", "))
 		}
 
-		p.sender.Send(types.EventNotification{
+		err = p.sender.Send(types.EventNotification{
 			ResourceKind: resource.Kind(),
 			Identifier:   resource.Identifier,
 			Name:         "update resource",
@@ -355,6 +355,16 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 				"name":      resource.GetName(),
 			},
 		})
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":     err,
+				"name":      resource.Name,
+				"kind":      resource.Kind(),
+				"previous":  plan.CurrentVersion,
+				"new":       plan.NewVersion,
+				"namespace": resource.Namespace,
+			}).Error("provider.kubernetes: got error while sending notification")
+		}
 
 		log.WithFields(log.Fields{
 			"name":      resource.Name,
