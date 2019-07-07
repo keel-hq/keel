@@ -7,12 +7,37 @@ workspace:
 
 steps:
 - name: unit-test
-  image: golang:1.12.0
+  image: golang:1.12.5
   commands:
     - make test
 
+- name: e2e-test
+  image: golang:1.12.5
+  environment:
+    K8S_VERSION: v1.11.3
+  commands:
+    - echo "Get kind binary..."   
+    - curl -Lo kind https://storage.googleapis.com/rimusz-ci-artifacts/kind && chmod +x kind && sudo mv kind /usr/local/bin/
+    - echo "Download kubectl..."
+    - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${K8S_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+    - echo
+    - echo "Create Kubernetes cluster with kind..."
+    - kind create cluster --image=kindest/node:"$K8S_VERSION"
+    - echo "Export kubeconfig..."
+    # shellcheck disable=SC2155
+    - export KUBECONFIG="$(kind get kubeconfig-path)"
+    - echo
+    - echo "Ensure the apiserver is responding..."
+    - kubectl cluster-info
+    - echo
+    - echo "Wait for Kubernetes to be up and ready..."
+    - JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
+    - echo
+    - echo "Starting end-to-end tests"
+    - make e2e
+
 - name: build
-  image: golang:1.12.0
+  image: golang:1.12.5
   commands:
     - make install
 
