@@ -45,7 +45,8 @@ arm: build-binaries	compress fetch-certs armhf aarch64
 
 test:
 	go get github.com/mfridman/tparse
-	go test -json -v `go list ./... | egrep -v /tests` -cover | tparse -all -smallscreen
+	go test -json -v `go list ./... | egrep -v /tests` -cover > fmt.out
+	tparse -all -smallscreen fmt.out
 
 build:
 	@echo "++ Building keel"
