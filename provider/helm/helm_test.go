@@ -1,14 +1,18 @@
 package helm
 
 import (
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/ghodss/yaml"
 	"github.com/keel-hq/keel/approvals"
-	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/internal/policy"
+	"github.com/keel-hq/keel/pkg/store/sql"
 	"github.com/keel-hq/keel/types"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/helm"
@@ -17,10 +21,30 @@ import (
 	rls "k8s.io/helm/pkg/proto/hapi/services"
 )
 
-func approver() *approvals.DefaultManager {
-	cache := memory.NewMemoryCache()
+func newTestingUtils() (*sql.SQLStore, func()) {
+	dir, err := ioutil.TempDir("", "whstoretest")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tmpfn := filepath.Join(dir, "gorm.db")
+	// defer
+	store, err := sql.New(sql.Opts{DatabaseType: "sqlite3", URI: tmpfn})
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	return approvals.New(cache)
+	teardown := func() {
+		os.RemoveAll(dir) // clean up
+	}
+
+	return store, teardown
+}
+
+func approver() (*approvals.DefaultManager, func()) {
+	store, teardown := newTestingUtils()
+	return approvals.New(&approvals.Opts{
+		Store: store,
+	}), teardown
 }
 
 type fakeSender struct {
@@ -221,7 +245,9 @@ keel:
 		},
 	}
 
-	prov := NewProvider(fakeImpl, &fakeSender{}, approver())
+	approver, teardown := approver()
+	defer teardown()
+	prov := NewProvider(fakeImpl, &fakeSender{}, approver)
 
 	tracked, _ := prov.TrackedImages()
 
@@ -262,7 +288,9 @@ image2:
 		},
 	}
 
-	prov := NewProvider(fakeImpl, &fakeSender{}, approver())
+	approver, teardown := approver()
+	defer teardown()
+	prov := NewProvider(fakeImpl, &fakeSender{}, approver)
 
 	tracked, _ := prov.TrackedImages()
 
@@ -311,7 +339,9 @@ keel:
 		},
 	}
 
-	prov := NewProvider(fakeImpl, &fakeSender{}, approver())
+	approver, teardown := approver()
+	defer teardown()
+	prov := NewProvider(fakeImpl, &fakeSender{}, approver)
 
 	tracked, _ := prov.TrackedImages()
 
@@ -379,7 +409,6 @@ func TestGetImagesFromConfig(t *testing.T) {
 }
 
 func TestUpdateRelease(t *testing.T) {
-	// imp := NewHelmImplementer("192.168.99.100:30083")
 
 	chartVals := `
 name: al Rashid
@@ -414,7 +443,9 @@ keel:
 		},
 	}
 
-	provider := NewProvider(fakeImpl, &fakeSender{}, approver())
+	approver, teardown := approver()
+	defer teardown()
+	provider := NewProvider(fakeImpl, &fakeSender{}, approver)
 
 	err := provider.processEvent(&types.Event{
 		Repository: types.Repository{

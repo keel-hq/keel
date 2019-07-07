@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/keel-hq/keel/approvals"
-	"github.com/keel-hq/keel/cache/memory"
+	// "github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/types"
@@ -27,8 +27,12 @@ func TestWatchMultipleTagsWithSemver(t *testing.T) {
 			},
 		},
 	}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	// returning some sha
@@ -64,8 +68,12 @@ func TestWatchAllTagsJobWithSemver(t *testing.T) {
 			},
 		},
 	}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -114,8 +122,12 @@ func TestWatchAllTagsPrerelease(t *testing.T) {
 			},
 		},
 	}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -168,8 +180,12 @@ func TestWatchAllTagsMixed(t *testing.T) {
 			},
 		},
 	}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -227,8 +243,12 @@ func TestWatchAllTagsMixedPolicyAll(t *testing.T) {
 			},
 		},
 	}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{

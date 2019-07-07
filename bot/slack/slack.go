@@ -130,7 +130,7 @@ func (b *Bot) startInternal() error {
 			case *slack.PresenceChangeEvent:
 				// nothing to do
 			case *slack.RTMError:
-				log.Error("Error: %s", ev.Error())
+				log.Errorf("Error: %s", ev.Error())
 			case *slack.InvalidAuthEvent:
 				log.Error("Invalid credentials")
 				return fmt.Errorf("invalid credentials")

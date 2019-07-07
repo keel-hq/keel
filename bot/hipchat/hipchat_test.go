@@ -1,7 +1,9 @@
 package hipchat
 
 import (
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -11,7 +13,8 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	b "github.com/keel-hq/keel/bot"
-	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/pkg/store/sql"
+
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/types"
 
@@ -104,12 +107,35 @@ func init() {
 	log.SetLevel(log.DebugLevel)
 }
 
+func newTestingUtils() (*sql.SQLStore, func()) {
+	dir, err := ioutil.TempDir("", "whstoretest")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tmpfn := filepath.Join(dir, "gorm.db")
+	// defer
+	store, err := sql.New(sql.Opts{DatabaseType: "sqlite3", URI: tmpfn})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	teardown := func() {
+		os.RemoveAll(dir) // clean up
+	}
+
+	return store, teardown
+}
+
 func TestHelpCommand(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeXmppImplementer{}
 	fi.messages = make(chan *h.Message)
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
 
 	NewBot(f8s, am, fi)
 	defer b.Stop()
@@ -138,8 +164,11 @@ func TestBotAproval(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeXmppImplementer{}
 	fi.messages = make(chan *h.Message)
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
 
 	NewBot(f8s, am, fi)
 	defer b.Stop()
@@ -200,8 +229,11 @@ func TestBotReject(t *testing.T) {
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeXmppImplementer{}
 	fi.messages = make(chan *h.Message)
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
 
 	NewBot(f8s, am, fi)
 	defer b.Stop()
