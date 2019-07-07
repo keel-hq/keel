@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/keel-hq/keel/approvals"
-	"github.com/keel-hq/keel/cache/memory"
+	// "github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/provider"
@@ -73,8 +73,12 @@ func (p *fakeProvider) TrackedImages() ([]*types.TrackedImage, error) {
 func TestWatchTagJob(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -120,8 +124,12 @@ func TestWatchTagJob(t *testing.T) {
 func TestWatchTagJobLatest(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -175,8 +183,12 @@ func TestWatchAllTagsJob(t *testing.T) {
 			},
 		},
 	}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -215,8 +227,12 @@ func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
 			},
 		},
 	}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -282,8 +298,12 @@ func TestWatchMultipleTags(t *testing.T) {
 			},
 		},
 	}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	// returning some sha
@@ -358,8 +378,12 @@ func TestWatchTagJobCheckCredentials(t *testing.T) {
 	defer credentialshelper.UnregisterCredentialsHelper("fake")
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	frc := &fakeRegistryClient{
@@ -407,8 +431,12 @@ func TestWatchTagJobLatestECR(t *testing.T) {
 		},
 	}
 
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 	rc := registry.New()
 
@@ -450,8 +478,12 @@ func TestWatchTagJobLatestECR(t *testing.T) {
 
 func TestUnwatchAfterNotTrackedAnymore(t *testing.T) {
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	// returning some sha

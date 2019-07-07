@@ -1,12 +1,16 @@
 package kubernetes
 
 import (
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/keel-hq/keel/approvals"
-	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/internal/k8s"
+	"github.com/keel-hq/keel/pkg/store/sql"
 	"github.com/keel-hq/keel/types"
 
 	apps_v1 "k8s.io/api/apps/v1"
@@ -107,9 +111,30 @@ func (s *fakeSender) Send(event types.EventNotification) error {
 	return nil
 }
 
-func approver() *approvals.DefaultManager {
-	cache := memory.NewMemoryCache()
-	return approvals.New(cache)
+func NewTestingUtils() (*sql.SQLStore, func()) {
+	dir, err := ioutil.TempDir("", "whstoretest")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tmpfn := filepath.Join(dir, "gorm.db")
+	// defer
+	store, err := sql.New(sql.Opts{DatabaseType: "sqlite3", URI: tmpfn})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	teardown := func() {
+		os.RemoveAll(dir) // clean up
+	}
+
+	return store, teardown
+}
+
+func approver() (*approvals.DefaultManager, func()) {
+	store, teardown := NewTestingUtils()
+	return approvals.New(&approvals.Opts{
+		Store: store,
+	}), teardown
 }
 
 func TestGetNamespaces(t *testing.T) {
@@ -128,7 +153,9 @@ func TestGetNamespaces(t *testing.T) {
 
 	grc := &k8s.GenericResourceCache{}
 
-	provider, err := NewProvider(fi, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fi, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -232,7 +259,9 @@ func TestGetImpacted(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -328,7 +357,9 @@ func TestGetImpactedPolicyAnnotations(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -428,7 +459,9 @@ func TestPrereleaseGetImpactedA(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -518,7 +551,9 @@ func TestPrereleaseGetImpactedB(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -644,8 +679,9 @@ func TestProcessEvent(t *testing.T) {
 	grs := MustParseGRS(deps)
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
-
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -710,7 +746,9 @@ func TestProcessEventBuildNumber(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -772,7 +810,9 @@ func TestEventSent(t *testing.T) {
 	grc.Add(grs...)
 
 	fs := &fakeSender{}
-	provider, err := NewProvider(fp, fs, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, fs, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -838,7 +878,9 @@ func TestEventSentWithReleaseNotes(t *testing.T) {
 	grc.Add(grs...)
 
 	fs := &fakeSender{}
-	provider, err := NewProvider(fp, fs, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, fs, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -856,6 +898,10 @@ func TestEventSentWithReleaseNotes(t *testing.T) {
 
 	if fp.updated.Containers()[0].Image != repo.Name+":"+repo.Tag {
 		t.Errorf("expected to find a deployment with updated image but found: %s", fp.updated.Containers()[0].Image)
+	}
+
+	if fs.sentEvent.Level != types.LevelSuccess {
+		t.Errorf("expected level %s, got: %s", types.LevelSuccess, fs.sentEvent.Level)
 	}
 
 	if fs.sentEvent.Message != "Successfully updated deployment xxxx/deployment-1 10.0.0->11.0.0 (gcr.io/v2-namespace/hello-world:11.0.0). Release notes: https://github.com/keel-hq/keel/releases" {
@@ -926,7 +972,9 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -1027,7 +1075,9 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -1123,7 +1173,9 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -1220,7 +1272,9 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -1302,7 +1356,9 @@ func TestTrackedImages(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}
@@ -1367,7 +1423,9 @@ func TestTrackedImagesWithSecrets(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	grc.Add(grs...)
 
-	provider, err := NewProvider(fp, &fakeSender{}, approver(), grc)
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
 	if err != nil {
 		t.Fatalf("failed to get provider: %s", err)
 	}

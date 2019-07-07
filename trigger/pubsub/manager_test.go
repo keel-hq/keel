@@ -1,19 +1,42 @@
 package pubsub
 
 import (
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"golang.org/x/net/context"
 
 	"github.com/keel-hq/keel/approvals"
-	"github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/pkg/store/sql"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
 	"testing"
 )
+
+func newTestingUtils() (*sql.SQLStore, func()) {
+	dir, err := ioutil.TempDir("", "whstoretest")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tmpfn := filepath.Join(dir, "gorm.db")
+	// defer
+	store, err := sql.New(sql.Opts{DatabaseType: "sqlite3", URI: tmpfn})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	teardown := func() {
+		os.RemoveAll(dir) // clean up
+	}
+
+	return store, teardown
+}
 
 type fakeSubscriber struct {
 	TimesSubscribed     int
@@ -66,8 +89,12 @@ func TestCheckDeployment(t *testing.T) {
 		},
 	}
 
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
 	providers := provider.New([]provider.Provider{fp}, am)
 
 	fs := &fakeSubscriber{}

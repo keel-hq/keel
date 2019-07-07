@@ -2,17 +2,22 @@ package slack
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/nlopes/slack"
 
 	"github.com/keel-hq/keel/extension/approval"
+	"github.com/keel-hq/keel/pkg/store/sql"
 	"github.com/keel-hq/keel/provider/kubernetes"
 
 	"github.com/keel-hq/keel/approvals"
 	b "github.com/keel-hq/keel/bot"
-	"github.com/keel-hq/keel/cache/memory"
+
+	// "github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/types"
 
@@ -83,20 +88,42 @@ func (i *fakeSlackImplementer) PostMessage(channelID string, options ...slack.Ms
 	return "", "", nil
 }
 
+func newTestingUtils() (*sql.SQLStore, func()) {
+	dir, err := ioutil.TempDir("", "whstoretest")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tmpfn := filepath.Join(dir, "gorm.db")
+	// defer
+	store, err := sql.New(sql.Opts{DatabaseType: "sqlite3", URI: tmpfn})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	teardown := func() {
+		os.RemoveAll(dir) // clean up
+	}
+
+	return store, teardown
+}
+
 func TestBotRequest(t *testing.T) {
 
 	os.Setenv(constants.EnvSlackToken, "")
 
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache()
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {
 		t.Skip()
 	}
 
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
 
 	New("keel", token, "approvals", f8s, am, fi)
 	defer b.Stop()
@@ -133,14 +160,17 @@ func TestProcessApprovedResponse(t *testing.T) {
 
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache()
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {
 		t.Skip()
 	}
 
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
 
 	New("keel", token, "approvals", f8s, am, fi)
 	defer b.Stop()
@@ -177,14 +207,17 @@ func TestProcessApprovalReply(t *testing.T) {
 
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache()
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {
 		t.Skip()
 	}
 
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
 
 	identifier := "k8s/project/repo:1.2.3"
 
@@ -245,7 +278,6 @@ func TestProcessRejectedReply(t *testing.T) {
 
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
-	mem := memory.NewMemoryCache()
 
 	token := os.Getenv(constants.EnvSlackToken)
 	if token == "" {
@@ -254,7 +286,11 @@ func TestProcessRejectedReply(t *testing.T) {
 
 	identifier := "k8s/project/repo:1.2.3"
 
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
 	// creating initial approve request
 	err := am.Create(&types.Approval{
 		Identifier:     identifier,
@@ -314,30 +350,7 @@ func TestProcessRejectedReply(t *testing.T) {
 }
 
 func TestIsApproval(t *testing.T) {
-	// f8s := &testutil.FakeK8sImplementer{}
-	// mem := memory.NewMemoryCache(100*time.Hour, 100*time.Hour, 100*time.Hour)
-	//
-	// identifier := "k8s/project/repo:1.2.3"
-	//
-	// am := approvals.New(mem)
-	// // creating initial approve request
-	// err := am.Create(&types.Approval{
-	// 	Identifier:     identifier,
-	// 	VotesRequired:  2,
-	// 	CurrentVersion: "2.3.4",
-	// 	NewVersion:     "3.4.5",
-	// 	Event: &types.Event{
-	// 		Repository: types.Repository{
-	// 			Name: "project/repo",
-	// 			Tag:  "2.3.4",
-	// 		},
-	// 	},
-	// })
-	//
-	// if err != nil {
-	// 	t.Fatalf("unexpected error while creating : %s", err)
-	// }
-	// bot := New("keel", "random", "approvals", f8s, am, fi)
+	
 	event := &slack.MessageEvent{
 		Msg: slack.Msg{
 			Channel: "approvals",

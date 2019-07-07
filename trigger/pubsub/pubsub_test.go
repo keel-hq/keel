@@ -7,7 +7,6 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/keel-hq/keel/approvals"
-	"github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/provider"
 
 	"testing"
@@ -23,8 +22,11 @@ func fakeDoneFunc(id string, done bool) {
 func TestCallback(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
 	providers := provider.New([]provider.Provider{fp}, am)
 	sub := &PubsubSubscriber{disableAck: true, providers: providers}
 
@@ -50,8 +52,11 @@ func TestCallback(t *testing.T) {
 func TestCallbackTagNotSemver(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
 	providers := provider.New([]provider.Provider{fp}, am)
 	sub := &PubsubSubscriber{disableAck: true, providers: providers}
 
@@ -78,8 +83,11 @@ func TestCallbackTagNotSemver(t *testing.T) {
 func TestCallbackNoTag(t *testing.T) {
 
 	fp := &fakeProvider{}
-	mem := memory.NewMemoryCache()
-	am := approvals.New(mem)
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
 	providers := provider.New([]provider.Provider{fp}, am)
 	sub := &PubsubSubscriber{disableAck: true, providers: providers}
 
