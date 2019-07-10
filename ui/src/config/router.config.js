@@ -24,7 +24,7 @@ export const asyncRouterMap = [
         path: '/tracked-images',
         name: 'tracked',
         hideChildrenInMenu: true,
-        meta: { title: 'Tacked Images', keepAlive: true, icon: 'reconciliation', permission: [ 'dashboard' ], auth: true },
+        meta: { title: 'Tracked Images', keepAlive: true, icon: 'reconciliation', permission: [ 'dashboard' ], auth: true },
         component: () => import('@/views/tracked/TrackedImageList')
       },
 
@@ -76,7 +76,7 @@ export const constantRouterMap = [
   //       path: '/tracked-images',
   //       name: 'tracked',
   //       hideChildrenInMenu: true,
-  //       meta: { title: 'Tacked Images', keepAlive: true, icon: 'reconciliation', permission: [ 'dashboard' ], auth: true },
+  //       meta: { title: 'Tracked Images', keepAlive: true, icon: 'reconciliation', permission: [ 'dashboard' ], auth: true },
   //       component: () => import('@/views/tracked/TrackedImageList')
   //     },
 
