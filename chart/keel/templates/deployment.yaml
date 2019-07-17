@@ -135,7 +135,7 @@ spec:
 {{- if .Values.debug }}
             # Enable debug logging
             - name: DEBUG
-              value: "1"
+              value: "true"
 {{- end }}
 {{- if .Values.insecureRegistry }}
             # Enable insecure registries
