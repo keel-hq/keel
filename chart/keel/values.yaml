@@ -21,7 +21,7 @@ helmProvider:
   tillerNamespace: "kube-system"
   # optional Tiller address (if portforwarder tunnel doesn't work),
   # if you are using default configuration, setting it to
-  # 'tiller-deploy.tiller.svc.cluster.local:44134' is usually fine
+  # 'tiller-deploy:44134' is usually fine
   tillerAddress: ''
 
 # Google Container Registry
