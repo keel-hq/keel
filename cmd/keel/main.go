@@ -48,6 +48,7 @@ import (
 
 	// credentials helpers
 	_ "github.com/keel-hq/keel/extension/credentialshelper/aws"
+	_ "github.com/keel-hq/keel/extension/credentialshelper/gcr"
 	secretsCredentialsHelper "github.com/keel-hq/keel/extension/credentialshelper/secrets"
 
 	// bots
