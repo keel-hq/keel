@@ -46,7 +46,7 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 	}
 
 	if image.Image.Registry() != "gcr.io" {
-		return nil, nil
+		return nil, credentialshelper.ErrUnsupportedRegistry
 	}
 
 	return &types.Credentials{
