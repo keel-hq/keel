@@ -88,6 +88,7 @@ func GetCredentials(image *types.TrackedImage) (creds *types.Credentials) {
 						"tracked_image": image,
 					}).Debug("extension.credentialshelper: credentials not found")
 				}
+				return &types.Credentials{}
 			} else {
 				return creds
 			}
