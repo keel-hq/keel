@@ -9,6 +9,7 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/pkg/store/sql"
+
 	// "github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
