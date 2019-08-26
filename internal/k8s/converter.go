@@ -2,6 +2,7 @@ package k8s
 
 import (
 	apps_v1 "k8s.io/api/apps/v1"
+	batch_v1 "k8s.io/api/batch/v1"
 	v1beta1 "k8s.io/api/batch/v1beta1"
 	core_v1 "k8s.io/api/core/v1"
 )
@@ -60,4 +61,14 @@ func getCronJobIdentifier(s *v1beta1.CronJob) string {
 
 func updateCronJobContainer(s *v1beta1.CronJob, index int, image string) {
 	s.Spec.JobTemplate.Spec.Template.Spec.Containers[index].Image = image
+}
+
+// jobs
+
+func getJobIdentifier(s *batch_v1.Job) string {
+	return "job/" + s.Namespace + "/" + s.Name
+}
+
+func updateJobContainer(s *batch_v1.Job, index int, image string) {
+	s.Spec.Template.Spec.Containers[index].Image = image
 }
