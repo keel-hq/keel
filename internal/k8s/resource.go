@@ -332,7 +332,7 @@ func (r *GenericResource) UpdateContainer(index int, image string) {
 	case *v1beta1.CronJob:
 		updateCronJobContainer(obj, index, image)
 	case *batch_v1.Job:
-		updateCronJobContainer(obj, index, image)
+		updateJobContainer(obj, index, image)
 	}
 }
 
