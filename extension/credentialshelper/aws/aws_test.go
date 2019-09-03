@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"os"
 	"testing"
 
 	"github.com/keel-hq/keel/registry"
@@ -9,6 +10,10 @@ import (
 )
 
 func TestAWS(t *testing.T) {
+
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
+		t.Skip()
+	}
 
 	ch := New()
 
@@ -42,6 +47,10 @@ func TestAWS(t *testing.T) {
 }
 
 func TestCredentialsCaching(t *testing.T) {
+
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
+		t.Skip()
+	}
 
 	ch := New()
 
