@@ -45,9 +45,11 @@ type CredentialsHelper struct {
 
 // New creates a new instance of aws credentials helper
 func New() *CredentialsHelper {
-	ch := &CredentialsHelper{}
-	ch.enabled = true
-	ch.cache = NewCache(AWSCredentialsExpiry)
+	ch := &CredentialsHelper{
+		enabled: true,
+		cache:   NewCache(AWSCredentialsExpiry),
+	}
+
 	return ch
 }
 
@@ -70,14 +72,14 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 		return nil, err
 	}
 
+	// set region
+	sess := newAwsSession(region)
+	svc := ecr.New(sess)
+
 	cached, err := h.cache.Get(registry)
 	if err == nil {
 		return cached, nil
 	}
-	// fetch region from registry instead of env
-	svc := ecr.New(session.New(), &aws.Config{
-		Region: aws.String(region),
-	})
 
 	input := &ecr.GetAuthorizationTokenInput{}
 
@@ -133,6 +135,14 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 	}
 
 	return nil, fmt.Errorf("not found")
+}
+
+func newAwsSession(region string) *session.Session {
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String(region),
+	}))
+
+	return sess
 }
 
 func decodeBase64Secret(authSecret string) (username, password string, err error) {

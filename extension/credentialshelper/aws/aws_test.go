@@ -1,7 +1,6 @@
 package aws
 
 import (
-	"os"
 	"testing"
 
 	"github.com/keel-hq/keel/registry"
@@ -10,10 +9,6 @@ import (
 )
 
 func TestAWS(t *testing.T) {
-
-	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		t.Skip()
-	}
 
 	ch := New()
 
@@ -48,10 +43,8 @@ func TestAWS(t *testing.T) {
 
 func TestCredentialsCaching(t *testing.T) {
 
-	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		t.Skip()
-	}
 	ch := New()
+
 	imgRef, _ := image.Parse("528670773427.dkr.ecr.us-east-2.amazonaws.com/webhook-demo:master")
 	for i := 0; i < 200; i++ {
 		_, err := ch.GetCredentials(&types.TrackedImage{
