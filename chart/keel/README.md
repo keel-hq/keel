@@ -98,6 +98,7 @@ The following table lists has the main configurable parameters (polling, trigger
 | `slack.approvalsChannel`                    | Slack channel for approvals            |                                                           |
 | `service.enabled`                           | Enable/disable Keel service            | `false`                                                   |
 | `service.type`                              | Keel service type                      | `LoadBalancer`                                            |
+| `service.externalIP`                        | Keel static IP                         |                                                           |
 | `service.externalPort`                      | Keel service port                      | `9300`                                                    |
 | `service.clusterIP`                         | Keel service clusterIP                 |                                                           |
 | `webhookRelay.enabled`                      | Enable/disable WebhookRelay integration| `false`                                                   |

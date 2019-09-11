@@ -18,6 +18,10 @@ spec:
   {{- if .Values.service.clusterIP }}
   clusterIP: {{ .Values.service.clusterIP | quote  }}
   {{- end }}
+  {{- if .Values.service.externalIP }}
+  externalIPs:
+    - {{ .Values.service.externalIP }}
+  {{- end }}
   ports:
     - port: {{ .Values.service.externalPort }}
   {{- if or (ne .Values.service.type "ClusterIP") (ne .Values.service.clusterIP "None") }}
