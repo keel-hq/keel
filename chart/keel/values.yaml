@@ -40,6 +40,7 @@ notificationLevel: info
 # https://keel.sh/v1/guide/documentation.html#Polling-with-AWS-ECR
 ecr:
   enabled: false
+  roleArn: ""
   accessKeyId: ""
   secretAccessKey: ""
   region: ""
