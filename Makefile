@@ -7,6 +7,11 @@ LDFLAGS		+= -X github.com/keel-hq/keel/version.Version=$(VERSION)
 LDFLAGS		+= -X github.com/keel-hq/keel/version.Revision=$(GIT_REVISION)
 LDFLAGS		+= -X github.com/keel-hq/keel/version.BuildDate=$(JOBDATE)
 
+ARMFLAGS		+= -a -v
+ARMFLAGS		+= -X github.com/keel-hq/keel/version.Version=$(VERSION)
+ARMFLAGS		+= -X github.com/keel-hq/keel/version.Revision=$(GIT_REVISION)
+ARMFLAGS		+= -X github.com/keel-hq/keel/version.BuildDate=$(JOBDATE)
+
 .PHONY: release
 
 fetch-certs:
@@ -20,10 +25,12 @@ compress:
 build-binaries:
 	go get github.com/mitchellh/gox
 	@echo "++ Building keel binaries"
-	cd cmd/keel && gox -verbose -output="release/{{.Dir}}-{{.OS}}-{{.Arch}}" \
+	cd cmd/keel && CC=arm-linux-gnueabi-gcc gox -verbose -output="release/{{.Dir}}-{{.OS}}-{{.Arch}}" \
 		-ldflags "$(LDFLAGS)" -osarch="linux/arm"
-	@echo "++ building aarch64 binary"
-	cd cmd/keel && env GOARCH=arm64 GOOS=linux go build -ldflags="-s -w" -o release/keel-linux-aarch64
+
+build-arm:
+	cd cmd/keel && env GOARCH=arm GOOS=linux go build -ldflags="$(ARMFLAGS)" -o release/keel-linux-arm
+	cd cmd/keel && env GOARCH=arm64 GOOS=linux go build -ldflags="$(ARMFLAGS)" -o release/keel-linux-aarc64
 
 armhf-latest:
 	docker build -t keelhq/keel-arm:latest -f Dockerfile.armhf .
@@ -41,7 +48,7 @@ aarch64:
 	docker build -t keelhq/keel-aarch64:$(VERSION) -f Dockerfile.aarch64 .
 	docker push keelhq/keel-aarch64:$(VERSION)
 
-arm: build-binaries	compress fetch-certs armhf aarch64
+arm: build-arm fetch-certs armhf aarch64
 
 test:
 	go get github.com/mfridman/tparse
