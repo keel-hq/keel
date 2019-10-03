@@ -65,15 +65,15 @@ func UnregisterCredentialsHelper(name string) {
 
 // GetCredentials - generic function for getting credentials
 // func (ch *CredentialsHelpers) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
-func GetCredentials(image *types.TrackedImage) (creds *types.Credentials) {
+func GetCredentials(image *types.TrackedImage) *types.Credentials {
 	credHelpersM.RLock()
 	defer credHelpersM.RUnlock()
 
-	creds = &types.Credentials{}
+	creds := &types.Credentials{}
 
 	for name, credHelper := range credHelpers {
 		if credHelper.IsEnabled() {
-			creds, err := credHelper.GetCredentials(image)
+			credsFound, err := credHelper.GetCredentials(image)
 			if err != nil {
 				if err == ErrUnsupportedRegistry {
 					log.WithFields(log.Fields{
@@ -89,12 +89,12 @@ func GetCredentials(image *types.TrackedImage) (creds *types.Credentials) {
 					}).Debug("extension.credentialshelper: credentials not found")
 				}
 			} else {
-				return creds
+				return credsFound
 			}
 		}
 	}
 	log.WithFields(log.Fields{
 		"tracked_image": image,
 	}).Debug("extension.credentialshelper: credentials helper not found")
-	return &types.Credentials{}
+	return creds
 }
