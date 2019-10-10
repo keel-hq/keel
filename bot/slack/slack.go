@@ -147,6 +147,7 @@ func (b *Bot) startInternal() error {
 func (b *Bot) postMessage(title, message, color string, fields []slack.AttachmentField) error {
 	params := slack.NewPostMessageParameters()
 	params.Username = b.name
+	params.IconURL = b.getBotUserIconURL()
 
 	attachements := []slack.Attachment{
 		slack.Attachment{
@@ -293,4 +294,28 @@ func (b *Bot) trimBot(msg string) string {
 
 func formatAsSnippet(response string) string {
 	return "```" + response + "```"
+}
+
+// func (b *Bot) getBotUserInfo() string {
+// 	res, err := b.slackClient.authRequest()
+// 	if err != nil {
+// 		log.WithFields(log.Fields{
+// 			"error":	err,
+// 		}).Error("bot.getBotUserInfo: failed to auth bot")
+// 	}
+
+// 	# PARSE
+// 	return res
+// }
+
+func (b *Bot) getBotUserIconURL() string {
+	res, err := b.slackClient.GetUserInfo(b.id)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":  err,
+			"bot_id": b.id,
+		}).Error("bot.postMessage: failed to retrieve bot user icon url")
+	}
+
+	return res.Profile.ImageOriginal
 }
