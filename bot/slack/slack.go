@@ -296,18 +296,6 @@ func formatAsSnippet(response string) string {
 	return "```" + response + "```"
 }
 
-// func (b *Bot) getBotUserInfo() string {
-// 	res, err := b.slackClient.authRequest()
-// 	if err != nil {
-// 		log.WithFields(log.Fields{
-// 			"error":	err,
-// 		}).Error("bot.getBotUserInfo: failed to auth bot")
-// 	}
-
-// 	# PARSE
-// 	return res
-// }
-
 func (b *Bot) getBotUserIconURL() string {
 	res, err := b.slackClient.GetUserInfo(b.id)
 	if err != nil {
