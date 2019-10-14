@@ -85,6 +85,7 @@ The following table lists has the main configurable parameters (polling, trigger
 | `gcr.projectId`                             | GCP Project ID GCR belongs to          |                                                           |
 | `gcr.pubsub.enabled`                        | Enable/disable GCP Pub/Sub trigger     | `false`                                                   |
 | `ecr.enabled`                               | Enable/disable AWS ECR Registry        | `false`                                                   |
+| `ecr.roleArn`                               | Service Account IAM Role ARN for EKS   |                                                           |
 | `ecr.accessKeyId`                           | AWS_ACCESS_KEY_ID for ECR Registry     |                                                           |
 | `ecr.secretAccessKey`                       | AWS_SECRET_ACCESS_KEY for ECR Registry |                                                           |
 | `ecr.region`                                | AWS_REGION for ECR Registry            |                                                           |
