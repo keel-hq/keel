@@ -7,10 +7,10 @@ Expand the name of the chart.
 {{- end -}}
 
 {{- define "serviceAccount.name" -}}
-{{- if .Values.rbac.serviceAccount.create -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
+{{- if .Values.rbac.serviceAccount.name -}}
 {{- .Values.rbac.serviceAccount.name -}}
+{{- else -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
