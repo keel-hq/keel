@@ -130,6 +130,12 @@ keel:
 # RBAC manifests management
 rbac:
   enabled: true
+  serviceAccount:
+    # Kubernetes service account name to be used for ClusterRoleBinding and Deployment.
+    #name:
+    # Create a new Kubernetes service account automatically. Set to false if you want to use your own service account.
+    # If rbac.serviceAccount.name is not set, a new name for the service account is generated
+    create: true
 
 # Resources
 resources:

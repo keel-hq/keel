@@ -9,6 +9,6 @@ roleRef:
   name: {{ template "keel.name" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ template "keel.name" . }}
+    name: {{ template "serviceAccount.name" . }}
     namespace: {{ .Release.Namespace }}
 {{ end }}
