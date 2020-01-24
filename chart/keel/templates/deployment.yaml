@@ -24,7 +24,7 @@ spec:
 {{ toYaml . | indent 8 }}
 {{- end }}
     spec:
-      serviceAccountName: {{ template "keel.name" . }}
+      serviceAccountName: {{ template "serviceAccount.name" . }}
       containers:
         - name: keel
           # Note that we use appVersion to get images tag.
