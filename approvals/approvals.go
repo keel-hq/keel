@@ -13,6 +13,7 @@ import (
 	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/types"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -89,6 +90,15 @@ func New(opts *Opts) *DefaultManager {
 		mu:         &sync.Mutex{},
 		subMu:      &sync.RWMutex{},
 	}
+
+	prom_pending := prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "keel_pending_approvals",
+		Help: "number of the pending approvals",
+	}, func() float64 {
+		approvals, _ := man.List()
+		return float64(len(approvals))
+	})
+	prometheus.MustRegister(prom_pending)
 
 	return man
 }
