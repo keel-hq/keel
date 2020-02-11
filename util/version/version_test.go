@@ -51,6 +51,12 @@ func TestGetVersionFromImageName(t *testing.T) {
 			want:    nil,
 			wantErr: true,
 		},
+		{
+			name:    "image webhookrelay with rc",
+			args:    args{name: "gcr.io/webhookrelay/webhookrelay:0.9.0-rc5"},
+			want:    MustParse("0.9.0-rc5"),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -140,15 +146,62 @@ func TestLowest(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "thre semvers",
+			name: "three semvers",
 			args: args{tags: []string{"5.0.0", "1.0.0", "3.0.0"}},
 			want: "1.0.0",
+		},
+		{
+			name: "rc candidates",
+			args: args{tags: []string{"0.15.1", "0.9.0-rc5", "0.14.0"}},
+			// rc will be skipped altogether
+			want: "0.14.0",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := Lowest(tt.args.tags); got != tt.want {
 				t.Errorf("Lowest() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewAvailable(t *testing.T) {
+	type args struct {
+		current         string
+		tags            []string
+		matchPreRelease bool
+	}
+	tests := []struct {
+		name             string
+		args             args
+		wantNewVersion   string
+		wantNewAvailable bool
+		wantErr          bool
+	}{
+		{
+			name: "test with pre-release",
+			args: args{
+				current: "0.15.0",
+				tags:    []string{"0.15.0", "0.9.0-rc5"},
+			},
+			wantNewVersion:   "",
+			wantNewAvailable: false,
+			wantErr:          false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotNewVersion, gotNewAvailable, err := NewAvailable(tt.args.current, tt.args.tags, tt.args.matchPreRelease)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewAvailable() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotNewVersion != tt.wantNewVersion {
+				t.Errorf("NewAvailable() gotNewVersion = %v, want %v", gotNewVersion, tt.wantNewVersion)
+			}
+			if gotNewAvailable != tt.wantNewAvailable {
+				t.Errorf("NewAvailable() gotNewAvailable = %v, want %v", gotNewAvailable, tt.wantNewAvailable)
 			}
 		})
 	}
