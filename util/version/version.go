@@ -136,11 +136,13 @@ func Lowest(tags []string) string {
 	for _, r := range tags {
 		v, err := semver.NewVersion(r)
 		if err != nil {
+			log.Debugf("failed to parse version '%s', error: %s", r, err)
 			continue
 
 		}
 
 		if v.Prerelease() != "" {
+			log.Debugf("version '%s' is prerelease, skipping", r)
 			continue
 		}
 
