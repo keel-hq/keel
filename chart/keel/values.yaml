@@ -22,7 +22,7 @@ helmProvider:
   # optional Tiller address (if portforwarder tunnel doesn't work),
   # if you are using default configuration, setting it to
   # 'tiller-deploy:44134' is usually fine
-  tillerAddress: ''
+  tillerAddress: 'tiller-deploy:44134'
 
 # Google Container Registry
 # GCP Project ID
