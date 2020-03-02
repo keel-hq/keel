@@ -9,6 +9,7 @@ import (
 
 	"context"
 
+	"github.com/prometheus/client_golang/prometheus"
 	netContext "golang.org/x/net/context"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	kube "k8s.io/client-go/kubernetes"
@@ -197,6 +198,18 @@ func main() {
 		// Cache: approvalsCache,
 		Store: sqlStore,
 	})
+
+	pendindApprovalsCounter := prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "pending_approvals",
+		Help: "Number of the pending approvals",
+	}, func() float64 {
+		approvals, err := approvalsManager.List()
+		if err != nil {
+			return float64(len(approvals))
+		}
+		return 0
+	})
+	prometheus.MustRegister(pendindApprovalsCounter)
 
 	go approvalsManager.StartExpiryService(ctx)
 
