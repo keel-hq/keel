@@ -140,6 +140,20 @@ export default {
     return {
       selectedRowKeys: [],
       selectedRows: [],
+      rowSelection: {
+        onChange: (selectedRowKeys, selectedRows) => {
+          // eslint-disable-next-line vue/no-side-effects-in-computed-properties
+          this.selectedRowKeys = selectedRowKeys
+          // eslint-disable-next-line vue/no-side-effects-in-computed-properties
+          this.selectedRows = selectedRows
+        },
+        getCheckboxProps: record => ({
+          props: {
+            disabled: record.rejected || record.archived,
+            name: record.id
+          }
+        })
+      },
       columns: [
         {
           dataIndex: 'updated',
@@ -197,21 +211,6 @@ export default {
   computed: {
     hasSelected () {
       return this.selectedRowKeys.length > 0
-    },
-    rowSelection () {
-      const { selectedRowKeys } = this
-      return {
-        onChange: (selectedRowKeys, selectedRows) => {
-          this.selectedRowKeys = selectedRowKeys
-          this.selectedRows = selectedRows
-        },
-        getCheckboxProps: record => ({
-          props: {
-            disabled: record.rejected || record.archived,
-            name: record.id
-          }
-        })
-      }
     }
   },
   methods: {
