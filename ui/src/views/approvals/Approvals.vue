@@ -207,7 +207,7 @@ export default {
         },
         getCheckboxProps: record => ({
           props: {
-            disabled: false,
+            disabled: record.rejected || record.archived,
             name: record.id
           }
         })
