@@ -29,8 +29,9 @@ build-binaries:
 		-ldflags "$(LDFLAGS)" -osarch="linux/arm"
 
 build-arm:
-	cd cmd/keel && env GOARCH=arm GOOS=linux go build -ldflags="$(ARMFLAGS)" -o release/keel-linux-arm
-	cd cmd/keel && env GOARCH=arm64 GOOS=linux go build -ldflags="$(ARMFLAGS)" -o release/keel-linux-aarc64
+	cd cmd/keel && env CC=arm-linux-gnueabihf-gcc CGO_ENABLED=1 GOARCH=arm GOOS=linux go build -ldflags="$(ARMFLAGS)" -o release/keel-linux-arm
+	# disabling for now 64bit builds
+	# cd cmd/keel && env GOARCH=arm64 GOOS=linux go build -ldflags="$(ARMFLAGS)" -o release/keel-linux-aarc64
 
 armhf-latest:
 	docker build -t keelhq/keel-arm:latest -f Dockerfile.armhf .
@@ -42,7 +43,7 @@ aarch64-latest:
 
 armhf:
 	docker build -t keelhq/keel-arm:$(VERSION) -f Dockerfile.armhf .
-	docker push keelhq/keel-arm:$(VERSION)
+	# docker push keelhq/keel-arm:$(VERSION)
 
 aarch64:
 	docker build -t keelhq/keel-aarch64:$(VERSION) -f Dockerfile.aarch64 .
@@ -80,7 +81,7 @@ e2e: install
 	cd tests && go test
 
 run: install
-	keel --no-incluster --ui-dir ../../rusenask/keel-ui/dist
+	keel --no-incluster --ui-dir ui/dist
 
 lint-ui:
 	cd ui && yarn 
