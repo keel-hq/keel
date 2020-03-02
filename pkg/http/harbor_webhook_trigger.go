@@ -84,7 +84,6 @@ func (s *TriggerServer) harborHandler(resp http.ResponseWriter, req *http.Reques
 
 		//go trough all the ressource arrays
 		for _, e := range hn.EventData.Resources {
-			fmt.Println("Push found!")
 			//Split the combined <URL>:<tag> into seperate fields
 			splitRegexp := regexp.MustCompile("(.*):(.*)")
 			splitString := splitRegexp.FindAllStringSubmatch(e.ResourceURL, -1)
