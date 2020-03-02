@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/image"
+
 	"github.com/prometheus/client_golang/prometheus"
 
 	log "github.com/sirupsen/logrus"
@@ -81,24 +82,17 @@ func (s *TriggerServer) harborHandler(resp http.ResponseWriter, req *http.Reques
 	}).Debug("harborHandler: received event, looking for a pushImage tag")
 
 	if hn.Type == "pushImage" {
-
-		//go trough all the ressource arrays
+		// go trough all the ressource items
 		for _, e := range hn.EventData.Resources {
-			//Split the combined <URL>:<tag> into seperate fields
-			splitRegexp := regexp.MustCompile("(.*):(.*)")
-			splitString := splitRegexp.FindAllStringSubmatch(e.ResourceURL, -1)
-			DockerURL := splitString[0][1]
-			tag := splitString[0][2]
+			imageRepo, err := image.Parse(e.ResourceURL)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":      err,
+					"repository": e.ResourceURL,
+				}).Error("trigger.harborHandler: failed to parse repository")
 
-			if len(DockerURL) == 0 {
 				resp.WriteHeader(http.StatusBadRequest)
-				fmt.Fprintf(resp, "DockerURL cannot be empty")
-				return
-			}
-
-			if len(tag) == 0 {
-				resp.WriteHeader(http.StatusBadRequest)
-				fmt.Fprintf(resp, "tags cannot be empty")
+				fmt.Fprintf(resp, "failed to parse repository %s, error: %s", e.ResourceURL, err)
 				return
 			}
 
@@ -106,21 +100,20 @@ func (s *TriggerServer) harborHandler(resp http.ResponseWriter, req *http.Reques
 			event := types.Event{}
 			event.CreatedAt = time.Now()
 			event.TriggerName = "harbor"
-			event.Repository.Name = DockerURL
-			event.Repository.Tag = tag
+			event.Repository.Name = imageRepo.Repository()
+			event.Repository.Tag = imageRepo.Tag()
 
 			log.WithFields(log.Fields{
 				"action":     hn.Type,
-				"tag":        tag,
-				"repository": DockerURL,
+				"tag":        imageRepo.Tag(),
+				"repository": imageRepo.Repository(),
 				"digest":     e.Digest,
 			}).Debug("harborHandler: got registry notification, processing")
 
 			s.trigger(event)
 			newHarborWebhooksCounter.With(prometheus.Labels{"image": event.Repository.Name}).Inc()
-
-			resp.WriteHeader(http.StatusOK)
-			return
 		}
 	}
+
+	resp.WriteHeader(http.StatusOK)
 }
