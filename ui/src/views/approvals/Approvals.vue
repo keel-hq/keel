@@ -23,6 +23,12 @@
         <a-radio-group>
           <a-radio-button @click="refresh()">Refresh</a-radio-button>
         </a-radio-group>
+        <a-button type="primary" :ghost="true" @click="bulkApprove()" :disabled="!hasSelected" style="margin-left: 16px;">
+          Approve
+        </a-button>
+        <a-button type="danger" :ghost="true" @click="bulkReject()" :disabled="!hasSelected" style="margin-left: 16px;">
+          Reject
+        </a-button>
         <a-input-search @search="onSearch" @change="onSearchChange" style="margin-left: 16px; width: 272px;" />
       </div>
 
@@ -31,6 +37,7 @@
         :columns="columns"
         :dataSource="filtered()"
         :rowKey="approval => approval.id"
+        :rowSelection="rowSelection"
         size="middle">
         >
         <span slot="updated" slot-scope="text, log">
@@ -131,45 +138,48 @@ export default {
   },
   data () {
     return {
-      columns: [{
-        dataIndex: 'updated',
-        key: 'updated',
-        title: 'Last Activity',
-        scopedSlots: { customRender: 'updated' }
-      }, {
-        dataIndex: 'provider',
-        key: 'provider',
-        title: 'Provider'
-      }, {
-        title: 'Identifier',
-        dataIndex: 'identifier',
-        key: 'identifier'
-      }, {
-        title: 'Votes',
-        dataIndex: 'votes',
-        key: 'votes',
-        scopedSlots: { customRender: 'votes' }
-      }, {
-        title: 'Delta',
-        key: 'delta',
-        dataIndex: 'delta',
-        scopedSlots: { customRender: 'delta' }
-      }, {
-        title: 'Status',
-        key: 'status',
-        dataIndex: 'status',
-        width: 200,
-        scopedSlots: { customRender: 'status' }
-      }, {
-        title: 'Expires In',
-        key: 'deadline',
-        dataIndex: 'deadline',
-        scopedSlots: { customRender: 'deadline' }
-      }, {
-        title: 'Action',
-        key: 'action',
-        scopedSlots: { customRender: 'action' }
-      }],
+      selectedRowKeys: [],
+      selectedRows: [],
+      columns: [
+        {
+          dataIndex: 'updated',
+          key: 'updated',
+          title: 'Last Activity',
+          scopedSlots: { customRender: 'updated' }
+        }, {
+          dataIndex: 'provider',
+          key: 'provider',
+          title: 'Provider'
+        }, {
+          title: 'Identifier',
+          dataIndex: 'identifier',
+          key: 'identifier'
+        }, {
+          title: 'Votes',
+          dataIndex: 'votes',
+          key: 'votes',
+          scopedSlots: { customRender: 'votes' }
+        }, {
+          title: 'Delta',
+          key: 'delta',
+          dataIndex: 'delta',
+          scopedSlots: { customRender: 'delta' }
+        }, {
+          title: 'Status',
+          key: 'status',
+          dataIndex: 'status',
+          width: 200,
+          scopedSlots: { customRender: 'status' }
+        }, {
+          title: 'Expires In',
+          key: 'deadline',
+          dataIndex: 'deadline',
+          scopedSlots: { customRender: 'deadline' }
+        }, {
+          title: 'Action',
+          key: 'action',
+          scopedSlots: { customRender: 'action' }
+        }],
       approvals: [],
       filter: ''
     }
@@ -184,7 +194,26 @@ export default {
   activated () {
     this.$store.dispatch('GetApprovals')
   },
-
+  computed: {
+    hasSelected () {
+      return this.selectedRowKeys.length > 0
+    },
+    rowSelection () {
+      const { selectedRowKeys } = this
+      return {
+        onChange: (selectedRowKeys, selectedRows) => {
+          this.selectedRowKeys = selectedRowKeys
+          this.selectedRows = selectedRows
+        },
+        getCheckboxProps: record => ({
+          props: {
+            disabled: false,
+            name: record.id
+          }
+        })
+      }
+    }
+  },
   methods: {
     onSearch (value) {
       this.filter = value
@@ -270,6 +299,39 @@ export default {
         content: `are you sure want to archive approval ${approval.identifier}?`,
         onOk () {
           that.updateApproval(approval, 'archive')
+        },
+        onCancel () {
+        }
+      })
+    },
+
+    bulkApprove () {
+      const that = this
+      this.$confirm({
+        title: 'Confirm update',
+        content: `Are you sure want to approve the selected updates?`,
+        onOk () {
+          for (let i = 0; i < that.selectedRows.length; i++) {
+            if (!that.selectedRows[i].rejected && !that.selectedRows[i].archived) {
+              that.updateApproval(that.selectedRows[i], 'approve')
+            }
+          }
+        },
+        onCancel () {
+        }
+      })
+    },
+    bulkReject () {
+      const that = this
+      this.$confirm({
+        title: 'Confirm update',
+        content: `Are you sure want to approve the selected updates?`,
+        onOk () {
+          for (let i = 0; i < that.selectedRows.length; i++) {
+            if (!that.selectedRows[i].rejected && !that.selectedRows[i].archived) {
+              that.updateApproval(that.selectedRows[i], 'reject')
+            }
+          }
         },
         onCancel () {
         }
