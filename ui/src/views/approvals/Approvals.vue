@@ -142,9 +142,7 @@ export default {
       selectedRows: [],
       rowSelection: {
         onChange: (selectedRowKeys, selectedRows) => {
-          // eslint-disable-next-line vue/no-side-effects-in-computed-properties
           this.selectedRowKeys = selectedRowKeys
-          // eslint-disable-next-line vue/no-side-effects-in-computed-properties
           this.selectedRows = selectedRows
         },
         getCheckboxProps: record => ({
