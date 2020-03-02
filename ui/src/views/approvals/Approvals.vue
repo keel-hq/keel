@@ -322,7 +322,7 @@ export default {
       const that = this
       this.$confirm({
         title: 'Confirm update',
-        content: `Are you sure want to approve the selected updates?`,
+        content: `Are you sure want to reject the selected updates?`,
         onOk () {
           for (let i = 0; i < that.selectedRows.length; i++) {
             if (!that.selectedRows[i].rejected && !that.selectedRows[i].archived) {
