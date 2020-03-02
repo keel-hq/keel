@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 	"regexp"
+	"time"
 
 	"github.com/keel-hq/keel/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -46,7 +46,6 @@ func init() {
 //             "repo_type": "private"
 //         }
 //     }
-}
 
 type harborWebhook struct {
 	Type      string `json:"type"`
@@ -69,51 +68,60 @@ type harborWebhook struct {
 }
 
 func (s *TriggerServer) harborHandler(resp http.ResponseWriter, req *http.Request) {
-	qw := harborWebhook{}
-	if err := json.NewDecoder(req.Body).Decode(&qw); err != nil {
+	hn := harborWebhook{}
+	if err := json.NewDecoder(req.Body).Decode(&hn); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("trigger.harborHandler: failed to decode request")
 		resp.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	log.WithFields(log.Fields{
+		"event": hn,
+	}).Debug("harborHandler: received event, looking for a pushImage tag")
 
-	if qw.type == "pushImage" {
-		if qw.ResourceURL == "" {
-			resp.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(resp, "ResourceURL cannot be empty")
+	if hn.Type == "pushImage" {
+
+		//go trough all the ressource arrays
+		for _, e := range hn.EventData.Resources {
+			fmt.Println("Push found!")
+			//Split the combined <URL>:<tag> into seperate fields
+			splitRegexp := regexp.MustCompile("(.*):(.*)")
+			splitString := splitRegexp.FindAllStringSubmatch(e.ResourceURL, -1)
+			DockerURL := splitString[0][1]
+			tag := splitString[0][2]
+
+			if len(DockerURL) == 0 {
+				resp.WriteHeader(http.StatusBadRequest)
+				fmt.Fprintf(resp, "DockerURL cannot be empty")
+				return
+			}
+
+			if len(tag) == 0 {
+				resp.WriteHeader(http.StatusBadRequest)
+				fmt.Fprintf(resp, "tags cannot be empty")
+				return
+			}
+
+			//create event
+			event := types.Event{}
+			event.CreatedAt = time.Now()
+			event.TriggerName = "harbor"
+			event.Repository.Name = DockerURL
+			event.Repository.Tag = tag
+
+			log.WithFields(log.Fields{
+				"action":     hn.Type,
+				"tag":        tag,
+				"repository": DockerURL,
+				"digest":     e.Digest,
+			}).Debug("harborHandler: got registry notification, processing")
+
+			s.trigger(event)
+			newHarborWebhooksCounter.With(prometheus.Labels{"image": event.Repository.Name}).Inc()
+
+			resp.WriteHeader(http.StatusOK)
 			return
 		}
-		//Split the combined <URL>:<tag> into seperate fields
-		split_regexp := regexp.MustCompile("(.*):(.*)")
-		split_string := split_regexp.FindAllStringSubmatch(qw.ResourceURL,-1)
-		DockerURL    := split_string[0][1]
-		tag          := split_string[0][2]
-		
-		if len(DockerURL) == 0 {
-			resp.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(resp, "DockerURL cannot be empty")
-			return
-		}
-		
-		if len(tag) == 0 {
-			resp.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(resp, "tags cannot be empty")
-			return
-		}
-
-	    //create event		
-		event := types.Event{}
-		event.CreatedAt = time.Now()
-		event.TriggerName = "harbor"
-		event.Repository.Name = DockerURL
-		event.Repository.Tag = tag
-
-		s.trigger(event)
-		newHarborWebhooksCounter.With(prometheus.Labels{"image": event.Repository.Name}).Inc()
-		
 	}
-
-	resp.WriteHeader(http.StatusOK)
-	return
 }

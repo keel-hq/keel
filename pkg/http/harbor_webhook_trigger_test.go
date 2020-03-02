@@ -16,7 +16,7 @@ var fakeHarborWebhook = ` {
         "resources": [
             {
                 "digest": "sha256:b4758aaed11c155a476b9857e1178f157759c99cb04c907a04993f5481eff848",
-                "tag": "2.1.6",
+                "tag": "1.2.3",
                 "resource_url": "quay.io/mynamespace/repository:1.2.3"
             }
         ],
@@ -31,7 +31,7 @@ var fakeHarborWebhook = ` {
 }
 `
 
-func TestQuayWebhookHandler(t *testing.T) {
+func TestHarborWebhookHandler(t *testing.T) {
 
 	fp := &fakeProvider{}
 	srv, teardown := NewTestingServer(fp)
