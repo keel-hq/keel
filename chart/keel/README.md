@@ -1,7 +1,7 @@
 # Keel - automated Kubernetes deployments for the rest of us
 
 * Website [https://keel.sh](https://keel.sh)
-* User Guide [https://keel.sh/user-guide/](https://keel.sh/user-guide/)
+* User Guide [https://keel.sh/docs/](https://keel.sh/docs/)
 
 Keel is a tool for automating [Kubernetes](https://kubernetes.io/) deployment updates. Keel is stateless, robust and lightweight.
 
