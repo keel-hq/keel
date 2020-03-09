@@ -32,10 +32,10 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/keel"]
           volumeMounts:
-{{- if .Values.persistance.enable}}
+{{- if .Values.persistence.enabled }}
             - name: storage-logs
               mountPath: /data
-{{- end}}
+{{- end }}
 {{- if .Values.googleApplicationCredentials }}
             - name: secret
               mountPath: "/secret"
@@ -186,12 +186,12 @@ spec:
           resources:
 {{ toYaml .Values.resources | indent 12 }}
 {{- end }}
-{{- if .Values.persistance.enable }}
+{{- if .Values.persistence.enabled }}
       volumes:
         - name: storage-logs
           persistentVolumeClaim:
             claimName: {{ template "keel.fullname" . }}
-{{- end}}
+{{- end }}
     {{- with .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}

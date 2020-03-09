@@ -1,4 +1,4 @@
-{{- if .Values.persistance.enable }}
+{{- if .Values.persistence.enabled }}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -9,10 +9,10 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
-  storageClassName: "{{ .Values.persistance.storageClass }}"
+  storageClassName: "{{ .Values.persistence.storageClass }}"
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: "{{ .Values.persistance.size }}"
-{{- end}}
+      storage: "{{ .Values.persistence.size }}"
+{{- end }}

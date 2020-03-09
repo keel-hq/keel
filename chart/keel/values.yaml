@@ -208,7 +208,7 @@ dockerRegistry:
   name: ""
   key: ""
 
-persistance:
-  enable: false
+persistence:
+  enabled: false
   storageClass: "-"
   size: 1Gi
