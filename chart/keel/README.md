@@ -114,6 +114,13 @@ The following table lists has the main configurable parameters (polling, trigger
 | `hipchat.botName`                           | Name of the Hipchat bot                |                                                           |
 | `hipchat.userName`                          | Hipchat username in Jabber format      |                                                           |
 | `hipchat.password`                          | Hipchat password for approvals user    |                                                           |
+| `mail.enabled`                              | Enable/disable mail notifications      | `false`                                                   |
+| `mail.from`                                 | Mail sender address                    |                                                           |
+| `mail.to`                                   | Mail destination address               |                                                           |
+| `mail.smtp.server`                          | Mail SMTP server address               |                                                           |
+| `mail.smtp.port`                            | Mail SMTP server port                  | `25`                                                      |
+| `mail.smtp.user`                            | Mail SMTP server user (optional)       |                                                           |
+| `mail.smtp.pass`                            | Mail SMTP server password (optional)   |                                                           |
 | `mattermost.enabled`                        | Enable/disable Mattermost integration  | `false`                                                   |
 | `mattermost.endpoint`                       | Mattermost API endpoint                |                                                           |
 | `googleApplicationCredentials`              | GCP Service account key configurable   |                                                           |
