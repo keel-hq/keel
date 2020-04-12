@@ -74,6 +74,17 @@ mattermost:
   enabled: false
   endpoint: ""
 
+# Mail notifications
+mail:
+  enabled: false
+  from: ""
+  to: ""
+  smtp:
+    server: ""
+    port: 25
+    user: ""
+    pass: ""
+
 # Basic auth on approvals
 basicauth:
   enabled: false

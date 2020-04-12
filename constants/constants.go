@@ -30,6 +30,14 @@ const (
 	// for documentation on setting it up
 	EnvMattermostEndpoint = "MATTERMOST_ENDPOINT"
 	EnvMattermostName     = "MATTERMOST_USERNAME"
+
+	// Mail notification settings
+	EnvMailTo         = "MAIL_TO"
+	EnvMailFrom       = "MAIL_FROM"
+	EnvMailSmtpServer = "MAIL_SMTP_SERVER"
+	EnvMailSmtpPort   = "MAIL_SMTP_PORT"
+	EnvMailSmtpUser   = "MAIL_SMTP_USER"
+	EnvMailSmtpPass   = "MAIL_SMTP_PASS"
 )
 
 // EnvNotificationLevel - minimum level for notifications, defaults to info

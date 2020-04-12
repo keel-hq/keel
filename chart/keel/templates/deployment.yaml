@@ -130,6 +130,19 @@ spec:
             - name: HIPCHAT_APPROVALS_USER_NAME
               value: "{{ .Values.hipchat.userName }}"
 {{- end }}
+{{- if .Values.mail.enabled }}
+            # Enable mail notifications
+            - name: MAIL_SMTP_SERVER
+              value: "{{ .Values.mail.smtp.server }}"
+            - name: MAIL_SMTP_PORT
+              value: "{{ .Values.mail.smtp.port }}"
+            - name: MAIL_SMTP_USER
+              value: "{{ .Values.mail.smtp.user }}"
+            - name: MAIL_TO
+              value: "{{ .Values.mail.to }}"
+            - name: MAIL_FROM
+              value: "{{ .Values.mail.from }}"
+{{- end }}
             - name: NOTIFICATION_LEVEL
               value: "{{ .Values.notificationLevel }}"
 {{- if .Values.debug }}
