@@ -4,7 +4,7 @@
 
 image:
   repository: keelhq/keel
-  tag: 0.15.0-rc1
+  tag: null
   pullPolicy: Always
 
 # Enable insecure registries
