@@ -104,6 +104,7 @@ type Root struct {
 type KeelChartConfig struct {
 	Policy               string            `json:"policy"`
 	MatchTag             bool              `json:"matchTag"`
+	MatchPreRelease      bool              `json:"matchPreRelease"`
 	Trigger              types.TriggerType `json:"trigger"`
 	PollSchedule         string            `json:"pollSchedule"`
 	Approvals            int               `json:"approvals"`        // Minimum required approvals
@@ -448,6 +449,8 @@ func getKeelConfig(vals chartutil.Values) (*KeelChartConfig, error) {
 	}
 
 	var r Root
+	// Default MatchPreRelease to true if not present (backward compatibility)
+	r.Keel.MatchPreRelease = true
 	err = yaml.Unmarshal([]byte(yamlFull), &r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse keel config: %s", err)
@@ -459,7 +462,7 @@ func getKeelConfig(vals chartutil.Values) (*KeelChartConfig, error) {
 
 	cfg := r.Keel
 
-	cfg.Plc = policy.GetPolicy(cfg.Policy, &policy.Options{MatchTag: cfg.MatchTag})
+	cfg.Plc = policy.GetPolicy(cfg.Policy, &policy.Options{MatchTag: cfg.MatchTag, MatchPreRelease: cfg.MatchPreRelease})
 
 	return &cfg, nil
 }

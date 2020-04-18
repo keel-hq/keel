@@ -107,8 +107,9 @@ keel:
 				CurrentVersion: "1.1.0",
 				NewVersion:     "latest",
 				Config: &KeelChartConfig{
-					Policy:  "force",
-					Trigger: types.TriggerTypePoll,
+					Policy:          "force",
+					MatchPreRelease: true,
+					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
 						ImageDetails{
 							RepositoryPath: "image.repository",
@@ -139,8 +140,9 @@ keel:
 				NewVersion:     "1.2.0",
 				ReleaseNotes:   []string{"https://github.com/keel-hq/keel/releases"},
 				Config: &KeelChartConfig{
-					Policy:  "force",
-					Trigger: types.TriggerTypePoll,
+					Policy:          "force",
+					MatchPreRelease: true,
+					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
 						ImageDetails{
 							RepositoryPath: "image.repository",
@@ -318,12 +320,13 @@ image:
 				NewVersion:     "1.1.2",
 				CurrentVersion: "1.1.0",
 				Config: &KeelChartConfig{
-					Policy:  "all",
-					Trigger: types.TriggerTypePoll,
+					Policy:          "all",
+					MatchPreRelease: true,
+					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
 						ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 					},
-					Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+					Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 				},
 			},
 			wantShouldUpdateRelease: true,
@@ -374,8 +377,9 @@ image:
 				NewVersion:     "1.1.0",
 				CurrentVersion: "alpha",
 				Config: &KeelChartConfig{
-					Policy:  "force",
-					Trigger: types.TriggerTypePoll,
+					Policy:          "force",
+					MatchPreRelease: true,
+					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
 						ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 					},
@@ -417,12 +421,13 @@ image:
 				NewVersion:     "1.1.0",
 				CurrentVersion: "1.0.0",
 				Config: &KeelChartConfig{
-					Policy:  "major",
-					Trigger: types.TriggerTypePoll,
+					Policy:          "major",
+					MatchPreRelease: true,
+					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
 						ImageDetails{RepositoryPath: "image.repository"},
 					},
-					Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor),
+					Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 				},
 			},
 			wantShouldUpdateRelease: true,

@@ -11,7 +11,7 @@ import (
 	"github.com/keel-hq/keel/util/timeutil"
 
 	apps_v1 "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -674,7 +674,7 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 		{
 			name: "standard version bump",
 			args: args{
-				policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+				policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
 				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
@@ -740,7 +740,7 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 			name: "staging pre-release",
 			args: args{
 
-				policy: policy.NewSemverPolicy(policy.SemverPolicyTypeMinor),
+				policy: policy.NewSemverPolicy(policy.SemverPolicyTypeMinor, true),
 				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-prerelease", Tag: "v1.1.2-staging"},
 				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
@@ -777,7 +777,7 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 			name: "normal new tag while there's pre-release",
 			args: args{
 
-				policy: policy.NewSemverPolicy(policy.SemverPolicyTypeMinor),
+				policy: policy.NewSemverPolicy(policy.SemverPolicyTypeMinor, true),
 				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-prerelease", Tag: "v1.1.2"},
 				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
@@ -814,7 +814,7 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 			name: "standard ignore version bump",
 			args: args{
 
-				policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+				policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.1"},
 				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},
@@ -849,7 +849,7 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 		{
 			name: "multiple containers, version bump one",
 			args: args{
-				policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+				policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "1.1.2"},
 				resource: MustParseGR(&apps_v1.Deployment{
 					meta_v1.TypeMeta{},

@@ -179,7 +179,7 @@ func TestWatchAllTagsJob(t *testing.T) {
 		images: []*types.TrackedImage{
 			&types.TrackedImage{
 				Image:  reference,
-				Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+				Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 			},
 		},
 	}
@@ -270,7 +270,7 @@ func TestWatchMultipleTags(t *testing.T) {
 				Provider:     "fp",
 				PollSchedule: types.KeelPollDefaultSchedule,
 
-				Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor),
+				Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 			},
 
 			&types.TrackedImage{
@@ -278,7 +278,7 @@ func TestWatchMultipleTags(t *testing.T) {
 				Image:        imgB,
 				Provider:     "fp",
 				PollSchedule: types.KeelPollDefaultSchedule,
-				Policy:       policy.NewSemverPolicy(policy.SemverPolicyTypeMajor),
+				Policy:       policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 			},
 
 			&types.TrackedImage{
