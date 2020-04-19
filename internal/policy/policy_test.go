@@ -70,7 +70,7 @@ func TestGetPolicy(t *testing.T) {
 		{
 			name: "patch",
 			args: args{policyName: "patch", options: &Options{}},
-			want: NewSemverPolicy(SemverPolicyTypePatch),
+			want: NewSemverPolicy(SemverPolicyTypePatch, false),
 		},
 		{
 			name: "glob:foo-*",
@@ -108,15 +108,34 @@ func TestGetPolicyFromLabelsOrAnnotations(t *testing.T) {
 				labels:      map[string]string{"foo": "bar"},
 				annotations: map[string]string{types.KeelPolicyLabel: "all"},
 			},
-			want: NewSemverPolicy(SemverPolicyTypeAll),
+			want: NewSemverPolicy(SemverPolicyTypeAll, true),
 		},
 		{
-			name: "annotations overides labels",
+			name: "annotations overrides labels",
 			args: args{
-				labels:      map[string]string{types.KeelPolicyLabel: "patch"},
+				// The "annotations overrides labels" can be quite mis-leading for end-users (here the default value of MatchPreRelease)
+				// is taken from the annotations section, along with the policy...
+				// Shouldn't we rather merge both labels and annotations, with priority given to annotation (and a warning)?
+				labels:      map[string]string{types.KeelPolicyLabel: "patch", types.KeelMatchPreReleaseAnnotation: "false"},
 				annotations: map[string]string{types.KeelPolicyLabel: "all"},
 			},
-			want: NewSemverPolicy(SemverPolicyTypeAll),
+			want: NewSemverPolicy(SemverPolicyTypeAll, true),
+		},
+		{
+			name: "label matchPreRelease set to false",
+			args: args{
+				labels:      map[string]string{types.KeelPolicyLabel: "minor", types.KeelMatchPreReleaseAnnotation: "false"},
+				annotations: map[string]string{"foo": "bar"},
+			},
+			want: NewSemverPolicy(SemverPolicyTypeMinor, false),
+		},
+		{
+			name: "annotation matchPreRelease set to false",
+			args: args{
+				labels:      map[string]string{"foo": "bar"},
+				annotations: map[string]string{types.KeelPolicyLabel: "minor", types.KeelMatchPreReleaseAnnotation: "false"},
+			},
+			want: NewSemverPolicy(SemverPolicyTypeMinor, false),
 		},
 	}
 	for _, tt := range tests {

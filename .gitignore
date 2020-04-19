@@ -2,6 +2,7 @@
 deployment.yml
 .test_env.sh
 cmd/keel/release
+cmd/keel/keel
 hack/deployment-norbac.yaml
 hack/deployment-rbac.yaml
 hack/deployment-norbac-helm.yaml

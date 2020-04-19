@@ -2,13 +2,13 @@ package poll
 
 import (
 	"sort"
+	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/keel-hq/keel/extension/credentialshelper"
-	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/util/version"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -90,32 +90,47 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 
 	events := []types.Event{}
 
-	// collapse removes all non-semver tags and only takes
-	// the highest versions of each prerelease + the main version that doesn't have
-	// any prereleases
-	tags = collapse(tags)
+	// Keep only semver tags, sorted desc (to optimize process)
+	versions := semverSort(tags)
 
 	for _, trackedImage := range getRelatedTrackedImages(j.details.trackedImage, trackedImages) {
+		// Current version tag might not be a valid semver one
+		currentVersion, invalidCurrentVersion := semver.NewVersion(trackedImage.Image.Tag())
 		// matches, going through tags
-		for _, tag := range tags {
-			update, err := trackedImage.Policy.ShouldUpdate(trackedImage.Image.Tag(), tag)
+		for _, version := range versions {
+			if invalidCurrentVersion == nil && currentVersion.GreaterThan(version) {
+				// Current tag is a valid semver, and is bigger than currently tested one
+				// -> we can stop now, nothing will be worth upgrading in the rest of the sorted list
+				break
+			}
+			update, err := trackedImage.Policy.ShouldUpdate(trackedImage.Image.Tag(), version.Original())
+			// log.WithFields(log.Fields{
+			// 	"current_tag": j.details.trackedImage.Image.Tag(),
+			// 	"image_name":  j.details.trackedImage.Image.Remote(),
+			// }).Debug("trigger.poll.WatchRepositoryTagsJob: tag: ", version.Original(), "; update: ", update, "; err:", err)
 			if err != nil {
 				continue
 			}
-			if update && !exists(tag, events) {
+			if update && !exists(version.Original(), events) {
 				event := types.Event{
 					Repository: types.Repository{
 						Name: j.details.trackedImage.Image.Repository(),
-						Tag:  tag,
+						Tag:  version.Original(),
 					},
 					TriggerName: types.TriggerTypePoll.String(),
 				}
 				events = append(events, event)
+				// Only keep first match per image (should be the highest usable version)
+				break
 			}
 
 		}
 
 	}
+	log.WithFields(log.Fields{
+		"current_tag": j.details.trackedImage.Image.Tag(),
+		"image_name":  j.details.trackedImage.Image.Remote(),
+	}).Debug("trigger.poll.WatchRepositoryTagsJob: events: ", events)
 
 	return events, nil
 }
@@ -129,41 +144,24 @@ func exists(tag string, events []types.Event) bool {
 	return false
 }
 
-// collapse gets latest available tags for main version and pre-releases
-// example:
-// [1.0.0, 1.5.0, 1.3.0-dev, 1.4.5-dev] would become [1.5.0, 1.4.5-dev]
-func collapse(tags []string) []string {
-	r := map[string]string{}
-	p := policy.NewSemverPolicy(policy.SemverPolicyTypeAll)
+// Filter and sort tags according to semver, desc
+func semverSort(tags []string) []*semver.Version {
+	var versions []*semver.Version
 	for _, t := range tags {
-		v, err := version.GetVersion(t)
-		// v, err := semver.NewVersion(tag)
+		if len(strings.SplitN(t, ".", 3)) < 3 {
+			// Keep only X.Y.Z+ semver
+			continue
+		}
+		v, err := semver.NewVersion(t)
+		// Filter out non semver tags
 		if err != nil {
 			continue
 		}
-		stored, ok := r[v.PreRelease]
-		if !ok {
-			r[v.PreRelease] = t
-			continue
-		}
-		higher, err := p.ShouldUpdate(stored, t)
-		if err != nil {
-			continue
-		}
-		if higher {
-			r[v.PreRelease] = t
-		}
+		versions = append(versions, v)
 	}
-
-	result := []string{}
-	for _, tag := range r {
-		result = append(result, tag)
-	}
-
-	// always sort, for test purposes
-	sort.Strings(result)
-
-	return result
+	// Sort desc, following semver
+	sort.Slice(versions, func(i, j int) bool { return versions[j].LessThan(versions[i]) })
+	return versions
 }
 
 func getRelatedTrackedImages(ours *types.TrackedImage, all []*types.TrackedImage) []*types.TrackedImage {

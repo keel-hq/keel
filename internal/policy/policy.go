@@ -35,7 +35,7 @@ func GetPolicyFromLabelsOrAnnotations(labels map[string]string, annotations map[
 
 	policyNameA, ok := getPolicyFromLabels(annotations)
 	if ok {
-		return GetPolicy(policyNameA, &Options{MatchTag: getMatchTag(annotations)})
+		return GetPolicy(policyNameA, &Options{MatchTag: getMatchTag(annotations), MatchPreRelease: getMatchPreRelease(annotations)})
 	}
 
 	policyNameL, ok := getPolicyFromLabels(labels)
@@ -43,12 +43,13 @@ func GetPolicyFromLabelsOrAnnotations(labels map[string]string, annotations map[
 		return &NilPolicy{}
 	}
 
-	return GetPolicy(policyNameL, &Options{MatchTag: getMatchTag(labels)})
+	return GetPolicy(policyNameL, &Options{MatchTag: getMatchTag(labels), MatchPreRelease: getMatchPreRelease(labels)})
 }
 
 // Options - additional options when parsing policy
 type Options struct {
-	MatchTag bool
+	MatchTag        bool
+	MatchPreRelease bool
 }
 
 // GetPolicy - policy getter used by Helm config
@@ -79,7 +80,7 @@ func GetPolicy(policyName string, options *Options) Policy {
 
 	switch policyName {
 	case "all", "major", "minor", "patch":
-		return ParseSemverPolicy(policyName)
+		return ParseSemverPolicy(policyName, options.MatchPreRelease)
 	case "force":
 		return NewForcePolicy(options.MatchTag)
 	case "", "never":
@@ -92,16 +93,16 @@ func GetPolicy(policyName string, options *Options) Policy {
 }
 
 // ParseSemverPolicy - parse policy type
-func ParseSemverPolicy(policy string) Policy {
+func ParseSemverPolicy(policy string, matchPreRelease bool) Policy {
 	switch policy {
 	case "all":
-		return NewSemverPolicy(SemverPolicyTypeAll)
+		return NewSemverPolicy(SemverPolicyTypeAll, matchPreRelease)
 	case "major":
-		return NewSemverPolicy(SemverPolicyTypeMajor)
+		return NewSemverPolicy(SemverPolicyTypeMajor, matchPreRelease)
 	case "minor":
-		return NewSemverPolicy(SemverPolicyTypeMinor)
+		return NewSemverPolicy(SemverPolicyTypeMinor, matchPreRelease)
 	case "patch":
-		return NewSemverPolicy(SemverPolicyTypePatch)
+		return NewSemverPolicy(SemverPolicyTypePatch, matchPreRelease)
 	// case "force":
 	// 	return PolicyTypeForce
 	default:
@@ -129,4 +130,14 @@ func getMatchTag(labels map[string]string) bool {
 	}
 
 	return false
+}
+
+func getMatchPreRelease(labels map[string]string) bool {
+	mt, ok := labels[types.KeelMatchPreReleaseAnnotation]
+	if ok {
+		return mt == "true"
+	}
+
+	// Default to true for backward compatibility
+	return true
 }

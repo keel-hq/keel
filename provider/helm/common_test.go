@@ -60,7 +60,7 @@ func Test_getImages(t *testing.T) {
 				&types.TrackedImage{
 					Image:   img,
 					Trigger: types.TriggerTypePoll,
-					Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+					Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 				},
 			},
 			wantErr: false,
@@ -74,17 +74,17 @@ func Test_getImages(t *testing.T) {
 				&types.TrackedImage{
 					Image:   mustParse("quay.io/prometheus/alertmanager:v0.16.2"),
 					Trigger: types.TriggerTypePoll,
-					Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+					Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 				},
 				&types.TrackedImage{
 					Image:   mustParse("quay.io/coreos/prometheus-operator:v0.29.0"),
 					Trigger: types.TriggerTypePoll,
-					Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+					Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 				},
 				&types.TrackedImage{
 					Image:   mustParse("quay.io/prometheus/prometheus:v2.7.2"),
 					Trigger: types.TriggerTypePoll,
-					Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+					Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 				},
 			},
 			wantErr: false,

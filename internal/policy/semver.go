@@ -41,18 +41,20 @@ func (t SemverPolicyType) String() string {
 	}
 }
 
-func NewSemverPolicy(spt SemverPolicyType) *SemverPolicy {
+func NewSemverPolicy(spt SemverPolicyType, matchPreRelease bool) *SemverPolicy {
 	return &SemverPolicy{
-		spt: spt,
+		spt:             spt,
+		matchPreRelease: matchPreRelease,
 	}
 }
 
 type SemverPolicy struct {
-	spt SemverPolicyType
+	spt             SemverPolicyType
+	matchPreRelease bool
 }
 
 func (sp *SemverPolicy) ShouldUpdate(current, new string) (bool, error) {
-	return shouldUpdate(sp.spt, current, new)
+	return shouldUpdate(sp.spt, sp.matchPreRelease, current, new)
 }
 
 func (sp *SemverPolicy) Name() string {
@@ -61,7 +63,7 @@ func (sp *SemverPolicy) Name() string {
 
 func (sp *SemverPolicy) Type() PolicyType { return PolicyTypeSemver }
 
-func shouldUpdate(spt SemverPolicyType, current, new string) (bool, error) {
+func shouldUpdate(spt SemverPolicyType, matchPreRelease bool, current, new string) (bool, error) {
 	if current == "latest" {
 		return true, nil
 	}
@@ -81,7 +83,10 @@ func shouldUpdate(spt SemverPolicyType, current, new string) (bool, error) {
 		return false, fmt.Errorf("failed to parse new version: %s", err)
 	}
 
-	if currentVersion.Prerelease() != newVersion.Prerelease() && spt != SemverPolicyTypeAll {
+	// Do not enforce pre-release match when either:
+	// - All policy
+	// - matchPreRelease set to false
+	if currentVersion.Prerelease() != newVersion.Prerelease() && spt != SemverPolicyTypeAll && matchPreRelease {
 		return false, nil
 	}
 

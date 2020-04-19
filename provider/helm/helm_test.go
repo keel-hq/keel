@@ -560,6 +560,25 @@ keel:
 `
 	valuesPoll, _ := chartutil.ReadValues([]byte(valuesPollStr))
 
+	var valuesNoMatchPreReleaseStr = `
+name: al Rashid
+where:
+  city: Basrah
+  title: caliph
+image:
+  repository: gcr.io/v2-namespace/hello-world
+  tag: 1.1.0
+
+keel:  
+  policy: all
+  matchPreRelease: false
+  images:
+    - repository: image.repository
+      tag: image.tag
+
+`
+	valuesNoMatchPreRelease, _ := chartutil.ReadValues([]byte(valuesNoMatchPreReleaseStr))
+
 	type args struct {
 		vals chartutil.Values
 	}
@@ -573,12 +592,13 @@ keel:
 			name: "correct config",
 			args: args{vals: valuesBasic},
 			want: &KeelChartConfig{
-				Policy:  "all",
-				Trigger: types.TriggerTypeDefault,
+				Policy:          "all",
+				MatchPreRelease: true,
+				Trigger:         types.TriggerTypeDefault,
 				Images: []ImageDetails{
 					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
-				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 			},
 		},
 		{
@@ -586,25 +606,40 @@ keel:
 			args: args{vals: valuesChannels},
 			want: &KeelChartConfig{
 				Policy:               "all",
+				MatchPreRelease:      true,
 				Trigger:              types.TriggerTypeDefault,
 				NotificationChannels: []string{"chan1", "chan2"},
 				Images: []ImageDetails{
 					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
-				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll),
+				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 			},
 		},
 		{
 			name: "correct polling config",
 			args: args{vals: valuesPoll},
 			want: &KeelChartConfig{
-				Policy:       "major",
-				Trigger:      types.TriggerTypePoll,
-				PollSchedule: "@every 30m",
+				Policy:          "major",
+				MatchPreRelease: true,
+				Trigger:         types.TriggerTypePoll,
+				PollSchedule:    "@every 30m",
 				Images: []ImageDetails{
 					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag", ImagePullSecret: "such-secret"},
 				},
-				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor),
+				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
+			},
+		},
+		{
+			name: "disable matchPreRelease",
+			args: args{vals: valuesNoMatchPreRelease},
+			want: &KeelChartConfig{
+				Policy:          "all",
+				MatchPreRelease: false,
+				Trigger:         types.TriggerTypeDefault,
+				Images: []ImageDetails{
+					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+				},
+				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, false),
 			},
 		},
 	}

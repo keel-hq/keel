@@ -32,6 +32,9 @@ const KeelTriggerLabel = "keel.sh/trigger"
 const KeelForceTagMatchLegacyLabel = "keel.sh/match-tag"
 const KeelForceTagMatchLabel = "keel.sh/matchTag"
 
+// KeelMatchPreReleaseAnnotation - label or annotation to set pre-release matching for SemVer, defaults to true for backward compatibility
+const KeelMatchPreReleaseAnnotation = "keel.sh/matchPreRelease"
+
 // KeelPollScheduleAnnotation - optional variable to setup custom schedule for polling, defaults to @every 10m
 const KeelPollScheduleAnnotation = "keel.sh/pollSchedule"
 
