@@ -7,12 +7,12 @@ workspace:
 
 steps:
 - name: unit-test
-  image: golang:1.12.0
+  image: golang:1.14.2
   commands:
     - make test
 
 - name: build
-  image: golang:1.12.0
+  image: golang:1.14.2
   commands:
     - make install
 
@@ -23,7 +23,7 @@ steps:
     - yarn
     - yarn run lint --no-fix
 
-- name: publish-image  
+- name: publish-image
   image: plugins/docker
   settings:
     repo: keelhq/keel
@@ -34,10 +34,10 @@ steps:
       from_secret: docker_password
 
 # - name: build-arm
-#   image: golang:1.12.0
+#   image: golang:1.14.2
 #   commands:
 #     - make arm
-    
+
 # - name: publish-arm-image
 #   image: plugins/docker
 #   settings:
@@ -49,7 +49,7 @@ steps:
 #     password:
 #       from_secret: docker_password
 
-# - name: publish-aarch64-image  
+# - name: publish-aarch64-image
 #   image: plugins/docker
 #   settings:
 #     repo: keelhq/keel-aarch64
