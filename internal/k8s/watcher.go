@@ -8,7 +8,7 @@ import (
 
 	apps_v1 "k8s.io/api/apps/v1"
 	v1beta1 "k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -69,9 +69,9 @@ type deleteEvent struct {
 }
 
 // NewBuffer returns a ResourceEventHandler which buffers and serialises ResourceEventHandler events.
-func NewBuffer(g *workgroup.Group, rh cache.ResourceEventHandler, log logrus.FieldLogger, size int) cache.ResourceEventHandler {
+func NewBuffer(g *workgroup.Group, rh cache.ResourceEventHandler, log logrus.FieldLogger) cache.ResourceEventHandler {
 	buf := &buffer{
-		ev:        make(chan interface{}, size),
+		ev:        make(chan interface{}),
 		StdLogger: log.WithField("context", "buffer"),
 		rh:        rh,
 	}
@@ -115,11 +115,5 @@ func (b *buffer) OnDelete(obj interface{}) {
 }
 
 func (b *buffer) send(ev interface{}) {
-	select {
-	case b.ev <- ev:
-		// all good
-	default:
-		b.Printf("event channel is full, len: %v, cap: %v", len(b.ev), cap(b.ev))
-		b.ev <- ev
-	}
+	b.ev <- ev
 }

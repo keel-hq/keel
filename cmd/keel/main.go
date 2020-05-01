@@ -187,7 +187,7 @@ func main() {
 		FieldLogger: log.WithField("context", "translator"),
 	}
 
-	buf := k8s.NewBuffer(&g, t, log.StandardLogger(), 128)
+	buf := k8s.NewBuffer(&g, t, log.StandardLogger())
 	wl := log.WithField("context", "watch")
 	k8s.WatchDeployments(&g, implementer.Client(), wl, buf)
 	k8s.WatchStatefulSets(&g, implementer.Client(), wl, buf)
