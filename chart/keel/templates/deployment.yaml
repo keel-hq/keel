@@ -154,14 +154,16 @@ spec:
             # Enable insecure registries
             - name: INSECURE_REGISTRY
               value: "{{ .Values.insecureRegistry }}"
- {{- end }}
+{{- end }}
 {{- if .Values.aws.region }}
             - name: AWS_REGION
               value: "{{ .Values.aws.region }}"
 {{- end }}
+{{- if .Values.secret.create }}
           envFrom:
             - secretRef:
                 name: {{ .Values.secret.name | default (include "keel.fullname" .) }}
+{{- end }}
           ports:
             - containerPort: 9300
           livenessProbe:
