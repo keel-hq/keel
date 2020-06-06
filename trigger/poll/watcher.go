@@ -225,15 +225,19 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 	// getting initial digest
 	reg := ti.Image.Scheme() + "://" + ti.Image.Registry()
 
-	creds := credentialshelper.GetCredentials(ti)
-
-	digest, err := w.registryClient.Digest(registry.Opts{
+	registryOpts := registry.Opts{
 		Registry: reg,
 		Name:     ti.Image.ShortName(),
 		Tag:      ti.Image.Tag(),
-		Username: creds.Username,
-		Password: creds.Password,
-	})
+	}
+
+	creds, err := credentialshelper.GetCredentials(ti)
+	if err == nil {
+		registryOpts.Username = creds.Username
+		registryOpts.Password = creds.Password
+	}
+
+	digest, err := w.registryClient.Digest(registryOpts)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error":    err,

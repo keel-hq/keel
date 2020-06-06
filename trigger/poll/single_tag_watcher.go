@@ -28,15 +28,20 @@ func NewWatchTagJob(providers provider.Providers, registryClient registry.Client
 
 // Run - main function to check schedule
 func (j *WatchTagJob) Run() {
-	creds := credentialshelper.GetCredentials(j.details.trackedImage)
 	reg := j.details.trackedImage.Image.Scheme() + "://" + j.details.trackedImage.Image.Registry()
-	currentDigest, err := j.registryClient.Digest(registry.Opts{
+	registryOpts := registry.Opts{
 		Registry: reg,
 		Name:     j.details.trackedImage.Image.ShortName(),
 		Tag:      j.details.trackedImage.Image.Tag(),
-		Username: creds.Username,
-		Password: creds.Password,
-	})
+	}
+
+	creds, err := credentialshelper.GetCredentials(j.details.trackedImage)
+	if err == nil {
+		registryOpts.Username = creds.Username
+		registryOpts.Password = creds.Password
+	}
+
+	currentDigest, err := j.registryClient.Digest(registryOpts)
 
 	registriesScannedCounter.With(prometheus.Labels{"registry": j.details.trackedImage.Image.Registry(), "image": j.details.trackedImage.Image.Repository()}).Inc()
 
