@@ -1,7 +1,7 @@
 package gcr
 
 import (
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"os"
 
@@ -42,11 +42,11 @@ func (h *CredentialsHelper) IsEnabled() bool {
 
 func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
 	if !h.enabled {
-		return nil, fmt.Errorf("not initialised")
+		return nil, errors.New("not initialised")
 	}
 
 	if image.Image.Registry() != "gcr.io" {
-		return nil, nil
+		return nil, credentialshelper.ErrUnsupportedRegistry
 	}
 
 	return &types.Credentials{
