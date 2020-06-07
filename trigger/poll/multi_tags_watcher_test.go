@@ -7,9 +7,8 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver"
-	"github.com/keel-hq/keel/approvals"
 
-	// "github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/types"
