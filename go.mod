@@ -82,6 +82,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.3
+	github.com/stretchr/testify v1.3.0
 	github.com/tbruyelle/hipchat-go v0.0.0-20160921153256-749fb9e14beb
 	github.com/urfave/negroni v0.3.0
 	go.opencensus.io v0.22.0

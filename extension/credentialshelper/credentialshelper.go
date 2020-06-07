@@ -88,6 +88,15 @@ func GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
 				}
 				continue
 			}
+
+			if foundCredentials == nil {
+				log.WithFields(log.Fields{
+					"error":                   "credentials helper returned nil error but also nil creds",
+					"credentials_helper_name": name,
+				}).Warn("extension.credentialshelper: no error and no credentials")
+				// try next helper
+				continue
+			}
 			// credentials found!
 			return foundCredentials, nil
 		}
