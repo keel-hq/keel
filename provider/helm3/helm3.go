@@ -184,8 +184,6 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		return nil, err
 	}
 
-	// releases := releaseList.GetReleases()
-
 	for _, release := range releases {
 		// getting configuration
 		vals, err := values(release.Chart, release.Config)
@@ -382,11 +380,6 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 }
 
 func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_chart.Chart, overrideValues map[string]string, opts ...bool) error {
-
-	// overrideBts, err := convertToYaml(mapToSlice(overrideValues))
-	// if err != nil {
-	// 	return err
-	// }
 
     // set reuse values to false if currentRelease.config is nil
     emptyConfig := false

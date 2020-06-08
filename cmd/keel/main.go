@@ -60,8 +60,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	// importing to ensure correct dependencies
 	_ "helm.sh/helm/v3/pkg/action"
-
 )
 
 // gcloud pubsub related config
@@ -370,7 +370,7 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error": err,
-				}).Fatal("helm provider stopped with an error")
+				}).Fatal("helm3 provider stopped with an error")
 			}
 		}()
 

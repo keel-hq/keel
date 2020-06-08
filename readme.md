@@ -119,6 +119,12 @@ If you work mostly with regular Kubernetes manifests, you can install Keel witho
 helm upgrade --install keel --namespace=keel keel/keel --set helmProvider.enabled="false" 
 ```
 
+To install for Helm v3, set helmProvider.version="v3" (default is "v2"):
+
+```bash
+helm install keel keel/keel --set helmProvider.version="v3" 
+```
+
 That's it, see [Configuration](https://github.com/keel-hq/keel#configuration) section now.
 
 ### Quick Start

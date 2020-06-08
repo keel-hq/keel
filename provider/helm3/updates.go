@@ -21,8 +21,6 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 		EmptyConfig: config == nil,
 	}
 
-	// if configmap is empty, then set DontReuseValues to true
-
 	eventRepoRef, err := image.Parse(repo.String())
 	if err != nil {
 		log.WithFields(log.Fields{

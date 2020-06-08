@@ -4,10 +4,7 @@ import (
     "os"
     "strings"
 
-	// "k8s.io/helm/pkg/helm"
-	// "k8s.io/helm/pkg/proto/hapi/chart"
     "helm.sh/helm/v3/pkg/chart"
-	// rls "k8s.io/helm/pkg/proto/hapi/services"
 
 	log "github.com/sirupsen/logrus"
 
@@ -71,7 +68,7 @@ func (i *Helm3Implementer) UpdateReleaseFromChart(rlsName string, chart *chart.C
 	client.Timeout = DefaultUpdateTimeout;
 	client.ReuseValues = true
 
-    // set reuse values to false if currentRelease.config is nil
+    // set reuse values to false if currentRelease.config is nil (temp fix for bug in chartutil.coalesce v3.1.2)
     if len(opts) == 1 && opts[0] {
         client.ReuseValues = false
     }
@@ -86,17 +83,14 @@ func (i *Helm3Implementer) UpdateReleaseFromChart(rlsName string, chart *chart.C
         }).Fatal("helm3: failed to update release from chart")
         return nil, err
     }
-
-    // neil
-    log.WithFields(log.Fields{
-        "releaseConfig": results.Config,
-        "releaseValues": results.Chart.Values,
-        "vals": vals,
-        "convertedVals": convertedVals,
-    }).Info("provider.helm3: released")
     return results, err
 }
 
+// convert map[string]string to map[string]interface
+// converts:
+//     map[string]string{"image.tag": "0.1.0"}
+// to:
+//     map[string]interface{"image": map[string]interface{"tag": "0.1.0"}}
 func convertToInterface(values map[string]string) (map[string]interface{}) {
     converted := make(map[string]interface{})
     for key, value := range values {
