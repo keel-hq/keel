@@ -2,10 +2,16 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# image:
+#   repository: keelhq/keel
+#   tag: null
+#   pullPolicy: Always
+
 image:
-  repository: keelhq/keel
-  tag: null
+  repository: docker-registry.com:80/keel
+  tag: 0.17.0
   pullPolicy: Always
+
 
 # Enable insecure registries
 insecureRegistry: false
@@ -18,6 +24,8 @@ polling:
 # Helm provider support
 helmProvider:
   enabled: true
+  # set to version "v3" for Helm v3
+  version: "v2"
   tillerNamespace: "kube-system"
   # optional Tiller address (if portforwarder tunnel doesn't work),
   # if you are using default configuration, setting it to

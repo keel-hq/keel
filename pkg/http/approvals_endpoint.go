@@ -45,7 +45,7 @@ func (s *TriggerServer) approvalsHandler(resp http.ResponseWriter, req *http.Req
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	
 	resp.Write(bts)
 }
 

@@ -1,4 +1,4 @@
-package helm
+package helm3
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
-	"k8s.io/helm/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/chartutil"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -27,7 +27,7 @@ func getImages(vals chartutil.Values) ([]*types.TrackedImage, error) {
 		}
 		log.WithFields(log.Fields{
 			"error": err,
-		}).Error("provider.helm: failed to get keel configuration for release")
+		}).Error("provider.helm3: failed to get keel configuration for release")
 		// ignoring this release, no keel config found
 		return nil, ErrKeelConfigNotFound
 	}
@@ -39,7 +39,7 @@ func getImages(vals chartutil.Values) ([]*types.TrackedImage, error) {
 				"error":           err,
 				"repository_name": imageDetails.RepositoryPath,
 				"repository_tag":  imageDetails.TagPath,
-			}).Error("provider.helm: failed to parse image")
+			}).Error("provider.helm3: failed to parse image")
 			continue
 		}
 

@@ -101,6 +101,7 @@ func (s *TriggerServer) Start() error {
 	log.WithFields(log.Fields{
 		"port": s.port,
 	}).Info("webhook trigger server starting...")
+
 	return s.server.ListenAndServe()
 }
 

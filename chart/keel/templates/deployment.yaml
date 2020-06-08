@@ -28,7 +28,7 @@ spec:
       containers:
         - name: keel
           # Note that we use appVersion to get images tag.
-          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ .Chart.AppVersion | default .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/keel"]
           volumeMounts:
@@ -60,6 +60,7 @@ spec:
               value: "0"
 {{- end }}
 {{- if .Values.helmProvider.enabled }}
+  {{- if eq .Values.helmProvider.version "v2" }}
             # Enable/disable Helm provider
             - name: HELM_PROVIDER
               value: "1"
@@ -67,6 +68,11 @@ spec:
               value: "{{ .Values.helmProvider.tillerNamespace }}"
             - name: TILLER_ADDRESS
               value: "{{ .Values.helmProvider.tillerAddress }}"
+  {{- else if eq .Values.helmProvider.version "v3" }}
+            # Enable/disable Helm provider
+            - name: HELM3_PROVIDER
+              value: "1"
+  {{- end }}
 {{- end }}
 {{- if .Values.gcr.enabled }}
             # Enable GCR with pub/sub support

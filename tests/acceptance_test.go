@@ -278,6 +278,10 @@ func TestWebhookHighIntegerUpdate(t *testing.T) {
 
 func TestApprovals(t *testing.T) {
 
+	// approvals endpoint shouldn't work without at least basic auth
+	// see http.go:134
+	t.Skip()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -535,6 +539,10 @@ func TestApprovalsWithAuthentication(t *testing.T) {
 		resp, err = client.Do(reqAuth)
 		if err != nil {
 			t.Errorf("failed to make req: %s", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected %d, got: %d", http.StatusOK, resp.StatusCode)
 		}
 
 		var approvals []*types.Approval

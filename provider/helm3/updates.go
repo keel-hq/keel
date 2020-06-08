@@ -1,30 +1,34 @@
-package helm
+package helm3
 
 import (
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
-	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
+	// hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
+	hapi_chart "helm.sh/helm/v3/pkg/chart"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_chart.Chart, config *hapi_chart.Config) (plan *UpdatePlan, shouldUpdateRelease bool, err error) {
+func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_chart.Chart, config map[string]interface{}) (plan *UpdatePlan, shouldUpdateRelease bool, err error) {
 
 	plan = &UpdatePlan{
 		Chart:     chart,
 		Namespace: namespace,
 		Name:      name,
 		Values:    make(map[string]string),
+		EmptyConfig: config == nil,
 	}
+
+	// if configmap is empty, then set DontReuseValues to true
 
 	eventRepoRef, err := image.Parse(repo.String())
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error":           err,
 			"repository_name": repo.Name,
-		}).Error("provider.helm: failed to parse event repository name")
+		}).Error("provider.helm3: failed to parse event repository name")
 		return
 	}
 
@@ -33,7 +37,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-		}).Error("provider.helm: failed to get values.yaml for release")
+		}).Error("provider.helm3: failed to get values.yaml for release")
 		return
 	}
 
@@ -45,7 +49,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 		}
 		log.WithFields(log.Fields{
 			"error": err,
-		}).Error("provider.helm: failed to get keel configuration for release")
+		}).Error("provider.helm3: failed to get keel configuration for release")
 		// ignoring this release, no keel config found
 		return plan, false, nil
 	}
@@ -64,7 +68,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 				"error":           err,
 				"repository_name": imageDetails.RepositoryPath,
 				"repository_tag":  imageDetails.TagPath,
-			}).Error("provider.helm: failed to parse image")
+			}).Error("provider.helm3: failed to parse image")
 			continue
 		}
 
@@ -72,7 +76,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 			log.WithFields(log.Fields{
 				"parsed_image_name": imageRef.Remote(),
 				"target_image_name": repo.Name,
-			}).Debug("provider.helm: images do not match, ignoring")
+			}).Debug("provider.helm3: images do not match, ignoring")
 			continue
 		}
 
@@ -82,7 +86,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 				"error":           err,
 				"repository_name": imageDetails.RepositoryPath,
 				"repository_tag":  imageDetails.TagPath,
-			}).Error("provider.helm: got error while checking whether update the chart")
+			}).Error("provider.helm3: got error while checking whether update the chart")
 			continue
 		}
 
@@ -91,7 +95,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 				"parsed_image_name": imageRef.Remote(),
 				"target_image_name": repo.Name,
 				"policy":            keelCfg.Plc.Name(),
-			}).Info("provider.helm: ignoring")
+			}).Info("provider.helm3: ignoring")
 			continue
 		}
 
@@ -100,7 +104,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 		// 		"parsed_image_name": imageRef.Remote(),
 		// 		"target_image_name": repo.Name,
 		// 		"policy":            keelCfg.Policy.String(),
-		// 	}).Info("provider.helm: match tag set but tags do not match, ignoring")
+		// 	}).Info("provider.helm3: match tag set but tags do not match, ignoring")
 		// 	continue
 		// }
 
@@ -109,7 +113,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 			log.WithFields(log.Fields{
 				"image_details_digestPath": imageDetails.DigestPath,
 				"target_image_digest":      repo.Digest,
-			}).Debug("provider.helm: setting image Digest")
+			}).Debug("provider.helm3: setting image Digest")
 		}
 
 		path, value := getUnversionedPlanValues(repo.Tag, imageRef, &imageDetails)
@@ -121,6 +125,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 		if imageDetails.ReleaseNotes != "" {
 			plan.ReleaseNotes = append(plan.ReleaseNotes, imageDetails.ReleaseNotes)
 		}
+
 	}
 
 	return plan, shouldUpdateRelease, nil

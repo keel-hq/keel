@@ -1,4 +1,4 @@
-package helm
+package helm3
 
 import (
 	"testing"
@@ -7,13 +7,13 @@ import (
 func TestImplementerList(t *testing.T) {
 	t.Skip()
 
-	imp := NewHelmImplementer("192.168.99.100:30083")
+	imp := NewHelm3Implementer()
 	releases, err := imp.ListReleases()
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	if releases.Count == 0 {
+	if len(releases) == 0 {
 		t.Errorf("why no releases? ")
 	}
 

@@ -113,7 +113,6 @@ keel:
   images:
     - repository: image.repository
       tag: image.tag
-
 `
 
 	fakeImpl := &fakeImplementer{
@@ -429,6 +428,7 @@ keel:
 `
 	myChart := &chart.Chart{
 		Values: &chart.Config{Raw: chartVals},
+		Metadata: &chart.Metadata{Name: "app-x"},
 	}
 
 	fakeImpl := &fakeImplementer{
@@ -442,6 +442,8 @@ keel:
 			},
 		},
 	}
+
+
 
 	approver, teardown := approver()
 	defer teardown()
