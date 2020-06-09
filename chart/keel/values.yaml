@@ -128,17 +128,17 @@ secret:
 # Keel self-update
 # uncomment lines below if you want Keel to automaticly
 # self-update to the latest release version
-keel:
-  # keel policy (all/major/minor/patch/force)
-  policy: patch
-  # trigger type, defaults to events such as pubsub, webhooks
-  trigger: poll
-  # polling schedule
-  pollSchedule: "@every 3m"
-  # images to track and update
-  images:
-    - repository: image.repository
-      tag: image.tag
+# keel:
+#   # keel policy (all/major/minor/patch/force)
+#   policy: patch
+#   # trigger type, defaults to events such as pubsub, webhooks
+#   trigger: poll
+#   # polling schedule
+#   pollSchedule: "@every 3m"
+#   # images to track and update
+#   images:
+#     - repository: image.repository
+#       tag: image.tag
 
 # RBAC manifests management
 rbac:

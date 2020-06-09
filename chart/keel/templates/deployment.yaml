@@ -28,7 +28,7 @@ spec:
       containers:
         - name: keel
           # Note that we use appVersion to get images tag.
-          image: "{{ .Values.image.repository }}:{{ .Chart.AppVersion | default .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/keel"]
           volumeMounts:
