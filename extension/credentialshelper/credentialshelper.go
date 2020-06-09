@@ -65,15 +65,13 @@ func UnregisterCredentialsHelper(name string) {
 
 // GetCredentials - generic function for getting credentials
 // func (ch *CredentialsHelpers) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
-func GetCredentials(image *types.TrackedImage) *types.Credentials {
+func GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
 	credHelpersM.RLock()
 	defer credHelpersM.RUnlock()
 
-	creds := &types.Credentials{}
-
 	for name, credHelper := range credHelpers {
 		if credHelper.IsEnabled() {
-			credsFound, err := credHelper.GetCredentials(image)
+			foundCredentials, err := credHelper.GetCredentials(image)
 			if err != nil {
 				if err == ErrUnsupportedRegistry {
 					log.WithFields(log.Fields{
@@ -88,13 +86,23 @@ func GetCredentials(image *types.TrackedImage) *types.Credentials {
 						"tracked_image": image,
 					}).Debug("extension.credentialshelper: credentials not found")
 				}
-			} else {
-				return credsFound
+				continue
 			}
+
+			if foundCredentials == nil {
+				log.WithFields(log.Fields{
+					"error":                   "credentials helper returned nil error but also nil creds",
+					"credentials_helper_name": name,
+				}).Warn("extension.credentialshelper: no error and no credentials")
+				// try next helper
+				continue
+			}
+			// credentials found!
+			return foundCredentials, nil
 		}
 	}
 	log.WithFields(log.Fields{
 		"tracked_image": image,
 	}).Debug("extension.credentialshelper: credentials helper not found")
-	return creds
+	return nil, ErrCredentialsNotAvailable
 }

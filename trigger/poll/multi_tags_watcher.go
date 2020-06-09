@@ -39,20 +39,24 @@ func (j *WatchRepositoryTagsJob) Run() {
 	j.details.mu.RLock()
 	defer j.details.mu.RUnlock()
 
-	creds := credentialshelper.GetCredentials(j.details.trackedImage)
-
 	reg := j.details.trackedImage.Image.Scheme() + "://" + j.details.trackedImage.Image.Registry()
 	if j.details.latest == "" {
 		j.details.latest = j.details.trackedImage.Image.Tag()
 	}
 
-	repository, err := j.registryClient.Get(registry.Opts{
+	registryOpts := registry.Opts{
 		Registry: reg,
 		Name:     j.details.trackedImage.Image.ShortName(),
 		Tag:      j.details.latest,
-		Username: creds.Username,
-		Password: creds.Password,
-	})
+	}
+
+	creds, err := credentialshelper.GetCredentials(j.details.trackedImage)
+	if err == nil {
+		registryOpts.Username = creds.Username
+		registryOpts.Password = creds.Password
+	}
+
+	repository, err := j.registryClient.Get(registryOpts)
 
 	if err != nil {
 		log.WithFields(log.Fields{

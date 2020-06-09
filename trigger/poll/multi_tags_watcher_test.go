@@ -1,15 +1,17 @@
 package poll
 
 import (
+	"errors"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/Masterminds/semver"
-	"github.com/keel-hq/keel/approvals"
+	"github.com/stretchr/testify/assert"
 
-	// "github.com/keel-hq/keel/cache/memory"
+	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/types"
@@ -190,4 +192,109 @@ func Test_semverSort(t *testing.T) {
 	if !reflect.DeepEqual(sortedTags, expectedVersions) {
 		t.Errorf("Invalid sorted tags; expected: %s; got: %s", expectedVersions, sortedTags)
 	}
+}
+
+type testingCredsHelper struct {
+	err         error              // err to return
+	credentials *types.Credentials // creds to return
+}
+
+func (h *testingCredsHelper) IsEnabled() bool {
+	return true
+}
+
+func (h *testingCredsHelper) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
+	return h.credentials, h.err
+}
+
+func TestWatchMultipleTagsWithCredentialsHelper(t *testing.T) {
+	// fake provider listening for events
+	imgA, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.1")
+	fp := &fakeProvider{
+		images: []*types.TrackedImage{
+			&types.TrackedImage{
+				Image:        imgA,
+				Trigger:      types.TriggerTypePoll,
+				Provider:     "fp",
+				PollSchedule: types.KeelPollDefaultSchedule,
+				Policy:       policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
+			},
+		},
+	}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	t.Run("TestError", func(t *testing.T) {
+		mockHelper := &testingCredsHelper{
+			err: errors.New("doesn't work"),
+		}
+		credentialshelper.RegisterCredentialsHelper("mock", mockHelper)
+		defer credentialshelper.UnregisterCredentialsHelper("mock")
+
+		providers := provider.New([]provider.Provider{fp}, am)
+
+		// returning some sha
+		frc := &fakeRegistryClient{
+			digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
+			tagsToReturn:   []string{"5.0.0"},
+		}
+
+		watcher := NewRepositoryWatcher(providers, frc)
+
+		tracked := []*types.TrackedImage{
+			mustParse("gcr.io/v2-namespace/hello-world:1.1.1", "@every 10m"),
+		}
+
+		err := watcher.Watch(tracked...)
+		if err != nil {
+			t.Errorf("failed to watch: %s", err)
+		}
+
+		if len(watcher.watched) != 1 {
+			t.Errorf("expected to find watching 1 entries, found: %d", len(watcher.watched))
+		}
+		assert.Equal(t, "", frc.opts.Username)
+		assert.Equal(t, "", frc.opts.Password)
+	})
+
+	t.Run("TestOK", func(t *testing.T) {
+		mockHelper := &testingCredsHelper{
+			err: nil,
+			credentials: &types.Credentials{
+				Username: "user",
+				Password: "pass",
+			},
+		}
+		credentialshelper.RegisterCredentialsHelper("mock", mockHelper)
+		defer credentialshelper.UnregisterCredentialsHelper("mock")
+
+		providers := provider.New([]provider.Provider{fp}, am)
+
+		// returning some sha
+		frc := &fakeRegistryClient{
+			digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
+			tagsToReturn:   []string{"5.0.0"},
+		}
+
+		watcher := NewRepositoryWatcher(providers, frc)
+
+		tracked := []*types.TrackedImage{
+			mustParse("gcr.io/v2-namespace/hello-world:1.1.1", "@every 10m"),
+		}
+
+		err := watcher.Watch(tracked...)
+		if err != nil {
+			t.Errorf("failed to watch: %s", err)
+		}
+
+		if len(watcher.watched) != 1 {
+			t.Errorf("expected to find watching 1 entries, found: %d", len(watcher.watched))
+		}
+		assert.Equal(t, "user", frc.opts.Username)
+		assert.Equal(t, "pass", frc.opts.Password)
+	})
+
 }
