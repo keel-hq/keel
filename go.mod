@@ -57,6 +57,7 @@ require (
 	github.com/rusenask/docker-registry-client v0.0.0-20200210164146-049272422097
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/sirupsen/logrus v1.6.0
+	github.com/stretchr/testify v1.5.1
 	github.com/tbruyelle/hipchat-go v0.0.0-20170717082847-35aebc99209a
 	github.com/urfave/negroni v1.0.0
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
@@ -66,6 +67,7 @@ require (
 	helm.sh/helm/v3 v3.0.0-00010101000000-000000000000
 	k8s.io/api v0.17.2
 	k8s.io/apimachinery v0.17.2
+	k8s.io/cli-runtime v0.17.2
 	k8s.io/client-go v0.17.2
 	k8s.io/helm v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/yaml v1.1.0

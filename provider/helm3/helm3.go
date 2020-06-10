@@ -286,6 +286,7 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 			}).Error("provider.helm3: failed to process versioned release")
 			continue
 		}
+
 		if update {
 			helm3VersionedUpdatesCounter.With(prometheus.Labels{"chart": fmt.Sprintf("%s/%s", release.Namespace, release.Name)}).Inc()
 			plans = append(plans, plan)
@@ -314,9 +315,8 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 			},
 		})
 
-
 		// err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values)
-		err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values, plan.EmptyConfig)
+		err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values, plan.Namespace, plan.EmptyConfig)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":     err,
@@ -379,14 +379,14 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 	return nil
 }
 
-func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_chart.Chart, overrideValues map[string]string, opts ...bool) error {
+func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_chart.Chart, overrideValues map[string]string, namespace string, opts ...bool) error {
 
     // set reuse values to false if currentRelease.config is nil
     emptyConfig := false
     if len(opts) == 1 && opts[0] {
         emptyConfig = opts[0]
     }
-	resp, err := implementer.UpdateReleaseFromChart(releaseName, chart, overrideValues, emptyConfig)
+	resp, err := implementer.UpdateReleaseFromChart(releaseName, chart, overrideValues, namespace, emptyConfig)
 
 	if err != nil {
 		return err

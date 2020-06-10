@@ -10,7 +10,9 @@ import (
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/release"
-    "helm.sh/helm/v3/pkg/cli"
+    // "helm.sh/helm/v3/pkg/cli"
+
+    "k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 // to do:
@@ -23,33 +25,41 @@ const DefaultUpdateTimeout = 300
 type Implementer interface {
 	// ListReleases(opts ...helm.ReleaseListOption) ([]*release.Release, error)
     ListReleases() ([]*release.Release, error)
-	UpdateReleaseFromChart(rlsName string, chart *chart.Chart, vals map[string]string, opts ...bool) (*release.Release, error)
+	UpdateReleaseFromChart(rlsName string, chart *chart.Chart, vals map[string]string, namespace string, opts ...bool) (*release.Release, error)
 }
 
 // Helm3Implementer - actual helm3 implementer
 type Helm3Implementer struct {
-	actionConfig *action.Configuration
+	// actionConfig *action.Configuration
+    HelmDriver string
+    KubeContext string
+    KubeToken string
+    KubeAPIServer string
 }
 
 // NewHelm3Implementer - get new helm implementer
 func NewHelm3Implementer() *Helm3Implementer {
-    settings := cli.New()
+    // settings := cli.New()
 
-    actionConfig := &action.Configuration{}
-    // You can pass an empty string instead of settings.Namespace() to list
-    // all namespaces
-    if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), os.Getenv("HELM_DRIVER"), log.Printf); err != nil {
-        log.Printf("%+v", err)
-        os.Exit(1)
-    }
+    // actionConfig := &action.Configuration{}
+    // // You can pass an empty string instead of settings.Namespace() to list
+    // // all namespaces
+    // if err := actionConfig.Init(settings.RESTClientGetter(), "", os.Getenv("HELM_DRIVER"), log.Printf); err != nil {
+    //     log.Printf("%+v", err)
+    //     os.Exit(1)
+    // }
     return &Helm3Implementer{
-    	actionConfig: actionConfig,
+        HelmDriver:       os.Getenv("HELM_DRIVER"),
+        KubeContext:      os.Getenv("HELM_KUBECONTEXT"),
+        KubeToken:        os.Getenv("HELM_KUBETOKEN"),
+        KubeAPIServer:    os.Getenv("HELM_KUBEAPISERVER"),
     }
 }
 
 // ListReleases - list available releases
 func (i *Helm3Implementer) ListReleases() ([]*release.Release, error) {
-    client := action.NewList(i.actionConfig)
+    actionConfig := i.generateConfig("")
+    client := action.NewList(actionConfig)
     results, err := client.Run()
     if err != nil {
         log.WithFields(log.Fields{
@@ -62,8 +72,10 @@ func (i *Helm3Implementer) ListReleases() ([]*release.Release, error) {
 
 // UpdateReleaseFromChart - update release from chart
 // func (i *Helm3Implementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, vals map[string]string) (*release.Release, error) {
-func (i *Helm3Implementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, vals map[string]string, opts ...bool) (*release.Release, error) {
-    client := action.NewUpgrade(i.actionConfig)
+func (i *Helm3Implementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, vals map[string]string, namespace string, opts ...bool) (*release.Release, error) {
+    actionConfig := i.generateConfig(namespace)
+    client := action.NewUpgrade(actionConfig)
+    client.Namespace = namespace
 	client.Force = true
 	client.Timeout = DefaultUpdateTimeout;
 	client.ReuseValues = true
@@ -84,6 +96,25 @@ func (i *Helm3Implementer) UpdateReleaseFromChart(rlsName string, chart *chart.C
         return nil, err
     }
     return results, err
+}
+
+func (i *Helm3Implementer) generateConfig(namespace string) (*action.Configuration) {
+    // settings := cli.New()
+    config := &genericclioptions.ConfigFlags{
+        Namespace:   &namespace,
+        Context:     &i.KubeContext,
+        BearerToken: &i.KubeToken,
+        APIServer:   &i.KubeAPIServer,
+    }
+
+    actionConfig := &action.Configuration{}
+
+    if err := actionConfig.Init(config, namespace, i.HelmDriver, log.Printf); err != nil {
+        log.Printf("%+v", err)
+        os.Exit(1)
+    }
+
+    return actionConfig
 }
 
 // convert map[string]string to map[string]interface

@@ -73,7 +73,7 @@ func (i *fakeImplementer) ListReleases() ([]*release.Release, error) {
 	return i.listReleasesResponse, nil
 }
 
-func (i *fakeImplementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, vals map[string]string, opts ...bool) (*release.Release, error) {
+func (i *fakeImplementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, vals map[string]string, namespace string, opts ...bool) (*release.Release, error) {
 // func (i *fakeImplementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, opts ...helm.UpdateOption) (*rls.UpdateReleaseResponse, error) {
 	i.updatedRlsName = rlsName
 	i.updatedChart = chart
