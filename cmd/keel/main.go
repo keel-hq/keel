@@ -361,7 +361,6 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 	}
 
 	if os.Getenv(EnvHelm3Provider) == "1" || os.Getenv(EnvHelm3Provider) == "true" {
-
 		helm3Implementer := helm3.NewHelm3Implementer()
 		helm3Provider := helm3.NewProvider(helm3Implementer, opts.sender, opts.approvalsManager)
 
