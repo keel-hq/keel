@@ -55,14 +55,14 @@ func TestCheckDeployment(t *testing.T) {
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
 
-			&types.TrackedImage{
+			{
 				Image:        imgA,
 				Trigger:      types.TriggerTypePoll,
 				Provider:     "fp",
 				PollSchedule: types.KeelPollDefaultSchedule,
 			},
 
-			&types.TrackedImage{
+			{
 				Trigger:      types.TriggerTypePoll,
 				Image:        imgB,
 				Provider:     "fp",
@@ -144,7 +144,7 @@ func TestCheckECRDeployment(t *testing.T) {
 	imgA, _ := image.Parse("528670773427.dkr.ecr.us-east-2.amazonaws.com/webhook-demo:master")
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
-			&types.TrackedImage{
+			{
 				Image:        imgA,
 				Trigger:      types.TriggerTypePoll,
 				Provider:     "fp",

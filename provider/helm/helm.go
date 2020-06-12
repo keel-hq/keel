@@ -443,7 +443,6 @@ func getValueAsString(vals chartutil.Values, path string) (string, error) {
 }
 
 func values(chart *hapi_chart.Chart, config *hapi_chart.Config) (chartutil.Values, error) {
-	// func CoalesceValues(chrt *chart.Chart, vals *chart.Config) (Values, error) {
 	return chartutil.CoalesceValues(chart, config)
 }
 

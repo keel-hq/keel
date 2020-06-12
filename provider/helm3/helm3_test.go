@@ -8,17 +8,16 @@ import (
 	"reflect"
 	"testing"
 
-	"sigs.k8s.io/yaml"
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/pkg/store/sql"
 	"github.com/keel-hq/keel/types"
+	"sigs.k8s.io/yaml"
 
-	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/release"
-
 )
 
 func newTestingUtils() (*sql.SQLStore, func()) {
@@ -74,14 +73,14 @@ func (i *fakeImplementer) ListReleases() ([]*release.Release, error) {
 }
 
 func (i *fakeImplementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, vals map[string]string, namespace string, opts ...bool) (*release.Release, error) {
-// func (i *fakeImplementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, opts ...helm.UpdateOption) (*rls.UpdateReleaseResponse, error) {
+	// func (i *fakeImplementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, opts ...helm.UpdateOption) (*rls.UpdateReleaseResponse, error) {
 	i.updatedRlsName = rlsName
 	i.updatedChart = chart
 	// i.updatedOptions = opts
 
 	return &release.Release{
-		Name: rlsName,
-		Chart: chart,
+		Name:    rlsName,
+		Chart:   chart,
 		Version: 2,
 	}, nil
 }
@@ -136,10 +135,10 @@ keel:
 
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: []*release.Release{
-			&release.Release{
-				Name: "release-1",
-				Chart: myChart,
-				Config: make(map[string]interface {}),
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -186,10 +185,10 @@ func TestGetChartPolicyFromProm(t *testing.T) {
 
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: []*release.Release{
-			&release.Release{
-				Name: "release-1",
-				Chart: myChart,
-				Config: make(map[string]interface {}),
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -254,10 +253,10 @@ keel:
 
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: []*release.Release{
-			&release.Release{
-				Name: "release-1",
-				Chart: myChart,
-				Config: make(map[string]interface {}),
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -297,10 +296,10 @@ image2:
 
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: []*release.Release{
-			&release.Release{
-				Name: "release-1",
-				Chart: myChart,
-				Config: make(map[string]interface {}),
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -348,10 +347,10 @@ keel:
 
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: []*release.Release{
-			&release.Release{
-				Name: "release-1",
-				Chart: myChart,
-				Config: make(map[string]interface {}),
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -383,7 +382,6 @@ func TestGetTriggerFromConfig(t *testing.T) {
 	}
 }
 
-
 func TestGetPolicyFromConfig(t *testing.T) {
 	vals, err := testingConfigYaml(&KeelChartConfig{Policy: "all"})
 	if err != nil {
@@ -403,7 +401,7 @@ func TestGetPolicyFromConfig(t *testing.T) {
 
 func TestGetImagesFromConfig(t *testing.T) {
 	vals, err := testingConfigYaml(&KeelChartConfig{Policy: "all", Images: []ImageDetails{
-		ImageDetails{
+		{
 			RepositoryPath: "repopath",
 			TagPath:        "tagpath",
 		},
@@ -453,10 +451,10 @@ keel:
 
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: []*release.Release{
-			&release.Release{
-				Name: "release-1",
-				Chart: myChart,
-				Config: make(map[string]interface {}),
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -614,7 +612,7 @@ keel:
 				MatchPreRelease: true,
 				Trigger:         types.TriggerTypeDefault,
 				Images: []ImageDetails{
-					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+					{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
 				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 			},
@@ -628,7 +626,7 @@ keel:
 				Trigger:              types.TriggerTypeDefault,
 				NotificationChannels: []string{"chan1", "chan2"},
 				Images: []ImageDetails{
-					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+					{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
 				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 			},
@@ -642,7 +640,7 @@ keel:
 				Trigger:         types.TriggerTypePoll,
 				PollSchedule:    "@every 30m",
 				Images: []ImageDetails{
-					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag", ImagePullSecret: "such-secret"},
+					{RepositoryPath: "image.repository", TagPath: "image.tag", ImagePullSecret: "such-secret"},
 				},
 				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 			},
@@ -655,7 +653,7 @@ keel:
 				MatchPreRelease: false,
 				Trigger:         types.TriggerTypeDefault,
 				Images: []ImageDetails{
-					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+					{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
 				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, false),
 			},
@@ -703,10 +701,10 @@ keel:
 
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: []*release.Release{
-			&release.Release{
-				Name: "release-1",
-				Chart: myChart,
-				Config: make(map[string]interface {}),
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}

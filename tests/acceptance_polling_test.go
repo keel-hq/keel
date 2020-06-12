@@ -80,7 +80,7 @@ func TestPollingSemverUpdate(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "keelhq/push-workflow-example:0.1.0-dev",
 							},
@@ -140,7 +140,7 @@ func TestPollingSemverUpdate(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "keelhq/push-workflow-example:0.1.0",
 							},
@@ -197,7 +197,7 @@ func TestPollingSemverUpdate(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "keelhq/push-workflow-example:0.3.0-alpha",
 							},
@@ -335,7 +335,7 @@ func TestPollingPrivateRegistry(t *testing.T) {
 							},
 						},
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								ImagePullPolicy: v1.PullAlways,
 								Name:            "wd-1",
 								Image:           "karolisr/demo-webhook:0.0.1",
@@ -447,7 +447,7 @@ func TestPollingPrivateRegistry(t *testing.T) {
 							},
 						},
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								ImagePullPolicy: v1.PullAlways,
 								Name:            "wd-1",
 								Image:           "registry.gitlab.com/karolisr/keel:0.1.0",

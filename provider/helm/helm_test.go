@@ -118,7 +118,7 @@ keel:
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: &rls.ListReleasesResponse{
 			Releases: []*hapi_release5.Release{
-				&hapi_release5.Release{
+				{
 					Name: "release-1",
 					Chart: &chart.Chart{
 						Values:   &chart.Config{Raw: chartVals},
@@ -164,7 +164,7 @@ func TestGetChartPolicyFromProm(t *testing.T) {
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: &rls.ListReleasesResponse{
 			Releases: []*hapi_release5.Release{
-				&hapi_release5.Release{
+				{
 					Name: "release-1",
 					Chart: &chart.Chart{
 						Values:   &chart.Config{Raw: promChartValues},
@@ -232,7 +232,7 @@ keel:
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: &rls.ListReleasesResponse{
 			Releases: []*hapi_release5.Release{
-				&hapi_release5.Release{
+				{
 					Name: "release-1",
 					Chart: &chart.Chart{
 						Values:   &chart.Config{Raw: chartVals},
@@ -275,7 +275,7 @@ image2:
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: &rls.ListReleasesResponse{
 			Releases: []*hapi_release5.Release{
-				&hapi_release5.Release{
+				{
 					Name: "release-1",
 					Chart: &chart.Chart{
 						Values:   &chart.Config{Raw: chartVals},
@@ -326,7 +326,7 @@ keel:
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: &rls.ListReleasesResponse{
 			Releases: []*hapi_release5.Release{
-				&hapi_release5.Release{
+				{
 					Name: "release-1",
 					Chart: &chart.Chart{
 						Values:   &chart.Config{Raw: chartVals},
@@ -384,7 +384,7 @@ func TestGetPolicyFromConfig(t *testing.T) {
 
 func TestGetImagesFromConfig(t *testing.T) {
 	vals, err := testingConfigYaml(&KeelChartConfig{Policy: "all", Images: []ImageDetails{
-		ImageDetails{
+		{
 			RepositoryPath: "repopath",
 			TagPath:        "tagpath",
 		},
@@ -427,14 +427,14 @@ keel:
 
 `
 	myChart := &chart.Chart{
-		Values: &chart.Config{Raw: chartVals},
+		Values:   &chart.Config{Raw: chartVals},
 		Metadata: &chart.Metadata{Name: "app-x"},
 	}
 
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: &rls.ListReleasesResponse{
 			Releases: []*hapi_release5.Release{
-				&hapi_release5.Release{
+				{
 					Name:   "release-1",
 					Chart:  myChart,
 					Config: &chart.Config{Raw: ""},
@@ -442,8 +442,6 @@ keel:
 			},
 		},
 	}
-
-
 
 	approver, teardown := approver()
 	defer teardown()
@@ -598,7 +596,7 @@ keel:
 				MatchPreRelease: true,
 				Trigger:         types.TriggerTypeDefault,
 				Images: []ImageDetails{
-					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+					{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
 				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 			},
@@ -612,7 +610,7 @@ keel:
 				Trigger:              types.TriggerTypeDefault,
 				NotificationChannels: []string{"chan1", "chan2"},
 				Images: []ImageDetails{
-					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+					{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
 				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 			},
@@ -626,7 +624,7 @@ keel:
 				Trigger:         types.TriggerTypePoll,
 				PollSchedule:    "@every 30m",
 				Images: []ImageDetails{
-					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag", ImagePullSecret: "such-secret"},
+					{RepositoryPath: "image.repository", TagPath: "image.tag", ImagePullSecret: "such-secret"},
 				},
 				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 			},
@@ -639,7 +637,7 @@ keel:
 				MatchPreRelease: false,
 				Trigger:         types.TriggerTypeDefault,
 				Images: []ImageDetails{
-					ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+					{RepositoryPath: "image.repository", TagPath: "image.tag"},
 				},
 				Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, false),
 			},
@@ -683,7 +681,7 @@ keel:
 	fakeImpl := &fakeImplementer{
 		listReleasesResponse: &rls.ListReleasesResponse{
 			Releases: []*hapi_release5.Release{
-				&hapi_release5.Release{
+				{
 					Name: "release-1",
 					Chart: &chart.Chart{
 						Values:   &chart.Config{Raw: chartVals},

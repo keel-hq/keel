@@ -61,7 +61,6 @@ func getImages(vals chartutil.Values) ([]*types.TrackedImage, error) {
 }
 
 func getPlanValues(newVersion *types.Version, ref *image.Reference, imageDetails *ImageDetails) (path, value string) {
-	// vals := make(map[string]string)
 	// if tag is not supplied, then user specified full image name
 	if imageDetails.TagPath == "" {
 		return imageDetails.RepositoryPath, getUpdatedImage(ref, newVersion.String())

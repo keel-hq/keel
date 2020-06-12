@@ -15,17 +15,16 @@ import (
 
 	"github.com/keel-hq/keel/extension/notification"
 
-	"sigs.k8s.io/yaml"
 	log "github.com/sirupsen/logrus"
+	"sigs.k8s.io/yaml"
 
 	"helm.sh/helm/v3/pkg/strvals"
 
 	_ "helm.sh/helm/v3/pkg/action"
 	_ "helm.sh/helm/v3/pkg/release"
 
-	"helm.sh/helm/v3/pkg/chartutil"
 	hapi_chart "helm.sh/helm/v3/pkg/chart"
-
+	"helm.sh/helm/v3/pkg/chartutil"
 )
 
 var helm3VersionedUpdatesCounter = prometheus.NewCounterVec(
@@ -381,11 +380,11 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 
 func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_chart.Chart, overrideValues map[string]string, namespace string, opts ...bool) error {
 
-    // set reuse values to false if currentRelease.config is nil
-    emptyConfig := false
-    if len(opts) == 1 && opts[0] {
-        emptyConfig = opts[0]
-    }
+	// set reuse values to false if currentRelease.config is nil
+	emptyConfig := false
+	if len(opts) == 1 && opts[0] {
+		emptyConfig = opts[0]
+	}
 	resp, err := implementer.UpdateReleaseFromChart(releaseName, chart, overrideValues, namespace, emptyConfig)
 
 	if err != nil {
@@ -393,8 +392,8 @@ func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_
 	}
 
 	log.WithFields(log.Fields{
-		"version": resp.Version,
-		"release": releaseName,
+		"version":        resp.Version,
+		"release":        releaseName,
 		"overrideValues": overrideValues,
 	}).Info("provider.helm3: release updated")
 	return nil

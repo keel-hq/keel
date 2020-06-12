@@ -3,8 +3,8 @@ package hipchat
 import (
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/daneharrigan/hipchat"
+	log "github.com/sirupsen/logrus"
 )
 
 type XmppImplementer interface {

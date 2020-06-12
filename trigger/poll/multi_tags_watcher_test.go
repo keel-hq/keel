@@ -23,7 +23,7 @@ func TestWatchMultipleTagsWithSemver(t *testing.T) {
 	imgA, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.1")
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
-			&types.TrackedImage{
+			{
 				Image:        imgA,
 				Trigger:      types.TriggerTypePoll,
 				Provider:     "fp",
@@ -212,7 +212,7 @@ func TestWatchMultipleTagsWithCredentialsHelper(t *testing.T) {
 	imgA, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.1")
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
-			&types.TrackedImage{
+			{
 				Image:        imgA,
 				Trigger:      types.TriggerTypePoll,
 				Provider:     "fp",

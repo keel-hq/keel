@@ -7,10 +7,9 @@ import (
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 
-	"helm.sh/helm/v3/pkg/chartutil"
 	hapi_chart "helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chartutil"
 )
-
 
 func Test_checkUnversionedRelease(t *testing.T) {
 	chartValuesPolicyForce := `
@@ -84,17 +83,17 @@ keel:
 
 	helloWorldChart := &hapi_chart.Chart{
 		// Values: &hapi_chart.Config{Raw: chartValuesPolicyForce},
-		Values: chartValuesPolicyForceVal,
+		Values:   chartValuesPolicyForceVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldChartPolicyMajor := &hapi_chart.Chart{
-		Values: chartValuesPolicyMajorVal,
+		Values:   chartValuesPolicyMajorVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldChartPolicyMajorReleaseNotes := &hapi_chart.Chart{
-		Values: chartValuesPolicyForceReleaseNotesVal,
+		Values:   chartValuesPolicyForceReleaseNotesVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
@@ -119,7 +118,7 @@ keel:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChart,
-				config:    make(map[string]interface {}),
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace:      "default",
@@ -133,7 +132,7 @@ keel:
 					MatchPreRelease: true,
 					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
-						ImageDetails{
+						{
 							RepositoryPath: "image.repository",
 							TagPath:        "image.tag",
 						},
@@ -151,7 +150,7 @@ keel:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChartPolicyMajorReleaseNotes,
-				config:    make(map[string]interface {}),
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace:      "default",
@@ -166,7 +165,7 @@ keel:
 					MatchPreRelease: true,
 					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
-						ImageDetails{
+						{
 							RepositoryPath: "image.repository",
 							TagPath:        "image.tag",
 							ReleaseNotes:   "https://github.com/keel-hq/keel/releases",
@@ -185,7 +184,7 @@ keel:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChartPolicyMajor,
-				config:    make(map[string]interface {}),
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace: "default",
@@ -314,25 +313,25 @@ image:
 	}
 
 	helloWorldChart := &hapi_chart.Chart{
-		Values: chartValuesAVal,
+		Values:   chartValuesAVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldNonSemverChart := &hapi_chart.Chart{
-		Values: chartValuesBVal,
+		Values:   chartValuesBVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 	helloWorldNonSemverNoForceChart := &hapi_chart.Chart{
-		Values: chartValuesNonSemverNoForceVal,
+		Values:   chartValuesNonSemverNoForceVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 	helloWorldNoTagChart := &hapi_chart.Chart{
-		Values: chartValuesNoTagVal,
+		Values:   chartValuesNoTagVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldNoKeelCfg := &hapi_chart.Chart{
-		Values: chartValuesNoKeelCfgVal,
+		Values:   chartValuesNoKeelCfgVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
@@ -341,7 +340,7 @@ image:
 		namespace string
 		name      string
 		chart     *hapi_chart.Chart
-		config    map[string]interface {}
+		config    map[string]interface{}
 	}
 	tests := []struct {
 		name                    string
@@ -358,7 +357,7 @@ image:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChart,
-				config:    make(map[string]interface {}),
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace:      "default",
@@ -372,7 +371,7 @@ image:
 					MatchPreRelease: true,
 					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
-						ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+						{RepositoryPath: "image.repository", TagPath: "image.tag"},
 					},
 					Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 				},
@@ -387,7 +386,7 @@ image:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChart,
-				config:    make(map[string]interface {}),
+				config:    make(map[string]interface{}),
 			},
 			wantPlan:                &UpdatePlan{Namespace: "default", Name: "release-1", Chart: helloWorldChart, Values: map[string]string{}},
 			wantShouldUpdateRelease: false,
@@ -401,7 +400,7 @@ image:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChart,
-				config:    make(map[string]interface {}),
+				config:    make(map[string]interface{}),
 			},
 			wantPlan:                &UpdatePlan{Namespace: "default", Name: "release-1", Chart: helloWorldChart, Values: map[string]string{}},
 			wantShouldUpdateRelease: false,
@@ -415,7 +414,7 @@ image:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldNonSemverChart,
-				config:    make(map[string]interface {}),
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace:      "default",
@@ -429,7 +428,7 @@ image:
 					MatchPreRelease: true,
 					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
-						ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+						{RepositoryPath: "image.repository", TagPath: "image.tag"},
 					},
 					Plc: policy.NewForcePolicy(false),
 				},
@@ -445,7 +444,7 @@ image:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldNonSemverNoForceChart,
-				config:    make(map[string]interface {}),
+				config:    make(map[string]interface{}),
 			},
 			wantPlan:                &UpdatePlan{Namespace: "default", Name: "release-1", Chart: helloWorldNonSemverNoForceChart, Values: map[string]string{}},
 			wantShouldUpdateRelease: false,
@@ -459,7 +458,7 @@ image:
 				namespace: "default",
 				name:      "release-1-no-tag",
 				chart:     helloWorldNoTagChart,
-				config:    make(map[string]interface {}),
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace:      "default",
@@ -473,7 +472,7 @@ image:
 					MatchPreRelease: true,
 					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
-						ImageDetails{RepositoryPath: "image.repository"},
+						{RepositoryPath: "image.repository"},
 					},
 					Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 				},
@@ -489,7 +488,7 @@ image:
 				namespace: "default",
 				name:      "release-1-no-tag",
 				chart:     helloWorldNoKeelCfg,
-				config:    make(map[string]interface {}),
+				config:    make(map[string]interface{}),
 			},
 			wantPlan:                &UpdatePlan{Namespace: "default", Name: "release-1-no-tag", Chart: helloWorldNoKeelCfg, Values: map[string]string{}},
 			wantShouldUpdateRelease: false,

@@ -101,7 +101,7 @@ func TestWebhooksSemverUpdate(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "karolisr/webhook-demo:0.0.14",
 							},
@@ -205,7 +205,7 @@ func TestWebhookHighIntegerUpdate(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "karolisr/webhook-demo:0.0.14",
 							},
@@ -339,7 +339,7 @@ func TestApprovals(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "karolisr/webhook-demo:0.0.14",
 							},
@@ -480,7 +480,7 @@ func TestApprovalsWithAuthentication(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "karolisr/webhook-demo:0.0.14",
 							},

@@ -141,7 +141,7 @@ func TestGetNamespaces(t *testing.T) {
 	fi := &fakeImplementer{
 		namespaces: &v1.NamespaceList{
 			Items: []v1.Namespace{
-				v1.Namespace{
+				{
 					meta_v1.TypeMeta{},
 					meta_v1.ObjectMeta{Name: "xxxx"},
 					v1.NamespaceSpec{},
@@ -203,7 +203,7 @@ func TestGetImpacted(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -224,7 +224,7 @@ func TestGetImpacted(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -244,7 +244,7 @@ func TestGetImpacted(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -300,7 +300,7 @@ func TestGetImpactedPolicyAnnotations(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -322,7 +322,7 @@ func TestGetImpactedPolicyAnnotations(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -342,7 +342,7 @@ func TestGetImpactedPolicyAnnotations(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -403,7 +403,7 @@ func TestPrereleaseGetImpactedA(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -424,7 +424,7 @@ func TestPrereleaseGetImpactedA(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1-staging",
 							},
 						},
@@ -444,7 +444,7 @@ func TestPrereleaseGetImpactedA(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -495,7 +495,7 @@ func TestPrereleaseGetImpactedB(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -516,7 +516,7 @@ func TestPrereleaseGetImpactedB(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1-staging",
 							},
 						},
@@ -536,7 +536,7 @@ func TestPrereleaseGetImpactedB(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -582,7 +582,7 @@ func TestProcessEvent(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -608,7 +608,7 @@ func TestProcessEvent(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -634,7 +634,7 @@ func TestProcessEvent(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/bye-world:1.1.1",
 							},
 						},
@@ -665,7 +665,7 @@ func TestProcessEvent(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/bye-world:1.1.1",
 							},
 						},
@@ -710,7 +710,7 @@ func TestProcessEventBuildNumber(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -731,7 +731,7 @@ func TestProcessEventBuildNumber(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:10",
 							},
 						},
@@ -773,7 +773,7 @@ func TestEventSent(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -794,7 +794,7 @@ func TestEventSent(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:10.0.0",
 							},
 						},
@@ -841,7 +841,7 @@ func TestEventSentWithReleaseNotes(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -862,7 +862,7 @@ func TestEventSentWithReleaseNotes(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:10.0.0",
 							},
 						},
@@ -914,7 +914,7 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -935,10 +935,10 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/greetings-world:1.1.1",
 							},
 						},
@@ -958,7 +958,7 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -1015,7 +1015,7 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -1036,10 +1036,10 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -1060,7 +1060,7 @@ func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -1117,7 +1117,7 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -1138,7 +1138,7 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/foo-world",
 							},
 						},
@@ -1159,7 +1159,7 @@ func TestGetImpactedUntaggedImage(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -1216,7 +1216,7 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -1237,7 +1237,7 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world",
 							},
 						},
@@ -1258,7 +1258,7 @@ func TestGetImpactedUntaggedOneImage(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -1316,7 +1316,7 @@ func TestTrackedImages(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -1336,12 +1336,12 @@ func TestTrackedImages(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1",
 							},
 						},
 						ImagePullSecrets: []v1.LocalObjectReference{
-							v1.LocalObjectReference{
+							{
 								Name: "very-secret",
 							},
 						},
@@ -1380,7 +1380,7 @@ func TestTrackedImagesWithSecrets(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -1403,12 +1403,12 @@ func TestTrackedImagesWithSecrets(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1",
 							},
 						},
 						ImagePullSecrets: []v1.LocalObjectReference{
-							v1.LocalObjectReference{
+							{
 								Name: "very-secret",
 							},
 						},

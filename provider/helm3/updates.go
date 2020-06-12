@@ -5,7 +5,6 @@ import (
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
-	// hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
 	hapi_chart "helm.sh/helm/v3/pkg/chart"
 
 	log "github.com/sirupsen/logrus"
@@ -14,10 +13,10 @@ import (
 func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_chart.Chart, config map[string]interface{}) (plan *UpdatePlan, shouldUpdateRelease bool, err error) {
 
 	plan = &UpdatePlan{
-		Chart:     chart,
-		Namespace: namespace,
-		Name:      name,
-		Values:    make(map[string]string),
+		Chart:       chart,
+		Namespace:   namespace,
+		Name:        name,
+		Values:      make(map[string]string),
 		EmptyConfig: config == nil,
 	}
 
@@ -96,15 +95,6 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 			}).Info("provider.helm3: ignoring")
 			continue
 		}
-
-		// if keelCfg.MatchTag && imageRef.Tag() != eventRepoRef.Tag() {
-		// 	log.WithFields(log.Fields{
-		// 		"parsed_image_name": imageRef.Remote(),
-		// 		"target_image_name": repo.Name,
-		// 		"policy":            keelCfg.Policy.String(),
-		// 	}).Info("provider.helm3: match tag set but tags do not match, ignoring")
-		// 	continue
-		// }
 
 		if imageDetails.DigestPath != "" {
 			plan.Values[imageDetails.DigestPath] = repo.Digest

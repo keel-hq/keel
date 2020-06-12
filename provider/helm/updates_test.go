@@ -65,17 +65,17 @@ keel:
 `
 
 	helloWorldChart := &hapi_chart.Chart{
-		Values: &hapi_chart.Config{Raw: chartValuesPolicyForce},
+		Values:   &hapi_chart.Config{Raw: chartValuesPolicyForce},
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldChartPolicyMajor := &hapi_chart.Chart{
-		Values: &hapi_chart.Config{Raw: chartValuesPolicyMajor},
+		Values:   &hapi_chart.Config{Raw: chartValuesPolicyMajor},
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldChartPolicyMajorReleaseNotes := &hapi_chart.Chart{
-		Values: &hapi_chart.Config{Raw: chartValuesPolicyForceReleaseNotes},
+		Values:   &hapi_chart.Config{Raw: chartValuesPolicyForceReleaseNotes},
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
@@ -114,7 +114,7 @@ keel:
 					MatchPreRelease: true,
 					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
-						ImageDetails{
+						{
 							RepositoryPath: "image.repository",
 							TagPath:        "image.tag",
 						},
@@ -147,7 +147,7 @@ keel:
 					MatchPreRelease: true,
 					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
-						ImageDetails{
+						{
 							RepositoryPath: "image.repository",
 							TagPath:        "image.tag",
 							ReleaseNotes:   "https://github.com/keel-hq/keel/releases",
@@ -274,25 +274,25 @@ image:
 `
 
 	helloWorldChart := &hapi_chart.Chart{
-		Values: &hapi_chart.Config{Raw: chartValuesA},
+		Values:   &hapi_chart.Config{Raw: chartValuesA},
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldNonSemverChart := &hapi_chart.Chart{
-		Values: &hapi_chart.Config{Raw: chartValuesB},
+		Values:   &hapi_chart.Config{Raw: chartValuesB},
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 	helloWorldNonSemverNoForceChart := &hapi_chart.Chart{
-		Values: &hapi_chart.Config{Raw: chartValuesNonSemverNoForce},
+		Values:   &hapi_chart.Config{Raw: chartValuesNonSemverNoForce},
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 	helloWorldNoTagChart := &hapi_chart.Chart{
-		Values: &hapi_chart.Config{Raw: chartValuesNoTag},
+		Values:   &hapi_chart.Config{Raw: chartValuesNoTag},
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldNoKeelCfg := &hapi_chart.Chart{
-		Values: &hapi_chart.Config{Raw: chartValuesNoKeelCfg},
+		Values:   &hapi_chart.Config{Raw: chartValuesNoKeelCfg},
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
@@ -332,7 +332,7 @@ image:
 					MatchPreRelease: true,
 					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
-						ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+						{RepositoryPath: "image.repository", TagPath: "image.tag"},
 					},
 					Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 				},
@@ -389,7 +389,7 @@ image:
 					MatchPreRelease: true,
 					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
-						ImageDetails{RepositoryPath: "image.repository", TagPath: "image.tag"},
+						{RepositoryPath: "image.repository", TagPath: "image.tag"},
 					},
 					Plc: policy.NewForcePolicy(false),
 				},
@@ -433,7 +433,7 @@ image:
 					MatchPreRelease: true,
 					Trigger:         types.TriggerTypePoll,
 					Images: []ImageDetails{
-						ImageDetails{RepositoryPath: "image.repository"},
+						{RepositoryPath: "image.repository"},
 					},
 					Plc: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 				},

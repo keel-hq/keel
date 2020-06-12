@@ -10,9 +10,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// namespace/release name/version
-func getIdentifier(namespace, name, version string) string {
-	return namespace + "/" + name + ":" + version
+// namespace/release name:version
+func getIdentifier(plan *UpdatePlan) string {
+	return fmt.Sprintf("%s/%s:%s", plan.Namespace, plan.Name, plan.NewVersion)
 }
 
 func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (approvedPlans []*UpdatePlan) {
@@ -36,7 +36,7 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 
 // updateComplete is called after we successfully update resource
 func (p *Provider) updateComplete(plan *UpdatePlan) error {
-	return p.approvalManager.Archive(getIdentifier(plan.Namespace, plan.Name, plan.NewVersion))
+	return p.approvalManager.Archive(getIdentifier(plan))
 }
 
 func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error) {
@@ -44,7 +44,7 @@ func (p *Provider) isApproved(event *types.Event, plan *UpdatePlan) (bool, error
 		return true, nil
 	}
 
-	identifier := getIdentifier(plan.Namespace, plan.Name, plan.NewVersion)
+	identifier := getIdentifier(plan)
 
 	// checking for existing approval
 	existing, err := p.approvalManager.Get(identifier)
