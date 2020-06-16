@@ -24,6 +24,7 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 				"error":        err,
 				"release_name": plan.Name,
 				"namespace":    plan.Namespace,
+				"version":      plan.NewVersion,
 			}).Error("provider.helm3: failed to check approval status for deployment")
 			continue
 		}
