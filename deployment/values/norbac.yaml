@@ -1,9 +1,0 @@
-# Helm provider support
-helmProvider:
-  enabled: false
-
-# RBAC manifests management
-rbac:
-  enabled: false
-
-debug: false
