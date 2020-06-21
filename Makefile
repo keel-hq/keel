@@ -74,9 +74,6 @@ alpha: image
 	@echo "++ Pushing keel alpha"
 	docker push keelhq/keel:alpha
 
-gen-deploy:
-	deployment/scripts/gen-deploy.sh
-
 e2e: install
 	cd tests && go test
 
