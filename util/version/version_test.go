@@ -46,6 +46,12 @@ func TestGetVersionFromImageName(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "2 point semver, missing minor",
+			args:    args{name: "index.docker.io/application:12.14"},
+			want:    MustParse("12.14"),
+			wantErr: false,
+		},
+		{
 			name:    "non semver, missing minor and patch",
 			args:    args{name: "index.docker.io/application:42"},
 			want:    nil,

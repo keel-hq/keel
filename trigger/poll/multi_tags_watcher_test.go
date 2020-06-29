@@ -130,6 +130,14 @@ func testRunHelper(testCases []runTestCase, availableTags []string, t *testing.T
 	}
 }
 
+
+func TestWatchAllTagsJobWith2pointSemver(t *testing.T) {
+	availableTags := []string{"1.3", "2.5", "2.7", "3.8"}
+	testRunHelper([]runTestCase{{"1.3", "3.8", policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, false)}}, availableTags, t)
+	testRunHelper([]runTestCase{{"2.5", "3.8", policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, false)}}, availableTags, t)
+	testRunHelper([]runTestCase{{"2.5", "2.7", policy.NewSemverPolicy(policy.SemverPolicyTypeMinor, false)}}, availableTags, t)
+}
+
 func TestWatchAllTagsJobWithSemver(t *testing.T) {
 	availableTags := []string{"1.3.0-dev", "1.5.0", "1.8.0-alpha"}
 	testCases := []runTestCase{{"1.1.0", "1.5.0", policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true)}}
@@ -153,6 +161,13 @@ func TestWatchAllTagsFullSemver(t *testing.T) {
 	testCases = []runTestCase{{"v0.1.0-ls1", "v0.2.0-ls3", policy.NewSemverPolicy(policy.SemverPolicyTypeMinor, false)}}
 	testRunHelper(testCases, availableTags, t)
 
+}
+
+func TestWatchAllTagsHiddenMinorWith2PointVersions(t *testing.T) {
+	availableTags := []string{"1.3", "1.5", "2.0", "1.2.1"}
+	testRunHelper([]runTestCase{{"1.2", "1.2.1", policy.NewSemverPolicy(policy.SemverPolicyTypePatch, false)}}, availableTags, t)
+	testRunHelper([]runTestCase{{"1.2", "1.5", policy.NewSemverPolicy(policy.SemverPolicyTypeMinor, false)}}, availableTags, t)
+	testRunHelper([]runTestCase{{"1.2", "2.0", policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, false)}}, availableTags, t)
 }
 
 // Bug #490: new major version "hiding" minor one
