@@ -69,7 +69,7 @@ func shouldUpdate(spt SemverPolicyType, matchPreRelease bool, current, new strin
 	}
 
 	parts := strings.SplitN(new, ".", 3)
-	if len(parts) != 3 {
+	if len(parts) != 2 && len(parts) != 3 {
 		return false, ErrNoMajorMinorPatchElementsFound
 	}
 
