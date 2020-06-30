@@ -48,6 +48,16 @@ func Test_shouldUpdate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "minor increase - 2 points, policy all",
+			args: args{
+				current: "1.4",
+				new:     "1.5",
+				spt:     SemverPolicyTypeAll,
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
 			name: "minor increase, policy major",
 			args: args{
 				current: "1.4.5",
@@ -78,10 +88,40 @@ func Test_shouldUpdate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "patch release, policy patch",
+			args: args{
+				current: "1.4",
+				new:     "1.4.6",
+				spt:     SemverPolicyTypePatch,
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "minor and patch release, policy patch",
+			args: args{
+				current: "1.4",
+				new:     "1.5.6",
+				spt:     SemverPolicyTypePatch,
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
 			name: "patch decrease, policy patch",
 			args: args{
 				current: "1.4.5",
 				new:     "1.4.4",
+				spt:     SemverPolicyTypePatch,
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name: "2 points minor change, policy patch",
+			args: args{
+				current: "1.4",
+				new:     "1.5",
 				spt:     SemverPolicyTypePatch,
 			},
 			want:    false,
@@ -112,6 +152,16 @@ func Test_shouldUpdate(t *testing.T) {
 			args: args{
 				current: "1.4.5",
 				new:     "1.5.5",
+				spt:     SemverPolicyTypeMinor,
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "minor increase 2 points, policy minor",
+			args: args{
+				current: "1.4",
+				new:     "1.5",
 				spt:     SemverPolicyTypeMinor,
 			},
 			want:    true,

@@ -152,7 +152,7 @@ func exists(tag string, events []types.Event) bool {
 func semverSort(tags []string) []*semver.Version {
 	var versions []*semver.Version
 	for _, t := range tags {
-		if len(strings.SplitN(t, ".", 3)) < 3 {
+		if len(strings.SplitN(t, ".", 3)) < 2 {
 			// Keep only X.Y.Z+ semver
 			continue
 		}
