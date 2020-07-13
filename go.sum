@@ -409,6 +409,8 @@ k8s.io/apiserver v0.0.0-20190516230822-f89599b3f645 h1:oMjWLjIo6BCIsay+j5r8WbEoH
 k8s.io/apiserver v0.0.0-20190516230822-f89599b3f645/go.mod h1:6bqaTSOSJavUIXUtfaR9Os9JtTCm8ZqH2SUl2S60C4w=
 k8s.io/cli-runtime v0.0.0-20190516231937-17bc0b7fcef5 h1:kSosNyQ/BwwdA3MsCX8wIhdELKQ0P4c1BVkL4LC3HAI=
 k8s.io/cli-runtime v0.0.0-20190516231937-17bc0b7fcef5/go.mod h1:qWnH3/b8sp/l7EvlDh7ulDU3UWA4P4N1NFbEEP791tM=
+k8s.io/client-go v1.5.1 h1:XaX/lo2/u3/pmFau8HN+sB5C/b4dc4Dmm2eXjBH4p1E=
+k8s.io/client-go v11.0.0+incompatible h1:LBbX2+lOwY9flffWlJM7f1Ct8V2SRNiMRDFeiwnJo9o=
 k8s.io/client-go v11.0.1-0.20190516230509-ae8359b20417+incompatible h1:bK03DJulJi9j05gwnXUufcs2j7h4M85YFvJ0dIlQ9k4=
 k8s.io/client-go v11.0.1-0.20190516230509-ae8359b20417+incompatible/go.mod h1:7vJpHMYJwNQCWgzmNV+VYUl1zCObLyodBc8nIyt8L5s=
 k8s.io/cloud-provider v0.0.0-20190323031113-9c9d72d1bf90 h1:FI7cwUSbHsDhcpEI8f9YYZinBEEJio7TSfI7BBIQ89g=

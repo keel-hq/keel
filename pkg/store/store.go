@@ -18,6 +18,8 @@ type Store interface {
 	ListApprovals(q *types.GetApprovalQuery) ([]*types.Approval, error)
 	DeleteApproval(approval *types.Approval) error
 
+	IsRecordNotFoundError(err error) bool
+
 	OK() bool
 	Close() error
 }

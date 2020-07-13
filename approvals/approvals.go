@@ -372,6 +372,7 @@ func (m *DefaultManager) Delete(approval *types.Approval) error {
 	return m.store.DeleteApproval(existing)
 }
 
+// Archive - marks approval entry as archived
 func (m *DefaultManager) Archive(identifier string) error {
 	existing, err := m.Get(identifier)
 	if err != nil {
@@ -379,9 +380,19 @@ func (m *DefaultManager) Archive(identifier string) error {
 	}
 	existing.Archived = true
 
+	err = m.store.UpdateApproval(existing)
+	if err != nil {
+		if m.store.IsRecordNotFoundError(err) {
+			// nothing to do
+			return nil
+		}
+		return err
+	}
+
 	m.addAuditEntry(existing, types.AuditActionApprovalArchived, "")
 
-	return m.store.UpdateApproval(existing)
+	return nil
+	// return m.store.UpdateApproval(existing)
 }
 
 // Create - creates new approval request and publishes to all subscribers

@@ -82,3 +82,8 @@ func connect(ctx context.Context, opts Opts) (*gorm.DB, error) {
 		}
 	}
 }
+
+// IsRecordNotFoundError - check if err is 'record not found'
+func (s *SQLStore) IsRecordNotFoundError(err error) bool {
+	return gorm.IsRecordNotFoundError(err)
+}
