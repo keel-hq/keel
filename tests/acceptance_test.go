@@ -101,7 +101,7 @@ func TestWebhooksSemverUpdate(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "karolisr/webhook-demo:0.0.14",
 							},
@@ -205,7 +205,7 @@ func TestWebhookHighIntegerUpdate(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "karolisr/webhook-demo:0.0.14",
 							},
@@ -278,6 +278,10 @@ func TestWebhookHighIntegerUpdate(t *testing.T) {
 
 func TestApprovals(t *testing.T) {
 
+	// approvals endpoint shouldn't work without at least basic auth
+	// see http.go:134
+	t.Skip()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -335,7 +339,7 @@ func TestApprovals(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "karolisr/webhook-demo:0.0.14",
 							},
@@ -476,7 +480,7 @@ func TestApprovalsWithAuthentication(t *testing.T) {
 					},
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Name:  "wd-1",
 								Image: "karolisr/webhook-demo:0.0.14",
 							},
@@ -535,6 +539,10 @@ func TestApprovalsWithAuthentication(t *testing.T) {
 		resp, err = client.Do(reqAuth)
 		if err != nil {
 			t.Errorf("failed to make req: %s", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected %d, got: %d", http.StatusOK, resp.StatusCode)
 		}
 
 		var approvals []*types.Approval

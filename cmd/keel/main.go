@@ -10,7 +10,6 @@ import (
 	"context"
 
 	"github.com/prometheus/client_golang/prometheus"
-	netContext "golang.org/x/net/context"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	kube "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -32,6 +31,7 @@ import (
 	"github.com/keel-hq/keel/internal/workgroup"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/provider/helm"
+	"github.com/keel-hq/keel/provider/helm3"
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/registry"
 	"github.com/keel-hq/keel/secrets"
@@ -58,6 +58,9 @@ import (
 	_ "github.com/keel-hq/keel/bot/slack"
 
 	log "github.com/sirupsen/logrus"
+
+	// importing to ensure correct dependencies
+	_ "helm.sh/helm/v3/pkg/action"
 )
 
 // gcloud pubsub related config
@@ -70,6 +73,7 @@ const (
 	EnvHelmProvider        = "HELM_PROVIDER"    // helm provider
 	EnvHelmTillerAddress   = "TILLER_ADDRESS"   // helm provider
 	EnvHelmTillerNamespace = "TILLER_NAMESPACE" // helm provider
+	EnvHelm3Provider       = "HELM3_PROVIDER"   // helm3 provider
 	EnvUIDir               = "UI_DIR"
 
 	// EnvDefaultDockerRegistryCfg - default registry configuration that can be passed into
@@ -134,7 +138,7 @@ func main() {
 	notification.RegisterSender("auditor", auditLogger)
 
 	// setting up triggers
-	ctx, cancel := netContext.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	notificationLevel := types.LevelInfo
@@ -355,6 +359,23 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 		enabledProviders = append(enabledProviders, helmProvider)
 	}
 
+	if os.Getenv(EnvHelm3Provider) == "1" || os.Getenv(EnvHelm3Provider) == "true" {
+		helm3Implementer := helm3.NewHelm3Implementer()
+		helm3Provider := helm3.NewProvider(helm3Implementer, opts.sender, opts.approvalsManager)
+
+		go func() {
+			err := helm3Provider.Start()
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Fatal("helm3 provider stopped with an error")
+			}
+		}()
+
+		enabledProviders = append(enabledProviders, helm3Provider)
+
+	}
+
 	providers = provider.New(enabledProviders, opts.approvalsManager)
 
 	return providers
@@ -426,7 +447,7 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 		go subManager.Start(ctx)
 	}
 
-	if os.Getenv(EnvTriggerPoll) != "0" {
+	if os.Getenv(EnvTriggerPoll) != "0" || os.Getenv(EnvTriggerPoll) != "false" {
 
 		registryClient := registry.New()
 		watcher := poll.NewRepositoryWatcher(opts.providers, registryClient)

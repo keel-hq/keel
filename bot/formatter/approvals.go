@@ -90,4 +90,3 @@ func (c *ApprovalContext) Created() string {
 	c.AddHeader(ApprovalCreatedHeader)
 	return c.v.CreatedAt.String()
 }
-

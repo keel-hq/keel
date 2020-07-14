@@ -150,7 +150,7 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 	params.IconURL = b.getBotUserIconURL()
 
 	attachements := []slack.Attachment{
-		slack.Attachment{
+		{
 			Fallback: message,
 			Color:    color,
 			Fields:   fields,

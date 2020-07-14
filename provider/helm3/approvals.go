@@ -1,4 +1,4 @@
-package helm
+package helm3
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 				"release_name": plan.Name,
 				"namespace":    plan.Namespace,
 				"version":      plan.NewVersion,
-			}).Error("provider.helm: failed to check approval status for deployment")
+			}).Error("provider.helm3: failed to check approval status for deployment")
 			continue
 		}
 		if approved {

@@ -77,7 +77,8 @@ alpha: image
 e2e: install
 	cd tests && go test
 
-run: install
+run:
+	go install github.com/keel-hq/keel/cmd/keel
 	keel --no-incluster --ui-dir ui/dist
 
 lint-ui:

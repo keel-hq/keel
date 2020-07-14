@@ -350,7 +350,7 @@ func TestProcessRejectedReply(t *testing.T) {
 }
 
 func TestIsApproval(t *testing.T) {
-	
+
 	event := &slack.MessageEvent{
 		Msg: slack.Msg{
 			Channel: "approvals",

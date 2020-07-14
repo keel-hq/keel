@@ -16,7 +16,7 @@ func TestCheckRequestedApproval(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -37,7 +37,7 @@ func TestCheckRequestedApproval(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -88,7 +88,7 @@ func TestCheckRequestedApprovalAnnotation(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -113,7 +113,7 @@ func TestCheckRequestedApprovalAnnotation(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -171,7 +171,7 @@ func TestApprovedCheck(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -192,7 +192,7 @@ func TestApprovedCheck(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},
@@ -252,7 +252,7 @@ func TestApprovalsCleanup(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
 		Items: []v1.Namespace{
-			v1.Namespace{
+			{
 				meta_v1.TypeMeta{},
 				meta_v1.ObjectMeta{Name: "xxxx"},
 				v1.NamespaceSpec{},
@@ -273,7 +273,7 @@ func TestApprovalsCleanup(t *testing.T) {
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
 						Containers: []v1.Container{
-							v1.Container{
+							{
 								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 							},
 						},

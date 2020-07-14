@@ -92,11 +92,11 @@ func (s *sender) Send(event types.EventNotification) error {
 	params.IconURL = constants.KeelLogoURL
 
 	attachements := []slack.Attachment{
-		slack.Attachment{
+		{
 			Fallback: event.Message,
 			Color:    event.Level.Color(),
 			Fields: []slack.AttachmentField{
-				slack.AttachmentField{
+				{
 					Title: event.Type.String(),
 					Value: event.Message,
 					Short: false,

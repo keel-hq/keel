@@ -82,7 +82,7 @@ func TestCheckDeployment(t *testing.T) {
 	img, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1")
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
-			&types.TrackedImage{
+			{
 				Image:    img,
 				Provider: "fp",
 			},

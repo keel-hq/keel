@@ -177,7 +177,7 @@ func TestWatchAllTagsJob(t *testing.T) {
 	reference, _ := image.Parse("foo/bar:1.1.0")
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
-			&types.TrackedImage{
+			{
 				Image:  reference,
 				Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 			},
@@ -221,7 +221,7 @@ func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
 	reference, _ := image.Parse("foo/bar:latest")
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
-			&types.TrackedImage{
+			{
 				Image:  reference,
 				Policy: policy.NewForcePolicy(true),
 			},
@@ -264,7 +264,7 @@ func TestWatchMultipleTags(t *testing.T) {
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
 
-			&types.TrackedImage{
+			{
 				Image:        imgA,
 				Trigger:      types.TriggerTypePoll,
 				Provider:     "fp",
@@ -273,7 +273,7 @@ func TestWatchMultipleTags(t *testing.T) {
 				Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 			},
 
-			&types.TrackedImage{
+			{
 				Trigger:      types.TriggerTypePoll,
 				Image:        imgB,
 				Provider:     "fp",
@@ -281,7 +281,7 @@ func TestWatchMultipleTags(t *testing.T) {
 				Policy:       policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 			},
 
-			&types.TrackedImage{
+			{
 				Trigger:      types.TriggerTypePoll,
 				Image:        imgC,
 				Provider:     "fp",
@@ -289,7 +289,7 @@ func TestWatchMultipleTags(t *testing.T) {
 				Policy:       policy.NewForcePolicy(true),
 			},
 
-			&types.TrackedImage{
+			{
 				Trigger:      types.TriggerTypePoll,
 				Image:        imgD,
 				Provider:     "fp",
@@ -422,7 +422,7 @@ func TestWatchTagJobLatestECR(t *testing.T) {
 	imgA, _ := image.Parse("528670773427.dkr.ecr.us-east-2.amazonaws.com/webhook-demo:master")
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
-			&types.TrackedImage{
+			{
 				Image:        imgA,
 				Trigger:      types.TriggerTypePoll,
 				Provider:     "fp",

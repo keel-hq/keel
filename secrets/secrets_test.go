@@ -35,7 +35,7 @@ func TestGetSecret(t *testing.T) {
 
 	impl := &testutil.FakeK8sImplementer{
 		AvailableSecret: map[string]*v1.Secret{
-			"myregistrysecret": &v1.Secret{
+			"myregistrysecret": {
 				Data: map[string][]byte{
 					dockerConfigKey: []byte(secretDataPayload),
 				},
@@ -71,7 +71,7 @@ func TestGetDockerConfigJSONSecret(t *testing.T) {
 
 	impl := &testutil.FakeK8sImplementer{
 		AvailableSecret: map[string]*v1.Secret{
-			"myregistrysecret": &v1.Secret{
+			"myregistrysecret": {
 				Data: map[string][]byte{
 					dockerConfigJSONKey: []byte(secretDockerConfigJSONPayload),
 				},
@@ -106,7 +106,7 @@ func TestGetDockerConfigJSONSecretUsernmePassword(t *testing.T) {
 
 	impl := &testutil.FakeK8sImplementer{
 		AvailableSecret: map[string]*v1.Secret{
-			"myregistrysecret": &v1.Secret{
+			"myregistrysecret": {
 				Data: map[string][]byte{
 					dockerConfigJSONKey: []byte(secretDockerConfigJSONPayloadWithUsernamePassword),
 				},
@@ -142,7 +142,7 @@ func TestGetFromDefaultCredentials(t *testing.T) {
 
 	impl := &testutil.FakeK8sImplementer{
 		AvailableSecret: map[string]*v1.Secret{
-			"myregistrysecret": &v1.Secret{
+			"myregistrysecret": {
 				Data: map[string][]byte{
 					dockerConfigJSONKey: []byte(secretDockerConfigJSONPayloadWithUsernamePassword),
 				},
@@ -215,9 +215,9 @@ func TestLookupHelmSecret(t *testing.T) {
 	impl := &testutil.FakeK8sImplementer{
 		AvailablePods: &v1.PodList{
 			Items: []v1.Pod{
-				v1.Pod{
+				{
 					Spec: v1.PodSpec{ImagePullSecrets: []v1.LocalObjectReference{
-						v1.LocalObjectReference{
+						{
 							Name: "very-secret",
 						},
 					},
@@ -226,7 +226,7 @@ func TestLookupHelmSecret(t *testing.T) {
 			},
 		},
 		AvailableSecret: map[string]*v1.Secret{
-			"myregistrysecret": &v1.Secret{
+			"myregistrysecret": {
 				Data: map[string][]byte{
 					dockerConfigKey: []byte(fmt.Sprintf(secretDataPayloadEncoded, mustEncode("user-y:pass-y"))),
 				},
@@ -263,9 +263,9 @@ func TestLookupHelmEncodedSecret(t *testing.T) {
 	impl := &testutil.FakeK8sImplementer{
 		AvailablePods: &v1.PodList{
 			Items: []v1.Pod{
-				v1.Pod{
+				{
 					Spec: v1.PodSpec{ImagePullSecrets: []v1.LocalObjectReference{
-						v1.LocalObjectReference{
+						{
 							Name: "very-secret",
 						},
 					},
@@ -274,7 +274,7 @@ func TestLookupHelmEncodedSecret(t *testing.T) {
 			},
 		},
 		AvailableSecret: map[string]*v1.Secret{
-			"myregistrysecret": &v1.Secret{
+			"myregistrysecret": {
 				Data: map[string][]byte{
 					dockerConfigKey: []byte(secretDataPayload),
 				},
@@ -311,10 +311,10 @@ func TestGetDirectHelmSecret(t *testing.T) {
 	impl := &testutil.FakeK8sImplementer{
 		AvailablePods: &v1.PodList{
 			Items: []v1.Pod{
-				v1.Pod{
+				{
 					Spec: v1.PodSpec{
 						ImagePullSecrets: []v1.LocalObjectReference{
-							v1.LocalObjectReference{
+							{
 								Name: "very-secret-dont-look",
 							},
 						},
@@ -323,13 +323,13 @@ func TestGetDirectHelmSecret(t *testing.T) {
 			},
 		},
 		AvailableSecret: map[string]*v1.Secret{
-			"myregistrysecret": &v1.Secret{
+			"myregistrysecret": {
 				Data: map[string][]byte{
 					dockerConfigKey: []byte(secretDataPayload2),
 				},
 				Type: v1.SecretTypeDockercfg,
 			},
-			"very-secret-dont-look": &v1.Secret{
+			"very-secret-dont-look": {
 				Data: map[string][]byte{
 					dockerConfigKey: []byte(secretDataPayload),
 				},
@@ -367,9 +367,9 @@ func TestLookupHelmNoSecretsFound(t *testing.T) {
 	impl := &testutil.FakeK8sImplementer{
 		AvailablePods: &v1.PodList{
 			Items: []v1.Pod{
-				v1.Pod{
+				{
 					Spec: v1.PodSpec{ImagePullSecrets: []v1.LocalObjectReference{
-						v1.LocalObjectReference{
+						{
 							Name: "very-secret",
 						},
 					},
@@ -411,9 +411,9 @@ func TestLookupWithPortedRegistry(t *testing.T) {
 	impl := &testutil.FakeK8sImplementer{
 		AvailablePods: &v1.PodList{
 			Items: []v1.Pod{
-				v1.Pod{
+				{
 					Spec: v1.PodSpec{ImagePullSecrets: []v1.LocalObjectReference{
-						v1.LocalObjectReference{
+						{
 							Name: "example.com",
 						},
 					},
@@ -422,7 +422,7 @@ func TestLookupWithPortedRegistry(t *testing.T) {
 			},
 		},
 		AvailableSecret: map[string]*v1.Secret{
-			"example.com": &v1.Secret{
+			"example.com": {
 				Data: map[string][]byte{
 					dockerConfigKey: []byte(secretDataPayloadWithPort),
 				},

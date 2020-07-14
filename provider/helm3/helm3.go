@@ -1,4 +1,4 @@
-package helm
+package helm3
 
 import (
 	"errors"
@@ -11,38 +11,41 @@ import (
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
-	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
-
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/keel-hq/keel/extension/notification"
 
-	"github.com/ghodss/yaml"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/helm"
-	"k8s.io/helm/pkg/strvals"
+	"sigs.k8s.io/yaml"
+
+	"helm.sh/helm/v3/pkg/strvals"
+
+	_ "helm.sh/helm/v3/pkg/action"
+	_ "helm.sh/helm/v3/pkg/release"
+
+	hapi_chart "helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chartutil"
 )
 
-var helmVersionedUpdatesCounter = prometheus.NewCounterVec(
+var helm3VersionedUpdatesCounter = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
-		Name: "helm_versioned_updates_total",
-		Help: "How many versioned helm charts were updated, partitioned by chart name.",
+		Name: "helm3_versioned_updates_total",
+		Help: "How many versioned helm3 charts were updated, partitioned by chart name.",
 	},
 	[]string{"chart"},
 )
 
-var helmUnversionedUpdatesCounter = prometheus.NewCounterVec(
+var helm3UnversionedUpdatesCounter = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
-		Name: "helm_unversioned_updates_total",
-		Help: "How many unversioned helm charts were updated, partitioned by chart name.",
+		Name: "helm3_unversioned_updates_total",
+		Help: "How many unversioned helm3 charts were updated, partitioned by chart name.",
 	},
 	[]string{"chart"},
 )
 
 func init() {
-	prometheus.MustRegister(helmVersionedUpdatesCounter)
-	prometheus.MustRegister(helmUnversionedUpdatesCounter)
+	prometheus.MustRegister(helm3VersionedUpdatesCounter)
+	prometheus.MustRegister(helm3UnversionedUpdatesCounter)
 }
 
 // ErrPolicyNotSpecified helm related errors
@@ -57,10 +60,10 @@ type Manager interface {
 }
 
 // ProviderName - helm provider name
-const ProviderName = "helm"
+const ProviderName = "helm3"
 
 // DefaultUpdateTimeout - update timeout in seconds
-const DefaultUpdateTimeout = 300
+// const DefaultUpdateTimeout = 300
 
 // UpdatePlan - release update plan
 type UpdatePlan struct {
@@ -82,6 +85,9 @@ type UpdatePlan struct {
 
 	// ReleaseNotes is a slice of combined release notes.
 	ReleaseNotes []string
+
+	// used as fix to bug in chartutil.coalesce v3.1.2
+	EmptyConfig bool
 }
 
 // keel:
@@ -124,7 +130,7 @@ type ImageDetails struct {
 	ImagePullSecret string `json:"imagePullSecret"`
 }
 
-// Provider - helm provider, responsible for managing release updates
+// Provider - helm3 provider, responsible for managing release updates
 type Provider struct {
 	implementer Implementer
 
@@ -172,26 +178,20 @@ func (p *Provider) Stop() {
 func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 	var trackedImages []*types.TrackedImage
 
-	releaseList, err := p.implementer.ListReleases()
+	releases, err := p.implementer.ListReleases()
 	if err != nil {
 		return nil, err
 	}
 
-	releases := releaseList.GetReleases()
-
 	for _, release := range releases {
 		// getting configuration
-
-		if release.Chart.Metadata.Name == "" {
-			return nil, err
-		}
 		vals, err := values(release.Chart, release.Config)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":     err,
 				"release":   release.Name,
 				"namespace": release.Namespace,
-			}).Error("provider.helm: failed to get values.yaml for release")
+			}).Error("provider.helm3: failed to get values.yaml for release")
 			continue
 		}
 
@@ -201,7 +201,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				"error":     err,
 				"release":   release.Name,
 				"namespace": release.Namespace,
-			}).Debug("provider.helm: failed to get config for release")
+			}).Debug("provider.helm3: failed to get config for release")
 			continue
 		}
 
@@ -217,7 +217,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				"error":     err,
 				"release":   release.Name,
 				"namespace": release.Namespace,
-			}).Error("provider.helm: failed to get images for release")
+			}).Error("provider.helm3: failed to get images for release")
 			continue
 		}
 
@@ -246,10 +246,10 @@ func (p *Provider) startInternal() error {
 					"error": err,
 					"image": event.Repository.Name,
 					"tag":   event.Repository.Tag,
-				}).Error("provider.helm: failed to process event")
+				}).Error("provider.helm3: failed to process event")
 			}
 		case <-p.stop:
-			log.Info("provider.helm: got shutdown signal, stopping...")
+			log.Info("provider.helm3: got shutdown signal, stopping...")
 			return nil
 		}
 	}
@@ -269,27 +269,25 @@ func (p *Provider) processEvent(event *types.Event) (err error) {
 func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) {
 	var plans []*UpdatePlan
 
-	releaseList, err := p.implementer.ListReleases()
+	releases, err := p.implementer.ListReleases()
 	if err != nil {
 		return nil, err
 	}
 
-	releases := releaseList.GetReleases()
-
 	for _, release := range releases {
 
-		// plan, update, err := checkRelease(newVersion, &event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
 		plan, update, err := checkRelease(&event.Repository, release.Namespace, release.Name, release.Chart, release.Config)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":     err,
 				"name":      release.Name,
 				"namespace": release.Namespace,
-			}).Error("provider.helm: failed to process versioned release")
+			}).Error("provider.helm3: failed to process versioned release")
 			continue
 		}
+
 		if update {
-			helmVersionedUpdatesCounter.With(prometheus.Labels{"chart": fmt.Sprintf("%s/%s", release.Namespace, release.Name)}).Inc()
+			helm3VersionedUpdatesCounter.With(prometheus.Labels{"chart": fmt.Sprintf("%s/%s", release.Namespace, release.Name)}).Inc()
 			plans = append(plans, plan)
 		}
 	}
@@ -316,13 +314,14 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 			},
 		})
 
-		err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values)
+		// err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values)
+		err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values, plan.Namespace, plan.EmptyConfig)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":     err,
 				"name":      plan.Name,
 				"namespace": plan.Namespace,
-			}).Error("provider.helm: failed to apply plan")
+			}).Error("provider.helm3: failed to apply plan")
 
 			p.sender.Send(types.EventNotification{
 				ResourceKind: "chart",
@@ -348,7 +347,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 				"error":     err,
 				"name":      plan.Name,
 				"namespace": plan.Namespace,
-			}).Debug("provider.helm: got error while resetting approvals counter after successful update")
+			}).Debug("provider.helm3: got error while resetting approvals counter after successful update")
 		}
 
 		var msg string
@@ -379,32 +378,24 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 	return nil
 }
 
-func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_chart.Chart, overrideValues map[string]string) error {
+func updateHelmRelease(implementer Implementer, releaseName string, chart *hapi_chart.Chart, overrideValues map[string]string, namespace string, opts ...bool) error {
 
-	overrideBts, err := convertToYaml(mapToSlice(overrideValues))
-	if err != nil {
-		return err
+	// set reuse values to false if currentRelease.config is nil
+	emptyConfig := false
+	if len(opts) == 1 && opts[0] {
+		emptyConfig = opts[0]
 	}
-
-	resp, err := implementer.UpdateReleaseFromChart(releaseName, chart,
-		helm.UpdateValueOverrides(overrideBts),
-		helm.UpgradeDryRun(false),
-		helm.UpgradeRecreate(false),
-		helm.UpgradeForce(true),
-		helm.UpgradeDisableHooks(false),
-		helm.UpgradeTimeout(DefaultUpdateTimeout),
-		helm.ResetValues(false),
-		helm.ReuseValues(true),
-		helm.UpgradeWait(true))
+	resp, err := implementer.UpdateReleaseFromChart(releaseName, chart, overrideValues, namespace, emptyConfig)
 
 	if err != nil {
 		return err
 	}
 
 	log.WithFields(log.Fields{
-		"version": resp.Release.Version,
-		"release": releaseName,
-	}).Info("provider.helm: release updated")
+		"version":        resp.Version,
+		"release":        releaseName,
+		"overrideValues": overrideValues,
+	}).Info("provider.helm3: release updated")
 	return nil
 }
 
@@ -434,15 +425,14 @@ func getValueAsString(vals chartutil.Values, path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	valString, ok := valinterface.(string)
-	if !ok {
-		return "", fmt.Errorf("failed to convert value  to string")
-	}
+
+	valString := fmt.Sprintf("%v", valinterface)
 
 	return valString, nil
 }
 
-func values(chart *hapi_chart.Chart, config *hapi_chart.Config) (chartutil.Values, error) {
+// func values(chart *hapi_chart.Chart, config *hapi_chart.Config) (chartutil.Values, error) {
+func values(chart *hapi_chart.Chart, config map[string]interface{}) (chartutil.Values, error) {
 	return chartutil.CoalesceValues(chart, config)
 }
 

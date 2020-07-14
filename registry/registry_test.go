@@ -305,14 +305,11 @@ var tagsResp = `{
 	]
   }`
 
-	func TestGetDockerHubManyTags(t *testing.T) {
-		client := registry.New("https://quay.io", "", "")
-		tags, err := client.Tags("coreos/prometheus-operator")
-		if err != nil {
-			t.Errorf("error while getting repo: %s", err)
-		}
-		fmt.Println(tags)
+func TestGetDockerHubManyTags(t *testing.T) {
+	client := registry.New("https://quay.io", "", "")
+	tags, err := client.Tags("coreos/prometheus-operator")
+	if err != nil {
+		t.Errorf("error while getting repo: %s", err)
 	}
-	
-
-	
+	fmt.Println(tags)
+}

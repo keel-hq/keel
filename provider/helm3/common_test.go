@@ -1,4 +1,4 @@
-package helm
+package helm3
 
 import (
 	"reflect"
@@ -7,7 +7,7 @@ import (
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
-	"k8s.io/helm/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/chartutil"
 )
 
 var chartValuesA = `
@@ -92,6 +92,7 @@ func Test_getImages(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
 			got, err := getImages(tt.args.vals)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getImages() error = %v, wantErr %v", err, tt.wantErr)

@@ -65,7 +65,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world",
 									},
 								},
@@ -93,7 +93,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:latest",
 									},
 								},
@@ -125,7 +125,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 						Template: v1.PodTemplateSpec{
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/goodbye-world:earliest",
 									},
 								},
@@ -163,7 +163,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 						Template: v1.PodTemplateSpec{
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:alpha",
 									},
 								},
@@ -201,7 +201,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "karolisr/keel:latest",
 									},
 								},
@@ -229,7 +229,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "karolisr/keel:0.2.0",
 									},
 								},
@@ -266,7 +266,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "karolisr/keel:master",
 									},
 								},
@@ -296,7 +296,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "karolisr/keel:master",
 									},
 								},
@@ -336,7 +336,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "karolisr/keel:latest-staging",
 									},
 								},
@@ -366,7 +366,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "karolisr/keel:latest-staging",
 									},
 								},
@@ -406,7 +406,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "eu.gcr.io/karolisr/keel:latest-staging",
 									},
 								},
@@ -437,7 +437,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "eu.gcr.io/karolisr/keel:latest-staging",
 									},
 								},
@@ -471,7 +471,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 						Template: v1.PodTemplateSpec{
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "karolisr/keel:latest-acceptance",
 									},
 								},
@@ -511,7 +511,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "eu.gcr.io/karolisr/keel:latest-staging",
 									},
 								},
@@ -542,7 +542,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "eu.gcr.io/karolisr/keel:latest-staging",
 									},
 								},
@@ -581,7 +581,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "eu.gcr.io/karolisr/keel:release-1",
 									},
 								},
@@ -612,7 +612,7 @@ func TestProvider_checkForUpdate(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "eu.gcr.io/karolisr/keel:release-2",
 									},
 								},
@@ -693,7 +693,7 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 									},
 								},
@@ -721,7 +721,7 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
 									},
 								},
@@ -759,7 +759,7 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-prerelease:v1.1.1",
 									},
 								},
@@ -796,7 +796,7 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-prerelease:v1.1.1-staging",
 									},
 								},
@@ -828,7 +828,7 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 						Template: v1.PodTemplateSpec{
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 									},
 								},
@@ -868,10 +868,10 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:1.1.1",
 									},
-									v1.Container{
+									{
 										Image: "yo-world:1.1.1",
 									},
 								},
@@ -899,10 +899,10 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
 									},
-									v1.Container{
+									{
 										Image: "yo-world:1.1.1",
 									},
 								},
@@ -939,10 +939,10 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:latest",
 									},
-									v1.Container{
+									{
 										Image: "yo-world:1.1.1",
 									},
 								},
@@ -970,10 +970,10 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
 									},
-									v1.Container{
+									{
 										Image: "yo-world:1.1.1",
 									},
 								},
@@ -1013,10 +1013,10 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
 									},
-									v1.Container{
+									{
 										Image: "yo-world:1.1.1",
 									},
 								},
@@ -1047,10 +1047,10 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
 									},
-									v1.Container{
+									{
 										Image: "yo-world:1.1.1",
 									},
 								},
@@ -1090,10 +1090,10 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 							},
 							Spec: v1.PodSpec{
 								Containers: []v1.Container{
-									v1.Container{
+									{
 										Image: "gcr.io/v2-namespace/hello-world:1.1.2",
 									},
-									v1.Container{
+									{
 										Image: "yo-world:1.1.1",
 									},
 								},

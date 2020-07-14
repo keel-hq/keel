@@ -1,4 +1,4 @@
-package helm
+package helm3
 
 import (
 	"io/ioutil"
@@ -8,17 +8,16 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ghodss/yaml"
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/pkg/store/sql"
 	"github.com/keel-hq/keel/types"
-	"k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/helm"
-	"k8s.io/helm/pkg/proto/hapi/chart"
-	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
-	rls "k8s.io/helm/pkg/proto/hapi/services"
+	"sigs.k8s.io/yaml"
+
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/release"
 )
 
 func newTestingUtils() (*sql.SQLStore, func()) {
@@ -61,27 +60,28 @@ func (s *fakeSender) Send(event types.EventNotification) error {
 }
 
 type fakeImplementer struct {
-	listReleasesResponse *rls.ListReleasesResponse
+	listReleasesResponse []*release.Release
 
 	// updated info
 	updatedRlsName string
 	updatedChart   *chart.Chart
-	updatedOptions []helm.UpdateOption
+	// updatedOptions []helm.UpdateOption
 }
 
-func (i *fakeImplementer) ListReleases(opts ...helm.ReleaseListOption) (*rls.ListReleasesResponse, error) {
+func (i *fakeImplementer) ListReleases() ([]*release.Release, error) {
 	return i.listReleasesResponse, nil
 }
 
-func (i *fakeImplementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, opts ...helm.UpdateOption) (*rls.UpdateReleaseResponse, error) {
+func (i *fakeImplementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, vals map[string]string, namespace string, opts ...bool) (*release.Release, error) {
+	// func (i *fakeImplementer) UpdateReleaseFromChart(rlsName string, chart *chart.Chart, opts ...helm.UpdateOption) (*rls.UpdateReleaseResponse, error) {
 	i.updatedRlsName = rlsName
 	i.updatedChart = chart
-	i.updatedOptions = opts
+	// i.updatedOptions = opts
 
-	return &rls.UpdateReleaseResponse{
-		Release: &hapi_release5.Release{
-			Version: 2,
-		},
+	return &release.Release{
+		Name:    rlsName,
+		Chart:   chart,
+		Version: 2,
 	}, nil
 }
 
@@ -94,6 +94,19 @@ func testingConfigYaml(cfg *KeelChartConfig) (vals chartutil.Values, err error) 
 	}
 
 	return chartutil.ReadValues(bts)
+}
+
+// helper function to generate chart.Chart object from string
+func testingStringToChart(raw string) (myChart *chart.Chart, err error) {
+	chartVals, err := chartutil.ReadValues([]byte(raw))
+	if err != nil {
+		return nil, err
+	}
+	myChart = &chart.Chart{
+		Values:   chartVals,
+		Metadata: &chart.Metadata{Name: "app-x"},
+	}
+	return myChart, nil
 }
 
 func TestGetChartPolicy(t *testing.T) {
@@ -115,17 +128,17 @@ keel:
       tag: image.tag
 `
 
+	myChart, err := testingStringToChart(chartVals)
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+
 	fakeImpl := &fakeImplementer{
-		listReleasesResponse: &rls.ListReleasesResponse{
-			Releases: []*hapi_release5.Release{
-				{
-					Name: "release-1",
-					Chart: &chart.Chart{
-						Values:   &chart.Config{Raw: chartVals},
-						Metadata: &chart.Metadata{Name: "app-x"},
-					},
-					Config: &chart.Config{Raw: ""},
-				},
+		listReleasesResponse: []*release.Release{
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -135,9 +148,13 @@ keel:
 		t.Fatalf("unexpected error: %s", err)
 	}
 
+	if len(releases) == 0 {
+		t.Fatalf("unexpexted error: releases should not be empty")
+	}
+
 	policyFound := false
 
-	for _, release := range releases.Releases {
+	for _, release := range releases {
 
 		vals, err := values(release.Chart, release.Config)
 		if err != nil {
@@ -161,17 +178,17 @@ keel:
 
 func TestGetChartPolicyFromProm(t *testing.T) {
 
+	myChart, err := testingStringToChart(promChartValues)
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+
 	fakeImpl := &fakeImplementer{
-		listReleasesResponse: &rls.ListReleasesResponse{
-			Releases: []*hapi_release5.Release{
-				{
-					Name: "release-1",
-					Chart: &chart.Chart{
-						Values:   &chart.Config{Raw: promChartValues},
-						Metadata: &chart.Metadata{Name: "app-x"},
-					},
-					Config: &chart.Config{Raw: ""},
-				},
+		listReleasesResponse: []*release.Release{
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -183,7 +200,7 @@ func TestGetChartPolicyFromProm(t *testing.T) {
 
 	policyFound := false
 
-	for _, release := range releases.Releases {
+	for _, release := range releases {
 
 		vals, err := values(release.Chart, release.Config)
 		if err != nil {
@@ -229,17 +246,17 @@ keel:
 
 `
 
+	myChart, err := testingStringToChart(chartVals)
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+
 	fakeImpl := &fakeImplementer{
-		listReleasesResponse: &rls.ListReleasesResponse{
-			Releases: []*hapi_release5.Release{
-				{
-					Name: "release-1",
-					Chart: &chart.Chart{
-						Values:   &chart.Config{Raw: chartVals},
-						Metadata: &chart.Metadata{Name: "app-x"},
-					},
-					Config: &chart.Config{Raw: ""},
-				},
+		listReleasesResponse: []*release.Release{
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -272,17 +289,17 @@ image2:
 
 `
 
+	myChart, err := testingStringToChart(chartVals)
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+
 	fakeImpl := &fakeImplementer{
-		listReleasesResponse: &rls.ListReleasesResponse{
-			Releases: []*hapi_release5.Release{
-				{
-					Name: "release-1",
-					Chart: &chart.Chart{
-						Values:   &chart.Config{Raw: chartVals},
-						Metadata: &chart.Metadata{Name: "app-x"},
-					},
-					Config: &chart.Config{Raw: ""},
-				},
+		listReleasesResponse: []*release.Release{
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -323,17 +340,17 @@ keel:
 
 `
 
+	myChart, err := testingStringToChart(chartVals)
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+
 	fakeImpl := &fakeImplementer{
-		listReleasesResponse: &rls.ListReleasesResponse{
-			Releases: []*hapi_release5.Release{
-				{
-					Name: "release-1",
-					Chart: &chart.Chart{
-						Values:   &chart.Config{Raw: chartVals},
-						Metadata: &chart.Metadata{Name: "app-x"},
-					},
-					Config: &chart.Config{Raw: ""},
-				},
+		listReleasesResponse: []*release.Release{
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -426,19 +443,18 @@ keel:
       tag: image.tag
 
 `
-	myChart := &chart.Chart{
-		Values:   &chart.Config{Raw: chartVals},
-		Metadata: &chart.Metadata{Name: "app-x"},
+
+	myChart, err := testingStringToChart(chartVals)
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
 	}
 
 	fakeImpl := &fakeImplementer{
-		listReleasesResponse: &rls.ListReleasesResponse{
-			Releases: []*hapi_release5.Release{
-				{
-					Name:   "release-1",
-					Chart:  myChart,
-					Config: &chart.Config{Raw: ""},
-				},
+		listReleasesResponse: []*release.Release{
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -447,7 +463,7 @@ keel:
 	defer teardown()
 	provider := NewProvider(fakeImpl, &fakeSender{}, approver)
 
-	err := provider.processEvent(&types.Event{
+	err = provider.processEvent(&types.Event{
 		Repository: types.Repository{
 			Name: "karolisr/webhook-demo",
 			Tag:  "0.0.11",
@@ -678,17 +694,17 @@ keel:
 
 `
 
+	myChart, err := testingStringToChart(chartVals)
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+
 	fakeImpl := &fakeImplementer{
-		listReleasesResponse: &rls.ListReleasesResponse{
-			Releases: []*hapi_release5.Release{
-				{
-					Name: "release-1",
-					Chart: &chart.Chart{
-						Values:   &chart.Config{Raw: chartVals},
-						Metadata: &chart.Metadata{Name: "app-x"},
-					},
-					Config: &chart.Config{Raw: ""},
-				},
+		listReleasesResponse: []*release.Release{
+			{
+				Name:   "release-1",
+				Chart:  myChart,
+				Config: make(map[string]interface{}),
 			},
 		},
 	}
@@ -700,7 +716,7 @@ keel:
 
 	policyFound := false
 
-	for _, release := range releases.Releases {
+	for _, release := range releases {
 
 		vals, err := values(release.Chart, release.Config)
 		if err != nil {

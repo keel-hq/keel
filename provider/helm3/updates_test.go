@@ -1,4 +1,4 @@
-package helm
+package helm3
 
 import (
 	"reflect"
@@ -6,7 +6,9 @@ import (
 
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
-	hapi_chart "k8s.io/helm/pkg/proto/hapi/chart"
+
+	hapi_chart "helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chartutil"
 )
 
 func Test_checkUnversionedRelease(t *testing.T) {
@@ -64,18 +66,34 @@ keel:
 
 `
 
+	chartValuesPolicyForceVal, err := chartutil.ReadValues([]byte(chartValuesPolicyForce))
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+
+	chartValuesPolicyMajorVal, err := chartutil.ReadValues([]byte(chartValuesPolicyMajor))
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+
+	chartValuesPolicyForceReleaseNotesVal, err := chartutil.ReadValues([]byte(chartValuesPolicyForceReleaseNotes))
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+
 	helloWorldChart := &hapi_chart.Chart{
-		Values:   &hapi_chart.Config{Raw: chartValuesPolicyForce},
+		// Values: &hapi_chart.Config{Raw: chartValuesPolicyForce},
+		Values:   chartValuesPolicyForceVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldChartPolicyMajor := &hapi_chart.Chart{
-		Values:   &hapi_chart.Config{Raw: chartValuesPolicyMajor},
+		Values:   chartValuesPolicyMajorVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldChartPolicyMajorReleaseNotes := &hapi_chart.Chart{
-		Values:   &hapi_chart.Config{Raw: chartValuesPolicyForceReleaseNotes},
+		Values:   chartValuesPolicyForceReleaseNotesVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
@@ -84,7 +102,7 @@ keel:
 		namespace string
 		name      string
 		chart     *hapi_chart.Chart
-		config    *hapi_chart.Config
+		config    map[string]interface{}
 	}
 	tests := []struct {
 		name                    string
@@ -100,7 +118,7 @@ keel:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChart,
-				config:    &hapi_chart.Config{Raw: ""},
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace:      "default",
@@ -132,7 +150,7 @@ keel:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChartPolicyMajorReleaseNotes,
-				config:    &hapi_chart.Config{Raw: ""},
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace:      "default",
@@ -166,7 +184,7 @@ keel:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChartPolicyMajor,
-				config:    &hapi_chart.Config{Raw: ""},
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace: "default",
@@ -273,26 +291,47 @@ image:
   tag: 1.0.0
 `
 
+	chartValuesAVal, err := chartutil.ReadValues([]byte(chartValuesA))
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+	chartValuesBVal, err := chartutil.ReadValues([]byte(chartValuesB))
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+	chartValuesNonSemverNoForceVal, err := chartutil.ReadValues([]byte(chartValuesNonSemverNoForce))
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+	chartValuesNoTagVal, err := chartutil.ReadValues([]byte(chartValuesNoTag))
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+	chartValuesNoKeelCfgVal, err := chartutil.ReadValues([]byte(chartValuesNoKeelCfg))
+	if err != nil {
+		t.Errorf("chartutil.ReadValues error = %v", err)
+	}
+
 	helloWorldChart := &hapi_chart.Chart{
-		Values:   &hapi_chart.Config{Raw: chartValuesA},
+		Values:   chartValuesAVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldNonSemverChart := &hapi_chart.Chart{
-		Values:   &hapi_chart.Config{Raw: chartValuesB},
+		Values:   chartValuesBVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 	helloWorldNonSemverNoForceChart := &hapi_chart.Chart{
-		Values:   &hapi_chart.Config{Raw: chartValuesNonSemverNoForce},
+		Values:   chartValuesNonSemverNoForceVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 	helloWorldNoTagChart := &hapi_chart.Chart{
-		Values:   &hapi_chart.Config{Raw: chartValuesNoTag},
+		Values:   chartValuesNoTagVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
 	helloWorldNoKeelCfg := &hapi_chart.Chart{
-		Values:   &hapi_chart.Config{Raw: chartValuesNoKeelCfg},
+		Values:   chartValuesNoKeelCfgVal,
 		Metadata: &hapi_chart.Metadata{Name: "app-x"},
 	}
 
@@ -301,7 +340,7 @@ image:
 		namespace string
 		name      string
 		chart     *hapi_chart.Chart
-		config    *hapi_chart.Config
+		config    map[string]interface{}
 	}
 	tests := []struct {
 		name                    string
@@ -318,7 +357,7 @@ image:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChart,
-				config:    &hapi_chart.Config{Raw: ""},
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace:      "default",
@@ -347,7 +386,7 @@ image:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChart,
-				config:    &hapi_chart.Config{Raw: ""},
+				config:    make(map[string]interface{}),
 			},
 			wantPlan:                &UpdatePlan{Namespace: "default", Name: "release-1", Chart: helloWorldChart, Values: map[string]string{}},
 			wantShouldUpdateRelease: false,
@@ -361,7 +400,7 @@ image:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldChart,
-				config:    &hapi_chart.Config{Raw: ""},
+				config:    make(map[string]interface{}),
 			},
 			wantPlan:                &UpdatePlan{Namespace: "default", Name: "release-1", Chart: helloWorldChart, Values: map[string]string{}},
 			wantShouldUpdateRelease: false,
@@ -375,7 +414,7 @@ image:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldNonSemverChart,
-				config:    &hapi_chart.Config{Raw: ""},
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace:      "default",
@@ -405,7 +444,7 @@ image:
 				namespace: "default",
 				name:      "release-1",
 				chart:     helloWorldNonSemverNoForceChart,
-				config:    &hapi_chart.Config{Raw: ""},
+				config:    make(map[string]interface{}),
 			},
 			wantPlan:                &UpdatePlan{Namespace: "default", Name: "release-1", Chart: helloWorldNonSemverNoForceChart, Values: map[string]string{}},
 			wantShouldUpdateRelease: false,
@@ -419,7 +458,7 @@ image:
 				namespace: "default",
 				name:      "release-1-no-tag",
 				chart:     helloWorldNoTagChart,
-				config:    &hapi_chart.Config{Raw: ""},
+				config:    make(map[string]interface{}),
 			},
 			wantPlan: &UpdatePlan{
 				Namespace:      "default",
@@ -449,7 +488,7 @@ image:
 				namespace: "default",
 				name:      "release-1-no-tag",
 				chart:     helloWorldNoKeelCfg,
-				config:    &hapi_chart.Config{Raw: ""},
+				config:    make(map[string]interface{}),
 			},
 			wantPlan:                &UpdatePlan{Namespace: "default", Name: "release-1-no-tag", Chart: helloWorldNoKeelCfg, Values: map[string]string{}},
 			wantShouldUpdateRelease: false,
