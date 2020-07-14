@@ -2,6 +2,7 @@ package poll
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 
@@ -33,6 +34,8 @@ type fakeRegistryClient struct {
 
 	digestToReturn string
 
+	digestErrToReturn error
+
 	tagsToReturn []string
 }
 
@@ -46,7 +49,7 @@ func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, erro
 
 func (c *fakeRegistryClient) Digest(opts registry.Opts) (digest string, err error) {
 	c.opts = opts
-	return c.digestToReturn, nil
+	return c.digestToReturn, c.digestErrToReturn
 }
 
 // ======== fake provider for testing =======
@@ -356,11 +359,14 @@ type fakeCredentialsHelper struct {
 
 	// credentials to return
 	creds *types.Credentials
+
+	// error to return
+	error error
 }
 
 func (fch *fakeCredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
 	fch.getImageRequest = image
-	return fch.creds, nil
+	return fch.creds, fch.error
 }
 
 func (fch *fakeCredentialsHelper) IsEnabled() bool { return true }
@@ -411,6 +417,42 @@ func TestWatchTagJobCheckCredentials(t *testing.T) {
 
 	if frc.opts.Username != "user-xx" {
 		t.Errorf("unexpected username for registry: %s", frc.opts.Username)
+	}
+}
+
+func TestWatchWithAuthenticationError(t *testing.T) {
+
+	fakeHelper := &fakeCredentialsHelper{
+		creds: nil,
+		error: errors.New("no credentials found"),
+	}
+
+	credentialshelper.RegisterCredentialsHelper("fake", fakeHelper)
+	defer credentialshelper.UnregisterCredentialsHelper("fake")
+
+	fp := &fakeProvider{}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	frc := &fakeRegistryClient{
+		digestErrToReturn: errors.New("authentication failed"),
+	}
+
+	watcher := NewRepositoryWatcher(providers, frc)
+
+	tracked := []*types.TrackedImage{
+		mustParse("private.registry.com/v2-namespace/hello-world:1.1.1", "@every 10m"),
+	}
+
+	err := watcher.Watch(tracked...)
+
+	if err == nil {
+		t.Fatalf("expected error with faild authentication, but got nil")
 	}
 }
 
