@@ -347,7 +347,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 				"error":     err,
 				"name":      plan.Name,
 				"namespace": plan.Namespace,
-			}).Warn("provider.helm3: got error while resetting approvals counter after successful update")
+			}).Debug("provider.helm3: got error while resetting approvals counter after successful update")
 		}
 
 		var msg string
