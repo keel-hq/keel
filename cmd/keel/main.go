@@ -10,7 +10,6 @@ import (
 	"context"
 
 	"github.com/prometheus/client_golang/prometheus"
-	netContext "golang.org/x/net/context"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	kube "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -139,7 +138,7 @@ func main() {
 	notification.RegisterSender("auditor", auditLogger)
 
 	// setting up triggers
-	ctx, cancel := netContext.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	notificationLevel := types.LevelInfo
