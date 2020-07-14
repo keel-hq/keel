@@ -447,7 +447,7 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 		go subManager.Start(ctx)
 	}
 
-	if os.Getenv(EnvTriggerPoll) != "0" {
+	if os.Getenv(EnvTriggerPoll) != "0" || os.Getenv(EnvTriggerPoll) != "false" {
 
 		registryClient := registry.New()
 		watcher := poll.NewRepositoryWatcher(opts.providers, registryClient)
