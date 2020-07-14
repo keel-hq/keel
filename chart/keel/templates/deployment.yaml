@@ -53,17 +53,17 @@ spec:
 {{- if .Values.polling.enabled }}
             # Enable polling
             - name: POLL
-              value: "1"
+              value: "true"
 {{- else }}
             # Disable polling
             - name: POLL
-              value: "0"
+              value: "false"
 {{- end }}
 {{- if .Values.helmProvider.enabled }}
   {{- if eq .Values.helmProvider.version "v2" }}
             # Enable/disable Helm provider
             - name: HELM_PROVIDER
-              value: "1"
+              value: "true"
             - name: TILLER_NAMESPACE
               value: "{{ .Values.helmProvider.tillerNamespace }}"
             - name: TILLER_ADDRESS
@@ -71,7 +71,7 @@ spec:
   {{- else if eq .Values.helmProvider.version "v3" }}
             # Enable/disable Helm provider
             - name: HELM3_PROVIDER
-              value: "1"
+              value: "true"
   {{- end }}
 {{- end }}
 {{- if .Values.gcr.enabled }}
@@ -79,7 +79,7 @@ spec:
             - name: PROJECT_ID
               value: "{{ .Values.gcr.projectId }}"
             - name: PUBSUB
-              value: "1"
+              value: "true"
   {{- if .Values.gcr.clusterName }}
             # Customize the cluster name, mainly useful when outside of GKE
             - name: CLUSTER_NAME
