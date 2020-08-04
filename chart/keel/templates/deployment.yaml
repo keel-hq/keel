@@ -72,14 +72,14 @@ spec:
             # Enable/disable Helm provider
             - name: HELM3_PROVIDER
               value: "true"
-  {{- if .Values.helmProvider.helmDriver }}
+    {{- if .Values.helmProvider.helmDriver }}
             - name: HELM_DRIVER
               value: "{{ .Values.helmProvider.helmDriver }}"
-  {{- end }}
-  {{- if .Values.helmProvider.helmDriverSqlConnectionString }}
+    {{- end }}
+    {{- if .Values.helmProvider.helmDriverSqlConnectionString }}
             - name: HELM_DRIVER_SQL_CONNECTION_STRING
               value: "{{ .Values.helmProvider.helmDriverSqlConnectionString }}"
-  {{- end }}
+    {{- end }}
   {{- end }}
 {{- end }}
 {{- if .Values.gcr.enabled }}
