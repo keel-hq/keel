@@ -25,6 +25,8 @@ helmProvider:
   # if you are using default configuration, setting it to
   # 'tiller-deploy:44134' is usually fine
   tillerAddress: 'tiller-deploy:44134'
+#  helmDriver: ''
+#  helmDriverSqlConnectionString: ''
 
 # Google Container Registry
 # GCP Project ID
