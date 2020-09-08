@@ -99,6 +99,8 @@ The following table lists has the main configurable parameters (polling, trigger
 | `slack.token`                               | Slack token                            |                                                           |
 | `slack.channel`                             | Slack channel                          |                                                           |
 | `slack.approvalsChannel`                    | Slack channel for approvals            |                                                           |
+| `teams.enabled`                             | Enable/disable MS Teams Notification   | `false`                                                   |
+| `teams.webhookUrl`                          | MS Teams Connector's webhook url       |                                                           |
 | `service.enabled`                           | Enable/disable Keel service            | `false`                                                   |
 | `service.type`                              | Keel service type                      | `LoadBalancer`                                            |
 | `service.externalIP`                        | Keel static IP                         |                                                           |
