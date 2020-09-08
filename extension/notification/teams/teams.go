@@ -121,7 +121,7 @@ func (s *sender) Send(event types.EventNotification) error {
 			[]TeamsFact{
 				{
 					Name: "Version",
-					Value: fmt.Sprintf("https://keel.sh %s", version.GetKeelVersion().Version)
+					Value: fmt.Sprintf("[https://keel.sh](https://keel.sh) %s", version.GetKeelVersion().Version)
 				}
 			},
 			Markdown: true
