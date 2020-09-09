@@ -94,7 +94,7 @@ type TeamsFact struct {
 
 // Microsoft Teams expects the hexidecimal formatted color to not have a "#" at the front
 // Source: https://stackoverflow.com/a/48798875/2199949
-func trimFirstChar(s string) string {
+func TrimFirstChar(s string) string {
     for i := range s {
         if i > 0 {
             // The value i is the index in s of the second 
@@ -111,7 +111,7 @@ func (s *sender) Send(event types.EventNotification) error {
 	jsonNotification, err := json.Marshal(SimpleTeamsMessageCard{
 		_Type: "MessageCard",
 		_Context: "http://schema.org/extensions",
-		ThemeColor: trimFirstChar(event.Level.Color()),
+		ThemeColor: TrimFirstChar(event.Level.Color()),
 		Summary: event.Type.String(),
 		Sections: []TeamsMessageSection{
 			{

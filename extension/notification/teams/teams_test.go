@@ -10,16 +10,15 @@ import (
 	"fmt"
 
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/extension/notification/teams"
 )
 
 func TestTrimLeftChar(t *testing.T) {
 	fmt.Printf("%q\n", "Hello, 世界")
-    fmt.Printf("%q\n", teams.trimLeftChar(""))
-    fmt.Printf("%q\n", teams.trimLeftChar("H"))
-    fmt.Printf("%q\n", teams.trimLeftChar("世"))
-    fmt.Printf("%q\n", teams.trimLeftChar("Hello"))
-    fmt.Printf("%q\n", teams.trimLeftChar("世界"))
+    fmt.Printf("%q\n", TrimFirstChar(""))
+    fmt.Printf("%q\n", TrimFirstChar("H"))
+    fmt.Printf("%q\n", TrimFirstChar("世"))
+    fmt.Printf("%q\n", TrimFirstChar("Hello"))
+    fmt.Printf("%q\n", TrimFirstChar("世界"))
 }
 
 func TestTeamsRequest(t *testing.T) {
@@ -56,7 +55,7 @@ func TestTeamsRequest(t *testing.T) {
 	defer ts.Close()
 
 	s := &sender{
-		webhook: ts.URL,
+		endpoint: ts.URL,
 		client:   &http.Client{},
 	}
 
