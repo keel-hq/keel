@@ -66,13 +66,9 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	return true, nil
 }
 
-type notificationEnvelope struct {
-	types.EventNotification
-}
-
 type SimpleTeamsMessageCard struct {
-	_Context string `json:"@context"`
-	_Type    string `json:"@type"`
+	AtContext string `json:"@context"`
+	AtType    string `json:"@type"`
 	Sections []TeamsMessageSection `json:"sections"`
 	Summary    string `json:"summary"`
 	ThemeColor string `json:"themeColor"`
@@ -109,14 +105,14 @@ func TrimFirstChar(s string) string {
 func (s *sender) Send(event types.EventNotification) error {
 	// Marshal notification.
 	jsonNotification, err := json.Marshal(SimpleTeamsMessageCard{
-		_Type: "MessageCard",
-		_Context: "http://schema.org/extensions",
+		AtType: "MessageCard",
+		AtContext: "http://schema.org/extensions",
 		ThemeColor: TrimFirstChar(event.Level.Color()),
 		Summary: event.Type.String(),
 		Sections: []TeamsMessageSection{
 			{
 				ActivityImage: constants.KeelLogoURL,
-				ActivityText: event.Message,
+				ActivityText: fmt.Sprintf("*%s*: %s", event.Name, event.Message),
 				ActivityTitle: fmt.Sprintf("**%s**",event.Type.String()),
 				Facts: []TeamsFact{
 					{

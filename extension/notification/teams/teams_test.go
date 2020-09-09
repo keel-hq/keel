@@ -6,10 +6,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 	"fmt"
 
+	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/version"
 )
 
 func TestTrimLeftChar(t *testing.T) {
@@ -22,7 +23,6 @@ func TestTrimLeftChar(t *testing.T) {
 }
 
 func TestTeamsRequest(t *testing.T) {
-	currentTime := time.Now()
 	handler := func(resp http.ResponseWriter, req *http.Request) {
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
@@ -31,12 +31,24 @@ func TestTeamsRequest(t *testing.T) {
 
 		bodyStr := string(body)
 
-		if !strings.Contains(bodyStr, types.NotificationPreDeploymentUpdate.String()) {
+		if !strings.Contains(bodyStr, "MessageCard") {
+			t.Errorf("missing MessageCard indicator")
+		}
+
+		if !strings.Contains(bodyStr, "themeColor") {
+			t.Errorf("missing themeColor")
+		}
+
+		if !strings.Contains(bodyStr, constants.KeelLogoURL) {
+			t.Errorf("missing logo url")
+		}
+
+		if !strings.Contains(bodyStr, "**" + types.NotificationPreDeploymentUpdate.String() + "**") {
 			t.Errorf("missing deployment type")
 		}
 
-		if !strings.Contains(bodyStr, "debug") {
-			t.Errorf("missing level")
+		if !strings.Contains(bodyStr, version.GetKeelVersion().Version) {
+			t.Errorf("missing version")
 		}
 
 		if !strings.Contains(bodyStr, "update deployment") {
@@ -62,8 +74,6 @@ func TestTeamsRequest(t *testing.T) {
 	s.Send(types.EventNotification{
 		Name:      "update deployment",
 		Message:   "message here",
-		CreatedAt: currentTime,
 		Type:      types.NotificationPreDeploymentUpdate,
-		Level:     types.LevelDebug,
 	})
 }
