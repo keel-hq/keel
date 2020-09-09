@@ -184,7 +184,7 @@ spec:
               value: ""
             # Enable MS Teams webhook endpoint
             - name: TEAMS_WEBHOOK_URL
-              value: "{{ .teams_webhook_url }}" # Following same pattern as with adjacent examples. However, I can't see why this would work. (There is no top level "slack_channel" in the values.yaml. Nor is there the ".Values" prefix as with deployment.yaml.) Maybe my issue here is that I don't know how this depoyment-template.yaml file is used. I assume deployment.yaml would be the primary one in use.
+              value: "{{ .teams_webhook_url }}"
             - name: SLACK_TOKEN
               value: "{{ .slack_token }}"
             - name: SLACK_CHANNELS
