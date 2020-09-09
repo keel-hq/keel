@@ -48,7 +48,7 @@ require (
 	github.com/jinzhu/gorm v1.9.12
 	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
-	github.com/mfridman/tparse v0.7.4 // indirect
+	github.com/mfridman/tparse v0.8.2 // indirect
 	github.com/nlopes/slack v0.6.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/prometheus/client_golang v1.6.0

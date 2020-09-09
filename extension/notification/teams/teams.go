@@ -12,6 +12,7 @@ import (
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/version"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -107,7 +108,7 @@ func trimFirstChar(s string) string {
 
 func (s *sender) Send(event types.EventNotification) error {
 	// Marshal notification.
-	jsonNotification, err := json.Marshal(simpleTeamsMessageCard{
+	jsonNotification, err := json.Marshal(SimpleTeamsMessageCard{
 		_Type: "MessageCard",
 		_Context: "http://schema.org/extensions",
 		ThemeColor: trimFirstChar(event.Level.Color()),
@@ -116,16 +117,16 @@ func (s *sender) Send(event types.EventNotification) error {
 			{
 				ActivityImage: constants.KeelLogoURL,
 				ActivityText: event.Message,
-				ActivityTitle: "**" + event.Type.String() + "**"
+				ActivityTitle: fmt.Sprintf("**%s**",event.Type.String()),
+				Facts: []TeamsFact{
+					{
+						Name: "Version",
+						Value: fmt.Sprintf("[https://keel.sh](https://keel.sh) %s", version.GetKeelVersion().Version),
+					},
+				},
+				Markdown: true,
 			},
-			[]TeamsFact{
-				{
-					Name: "Version",
-					Value: fmt.Sprintf("[https://keel.sh](https://keel.sh) %s", version.GetKeelVersion().Version)
-				}
-			},
-			Markdown: true
-		}
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("could not marshal: %s", err)

@@ -13,7 +13,7 @@ import (
 	"github.com/keel-hq/keel/extension/notification/teams"
 )
 
-func TestTrimLeftChar() {
+func TestTrimLeftChar(t *testing.T) {
 	fmt.Printf("%q\n", "Hello, 世界")
     fmt.Printf("%q\n", teams.trimLeftChar(""))
     fmt.Printf("%q\n", teams.trimLeftChar("H"))
