@@ -182,6 +182,9 @@ spec:
             # Enable mattermost endpoint
             - name: MATTERMOST_ENDPOINT
               value: ""
+            # Enable MS Teams webhook endpoint
+            - name: TEAMS_WEBHOOK_URL
+              value: "{{ .teams_webhook_url }}"
             - name: SLACK_TOKEN
               value: "{{ .slack_token }}"
             - name: SLACK_CHANNELS

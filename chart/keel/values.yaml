@@ -74,9 +74,15 @@ hipchat:
   userName: ""
   password: ""
 
+# Mattermost notifications
 mattermost:
   enabled: false
   endpoint: ""
+
+# MS Teams notifications
+teams:
+  enabled: false
+  webhookUrl: ""
 
 # Mail notifications
 mail:
