@@ -81,7 +81,7 @@ func (s *TriggerServer) harborHandler(resp http.ResponseWriter, req *http.Reques
 		"event": hn,
 	}).Debug("harborHandler: received event, looking for a pushImage tag")
 
-	if hn.Type == "pushImage" {
+	if hn.Type == "pushImage" || hn.Type == "PUSH_ARTIFACT" { 
 		// go trough all the ressource items
 		for _, e := range hn.EventData.Resources {
 			imageRepo, err := image.Parse(e.ResourceURL)
