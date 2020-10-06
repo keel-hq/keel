@@ -31,6 +31,9 @@ const (
 	EnvMattermostEndpoint = "MATTERMOST_ENDPOINT"
 	EnvMattermostName     = "MATTERMOST_USERNAME"
 
+	// MS Teams webhook url, see https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using#setting-up-a-custom-incoming-webhook
+	EnvTeamsWebhookUrl	= "TEAMS_WEBHOOK_URL"
+
 	// Mail notification settings
 	EnvMailTo         = "MAIL_TO"
 	EnvMailFrom       = "MAIL_FROM"

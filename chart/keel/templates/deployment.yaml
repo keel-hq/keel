@@ -55,10 +55,9 @@ spec:
             - name: HELM_PROVIDER
               value: "true"
             - name: HELM_DRIVER
-              value: "{{ .Values.helmProvider.driver }}"
+              value: "{{ .Values.helmProvider.helmDriver }}"
             - name: HELM_DRIVER_SQL_CONNECTION_STRING
-              value: "{{ .Values.helmProvider.driverSqlConnectionString }}"
-  {{- end }}
+              value: "{{ .Values.helmProvider.helmDriverSqlConnectionString }}"
 {{- end }}
 {{- if .Values.gcr.enabled }}
             # Enable GCR with pub/sub support

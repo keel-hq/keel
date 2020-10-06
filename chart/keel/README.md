@@ -81,6 +81,8 @@ The following table lists has the main configurable parameters (polling, trigger
 | ------------------------------------------- | -------------------------------------- | --------------------------------------------------------- |
 | `polling.enabled`                           | Docker registries polling              | `true`                                                    |
 | `helmProvider.enabled`                      | Enable/disable Helm provider           | `true`                                                    |
+| `helmProvider.helmDriver`                   | Set driver for Helm3                   | ``                                                        |
+| `helmProvider.helmDriverSqlConnectionString`| Set SQL connection string for Helm3    | ``                                                        |
 | `gcr.enabled`                               | Enable/disable GCR Registry            | `false`                                                   |
 | `gcr.projectId`                             | GCP Project ID GCR belongs to          |                                                           |
 | `gcr.pubsub.enabled`                        | Enable/disable GCP Pub/Sub trigger     | `false`                                                   |
@@ -97,6 +99,8 @@ The following table lists has the main configurable parameters (polling, trigger
 | `slack.token`                               | Slack token                            |                                                           |
 | `slack.channel`                             | Slack channel                          |                                                           |
 | `slack.approvalsChannel`                    | Slack channel for approvals            |                                                           |
+| `teams.enabled`                             | Enable/disable MS Teams Notification   | `false`                                                   |
+| `teams.webhookUrl`                          | MS Teams Connector's webhook url       |                                                           |
 | `service.enabled`                           | Enable/disable Keel service            | `false`                                                   |
 | `service.type`                              | Keel service type                      | `LoadBalancer`                                            |
 | `service.externalIP`                        | Keel static IP                         |                                                           |

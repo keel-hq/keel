@@ -16,10 +16,10 @@ helmProvider:
   # Additional Helm configuration, more info here:
   # https://helm.sh/docs/helm/helm/
   #
-  # driver sets HELM_DRIVER 
-  driver: ""
-  # driverSqlConnectionString sets HELM_DRIVER_SQL_CONNECTION_STRING
-  driverSqlConnectionString: ""
+  # helmDriver sets HELM_DRIVER 
+  helmDriver: ""
+  # helmDriverSqlConnectionString sets HELM_DRIVER_SQL_CONNECTION_STRING
+  helmDriverSqlConnectionString: ""
 
 # Google Container Registry
 # GCP Project ID
@@ -67,9 +67,15 @@ hipchat:
   userName: ""
   password: ""
 
+# Mattermost notifications
 mattermost:
   enabled: false
   endpoint: ""
+
+# MS Teams notifications
+teams:
+  enabled: false
+  webhookUrl: ""
 
 # Mail notifications
 mail:
