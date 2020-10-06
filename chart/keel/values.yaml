@@ -10,21 +10,16 @@ image:
 # Enable insecure registries
 insecureRegistry: false
 
-# Polling is enabled by default,
-# you can disable it setting value below to false
-polling:
-  enabled: true
-
 # Helm provider support
 helmProvider:
   enabled: true
-  # set to version "v3" for Helm v3
-  version: "v2"
-  tillerNamespace: "kube-system"
-  # optional Tiller address (if portforwarder tunnel doesn't work),
-  # if you are using default configuration, setting it to
-  # 'tiller-deploy:44134' is usually fine
-  tillerAddress: 'tiller-deploy:44134'
+  # Additional Helm configuration, more info here:
+  # https://helm.sh/docs/helm/helm/
+  #
+  # driver sets HELM_DRIVER 
+  driver: ""
+  # driverSqlConnectionString sets HELM_DRIVER_SQL_CONNECTION_STRING
+  driverSqlConnectionString: ""
 
 # Google Container Registry
 # GCP Project ID
