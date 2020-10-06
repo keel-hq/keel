@@ -50,37 +50,14 @@ spec:
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /secret/google-application-credentials.json
 {{- end }}
-{{- if .Values.polling.enabled }}
-            # Enable polling
-            - name: POLL
-              value: "true"
-{{- else }}
-            # Disable polling
-            - name: POLL
-              value: "false"
-{{- end }}
 {{- if .Values.helmProvider.enabled }}
-  {{- if eq .Values.helmProvider.version "v2" }}
             # Enable/disable Helm provider
             - name: HELM_PROVIDER
               value: "true"
-            - name: TILLER_NAMESPACE
-              value: "{{ .Values.helmProvider.tillerNamespace }}"
-            - name: TILLER_ADDRESS
-              value: "{{ .Values.helmProvider.tillerAddress }}"
-  {{- else if eq .Values.helmProvider.version "v3" }}
-            # Enable/disable Helm provider
-            - name: HELM3_PROVIDER
-              value: "true"
-    {{- if .Values.helmProvider.helmDriver }}
             - name: HELM_DRIVER
               value: "{{ .Values.helmProvider.helmDriver }}"
-    {{- end }}
-    {{- if .Values.helmProvider.helmDriverSqlConnectionString }}
             - name: HELM_DRIVER_SQL_CONNECTION_STRING
               value: "{{ .Values.helmProvider.helmDriverSqlConnectionString }}"
-    {{- end }}
-  {{- end }}
 {{- end }}
 {{- if .Values.gcr.enabled }}
             # Enable GCR with pub/sub support

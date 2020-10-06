@@ -11,7 +11,7 @@ import (
 	"github.com/keel-hq/keel/types"
 	log "github.com/sirupsen/logrus"
 	apps_v1 "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -90,13 +90,12 @@ func TestPollingSemverUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
-
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(ctx, dep, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "keelhq/push-workflow-example:0.5.0-dev")
 		if err != nil {
@@ -150,13 +149,12 @@ func TestPollingSemverUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
-
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(ctx, dep, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "keelhq/push-workflow-example:0.10.0")
 		if err != nil {
@@ -208,12 +206,12 @@ func TestPollingSemverUpdate(t *testing.T) {
 			apps_v1.DeploymentStatus{},
 		}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(ctx, dep, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "keelhq/push-workflow-example:0.11.0-alpha")
 		if err != nil {
@@ -295,7 +293,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 			},
 		}
 
-		_, err = kcs.CoreV1().Secrets(testNamespace).Create(secret)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		_, err = kcs.CoreV1().Secrets(testNamespace).Create(ctx, secret, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create secret: %s", err)
 		}
@@ -347,12 +347,10 @@ func TestPollingPrivateRegistry(t *testing.T) {
 			apps_v1.DeploymentStatus{},
 		}
 
-		_, err = kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err = kcs.AppsV1().Deployments(testNamespace).Create(ctx, dep, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "karolisr/demo-webhook:0.0.2")
 		if err != nil {
@@ -405,8 +403,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 				".dockerconfigjson": []byte(payload),
 			},
 		}
-
-		_, err = kcs.CoreV1().Secrets(testNamespace).Create(secret)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		_, err = kcs.CoreV1().Secrets(testNamespace).Create(ctx, secret, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create secret: %s", err)
 		} else {
@@ -459,12 +458,10 @@ func TestPollingPrivateRegistry(t *testing.T) {
 			apps_v1.DeploymentStatus{},
 		}
 
-		_, err = kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err = kcs.AppsV1().Deployments(testNamespace).Create(ctx, dep, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "registry.gitlab.com/karolisr/keel:0.2.0")
 		if err != nil {

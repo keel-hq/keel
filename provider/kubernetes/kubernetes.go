@@ -45,6 +45,8 @@ func init() {
 	prometheus.MustRegister(kubernetesUnversionedUpdatesCounter)
 }
 
+var defaultCtxTimeout = time.Second * 10
+
 // ProviderName - provider name
 const ProviderName = "kubernetes"
 

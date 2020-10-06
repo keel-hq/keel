@@ -73,13 +73,7 @@ func GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
 		if credHelper.IsEnabled() {
 			foundCredentials, err := credHelper.GetCredentials(image)
 			if err != nil {
-				if err == ErrUnsupportedRegistry {
-					log.WithFields(log.Fields{
-						"helper":        name,
-						"error":         err,
-						"tracked_image": image,
-					}).Debug("extension.credentialshelper: helper doesn't support this registry")
-				} else {
+				if err != ErrUnsupportedRegistry {
 					log.WithFields(log.Fields{
 						"helper":        name,
 						"error":         err,
@@ -101,8 +95,6 @@ func GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
 			return foundCredentials, nil
 		}
 	}
-	log.WithFields(log.Fields{
-		"tracked_image": image,
-	}).Debug("extension.credentialshelper: credentials helper not found")
+
 	return nil, ErrCredentialsNotAvailable
 }
