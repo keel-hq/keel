@@ -112,7 +112,9 @@ func TestWebhooksSemverUpdate(t *testing.T) {
 			apps_v1.DeploymentStatus{},
 		}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(ctx, dep, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -135,9 +137,6 @@ func TestWebhooksSemverUpdate(t *testing.T) {
 		if resp.StatusCode != 200 {
 			t.Errorf("unexpected webhook response from keel: %d", resp.StatusCode)
 		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "karolisr/webhook-demo:0.0.15")
 		if err != nil {
@@ -215,8 +214,9 @@ func TestWebhookHighIntegerUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
-
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+		defer cancel()
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(ctx, dep, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -263,9 +263,6 @@ func TestWebhookHighIntegerUpdate(t *testing.T) {
 		if resp.StatusCode != 200 {
 			t.Errorf("unexpected webhook response from keel: %d", resp.StatusCode)
 		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		time.Sleep(3 * time.Second)
 
@@ -350,7 +347,9 @@ func TestApprovals(t *testing.T) {
 			apps_v1.DeploymentStatus{},
 		}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(ctx, dep, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -402,9 +401,6 @@ func TestApprovals(t *testing.T) {
 				t.Errorf("deadline is for: %s", approvals[0].Deadline)
 			}
 		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "karolisr/webhook-demo:0.0.14")
 		if err != nil {
@@ -491,7 +487,7 @@ func TestApprovalsWithAuthentication(t *testing.T) {
 			apps_v1.DeploymentStatus{},
 		}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(ctx, dep, meta_v1.CreateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}

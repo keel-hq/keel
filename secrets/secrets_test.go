@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/keel-hq/keel/provider/helm"
+	"github.com/keel-hq/keel/provider/helm3"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 	testutil "github.com/keel-hq/keel/util/testing"
@@ -344,7 +344,7 @@ func TestGetDirectHelmSecret(t *testing.T) {
 		Image:     imgRef,
 		Namespace: "default",
 		Secrets:   []string{"myregistrysecret"},
-		Provider:  helm.ProviderName,
+		Provider:  helm3.ProviderName,
 	}
 
 	creds, err := getter.Get(trackedImage)

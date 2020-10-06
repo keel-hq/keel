@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/keel-hq/keel/internal/k8s"
@@ -94,20 +95,23 @@ func (i *KubernetesImplementer) Config() *rest.Config {
 
 // Namespaces - get all namespaces
 func (i *KubernetesImplementer) Namespaces() (*v1.NamespaceList, error) {
-	namespaces := i.client.CoreV1().Namespaces()
-	return namespaces.List(meta_v1.ListOptions{})
+	ctx, cancel := context.WithTimeout(context.Background(), defaultCtxTimeout)
+	defer cancel()
+	return i.client.CoreV1().Namespaces().List(ctx, meta_v1.ListOptions{})
 }
 
 // Deployment - get specific deployment for namespace/name
 func (i *KubernetesImplementer) Deployment(namespace, name string) (*apps_v1.Deployment, error) {
-	dep := i.client.AppsV1().Deployments(namespace)
-	return dep.Get(name, meta_v1.GetOptions{})
+	ctx, cancel := context.WithTimeout(context.Background(), defaultCtxTimeout)
+	defer cancel()
+	return i.client.AppsV1().Deployments(namespace).Get(ctx, name, meta_v1.GetOptions{})
 }
 
 // Deployments - get all deployments for namespace
 func (i *KubernetesImplementer) Deployments(namespace string) (*apps_v1.DeploymentList, error) {
-	dep := i.client.AppsV1().Deployments(namespace)
-	l, err := dep.List(meta_v1.ListOptions{})
+	ctx, cancel := context.WithTimeout(context.Background(), defaultCtxTimeout)
+	defer cancel()
+	l, err := i.client.AppsV1().Deployments(namespace).List(ctx, meta_v1.ListOptions{})
 	return l, err
 }
 
@@ -121,24 +125,27 @@ func (i *KubernetesImplementer) Update(obj *k8s.GenericResource) error {
 	// })
 	// return retryErr
 
+	ctx, cancel := context.WithTimeout(context.Background(), defaultCtxTimeout)
+	defer cancel()
+
 	switch resource := obj.GetResource().(type) {
 	case *apps_v1.Deployment:
-		_, err := i.client.AppsV1().Deployments(resource.Namespace).Update(resource)
+		_, err := i.client.AppsV1().Deployments(resource.Namespace).Update(ctx, resource, meta_v1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
 	case *apps_v1.StatefulSet:
-		_, err := i.client.AppsV1().StatefulSets(resource.Namespace).Update(resource)
+		_, err := i.client.AppsV1().StatefulSets(resource.Namespace).Update(ctx, resource, meta_v1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
 	case *apps_v1.DaemonSet:
-		_, err := i.client.AppsV1().DaemonSets(resource.Namespace).Update(resource)
+		_, err := i.client.AppsV1().DaemonSets(resource.Namespace).Update(ctx, resource, meta_v1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
 	case *v1beta1.CronJob:
-		_, err := i.client.BatchV1beta1().CronJobs(resource.Namespace).Update(resource)
+		_, err := i.client.BatchV1beta1().CronJobs(resource.Namespace).Update(ctx, resource, meta_v1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
@@ -150,17 +157,23 @@ func (i *KubernetesImplementer) Update(obj *k8s.GenericResource) error {
 
 // Secret - get secret
 func (i *KubernetesImplementer) Secret(namespace, name string) (*v1.Secret, error) {
-	return i.client.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
+	ctx, cancel := context.WithTimeout(context.Background(), defaultCtxTimeout)
+	defer cancel()
+	return i.client.CoreV1().Secrets(namespace).Get(ctx, name, meta_v1.GetOptions{})
 }
 
 // Pods - get pods
 func (i *KubernetesImplementer) Pods(namespace, labelSelector string) (*v1.PodList, error) {
-	return i.client.CoreV1().Pods(namespace).List(meta_v1.ListOptions{LabelSelector: labelSelector})
+	ctx, cancel := context.WithTimeout(context.Background(), defaultCtxTimeout)
+	defer cancel()
+	return i.client.CoreV1().Pods(namespace).List(ctx, meta_v1.ListOptions{LabelSelector: labelSelector})
 }
 
 // DeletePod - delete pod by name
 func (i *KubernetesImplementer) DeletePod(namespace, name string, opts *meta_v1.DeleteOptions) error {
-	return i.client.CoreV1().Pods(namespace).Delete(name, opts)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultCtxTimeout)
+	defer cancel()
+	return i.client.CoreV1().Pods(namespace).Delete(ctx, name, *opts)
 }
 
 // ConfigMaps - returns an interface to config maps for a specified namespace
