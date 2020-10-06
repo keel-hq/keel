@@ -66,11 +66,8 @@ const (
 	EnvProjectID     = "PROJECT_ID"
 	EnvClusterName   = "CLUSTER_NAME"
 	EnvDataDir       = "XDG_DATA_HOME"
-	// EnvHelmProvider        = "HELM_PROVIDER"    // helm provider
-	EnvHelmTillerAddress   = "TILLER_ADDRESS"   // helm provider
-	EnvHelmTillerNamespace = "TILLER_NAMESPACE" // helm provider
-	EnvHelm3Provider       = "HELM3_PROVIDER"   // helm3 provider
-	EnvUIDir               = "UI_DIR"
+	EnvHelmProvider  = "HELM_PROVIDER" // helm provider
+	EnvUIDir         = "UI_DIR"
 
 	// EnvDefaultDockerRegistryCfg - default registry configuration that can be passed into
 	// keel for polling trigger
@@ -316,7 +313,7 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 
 	enabledProviders = append(enabledProviders, k8sProvider)
 
-	if os.Getenv(EnvHelm3Provider) == "1" || os.Getenv(EnvHelm3Provider) == "true" {
+	if os.Getenv(EnvHelmProvider) == "1" || os.Getenv(EnvHelmProvider) == "true" {
 		helm3Implementer := helm3.NewHelm3Implementer()
 		helm3Provider := helm3.NewProvider(helm3Implementer, opts.sender, opts.approvalsManager)
 
