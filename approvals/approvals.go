@@ -96,7 +96,7 @@ func New(opts *Opts) *DefaultManager {
 // StartExpiryService - starts approval expiry service which deletes approvals
 // that already reached their deadline
 func (m *DefaultManager) StartExpiryService(ctx context.Context) error {
-	ticker := time.NewTicker(60 * time.Minute)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	err := m.expireEntries()
 	if err != nil {
