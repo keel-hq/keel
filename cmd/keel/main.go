@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -13,12 +12,10 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	kube "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/helm/pkg/helm/portforwarder"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/bot"
 
-	// "github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/pkg/auth"
 	"github.com/keel-hq/keel/pkg/http"
 	"github.com/keel-hq/keel/pkg/store"
@@ -30,7 +27,6 @@ import (
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/workgroup"
 	"github.com/keel-hq/keel/provider"
-	"github.com/keel-hq/keel/provider/helm"
 	"github.com/keel-hq/keel/provider/helm3"
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/registry"
@@ -65,12 +61,12 @@ import (
 
 // gcloud pubsub related config
 const (
-	EnvTriggerPubSub       = "PUBSUB" // set to 1 or something to enable pub/sub trigger
-	EnvTriggerPoll         = "POLL"   // set to 0 to disable poll trigger
-	EnvProjectID           = "PROJECT_ID"
-	EnvClusterName         = "CLUSTER_NAME"
-	EnvDataDir             = "XDG_DATA_HOME"
-	EnvHelmProvider        = "HELM_PROVIDER"    // helm provider
+	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
+	EnvTriggerPoll   = "POLL"   // set to 0 to disable poll trigger
+	EnvProjectID     = "PROJECT_ID"
+	EnvClusterName   = "CLUSTER_NAME"
+	EnvDataDir       = "XDG_DATA_HOME"
+	// EnvHelmProvider        = "HELM_PROVIDER"    // helm provider
 	EnvHelmTillerAddress   = "TILLER_ADDRESS"   // helm provider
 	EnvHelmTillerNamespace = "TILLER_NAMESPACE" // helm provider
 	EnvHelm3Provider       = "HELM3_PROVIDER"   // helm3 provider
@@ -319,45 +315,6 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 	}()
 
 	enabledProviders = append(enabledProviders, k8sProvider)
-
-	if os.Getenv(EnvHelmProvider) == "1" || os.Getenv(EnvHelmProvider) == "true" {
-
-		var tillerAddr string
-
-		if os.Getenv(EnvHelmTillerAddress) != "" {
-			tillerAddr = os.Getenv(EnvHelmTillerAddress)
-			log.Infof("Tiller address specified: %s", tillerAddr)
-		} else {
-			tillerNamespace := "kube-system"
-			if os.Getenv(EnvHelmTillerNamespace) != "" {
-				tillerNamespace = os.Getenv(EnvHelmTillerNamespace)
-			}
-
-			tillerTunnel, err := portforwarder.New(tillerNamespace, opts.k8sClient, opts.config)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error": err,
-				}).Fatal("failed to setup Tiller tunnel")
-			}
-
-			tillerAddr = fmt.Sprintf("127.0.0.1:%d", tillerTunnel.Local)
-			log.Infof("created local tunnel using local port: '%d'", tillerTunnel.Local)
-		}
-
-		helmImplementer := helm.NewHelmImplementer(tillerAddr)
-		helmProvider := helm.NewProvider(helmImplementer, opts.sender, opts.approvalsManager)
-
-		go func() {
-			err := helmProvider.Start()
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error": err,
-				}).Fatal("helm provider stopped with an error")
-			}
-		}()
-
-		enabledProviders = append(enabledProviders, helmProvider)
-	}
 
 	if os.Getenv(EnvHelm3Provider) == "1" || os.Getenv(EnvHelm3Provider) == "true" {
 		helm3Implementer := helm3.NewHelm3Implementer()
