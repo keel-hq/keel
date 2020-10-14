@@ -19,7 +19,7 @@ Keel provides several key features:
 
 *  __[Polling](https://keel.sh/user-guide/#polling-deployment-example)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for new tags (if current tag is semver) or same tag SHA digest change (ie: `latest`).
 
-* __Notifications__ - out of the box Keel has Slack and standard webhook notifications, more info [here](https://keel.sh/user-guide/#notifications)
+* __Notifications__ - out of the box Keel has Slack, HipChat, Mattermost, Teams and standard webhook notifications, more info [here](https://keel.sh/user-guide/#notifications)
 
 
 ## Installing
