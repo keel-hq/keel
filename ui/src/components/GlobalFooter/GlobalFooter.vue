@@ -10,7 +10,7 @@
     </div>
     <div class="copyright">
       Copyright
-      <a-icon type="copyright" /> 2019 <span>Keel</span>
+      <a-icon type="copyright" /> 2020 <span>Keel</span>
     </div>
   </div>
 </template>
