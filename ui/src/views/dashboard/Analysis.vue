@@ -154,8 +154,9 @@
               <a-menu-item @click="setPolicy(resource, 'major')" key="3">major</a-menu-item>
               <a-menu-item @click="setPolicy(resource, 'all')" key="4">all</a-menu-item>
               <a-menu-item @click="setPolicy(resource, 'force')" key="5">force</a-menu-item>
-              <a-menu-item @click="showPolicyModal(resource, 'glob')" key="6">glob</a-menu-item>
-              <a-menu-item @click="showPolicyModal(resource, 'regexp')" key="7">regexp</a-menu-item>
+              <a-menu-item @click="setPolicy(resource, 'force-match-tag')" key="6">force (match tag)</a-menu-item>
+              <a-menu-item @click="showPolicyModal(resource, 'glob')" key="7">glob</a-menu-item>
+              <a-menu-item @click="showPolicyModal(resource, 'regexp')" key="8">regexp</a-menu-item>
             </a-menu>
             <a-button size="small" type="primary">
               Policy<a-icon type="down" />

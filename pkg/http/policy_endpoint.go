@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/keel-hq/keel/types"
 )
@@ -39,7 +41,12 @@ func (s *TriggerServer) policyUpdateHandler(resp http.ResponseWriter, req *http.
 			v.SetLabels(labels)
 
 			ann := v.GetAnnotations()
-			ann[types.KeelPolicyLabel] = policyRequest.Policy
+			if strings.HasPrefix(policyRequest.Policy, "force") {
+				ann[types.KeelPolicyLabel] = "force"
+				ann[types.KeelForceTagMatchLegacyLabel] = strconv.FormatBool(strings.HasSuffix(policyRequest.Policy, "match-tag"))
+			} else {
+				ann[types.KeelPolicyLabel] = policyRequest.Policy
+			}
 
 			v.SetAnnotations(ann)
 
