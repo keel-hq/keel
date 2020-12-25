@@ -102,7 +102,7 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 		currentVersion, invalidCurrentVersion := semver.NewVersion(trackedImage.Image.Tag())
 		// matches, going through tags
 		for _, version := range versions {
-			if invalidCurrentVersion == nil && currentVersion.GreaterThan(version) {
+			if invalidCurrentVersion == nil && (currentVersion.GreaterThan(version) || currentVersion.Equal(version)) {
 				// Current tag is a valid semver, and is bigger than currently tested one
 				// -> we can stop now, nothing will be worth upgrading in the rest of the sorted list
 				break
