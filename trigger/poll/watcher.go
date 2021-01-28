@@ -90,10 +90,10 @@ func (w *RepositoryWatcher) Start(ctx context.Context) {
 	}()
 }
 
-func getImageIdentifier(ref *image.Reference) string {
+func getImageIdentifier(ref *image.Reference, keepTag bool) string {
 	_, err := version.GetVersion(ref.Tag())
 	// if failed to parse version, will need to watch digest
-	if err != nil {
+	if err != nil || keepTag == true {
 		return ref.Registry() + "/" + ref.ShortName() + ":" + ref.Tag()
 	}
 
@@ -110,7 +110,7 @@ func (w *RepositoryWatcher) Unwatch(imageName string) error {
 		}).Error("trigger.poll.RepositoryWatcher.Unwatch: failed to parse image")
 		return err
 	}
-	key := getImageIdentifier(imageRef)
+	key := getImageIdentifier(imageRef, false)
 	_, ok := w.watched[key]
 	if ok {
 		w.cron.DeleteJob(key)
@@ -183,7 +183,8 @@ func (w *RepositoryWatcher) watch(image *types.TrackedImage) (string, error) {
 		return "", fmt.Errorf("invalid cron schedule: %s", err)
 	}
 
-	key := getImageIdentifier(image.Image)
+	keepTag := image.Policy != nil && image.Policy.Name() == "force"
+	key := getImageIdentifier(image.Image, keepTag)
 
 	// checking whether it's already being watched
 	details, ok := w.watched[key]
@@ -248,7 +249,8 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 		return err
 	}
 
-	key := getImageIdentifier(ti.Image)
+	keepTag := ti.Policy != nil && ti.Policy.Name() == "force"
+	key := getImageIdentifier(ti.Image, keepTag)
 	details := &watchDetails{
 		trackedImage: ti,
 		digest:       digest, // current image digest
@@ -263,7 +265,7 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 	// and for non-semver types we create a single tag watcher which
 	// checks digest
 	_, err = version.GetVersion(ti.Image.Tag())
-	if err != nil {
+	if err != nil || (ti.Policy != nil && ti.Policy.Name() == "force") {
 		// adding new job
 		job := NewWatchTagJob(w.providers, w.registryClient, details)
 		log.WithFields(log.Fields{

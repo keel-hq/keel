@@ -100,7 +100,7 @@ func TestCheckDeployment(t *testing.T) {
 	}
 
 	ref, _ := image.Parse(imageA)
-	keyA := getImageIdentifier(ref)
+	keyA := getImageIdentifier(ref, false)
 	if watcher.watched[keyA].digest != frc.digestToReturn {
 		t.Errorf("unexpected digest")
 	}
@@ -115,7 +115,7 @@ func TestCheckDeployment(t *testing.T) {
 	}
 
 	refB, _ := image.Parse(imageB)
-	keyB := getImageIdentifier(refB)
+	keyB := getImageIdentifier(refB, false)
 	if watcher.watched[keyB].digest != frc.digestToReturn {
 		t.Errorf("unexpected digest")
 	}
@@ -176,7 +176,7 @@ func TestCheckECRDeployment(t *testing.T) {
 		t.Fatalf("unexpected list of cron entries: %d", len(entries))
 	}
 
-	keyA := getImageIdentifier(imgA)
+	keyA := getImageIdentifier(imgA, false)
 
 	if len(watcher.watched) != 1 {
 		t.Fatalf("expected to find 1 entry in watcher.watched map, found: %d", len(watcher.watched))

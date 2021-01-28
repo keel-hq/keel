@@ -124,6 +124,50 @@ func TestWatchTagJob(t *testing.T) {
 	}
 }
 
+func TestWatchTagJobForce(t *testing.T) {
+
+	img, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.1")
+	fp := &fakeProvider{
+		images: []*types.TrackedImage{
+			{
+				Image:        img,
+				Trigger:      types.TriggerTypePoll,
+				Provider:     "fp",
+				PollSchedule: types.KeelPollDefaultSchedule,
+				Policy:       policy.NewForcePolicy(true),
+			},
+		},
+	}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	frc := &fakeRegistryClient{
+		digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
+		tagsToReturn:   []string{"1.1.2", "1.2.0"},
+	}
+
+	watcher := NewRepositoryWatcher(providers, frc)
+
+	err := watcher.Watch(fp.images...)
+
+	if err != nil {
+		t.Errorf("expected to find watching %s", img.Remote())
+	}
+
+	if dig, ok := watcher.watched["gcr.io/v2-namespace/hello-world:1.1.1"]; ok {
+		if dig.latest != "1.1.1" {
+			t.Errorf("unexpected event repository tag: %s", dig.latest)
+		}
+	} else {
+		t.Errorf("hello-world:1.1.1 watcher not found")
+	}
+}
+
 func TestWatchTagJobLatest(t *testing.T) {
 
 	fp := &fakeProvider{}
@@ -272,8 +316,7 @@ func TestWatchMultipleTags(t *testing.T) {
 				Trigger:      types.TriggerTypePoll,
 				Provider:     "fp",
 				PollSchedule: types.KeelPollDefaultSchedule,
-
-				Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
+				Policy:       policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 			},
 
 			{
@@ -338,14 +381,14 @@ func TestWatchMultipleTags(t *testing.T) {
 	}
 
 	if dig, ok := watcher.watched["gcr.io/v2-namespace/greetings-world:master"]; ok != true {
-		t.Errorf("alpha watcher not found")
+		t.Errorf("master watcher not found")
 		if dig.digest != "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb" {
-			t.Errorf("digest not set for alpha")
+			t.Errorf("digest not set for master")
 		}
 	}
 
 	if det, ok := watcher.watched["gcr.io/v2-namespace/greetings-world"]; ok != true {
-		t.Errorf("alpha watcher not found")
+		t.Errorf("watcher not found")
 		if det.latest != "5.0.0" {
 			t.Errorf("expected to find a tag set for multiple tags watch job")
 		}
