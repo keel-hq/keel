@@ -117,7 +117,7 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 			"token":            *ad.AuthorizationToken,
 			"registry":         registry,
 		}).Debug("checking registry")
-		if u.Host == registry {
+		if strings.SplitN(u.Host,".",2)[1] == strings.SplitN(registry,".",2)[1] {
 			username, password, err := decodeBase64Secret(*ad.AuthorizationToken)
 			if err != nil {
 				return nil, fmt.Errorf("failed to decode authentication token: %s, error: %s", *ad.AuthorizationToken, err)
