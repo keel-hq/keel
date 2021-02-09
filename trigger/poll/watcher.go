@@ -261,11 +261,15 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 	// adding job to internal map
 	w.watched[key] = details
 
-	// checking tag type, for versioned (semver) tags we setup a watch all tags job
-	// and for non-semver types we create a single tag watcher which
+	// checking tag type:
+	//  - for versioned (semver) tags:
+	//    - we setup a watch all tags job (default)
+	//    - if "force" to follow a floating tag, a single tag watcher is
+	//      setup, which checks digest
+	//  - for non-semver types we create a single tag watcher which
 	// checks digest
 	_, err = version.GetVersion(ti.Image.Tag())
-	if err != nil || (ti.Policy != nil && ti.Policy.Name() == "force") {
+	if err != nil || keepTag == true {
 		// adding new job
 		job := NewWatchTagJob(w.providers, w.registryClient, details)
 		log.WithFields(log.Fields{
