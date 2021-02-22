@@ -173,7 +173,7 @@ spec:
             - name: AWS_REGION
               value: "{{ .Values.aws.region }}"
 {{- end }}
-{{- if .Values.secret.create }}
+{{- if or .Values.secret.create .Values.secret.name }}
           envFrom:
             - secretRef:
                 name: {{ .Values.secret.name | default (include "keel.fullname" .) }}
