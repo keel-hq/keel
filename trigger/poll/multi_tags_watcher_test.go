@@ -130,7 +130,6 @@ func testRunHelper(testCases []runTestCase, availableTags []string, t *testing.T
 	}
 }
 
-
 func TestWatchAllTagsJobWith2pointSemver(t *testing.T) {
 	availableTags := []string{"1.3", "2.5", "2.7", "3.8"}
 	testRunHelper([]runTestCase{{"1.3", "3.8", policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, false)}}, availableTags, t)
