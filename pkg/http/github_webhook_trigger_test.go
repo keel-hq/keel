@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-var fakeGithubWebhook = `{
+var fakeGithubPackageWebhook = `{
   "action": "published",
   "registry_package": {
     "id": 35087,
@@ -239,16 +239,113 @@ var fakeGithubWebhook = `{
   }
 }`
 
-func TestGithubWebhookHandler(t *testing.T) {
+var fakeGithubContainerRegistryWebhook = `{
+  "action": "create",
+  "package": {
+    "id": 779666,
+    "name": "utaitebox-server",
+    "namespace": "utaitebox",
+    "description": "",
+    "ecosystem": "CONTAINER",
+    "html_url": "https://github.com/utaitebox/packages/779666",
+    "created_at": "0001-01-01T00:00:00Z",
+    "updated_at": "0001-01-01T00:00:00Z",
+    "package_version": {
+      "id": 1284299,
+      "name": "sha256:7d3848ba2f2e7f69bebb4b576e5fad0379b64a0b1512aee6ad0ec9e7c6319fed",
+      "description": "",
+      "blob_store": "s3",
+      "html_url": "https://github.com/utaitebox/packages/779666?version=1284299",
+      "created_at": "0001-01-01T00:00:00Z",
+      "updated_at": "0001-01-01T00:00:00Z",
+      "container_metadata": {
+        "tag": {
+          "name": "3.2.1",
+          "digest": "sha256:7d3848ba2f2e7f69bebb4b576e5fad0379b64a0b1512aee6ad0ec9e7c6319fed"
+        },
+        "labels": {
+          "description": "",
+          "source": "",
+          "revision": "",
+          "image_url": "",
+          "licenses": "",
+          "all_labels": {
+
+          }
+        },
+        "manifest": {
+          "digest": "sha256:7d3848ba2f2e7f69bebb4b576e5fad0379b64a0b1512aee6ad0ec9e7c6319fed",
+          "media_type": "application/vnd.docker.distribution.manifest.v2+json",
+          "uri": "repositories/utaitebox/utaitebox-server/manifests/sha256:7d3848ba2f2e7f69bebb4b576e5fad0379b64a0b1512aee6ad0ec9e7c6319fed",
+          "size": 735,
+          "config": {
+            "digest": "sha256:2b94d3d75692e4b04dde5046ad3246fe01cc8889cb641c3e116f10e41c51e164",
+            "media_type": "application/vnd.docker.container.image.v1+json",
+            "size": 1709
+          },
+          "layers": [
+            {
+              "digest": "sha256:9d48c3bd43c520dc2784e868a780e976b207cbf493eaff8c6596eb871cbd9609",
+              "media_type": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+              "size": 2789669
+            },
+            {
+              "digest": "sha256:957045d2b582f07cdc07ebbc7d971239bb7bc19f78216fe547609ff495b007f5",
+              "media_type": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+              "size": 350
+            }
+          ]
+        }
+      }
+    }
+  },
+  "organization": {
+    "login": "UtaiteBOX",
+    "id": 65208347,
+    "node_id": "MDEyOk9yZ2FuaXphdGlvbjY1MjA4MzQ3",
+    "url": "https://api.github.com/orgs/UtaiteBOX",
+    "repos_url": "https://api.github.com/orgs/UtaiteBOX/repos",
+    "events_url": "https://api.github.com/orgs/UtaiteBOX/events",
+    "hooks_url": "https://api.github.com/orgs/UtaiteBOX/hooks",
+    "issues_url": "https://api.github.com/orgs/UtaiteBOX/issues",
+    "members_url": "https://api.github.com/orgs/UtaiteBOX/members{/member}",
+    "public_members_url": "https://api.github.com/orgs/UtaiteBOX/public_members{/member}",
+    "avatar_url": "https://avatars.githubusercontent.com/u/65208347?v=4",
+    "description": null
+  },
+  "sender": {
+    "login": "DingGGu",
+    "id": 2981443,
+    "node_id": "MDQ6VXNlcjI5ODE0NDM=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/2981443?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/DingGGu",
+    "html_url": "https://github.com/DingGGu",
+    "followers_url": "https://api.github.com/users/DingGGu/followers",
+    "following_url": "https://api.github.com/users/DingGGu/following{/other_user}",
+    "gists_url": "https://api.github.com/users/DingGGu/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/DingGGu/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/DingGGu/subscriptions",
+    "organizations_url": "https://api.github.com/users/DingGGu/orgs",
+    "repos_url": "https://api.github.com/users/DingGGu/repos",
+    "events_url": "https://api.github.com/users/DingGGu/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/DingGGu/received_events",
+    "type": "User",
+    "site_admin": false
+  }
+}`
+
+func TestGithubPackageWebhookHandler(t *testing.T) {
 
 	fp := &fakeProvider{}
 	srv, teardown := NewTestingServer(fp)
 	defer teardown()
 
-	req, err := http.NewRequest("POST", "/v1/webhooks/github", bytes.NewBuffer([]byte(fakeGithubWebhook)))
+	req, err := http.NewRequest("POST", "/v1/webhooks/github", bytes.NewBuffer([]byte(fakeGithubPackageWebhook)))
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
+	req.Header.Set("X-GitHub-Event", "registry_package")
 
 	//The response recorder used to record HTTP responses
 	rec := httptest.NewRecorder()
@@ -270,5 +367,40 @@ func TestGithubWebhookHandler(t *testing.T) {
 
 	if fp.submitted[0].Repository.Tag != "1.2.3" {
 		t.Errorf("expected 1.2.3 but got %s", fp.submitted[0].Repository.Tag)
+	}
+}
+
+func TestGithubContainerRegistryWebhookHandler(t *testing.T) {
+
+	fp := &fakeProvider{}
+	srv, teardown := NewTestingServer(fp)
+	defer teardown()
+
+	req, err := http.NewRequest("POST", "/v1/webhooks/github", bytes.NewBuffer([]byte(fakeGithubContainerRegistryWebhook)))
+	if err != nil {
+		t.Fatalf("failed to create req: %s", err)
+	}
+	req.Header.Set("X-GitHub-Event", "package_v2")
+
+	//The response recorder used to record HTTP responses
+	rec := httptest.NewRecorder()
+
+	srv.router.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Errorf("unexpected status code: %d", rec.Code)
+
+		t.Log(rec.Body.String())
+	}
+
+	if len(fp.submitted) != 1 {
+		t.Fatalf("unexpected number of events submitted: %d", len(fp.submitted))
+	}
+
+	if fp.submitted[0].Repository.Name != "ghcr.io/utaitebox/utaitebox-server" {
+		t.Errorf("expected ghcr.io/utaitebox/utaitebox-server but got %s", fp.submitted[0].Repository.Name)
+	}
+
+	if fp.submitted[0].Repository.Tag != "3.2.1" {
+		t.Errorf("expected 3.2.1 but got %s", fp.submitted[0].Repository.Tag)
 	}
 }
