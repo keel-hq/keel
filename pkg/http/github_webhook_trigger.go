@@ -3,9 +3,12 @@ package http
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/go-github/v33/github"
+	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -20,8 +23,16 @@ var newGithubWebhooksCounter = prometheus.NewCounterVec(
 	[]string{"image"},
 )
 
+var githubSecretToken string
+
+const (
+	eventTypeHeader = "X-Github-Event"
+)
+
 func init() {
 	prometheus.MustRegister(newGithubWebhooksCounter)
+
+	githubSecretToken = os.Getenv(constants.EnvGithubSecretToken)
 }
 
 type githubRegistryPackageWebhook struct {
@@ -60,18 +71,27 @@ type githubPackageV2Webhook struct {
 
 // githubHandler - used to react to github webhooks
 func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Request) {
+	data, err := github.ValidatePayload(req, []byte(githubSecretToken))
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("trigger.githubHandler: failed to decode request")
+		resp.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	// GitHub provides different webhook events for each registry.
 	// Github Package uses 'registry_package'
 	// Github Container Registry uses 'package_v2'
 	// events can be classified as 'X-GitHub-Event' in Request Header.
-	hookEvent := req.Header.Get("X-GitHub-Event")
+	hookEvent := req.Header.Get(eventTypeHeader)
 
 	var imageName, imageTag string
 
 	switch hookEvent {
 	case "package_v2":
 		payload := new(githubPackageV2Webhook)
-		if err := json.NewDecoder(req.Body).Decode(payload); err != nil {
+		if err := json.Unmarshal(data, payload); err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
 			}).Error("trigger.githubHandler: failed to decode request")
@@ -107,12 +127,9 @@ func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Reques
 			"/",
 		)
 		imageTag = payload.Package.PackageVersion.ContainerMetadata.Tag.Name
-
-		break
-
 	case "registry_package":
 		payload := new(githubRegistryPackageWebhook)
-		if err := json.NewDecoder(req.Body).Decode(payload); err != nil {
+		if err := json.Unmarshal(data, payload); err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
 			}).Error("trigger.githubHandler: failed to decode request")
@@ -148,8 +165,6 @@ func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Reques
 			"/",
 		)
 		imageTag = payload.RegistryPackage.PackageVersion.Version
-
-		break
 	}
 
 	event := types.Event{}

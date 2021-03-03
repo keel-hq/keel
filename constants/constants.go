@@ -32,7 +32,7 @@ const (
 	EnvMattermostName     = "MATTERMOST_USERNAME"
 
 	// MS Teams webhook url, see https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using#setting-up-a-custom-incoming-webhook
-	EnvTeamsWebhookUrl	= "TEAMS_WEBHOOK_URL"
+	EnvTeamsWebhookUrl = "TEAMS_WEBHOOK_URL"
 
 	// Mail notification settings
 	EnvMailTo         = "MAIL_TO"
@@ -51,6 +51,9 @@ const EnvBasicAuthUser = "BASIC_AUTH_USER"
 const EnvBasicAuthPassword = "BASIC_AUTH_PASSWORD"
 const EnvAuthenticatedWebhooks = "AUTHENTICATED_WEBHOOKS"
 const EnvTokenSecret = "TOKEN_SECRET"
+
+// Github Secret Token, see https://docs.github.com/en/developers/webhooks-and-events/securing-your-webhooks#validating-payloads-from-github
+const EnvGithubSecretToken = "GITHUB_SECRET_TOKEN"
 
 // KeelLogoURL - is a logo URL for bot icon
 const KeelLogoURL = "https://keel.sh/images/logo.png"
