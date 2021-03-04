@@ -23,16 +23,12 @@ var newGithubWebhooksCounter = prometheus.NewCounterVec(
 	[]string{"image"},
 )
 
-var githubSecretToken string
-
 const (
 	eventTypeHeader = "X-Github-Event"
 )
 
 func init() {
 	prometheus.MustRegister(newGithubWebhooksCounter)
-
-	githubSecretToken = os.Getenv(constants.EnvGithubSecretToken)
 }
 
 type githubRegistryPackageWebhook struct {
@@ -71,7 +67,7 @@ type githubPackageV2Webhook struct {
 
 // githubHandler - used to react to github webhooks
 func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Request) {
-	data, err := github.ValidatePayload(req, []byte(githubSecretToken))
+	data, err := github.ValidatePayload(req, []byte(os.Getenv(constants.EnvGithubSecretToken)))
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -94,7 +90,7 @@ func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Reques
 		if err := json.Unmarshal(data, payload); err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
-			}).Error("trigger.githubHandler: failed to decode request")
+			}).Error("trigger.githubHandler: failed to decode data")
 			resp.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -132,7 +128,7 @@ func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Reques
 		if err := json.Unmarshal(data, payload); err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
-			}).Error("trigger.githubHandler: failed to decode request")
+			}).Error("trigger.githubHandler: failed to decode data")
 			resp.WriteHeader(http.StatusBadRequest)
 			return
 		}
