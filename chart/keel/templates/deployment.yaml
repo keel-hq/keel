@@ -215,11 +215,18 @@ spec:
           resources:
 {{ toYaml .Values.resources | indent 12 }}
 {{- end }}
-{{- if .Values.persistence.enabled }}
+{{- if or .Values.persistence.enabled .Values.googleApplicationCredentials }}
       volumes:
+{{- if .Values.persistence.enabled }}
         - name: storage-logs
           persistentVolumeClaim:
             claimName: {{ template "keel.fullname" . }}
+{{- end }}
+{{- if .Values.googleApplicationCredentials }}
+        - name: secret
+          secret:
+            secretName: {{ .Values.secret.name | default (include "keel.fullname" .) }}
+{{- end }}
 {{- end }}
     {{- with .Values.nodeSelector }}
       nodeSelector:
@@ -233,9 +240,3 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
-{{- if .Values.googleApplicationCredentials }}
-      volumes:
-        - name: secret
-          secret:
-            secretName: {{ .Values.secret.name | default (include "keel.fullname" .) }}
-{{- end }}
