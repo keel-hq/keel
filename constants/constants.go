@@ -53,4 +53,4 @@ const EnvAuthenticatedWebhooks = "AUTHENTICATED_WEBHOOKS"
 const EnvTokenSecret = "TOKEN_SECRET"
 
 // KeelLogoURL - is a logo URL for bot icon
-const KeelLogoURL = "https://keel.sh/images/logo.png"
+const KeelLogoURL = "https://keel.sh/img/logo.png"
