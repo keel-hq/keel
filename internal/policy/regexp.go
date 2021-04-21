@@ -14,7 +14,7 @@ type RegexpPolicy struct {
 
 func NewRegexpPolicy(policy string) (*RegexpPolicy, error) {
 	if strings.Contains(policy, ":") {
-		parts := strings.Split(policy, ":")
+		parts := strings.SplitN(policy, ":", 2)
 		if len(parts) == 2 {
 
 			rx, err := regexp.Compile(parts[1])
