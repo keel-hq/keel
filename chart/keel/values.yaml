@@ -15,6 +15,13 @@ insecureRegistry: false
 polling:
   enabled: true
 
+# Extra Containers to run alongside Keel
+# extraContainers:
+#   - name: busybox
+#     image: busybox
+#     imagePullPolicy: IfNotPresent
+#     command: ['sh', '-c', 'echo Container 1 is Running ; sleep 3600']
+
 # Helm provider support
 helmProvider:
   enabled: true

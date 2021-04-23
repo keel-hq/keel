@@ -26,6 +26,7 @@ spec:
     spec:
       serviceAccountName: {{ template "serviceAccount.name" . }}
       containers:
+{{ toYaml .Values.extraContainers | indent 8 }}
         - name: keel
           # Note that we use appVersion to get images tag.
           image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
