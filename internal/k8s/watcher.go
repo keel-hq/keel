@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	//"github.com/keel-hq/keel/constants"
+	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/internal/workgroup"
 	"github.com/sirupsen/logrus"
 
@@ -17,8 +17,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
-
-const EnvNamespaceInstall = "NAMESPACE_INSTALL"
 
 // WatchDeployments creates a SharedInformer for apps/v1.Deployments and registers it with g.
 func WatchDeployments(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, rs ...cache.ResourceEventHandler) {
@@ -41,16 +39,18 @@ func WatchCronJobs(g *workgroup.Group, client *kubernetes.Clientset, log logrus.
 }
 
 func watch(g *workgroup.Group, c cache.Getter, log logrus.FieldLogger, resource string, objType runtime.Object, rs ...cache.ResourceEventHandler) {
-	namespace_scan := EnvNamespaceInstall
-	if os.Getenv(EnvNamespaceInstall) == "keel" {
+	//Check if the env var RESTRICTED_NAMESPACE is empty or equal to keel
+	// If equal to keel or empty, the scan will be over all the cluster
+	// If RESTRICTED_NAMESPACE is different than keel or empty, keel will scan in the defined namespace
+	namespace_scan := "keel"
+	if os.Getenv(constants.EnvRestrictedNamespace) == "keel" {
 		namespace_scan = v1.NamespaceAll
-	} else if os.Getenv(EnvNamespaceInstall) == "" {
+	} else if os.Getenv(constants.EnvRestrictedNamespace) == "" {
 		namespace_scan = v1.NamespaceAll
 	} else {
-		namespace_scan = os.Getenv(EnvNamespaceInstall)
+		namespace_scan = os.Getenv(constants.EnvRestrictedNamespace)
 	}
 
-	//ethos_namespace := "ns-team-3di-services-stage"
 	lw := cache.NewListWatchFromClient(c, resource, namespace_scan, fields.Everything())
 	sw := cache.NewSharedInformer(lw, objType, 30*time.Minute)
 	for _, r := range rs {
