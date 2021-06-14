@@ -42,16 +42,16 @@ func watch(g *workgroup.Group, c cache.Getter, log logrus.FieldLogger, resource 
 	//Check if the env var RESTRICTED_NAMESPACE is empty or equal to keel
 	// If equal to keel or empty, the scan will be over all the cluster
 	// If RESTRICTED_NAMESPACE is different than keel or empty, keel will scan in the defined namespace
-	namespace_scan := "keel"
+	namespaceScan := "keel"
 	if os.Getenv(constants.EnvRestrictedNamespace) == "keel" {
-		namespace_scan = v1.NamespaceAll
+		namespaceScan = v1.NamespaceAll
 	} else if os.Getenv(constants.EnvRestrictedNamespace) == "" {
-		namespace_scan = v1.NamespaceAll
+		namespaceScan = v1.NamespaceAll
 	} else {
-		namespace_scan = os.Getenv(constants.EnvRestrictedNamespace)
+		namespaceScan = os.Getenv(constants.EnvRestrictedNamespace)
 	}
 
-	lw := cache.NewListWatchFromClient(c, resource, namespace_scan, fields.Everything())
+	lw := cache.NewListWatchFromClient(c, resource, namespaceScan, fields.Everything())
 	sw := cache.NewSharedInformer(lw, objType, 30*time.Minute)
 	for _, r := range rs {
 		sw.AddEventHandler(r)
