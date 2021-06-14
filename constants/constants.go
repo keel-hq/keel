@@ -32,7 +32,7 @@ const (
 	EnvMattermostName     = "MATTERMOST_USERNAME"
 
 	// MS Teams webhook url, see https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using#setting-up-a-custom-incoming-webhook
-	EnvTeamsWebhookUrl	= "TEAMS_WEBHOOK_URL"
+	EnvTeamsWebhookUrl = "TEAMS_WEBHOOK_URL"
 
 	// Mail notification settings
 	EnvMailTo         = "MAIL_TO"
@@ -54,3 +54,6 @@ const EnvTokenSecret = "TOKEN_SECRET"
 
 // KeelLogoURL - is a logo URL for bot icon
 const KeelLogoURL = "https://keel.sh/img/logo.png"
+
+// Env var to define a namespace that keel will scan - avoid scan over all the cluster -
+const EnvRestrictedNamespace = "RESTRICTED_NAMESPACE"

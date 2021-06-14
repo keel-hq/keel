@@ -1,15 +1,17 @@
 package k8s
 
 import (
+	"os"
 	"time"
 
+	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/internal/workgroup"
 	"github.com/sirupsen/logrus"
 
 	apps_v1 "k8s.io/api/apps/v1"
 	v1beta1 "k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -37,7 +39,19 @@ func WatchCronJobs(g *workgroup.Group, client *kubernetes.Clientset, log logrus.
 }
 
 func watch(g *workgroup.Group, c cache.Getter, log logrus.FieldLogger, resource string, objType runtime.Object, rs ...cache.ResourceEventHandler) {
-	lw := cache.NewListWatchFromClient(c, resource, v1.NamespaceAll, fields.Everything())
+	//Check if the env var RESTRICTED_NAMESPACE is empty or equal to keel
+	// If equal to keel or empty, the scan will be over all the cluster
+	// If RESTRICTED_NAMESPACE is different than keel or empty, keel will scan in the defined namespace
+	namespaceScan := "keel"
+	if os.Getenv(constants.EnvRestrictedNamespace) == "keel" {
+		namespaceScan = v1.NamespaceAll
+	} else if os.Getenv(constants.EnvRestrictedNamespace) == "" {
+		namespaceScan = v1.NamespaceAll
+	} else {
+		namespaceScan = os.Getenv(constants.EnvRestrictedNamespace)
+	}
+
+	lw := cache.NewListWatchFromClient(c, resource, namespaceScan, fields.Everything())
 	sw := cache.NewSharedInformer(lw, objType, 30*time.Minute)
 	for _, r := range rs {
 		sw.AddEventHandler(r)
