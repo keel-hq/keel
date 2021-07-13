@@ -45,6 +45,7 @@ import (
 	_ "github.com/keel-hq/keel/extension/notification/hipchat"
 	_ "github.com/keel-hq/keel/extension/notification/mail"
 	_ "github.com/keel-hq/keel/extension/notification/mattermost"
+	_ "github.com/keel-hq/keel/extension/notification/googlechat"
 	_ "github.com/keel-hq/keel/extension/notification/slack"
 	_ "github.com/keel-hq/keel/extension/notification/teams"
 	_ "github.com/keel-hq/keel/extension/notification/webhook"

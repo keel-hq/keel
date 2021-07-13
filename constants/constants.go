@@ -31,6 +31,9 @@ const (
 	EnvMattermostEndpoint = "MATTERMOST_ENDPOINT"
 	EnvMattermostName     = "MATTERMOST_USERNAME"
 
+	// Googlechat webhook endpoint, see https://developers.google.com/chat/how-tos/webhooks for documentation on setting it up
+	EnvGoogleChatEndpoint = "GOOGLECHAT_ENDPOINT"
+
 	// MS Teams webhook url, see https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using#setting-up-a-custom-incoming-webhook
 	EnvTeamsWebhookUrl = "TEAMS_WEBHOOK_URL"
 

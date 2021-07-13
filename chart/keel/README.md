@@ -127,6 +127,8 @@ The following table lists has the main configurable parameters (polling, trigger
 | `mail.smtp.pass`                            | Mail SMTP server password (optional)   |                                                           |
 | `mattermost.enabled`                        | Enable/disable Mattermost integration  | `false`                                                   |
 | `mattermost.endpoint`                       | Mattermost API endpoint                |                                                           |
+| `googlechat.enabled`                        | Enable/disable Google Chat integration | `false`                                                   |
+| `googlechat.endpoint`                       | Google Chat API endpoint               |                                                           |
 | `googleApplicationCredentials`              | GCP Service account key configurable   |                                                           |
 | `hipchat.password`                          | Hipchat password for approvals user    |                                                           |
 | `gcloud.managedCertificates.enabled`        | Enable/Disable managed ssl on Gcloud   | `false`                                                   |

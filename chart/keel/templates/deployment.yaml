@@ -121,6 +121,11 @@ spec:
             - name: MATTERMOST_ENDPOINT
               value: "{{ .Values.mattermost.endpoint }}"
 {{- end }}
+{{- if .Values.mattermost.enabled }}
+            # Enable google chat endpoint
+            - name: GOOGLECHAT_ENDPOINT
+              value: "{{ .Values.googlechat.endpoint }}"
+{{- end }}
 {{- if .Values.basicauth.enabled }}
             # Enable basic auth
             - name: BASIC_AUTH_USER
