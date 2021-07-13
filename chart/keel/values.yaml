@@ -86,6 +86,11 @@ mattermost:
   enabled: false
   endpoint: ""
 
+# Google Chat notifications
+googlechat:
+  enabled: false
+  endpoint: ""
+
 # MS Teams notifications
 teams:
   enabled: false
