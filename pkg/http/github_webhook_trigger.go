@@ -97,7 +97,7 @@ func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Reques
 
 		if payload.Package.Ecosystem != "CONTAINER" {
 			resp.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(resp, "registry package type was not container")
+			fmt.Fprintf(resp, "registry package type was not CONTAINER")
 		}
 
 		if payload.Package.Name == "" { // github package name
@@ -133,9 +133,9 @@ func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Reques
 			return
 		}
 
-		if payload.RegistryPackage.PackageType != "docker" {
+		if payload.RegistryPackage.PackageType != "CONTAINER" {
 			resp.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(resp, "registry package type was not docker")
+			fmt.Fprintf(resp, "registry package type was not CONTAINER")
 		}
 
 		if payload.Repository.FullName == "" { // github package name
