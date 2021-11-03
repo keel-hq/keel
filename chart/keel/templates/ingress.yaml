@@ -14,7 +14,7 @@ spec:
     {{- end }}
 {{- end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ $fullName }}
@@ -34,6 +34,9 @@ metadata:
     networking.gke.io/managed-certificates: {{ $fullName }}
   {{- end }}
 spec:
+  {{- if .Values.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  {{- end }}
 {{- if not .Values.ingress.hosts }}
   backend:
     serviceName: {{ $fullName }}
@@ -57,9 +60,12 @@ spec:
         paths:
         {{- range .paths }}
           - path: {{ . }}
+            pathType: Prefix
             backend:
-              serviceName: {{ $fullName }}
-              servicePort: keel
+              service:
+                name: {{ $fullName }}
+                port:
+                  name: keel
         {{- end }}
   {{- end }}
 {{- end }}
