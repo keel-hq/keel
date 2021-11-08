@@ -236,6 +236,10 @@ dockerRegistry:
   name: ""
   key: ""
 
+## Deployment Strategy type
+# strategy:
+#   type: Recreate
+
 persistence:
   enabled: false
   storageClass: "-"
