@@ -144,6 +144,7 @@ The following table lists has the main configurable parameters (polling, trigger
 | `dockerRegistry.key`                        | Docker registry secret key             |                                                           |
 | `secret.name`                               | Secret name                            |                                                           |
 | `secret.create`                             | Create secret                          | `true`                                                    |
+| `strategy.type`                             | Deployment strategy type               | ``                                                        |
 | `persistence.enabled`                       | Enable/disable audit log persistence   | `true`                                                    |
 | `persistence.storageClass`                  | Storage Class for the Persistent Volume| `true`                                                    |
 | `persistence.size`                          | Persistent Volume size                 | `true`                                                    |
