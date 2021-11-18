@@ -107,6 +107,7 @@ basicauth:
   enabled: false
   user: ""
   password: ""
+  authenticated_webhooks: false
 
 # Keel service
 # Enable to receive webhooks from Docker registries

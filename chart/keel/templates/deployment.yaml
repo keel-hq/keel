@@ -125,6 +125,8 @@ spec:
             # Enable basic auth
             - name: BASIC_AUTH_USER
               value: "{{ .Values.basicauth.user }}"
+            - name: AUTHENTICATED_WEBHOOKS
+              value: "{{ .Values.basicauth.authenticated_webhooks | default "false" }}"
 {{- end }}
 {{- if .Values.slack.enabled }}
             - name: SLACK_CHANNELS
