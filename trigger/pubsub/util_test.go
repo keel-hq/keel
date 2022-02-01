@@ -31,6 +31,11 @@ func Test_isGoogleContainerRegistry(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "google artifact registry",
+			args: args{registry: unsafeImageRef("europe-west3-docker.pkg.dev/v2-namespace/hello-world:1.1").Registry()},
+			want: true,
+		},
+		{
 			name: "docker registry",
 			args: args{registry: unsafeImageRef("docker.io/v2-namespace/hello-world:1.1").Registry()},
 			want: false,
