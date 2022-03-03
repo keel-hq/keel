@@ -48,8 +48,8 @@ func Test_isGoogleContainerRegistry(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isGoogleContainerRegistry(tt.args.registry); got != tt.want {
-				t.Errorf("isGoogleContainerRegistry() = %v, want %v", got, tt.want)
+			if got := isGoogleArtifactRegistry(tt.args.registry); got != tt.want {
+				t.Errorf("isGoogleArtifactRegistry() = %v, want %v", got, tt.want)
 			}
 		})
 	}
