@@ -16,7 +16,7 @@ func unsafeImageRef(img string) *image.Reference {
 	return ref
 }
 
-func Test_isGoogleContainerRegistry(t *testing.T) {
+func Test_isGoogleArtifactRegistry(t *testing.T) {
 	type args struct {
 		registry string
 	}
