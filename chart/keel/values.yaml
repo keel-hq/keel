@@ -62,6 +62,7 @@ ecr:
 webhook:
   enabled: false
   endpoint: ""
+  authenticated: false
 
 # Slack Notification
 # bot name (default keel) must exist!
