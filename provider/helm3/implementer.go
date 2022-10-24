@@ -19,7 +19,10 @@ import (
 // * update to latest chart package
 // * udpate the paramateres for the function
 
-const DefaultUpdateTimeout = 300
+// #595 - DefaultUpdateTimeout is in ns
+// Per https://pkg.go.dev/helm.sh/helm/v3/pkg/action#Upgrade
+// Convert it to 300s (5m) and retrieve the ns duration
+const DefaultUpdateTimeout = 300000000000
 
 // Implementer - generic helm implementer used to abstract actual implementation
 type Implementer interface {
