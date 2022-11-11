@@ -205,7 +205,7 @@ func main() {
 		Store: sqlStore,
 	})
 
-	pendindApprovalsCounter := prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+	pendingApprovalsCounter := prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 		Name: "pending_approvals",
 		Help: "Number of the pending approvals",
 	}, func() float64 {
@@ -215,7 +215,7 @@ func main() {
 		}
 		return 0
 	})
-	prometheus.MustRegister(pendindApprovalsCounter)
+	prometheus.MustRegister(pendingApprovalsCounter)
 
 	go approvalsManager.StartExpiryService(ctx)
 
