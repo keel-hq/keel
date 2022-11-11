@@ -10,6 +10,10 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   replicas: 1
+{{- if .Values.strategy }}
+  strategy:
+{{ toYaml .Values.strategy | trim | indent 4 }}
+{{- end }}
   selector:
     matchLabels:
       app: {{ template "keel.name" . }}
