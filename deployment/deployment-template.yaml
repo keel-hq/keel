@@ -193,7 +193,7 @@ spec:
               value: "{{ .slack_approvals_channel | default "general" }}"
             - name: SLACK_BOT_NAME
               value: "{{ .bot_name | default "keel" }}"
-            # Enable hipchat approvials and notification
+            # Enable hipchat approvals and notification
             - name: HIPCHAT_TOKEN
               value: ""
             - name: HIPCHAT_CHANNELS
