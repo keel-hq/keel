@@ -2,7 +2,7 @@ package k8s
 
 import (
 	apps_v1 "k8s.io/api/apps/v1"
-	v1beta1 "k8s.io/api/batch/v1beta1"
+	batch_v1 "k8s.io/api/batch/v1"
 	core_v1 "k8s.io/api/core/v1"
 )
 
@@ -54,10 +54,10 @@ func updateDaemonsetSetContainer(s *apps_v1.DaemonSet, index int, image string) 
 
 // cron
 
-func getCronJobIdentifier(s *v1beta1.CronJob) string {
+func getCronJobIdentifier(s *batch_v1.CronJob) string {
 	return "cronjob/" + s.Namespace + "/" + s.Name
 }
 
-func updateCronJobContainer(s *v1beta1.CronJob, index int, image string) {
+func updateCronJobContainer(s *batch_v1.CronJob, index int, image string) {
 	s.Spec.JobTemplate.Spec.Template.Spec.Containers[index].Image = image
 }
