@@ -6,7 +6,7 @@ jobs:
   build:
     docker:
       # specify the version
-      - image: cimg/go:1.19
+      - image: golang:1.20.1
 
     #### TEMPLATE_NOTE: go expects specific checkout path representing url
     #### expecting it in the form of
