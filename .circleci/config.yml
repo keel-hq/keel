@@ -49,7 +49,7 @@ jobs:
       CHART_TESTING_IMAGE: quay.io/helmpack/chart-testing
       CHART_TESTING_TAG: v3.7.1
       CHARTS_REPO: https://github.com/keel-hq/keel
-      K8S_VERSION: v1.24.10
+      K8S_VERSION: v1.24.7
     steps:
       - checkout
       - run:
