@@ -35,6 +35,7 @@ replace k8s.io/kubernetes => k8s.io/kubernetes v1.16.10
 
 require (
 	cloud.google.com/go/pubsub v1.4.0
+	github.com/DATA-DOG/go-sqlmock v1.5.0 // indirect
 	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/aws/aws-sdk-go v1.31.10
@@ -42,13 +43,12 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/ghodss/yaml v1.0.0
-	github.com/golang/protobuf v1.4.2
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.4
 	github.com/jinzhu/gorm v1.9.12
 	github.com/jmoiron/sqlx v1.2.0 // indirect
+	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
-	github.com/mfridman/tparse v0.8.2 // indirect
 	github.com/nlopes/slack v0.6.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/prometheus/client_golang v1.6.0
@@ -60,7 +60,7 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/tbruyelle/hipchat-go v0.0.0-20170717082847-35aebc99209a
 	github.com/urfave/negroni v1.0.0
-	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
+	golang.org/x/net v0.7.0
 	google.golang.org/api v0.26.0
 	google.golang.org/grpc v1.29.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
@@ -70,5 +70,6 @@ require (
 	k8s.io/cli-runtime v0.17.2
 	k8s.io/client-go v0.17.2
 	k8s.io/helm v0.0.0-00010101000000-000000000000
+	rsc.io/letsencrypt v0.0.3 // indirect
 	sigs.k8s.io/yaml v1.1.0
 )
