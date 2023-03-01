@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	apps_v1 "k8s.io/api/apps/v1"
-	v1beta1 "k8s.io/api/batch/v1beta1"
+	batch_v1 "k8s.io/api/batch/v1"
 	core_v1 "k8s.io/api/core/v1"
 )
 
@@ -41,7 +41,7 @@ func NewGenericResource(obj interface{}) (*GenericResource, error) {
 	switch obj.(type) {
 	case *apps_v1.Deployment, *apps_v1.StatefulSet, *apps_v1.DaemonSet:
 		// ok
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		// ok
 	default:
 		return nil, fmt.Errorf("unsupported resource type: %v", reflect.TypeOf(obj).Kind())
@@ -79,7 +79,7 @@ func (r *GenericResource) DeepCopy() *GenericResource {
 		gr.obj = obj.DeepCopy()
 	case *apps_v1.DaemonSet:
 		gr.obj = obj.DeepCopy()
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		gr.obj = obj.DeepCopy()
 	}
 
@@ -95,7 +95,7 @@ func (r *GenericResource) GetIdentifier() string {
 		return getStatefulSetIdentifier(obj)
 	case *apps_v1.DaemonSet:
 		return getDaemonsetSetIdentifier(obj)
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return getCronJobIdentifier(obj)
 	}
 	return ""
@@ -110,7 +110,7 @@ func (r *GenericResource) GetName() string {
 		return obj.GetName()
 	case *apps_v1.DaemonSet:
 		return obj.GetName()
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return obj.GetName()
 	}
 	return ""
@@ -125,7 +125,7 @@ func (r *GenericResource) GetNamespace() string {
 		return obj.GetNamespace()
 	case *apps_v1.DaemonSet:
 		return obj.GetNamespace()
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return obj.GetNamespace()
 	}
 	return ""
@@ -140,7 +140,7 @@ func (r *GenericResource) Kind() string {
 		return "statefulset"
 	case *apps_v1.DaemonSet:
 		return "daemonset"
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return "cronjob"
 	}
 	return ""
@@ -160,7 +160,7 @@ func (r *GenericResource) GetLabels() (labels map[string]string) {
 		return getOrInitialise(obj.GetLabels())
 	case *apps_v1.DaemonSet:
 		return getOrInitialise(obj.GetLabels())
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return getOrInitialise(obj.GetLabels())
 	}
 	return
@@ -175,7 +175,7 @@ func (r *GenericResource) SetLabels(labels map[string]string) {
 		obj.SetLabels(labels)
 	case *apps_v1.DaemonSet:
 		obj.SetLabels(labels)
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		obj.SetLabels(labels)
 	}
 }
@@ -189,7 +189,7 @@ func (r *GenericResource) GetSpecAnnotations() (annotations map[string]string) {
 		return getOrInitialise(obj.Spec.Template.GetAnnotations())
 	case *apps_v1.DaemonSet:
 		return getOrInitialise(obj.Spec.Template.GetAnnotations())
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return getOrInitialise(obj.Spec.JobTemplate.GetAnnotations())
 	}
 	return
@@ -204,7 +204,7 @@ func (r *GenericResource) SetSpecAnnotations(annotations map[string]string) {
 		obj.Spec.Template.SetAnnotations(annotations)
 	case *apps_v1.DaemonSet:
 		obj.Spec.Template.SetAnnotations(annotations)
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		obj.Spec.JobTemplate.SetAnnotations(annotations)
 	}
 }
@@ -225,7 +225,7 @@ func (r *GenericResource) GetAnnotations() (annotations map[string]string) {
 		return getOrInitialise(obj.GetAnnotations())
 	case *apps_v1.DaemonSet:
 		return getOrInitialise(obj.GetAnnotations())
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return getOrInitialise(obj.GetAnnotations())
 	}
 	return
@@ -240,7 +240,7 @@ func (r *GenericResource) SetAnnotations(annotations map[string]string) {
 		obj.SetAnnotations(annotations)
 	case *apps_v1.DaemonSet:
 		obj.SetAnnotations(annotations)
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		obj.SetAnnotations(annotations)
 	}
 }
@@ -254,7 +254,7 @@ func (r *GenericResource) GetImagePullSecrets() (secrets []string) {
 		return getImagePullSecrets(obj.Spec.Template.Spec.ImagePullSecrets)
 	case *apps_v1.DaemonSet:
 		return getImagePullSecrets(obj.Spec.Template.Spec.ImagePullSecrets)
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return getImagePullSecrets(obj.Spec.JobTemplate.Spec.Template.Spec.ImagePullSecrets)
 	}
 	return
@@ -269,7 +269,7 @@ func (r *GenericResource) GetImages() (images []string) {
 		return getContainerImages(obj.Spec.Template.Spec.Containers)
 	case *apps_v1.DaemonSet:
 		return getContainerImages(obj.Spec.Template.Spec.Containers)
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return getContainerImages(obj.Spec.JobTemplate.Spec.Template.Spec.Containers)
 	}
 	return
@@ -284,7 +284,7 @@ func (r *GenericResource) Containers() (containers []core_v1.Container) {
 		return obj.Spec.Template.Spec.Containers
 	case *apps_v1.DaemonSet:
 		return obj.Spec.Template.Spec.Containers
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return obj.Spec.JobTemplate.Spec.Template.Spec.Containers
 	}
 	return
@@ -299,7 +299,7 @@ func (r *GenericResource) UpdateContainer(index int, image string) {
 		updateStatefulSetContainer(obj, index, image)
 	case *apps_v1.DaemonSet:
 		updateDaemonsetSetContainer(obj, index, image)
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		updateCronJobContainer(obj, index, image)
 	}
 }
@@ -354,7 +354,7 @@ func (r *GenericResource) GetStatus() Status {
 			AvailableReplicas:   obj.Status.NumberAvailable,
 			UnavailableReplicas: obj.Status.NumberUnavailable,
 		}
-	case *v1beta1.CronJob:
+	case *batch_v1.CronJob:
 		return Status{
 			Replicas:            int32(len(obj.Status.Active)),
 			UpdatedReplicas:     0,

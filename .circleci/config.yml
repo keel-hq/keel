@@ -6,7 +6,7 @@ jobs:
   build:
     docker:
       # specify the version
-      - image: circleci/golang:1.14.2
+      - image: golang:1.20.1
 
     #### TEMPLATE_NOTE: go expects specific checkout path representing url
     #### expecting it in the form of
@@ -34,7 +34,7 @@ jobs:
             shellcheck -x .test/e2e-kind.sh
   lint-charts:
     docker:
-      - image: quay.io/helmpack/chart-testing:v3.3.1
+      - image: quay.io/helmpack/chart-testing:v3.7.1
     steps:
       - checkout
       - run:
@@ -47,9 +47,9 @@ jobs:
     machine: true
     environment:
       CHART_TESTING_IMAGE: quay.io/helmpack/chart-testing
-      CHART_TESTING_TAG: v3.3.1
+      CHART_TESTING_TAG: v3.7.1
       CHARTS_REPO: https://github.com/keel-hq/keel
-      K8S_VERSION: v1.11.3
+      K8S_VERSION: v1.24.7
     steps:
       - checkout
       - run:

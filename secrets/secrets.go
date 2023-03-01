@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/keel-hq/keel/provider/helm"
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/types"
 
@@ -65,19 +64,6 @@ func (g *DefaultGetter) Get(image *types.TrackedImage) (*types.Credentials, erro
 		return creds, nil
 	}
 
-	switch image.Provider {
-	case helm.ProviderName:
-		if len(image.Secrets) == 0 {
-			// looking up secrets based on selector
-			secrets, err := g.lookupSecrets(image)
-			if err != nil {
-				return nil, err
-			}
-
-			// populating secrets
-			image.Secrets = secrets
-		}
-	}
 	if len(image.Secrets) == 0 {
 		return nil, ErrSecretsNotSpecified
 	}

@@ -52,7 +52,7 @@ aarch64:
 arm: build-arm fetch-certs armhf aarch64
 
 test:
-	go get github.com/mfridman/tparse
+	go install github.com/mfridman/tparse@latest
 	go test -json -v `go list ./... | egrep -v /tests` -cover | tparse -all -smallscreen
 
 build:

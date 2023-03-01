@@ -63,15 +63,7 @@ spec:
               value: "false"
 {{- end }}
 {{- if .Values.helmProvider.enabled }}
-  {{- if eq .Values.helmProvider.version "v2" }}
-            # Enable/disable Helm provider
-            - name: HELM_PROVIDER
-              value: "true"
-            - name: TILLER_NAMESPACE
-              value: "{{ .Values.helmProvider.tillerNamespace }}"
-            - name: TILLER_ADDRESS
-              value: "{{ .Values.helmProvider.tillerAddress }}"
-  {{- else if eq .Values.helmProvider.version "v3" }}
+  {{- if eq .Values.helmProvider.version "v3" }}
             # Enable/disable Helm provider
             - name: HELM3_PROVIDER
               value: "true"
