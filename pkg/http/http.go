@@ -181,6 +181,7 @@ func (s *TriggerServer) registerWebhookRoutes(mux *mux.Router) {
 	if s.authenticatedWebhooks {
 		mux.HandleFunc("/v1/webhooks/native", s.requireAdminAuthorization(s.nativeHandler)).Methods("POST", "OPTIONS")
 		mux.HandleFunc("/v1/webhooks/dockerhub", s.requireAdminAuthorization(s.dockerHubHandler)).Methods("POST", "OPTIONS")
+		mux.HandleFunc("/v1/webhooks/jfrog", s.requireAdminAuthorization(s.jfrogHandler)).Methods("POST", "OPTIONS")
 		mux.HandleFunc("/v1/webhooks/quay", s.requireAdminAuthorization(s.quayHandler)).Methods("POST", "OPTIONS")
 		mux.HandleFunc("/v1/webhooks/azure", s.requireAdminAuthorization(s.azureHandler)).Methods("POST", "OPTIONS")
 		mux.HandleFunc("/v1/webhooks/github", s.requireAdminAuthorization(s.githubHandler)).Methods("POST", "OPTIONS")
@@ -193,6 +194,7 @@ func (s *TriggerServer) registerWebhookRoutes(mux *mux.Router) {
 	} else {
 		mux.HandleFunc("/v1/webhooks/native", s.nativeHandler).Methods("POST", "OPTIONS")
 		mux.HandleFunc("/v1/webhooks/dockerhub", s.dockerHubHandler).Methods("POST", "OPTIONS")
+		mux.HandleFunc("/v1/webhooks/jfrog", s.jfrogHandler).Methods("POST", "OPTIONS")
 		mux.HandleFunc("/v1/webhooks/quay", s.quayHandler).Methods("POST", "OPTIONS")
 		mux.HandleFunc("/v1/webhooks/azure", s.azureHandler).Methods("POST", "OPTIONS")
 		mux.HandleFunc("/v1/webhooks/github", s.githubHandler).Methods("POST", "OPTIONS")
