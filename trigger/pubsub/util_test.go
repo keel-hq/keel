@@ -16,7 +16,7 @@ func unsafeImageRef(img string) *image.Reference {
 	return ref
 }
 
-func Test_isGoogleContainerRegistry(t *testing.T) {
+func Test_isGoogleArtifactRegistry(t *testing.T) {
 	type args struct {
 		registry string
 	}
@@ -28,6 +28,11 @@ func Test_isGoogleContainerRegistry(t *testing.T) {
 		{
 			name: "gcr",
 			args: args{registry: unsafeImageRef("gcr.io/v2-namespace/hello-world:1.1").Registry()},
+			want: true,
+		},
+		{
+			name: "google artifact registry",
+			args: args{registry: unsafeImageRef("europe-west3-docker.pkg.dev/v2-namespace/hello-world:1.1").Registry()},
 			want: true,
 		},
 		{
@@ -43,8 +48,8 @@ func Test_isGoogleContainerRegistry(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isGoogleContainerRegistry(tt.args.registry); got != tt.want {
-				t.Errorf("isGoogleContainerRegistry() = %v, want %v", got, tt.want)
+			if got := isGoogleArtifactRegistry(tt.args.registry); got != tt.want {
+				t.Errorf("isGoogleArtifactRegistry() = %v, want %v", got, tt.want)
 			}
 		})
 	}

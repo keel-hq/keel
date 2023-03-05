@@ -3,7 +3,7 @@ package pubsub
 import (
 	"io/ioutil"
 	"net/http"
-	"strings"
+	"regexp"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -51,10 +51,17 @@ func getClusterName(metadataEndpoint string) (string, error) {
 	return string(body), nil
 }
 
-// isGoogleContainerRegistry - we only care about gcr.io images,
+// isGoogleArtifactRegistry - we only care about gcr.io and pkg.dev images,
 // with other registries - we won't be able to receive events.
 // Theoretically if someone publishes messages for updated images to
 // google pubsub - we could turn this off
-func isGoogleContainerRegistry(registry string) bool {
-	return strings.Contains(registry, "gcr.io")
+func isGoogleArtifactRegistry(registry string) bool {
+	matched, err := regexp.MatchString(`(gcr\.io|pkg\.dev)`, registry)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Warn("trigger.pubsub.isGoogleArtifactRegistry: got error while checking if registry is gcr")
+		return false
+	}
+	return matched
 }
