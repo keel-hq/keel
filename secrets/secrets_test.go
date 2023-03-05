@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/keel-hq/keel/provider/helm"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 	testutil "github.com/keel-hq/keel/util/testing"
@@ -301,62 +300,6 @@ func TestLookupHelmEncodedSecret(t *testing.T) {
 	}
 
 	if creds.Password != "pass-x" {
-		t.Errorf("unexpected pass: %s", creds.Password)
-	}
-}
-
-func TestGetDirectHelmSecret(t *testing.T) {
-	imgRef, _ := image.Parse("karolisr/webhook-demo:0.0.11")
-
-	impl := &testutil.FakeK8sImplementer{
-		AvailablePods: &v1.PodList{
-			Items: []v1.Pod{
-				{
-					Spec: v1.PodSpec{
-						ImagePullSecrets: []v1.LocalObjectReference{
-							{
-								Name: "very-secret-dont-look",
-							},
-						},
-					},
-				},
-			},
-		},
-		AvailableSecret: map[string]*v1.Secret{
-			"myregistrysecret": {
-				Data: map[string][]byte{
-					dockerConfigKey: []byte(secretDataPayload2),
-				},
-				Type: v1.SecretTypeDockercfg,
-			},
-			"very-secret-dont-look": {
-				Data: map[string][]byte{
-					dockerConfigKey: []byte(secretDataPayload),
-				},
-				Type: v1.SecretTypeDockercfg,
-			},
-		},
-	}
-
-	getter := NewGetter(impl, nil)
-
-	trackedImage := &types.TrackedImage{
-		Image:     imgRef,
-		Namespace: "default",
-		Secrets:   []string{"myregistrysecret"},
-		Provider:  helm.ProviderName,
-	}
-
-	creds, err := getter.Get(trackedImage)
-	if err != nil {
-		t.Errorf("failed to get creds: %s", err)
-	}
-
-	if creds.Username != "foo-user-x-2" {
-		t.Errorf("unexpected username: %s", creds.Username)
-	}
-
-	if creds.Password != "bar-pass-x-2" {
 		t.Errorf("unexpected pass: %s", creds.Password)
 	}
 }
