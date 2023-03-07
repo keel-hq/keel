@@ -62,6 +62,11 @@ spec:
             - name: POLL
               value: "false"
 {{- end }}
+{{- if .Values.polling.defaultSchedule }}
+            # Set default poll schedule
+            - name: POLL_DEFAULTSCHEDULE
+              value: "{{ .Values.polling.defaultSchedule }}"
+{{- end }}
 {{- if .Values.helmProvider.enabled }}
   {{- if eq .Values.helmProvider.version "v3" }}
             # Enable/disable Helm provider
