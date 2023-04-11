@@ -55,7 +55,8 @@ func createNamespaceForTest() string {
 			GenerateName: "keel-e2e-test-",
 		},
 	}
-	cns, err := clientset.CoreV1().Namespaces().Create(ns)
+	createOptions := meta_v1.CreateOptions{}
+	cns, err := clientset.CoreV1().Namespaces().Create(context.Background(), ns, createOptions)
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +71,7 @@ func deleteTestNamespace(namespace string) error {
 	defer log.Infof("test namespace '%s' deleted", namespace)
 	_, clientset := getKubernetesClient()
 	deleteOptions := meta_v1.DeleteOptions{}
-	return clientset.CoreV1().Namespaces().Delete(namespace, &deleteOptions)
+	return clientset.CoreV1().Namespaces().Delete(context.Background(), namespace, deleteOptions)
 }
 
 type KeelCmd struct {
@@ -117,7 +118,7 @@ func waitFor(ctx context.Context, kcs *kubernetes.Clientset, namespace, name str
 		case <-ctx.Done():
 			return fmt.Errorf("expected '%s', got: '%s'", desired, last)
 		default:
-			updated, err := kcs.AppsV1().Deployments(namespace).Get(name, meta_v1.GetOptions{})
+			updated, err := kcs.AppsV1().Deployments(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 			if err != nil {
 				time.Sleep(500 * time.Millisecond)
 				continue

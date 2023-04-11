@@ -90,8 +90,9 @@ func TestPollingSemverUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -150,8 +151,9 @@ func TestPollingSemverUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -207,8 +209,9 @@ func TestPollingSemverUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -294,8 +297,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 				".dockerconfigjson": []byte(payload),
 			},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err = kcs.CoreV1().Secrets(testNamespace).Create(secret)
+		_, err = kcs.CoreV1().Secrets(testNamespace).Create(context.Background(), secret, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create secret: %s", err)
 		}
@@ -346,8 +350,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions = meta_v1.CreateOptions{}
 
-		_, err = kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err = kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -405,8 +410,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 				".dockerconfigjson": []byte(payload),
 			},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err = kcs.CoreV1().Secrets(testNamespace).Create(secret)
+		_, err = kcs.CoreV1().Secrets(testNamespace).Create(context.Background(), secret, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create secret: %s", err)
 		} else {
@@ -458,8 +464,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions = meta_v1.CreateOptions{}
 
-		_, err = kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err = kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
