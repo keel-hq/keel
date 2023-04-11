@@ -1,17 +1,15 @@
 package registry
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
+	"testing"
 
 	"github.com/keel-hq/keel/constants"
-
-	"github.com/rusenask/docker-registry-client/registry"
-
-	"fmt"
-	"os"
-	"testing"
+	"github.com/keel-hq/keel/registry/docker"
 )
 
 func TestDigest(t *testing.T) {
@@ -28,6 +26,24 @@ func TestDigest(t *testing.T) {
 	}
 
 	if digest != "sha256:671b6250a0793abdd9603d7f5c6f2fa1b4070661d6f56bcfc7ad5de86574ab48" {
+		t.Errorf("unexpected digest: %s", digest)
+	}
+}
+
+func TestOCIDigest(t *testing.T) {
+
+	client := New()
+	digest, err := client.Digest(Opts{
+		Registry: "https://index.docker.io",
+		Name:     "vaultwarden/server",
+		Tag:      "1.25.1",
+	})
+
+	if err != nil {
+		t.Errorf("error while getting digest: %s", err)
+	}
+
+	if digest != "sha256:dd8cf61d1997c098cc5686ef3116ca5cfef36f12192c01caa1de79a968397d4c" {
 		t.Errorf("unexpected digest: %s", digest)
 	}
 }
@@ -306,7 +322,7 @@ var tagsResp = `{
   }`
 
 func TestGetDockerHubManyTags(t *testing.T) {
-	client := registry.New("https://quay.io", "", "")
+	client := docker.New("https://quay.io", "", "")
 	tags, err := client.Tags("coreos/prometheus-operator")
 	if err != nil {
 		t.Errorf("error while getting repo: %s", err)

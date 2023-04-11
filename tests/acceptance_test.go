@@ -111,8 +111,9 @@ func TestWebhooksSemverUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -215,8 +216,9 @@ func TestWebhookHighIntegerUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -349,8 +351,9 @@ func TestApprovals(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -490,8 +493,9 @@ func TestApprovalsWithAuthentication(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}

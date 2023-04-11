@@ -90,8 +90,9 @@ func TestPollingSemverUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -150,8 +151,9 @@ func TestPollingSemverUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -207,8 +209,9 @@ func TestPollingSemverUpdate(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err := kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -216,6 +219,64 @@ func TestPollingSemverUpdate(t *testing.T) {
 		defer cancel()
 
 		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "keelhq/push-workflow-example:0.11.0-alpha")
+		if err != nil {
+			t.Errorf("update failed: %s", err)
+		}
+	})
+
+	t.Run("UpdateThroughDockerHubPollingD", func(t *testing.T) {
+
+		testNamespace := createNamespaceForTest()
+		defer deleteTestNamespace(testNamespace)
+
+		dep := &apps_v1.Deployment{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "deployment-3",
+				Namespace: testNamespace,
+				Labels: map[string]string{
+					types.KeelPolicyLabel:  "patch",
+					types.KeelTriggerLabel: "poll",
+				},
+				Annotations: map[string]string{
+					types.KeelPollScheduleAnnotation: "@every 2s",
+				},
+			},
+			apps_v1.DeploymentSpec{
+				Selector: &meta_v1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "wd-1",
+					},
+				},
+				Template: v1.PodTemplateSpec{
+					ObjectMeta: meta_v1.ObjectMeta{
+						Labels: map[string]string{
+							"app":     "wd-1",
+							"release": "1",
+						},
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{
+								Name:  "wd-1",
+								Image: "vaultwarden/server:1.25.1",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		}
+		createOptions := meta_v1.CreateOptions{}
+
+		_, err := kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
+		if err != nil {
+			t.Fatalf("failed to create deployment: %s", err)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+
+		err = waitFor(ctx, kcs, testNamespace, dep.ObjectMeta.Name, "vaultwarden/server:1.25.2")
 		if err != nil {
 			t.Errorf("update failed: %s", err)
 		}
@@ -294,8 +355,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 				".dockerconfigjson": []byte(payload),
 			},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err = kcs.CoreV1().Secrets(testNamespace).Create(secret)
+		_, err = kcs.CoreV1().Secrets(testNamespace).Create(context.Background(), secret, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create secret: %s", err)
 		}
@@ -346,8 +408,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions = meta_v1.CreateOptions{}
 
-		_, err = kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err = kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}
@@ -405,8 +468,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 				".dockerconfigjson": []byte(payload),
 			},
 		}
+		createOptions := meta_v1.CreateOptions{}
 
-		_, err = kcs.CoreV1().Secrets(testNamespace).Create(secret)
+		_, err = kcs.CoreV1().Secrets(testNamespace).Create(context.Background(), secret, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create secret: %s", err)
 		} else {
@@ -458,8 +522,9 @@ func TestPollingPrivateRegistry(t *testing.T) {
 			},
 			apps_v1.DeploymentStatus{},
 		}
+		createOptions = meta_v1.CreateOptions{}
 
-		_, err = kcs.AppsV1().Deployments(testNamespace).Create(dep)
+		_, err = kcs.AppsV1().Deployments(testNamespace).Create(context.Background(), dep, createOptions)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %s", err)
 		}

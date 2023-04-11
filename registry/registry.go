@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/rusenask/docker-registry-client/registry"
+	"github.com/keel-hq/keel/registry/docker"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -40,7 +40,7 @@ func New() *DefaultClient {
 	}
 	return &DefaultClient{
 		mu:         &sync.Mutex{},
-		registries: make(map[uint32]*registry.Registry),
+		registries: make(map[uint32]*docker.Registry),
 		insecure:   insecure,
 	}
 }
@@ -49,7 +49,7 @@ func New() *DefaultClient {
 type DefaultClient struct {
 	// a map of registries to reuse for polling
 	mu         *sync.Mutex
-	registries map[uint32]*registry.Registry
+	registries map[uint32]*docker.Registry
 	insecure   bool
 }
 
@@ -71,11 +71,11 @@ func hash(s string) uint32 {
 	return h.Sum32()
 }
 
-func (c *DefaultClient) getRegistryClient(registryAddress, username, password string) (*registry.Registry, error) {
+func (c *DefaultClient) getRegistryClient(registryAddress, username, password string) (*docker.Registry, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	var r *registry.Registry
+	var r *docker.Registry
 
 	h := hash(registryAddress + username + password)
 	r, ok := c.registries[h]
@@ -85,9 +85,9 @@ func (c *DefaultClient) getRegistryClient(registryAddress, username, password st
 
 	url := strings.TrimSuffix(registryAddress, "/")
 	if os.Getenv(EnvInsecure) == "true" {
-		r = registry.NewInsecure(url, username, password)
+		r = docker.NewInsecure(url, username, password)
 	} else {
-		r = registry.New(url, username, password)
+		r = docker.New(url, username, password)
 	}
 
 	r.Logf = LogFormatter

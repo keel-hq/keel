@@ -160,7 +160,7 @@ func (w *RepositoryWatcher) unwatch(tracked map[string]bool) {
 				"job_name": key,
 				"image":    details.trackedImage.String(),
 				"schedule": details.schedule,
-			}).Info("trigger.poll.RepositoryWatcher: image no tracked anymore, removing watcher")
+			}).Info("trigger.poll.RepositoryWatcher: image no longer tracked, removing watcher")
 			w.cron.DeleteJob(key)
 			delete(w.watched, key)
 		}
