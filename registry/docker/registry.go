@@ -105,10 +105,6 @@ type tagsResponse struct {
 
 func (r *Registry) url(pathTemplate string, args ...interface{}) string {
 	pathSuffix := fmt.Sprintf(pathTemplate, args...)
-	if strings.HasPrefix(pathSuffix, r.URL) {
-		return pathSuffix
-	}
-
 	url := fmt.Sprintf("%s%s", r.URL, pathSuffix)
 
 	return url

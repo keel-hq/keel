@@ -1,12 +1,12 @@
 package docker
 
-func (registry *Registry) Tags(repository string) (tags []string, err error) {
-	url := registry.url("/v2/%s/tags/list", repository)
+func (r *Registry) Tags(repository string) (tags []string, err error) {
+	url := r.url("/v2/%s/tags/list", repository)
 
 	var response tagsResponse
 	for {
-		registry.Logf("registry.tags url=%s repository=%s", url, repository)
-		url, err = registry.getPaginatedJSON(url, &response)
+		r.Logf("registry.tags url=%s repository=%s", url, repository)
+		url, err = r.getPaginatedJSON(url, &response)
 		switch err {
 		case ErrNoMorePages:
 			tags = append(tags, response.Tags...)

@@ -11,9 +11,9 @@ import (
 )
 
 // ManifestDigest - get manifest digest
-func (registry *Registry) ManifestDigest(repository, reference string) (digest.Digest, error) {
-	url := registry.url("/v2/%s/manifests/%s", repository, reference)
-	registry.Logf("registry.manifest.head url=%s repository=%s reference=%s", url, repository, reference)
+func (r *Registry) ManifestDigest(repository, reference string) (digest.Digest, error) {
+	url := r.url("/v2/%s/manifests/%s", repository, reference)
+	r.Logf("registry.manifest.head url=%s repository=%s reference=%s", url, repository, reference)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -21,12 +21,12 @@ func (registry *Registry) ManifestDigest(repository, reference string) (digest.D
 	}
 
 	req.Header.Set("Accept", manifestv2.MediaTypeManifest)
-	resp, err := registry.Client.Do(req)
+	resp, err := r.Client.Do(req)
 	if err != nil {
 		// Try OCI headers if error relates to OCI
 		if strings.Contains(err.Error(), "OCI index found, but accept header does not support OCI indexes") {
 			req.Header.Set("Accept", oci.MediaTypeImageIndex)
-			resp, err = registry.Client.Do(req)
+			resp, err = r.Client.Do(req)
 		}
 		if err != nil {
 			return "", err
