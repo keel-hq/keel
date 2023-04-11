@@ -3,6 +3,7 @@ package helm3
 import (
 	"os"
 	"strings"
+	"time"
 
 	"helm.sh/helm/v3/pkg/chart"
 
@@ -19,7 +20,9 @@ import (
 // * update to latest chart package
 // * udpate the paramateres for the function
 
-const DefaultUpdateTimeout = 300
+// #595 - DefaultUpdateTimeout is in ns
+// Per https://pkg.go.dev/helm.sh/helm/v3/pkg/action#Upgrade
+const DefaultUpdateTimeout = 5 * time.Minute
 
 // Implementer - generic helm implementer used to abstract actual implementation
 type Implementer interface {
