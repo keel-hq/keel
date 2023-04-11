@@ -30,7 +30,7 @@ func getNextLink(resp *http.Response) (string, error) {
 	return "", ErrNoMorePages
 }
 
-// getPaginatedJson accepts a string and a pointer, and returns the
+// getPaginatedJSON accepts a string and a pointer, and returns the
 // next page URL while updating pointed-to variable with a parsed JSON
 // value. When there are no more pages it returns `ErrNoMorePages`.
 func (r *Registry) getPaginatedJSON(url string, response interface{}) (string, error) {
