@@ -21,7 +21,7 @@ import (
 
 // #595 - DefaultUpdateTimeout is in ns
 // Per https://pkg.go.dev/helm.sh/helm/v3/pkg/action#Upgrade
-const DefaultUpdateTimeout = 300000000000
+const DefaultUpdateTimeout = 5 * time.Minute
 
 // Implementer - generic helm implementer used to abstract actual implementation
 type Implementer interface {
