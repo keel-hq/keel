@@ -14,6 +14,7 @@ insecureRegistry: false
 # you can disable it setting value below to false
 polling:
   enabled: true
+  defaultSchedule: "@every 1m"
 
 # Extra Containers to run alongside Keel
 # extraContainers:

@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 )
@@ -39,7 +40,7 @@ const KeelMatchPreReleaseAnnotation = "keel.sh/matchPreRelease"
 const KeelPollScheduleAnnotation = "keel.sh/pollSchedule"
 
 // KeelPollDefaultSchedule - defaul polling schedule
-const KeelPollDefaultSchedule = "@every 1m"
+var KeelPollDefaultSchedule = "@every 1m"
 
 // KeelDigestAnnotation - digest annotation
 const KeelDigestAnnotation = "keel.sh/digest"
@@ -62,6 +63,13 @@ const KeelApprovalDeadlineDefault = 24
 
 // KeelReleasePage - optional release notes URL passed on with notification
 const KeelReleaseNotesURL = "keel.sh/releaseNotes"
+
+func init() {
+	value, found := os.LookupEnv("POLL_DEFAULTSCHEDULE")
+	if found {
+		KeelPollDefaultSchedule = value
+	}
+}
 
 // Repository - represents main docker repository fields that
 // keel cares about
