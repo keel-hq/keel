@@ -20,17 +20,10 @@ func (r *Registry) ManifestDigest(repository, reference string) (digest.Digest, 
 		return "", err
 	}
 
-	req.Header.Set("Accept", manifestv2.MediaTypeManifest)
+	req.Header.Set("Accept", strings.Join([]string{manifestv2.MediaTypeManifest, oci.MediaTypeImageIndex, oci.MediaTypeImageManifest}, ","))
 	resp, err := r.Client.Do(req)
 	if err != nil {
-		// Try OCI headers if error relates to OCI
-		if strings.Contains(err.Error(), "OCI index found, but accept header does not support OCI indexes") {
-			req.Header.Set("Accept", oci.MediaTypeImageIndex)
-			resp, err = r.Client.Do(req)
-		}
-		if err != nil {
-			return "", err
-		}
+		return "", err
 	}
 	defer resp.Body.Close()
 
