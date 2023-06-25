@@ -13,7 +13,7 @@ var fakeGithubPackageWebhook = `{
   "registry_package": {
     "id": 35087,
     "name": "server",
-    "package_type": "docker",
+    "package_type": "CONTAINER",
     "html_url": "https://github.com/DingGGu/UtaiteBOX/packages/35087",
     "created_at": "2019-10-11T18:18:58Z",
     "updated_at": "2019-10-11T18:18:58Z",
