@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/keel-hq/keel/types"
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 )
 
 // Request - request approval

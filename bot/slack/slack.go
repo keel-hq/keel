@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 
 	"github.com/keel-hq/keel/bot"
 	"github.com/keel-hq/keel/constants"
@@ -18,12 +18,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-// SlackImplementer - implementes slack HTTP functionality, used to
-// send messages with attachments
-type SlackImplementer interface {
-	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
-}
 
 // Bot - main slack bot container
 type Bot struct {
@@ -36,8 +30,6 @@ type Bot struct {
 
 	slackClient *slack.Client
 	slackRTM    *slack.RTM
-
-	slackHTTPClient SlackImplementer
 
 	approvalsChannel string // slack approvals channel name
 
@@ -54,12 +46,14 @@ func (b *Bot) Configure(approvalsRespCh chan *bot.ApprovalResponse, botMessagesC
 	if os.Getenv(constants.EnvSlackToken) != "" {
 
 		b.name = "keel"
-		if bootName := os.Getenv(constants.EnvSlackBotName); bootName != "" {
-			b.name = bootName
+		if botName := os.Getenv(constants.EnvSlackBotName); botName != "" {
+			b.name = botName
 		}
 
 		token := os.Getenv(constants.EnvSlackToken)
-		client := slack.New(token)
+
+		debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
+		client := slack.New(token, slack.OptionDebug(debug))
 
 		b.approvalsChannel = "general"
 		if channel := os.Getenv(constants.EnvSlackApprovalsChannel); channel != "" {
@@ -67,7 +61,6 @@ func (b *Bot) Configure(approvalsRespCh chan *bot.ApprovalResponse, botMessagesC
 		}
 
 		b.slackClient = client
-		b.slackHTTPClient = client
 		b.approvalsRespCh = approvalsRespCh
 		b.botMessagesChannel = botMessagesChannel
 
@@ -114,34 +107,30 @@ func (b *Bot) startInternal() error {
 	b.slackRTM = b.slackClient.NewRTM()
 
 	go b.slackRTM.ManageConnection()
-	for {
-		select {
-		case <-b.ctx.Done():
-			return nil
 
-		case msg := <-b.slackRTM.IncomingEvents:
-			switch ev := msg.Data.(type) {
-			case *slack.HelloEvent:
-				// Ignore hello
-			case *slack.ConnectedEvent:
-				// nothing to do
-			case *slack.MessageEvent:
-				b.handleMessage(ev)
-			case *slack.PresenceChangeEvent:
-				// nothing to do
-			case *slack.RTMError:
-				log.Errorf("Error: %s", ev.Error())
-			case *slack.InvalidAuthEvent:
-				log.Error("Invalid credentials")
-				return fmt.Errorf("invalid credentials")
+	for msg := range b.slackRTM.IncomingEvents {
+		switch ev := msg.Data.(type) {
+		case *slack.HelloEvent:
+			// Ignore hello
+		case *slack.ConnectedEvent:
+			// nothing to do
+		case *slack.MessageEvent:
+			b.handleMessage(ev)
+		case *slack.PresenceChangeEvent:
+			// nothing to do
+		case *slack.RTMError:
+			log.Errorf("Error: %s", ev.Error())
+		case *slack.InvalidAuthEvent:
+			log.Error("Invalid credentials")
+			return fmt.Errorf("invalid credentials")
 
-			default:
+		default:
 
-				// Ignore other events..
-				// fmt.Printf("Unexpected: %v\n", msg.Data)
-			}
+			// Ignore other events..
+			// fmt.Printf("Unexpected: %v\n", msg.Data)
 		}
 	}
+	return fmt.Errorf("No more events?")
 }
 
 func (b *Bot) postMessage(title, message, color string, fields []slack.AttachmentField) error {
@@ -149,7 +138,7 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 	params.Username = b.name
 	params.IconURL = b.getBotUserIconURL()
 
-	attachements := []slack.Attachment{
+	attachments := []slack.Attachment{
 		{
 			Fallback: message,
 			Color:    color,
@@ -162,9 +151,9 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 	var mgsOpts []slack.MsgOption
 
 	mgsOpts = append(mgsOpts, slack.MsgOptionPostMessageParameters(params))
-	mgsOpts = append(mgsOpts, slack.MsgOptionAttachments(attachements...))
+	mgsOpts = append(mgsOpts, slack.MsgOptionAttachments(attachments...))
 
-	_, _, err := b.slackHTTPClient.PostMessage(b.approvalsChannel, mgsOpts...)
+	_, _, err := b.slackClient.PostMessage(b.approvalsChannel, mgsOpts...)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error":             err,
@@ -177,26 +166,26 @@ func (b *Bot) postMessage(title, message, color string, fields []slack.Attachmen
 // checking if message was received in approvals channel
 func (b *Bot) isApprovalsChannel(event *slack.MessageEvent) bool {
 
-	channel, err := b.slackClient.GetChannelInfo(event.Channel)
+	channel, err := b.slackClient.GetConversationInfo(&slack.GetConversationInfoInput{ChannelID: event.Channel})
 	if err != nil {
-		// looking for private channel
-		conv, err := b.slackRTM.GetConversationInfo(event.Channel, true)
-		if err != nil {
-			log.Errorf("couldn't find amongst private conversations: %s", err)
-		} else if conv.Name == b.approvalsChannel {
-			return true
+		if channel != (&slack.Channel{}) && channel != nil {
+			if channel.GroupConversation.Name == b.approvalsChannel &&
+				channel.GroupConversation.Conversation.IsPrivate {
+				return true
+			} else {
+				log.Errorf("couldn't find amongst private conversations: %s", err)
+			}
 		}
-
 		log.WithError(err).Errorf("channel with ID %s could not be retrieved", event.Channel)
 		return false
 	}
 
-	log.Debugf("checking if approvals channel: %s==%s", channel.Name, b.approvalsChannel)
-	if channel.Name == b.approvalsChannel {
+	log.Debugf("checking if approvals channel: %s==%s", channel.GroupConversation.Name, b.approvalsChannel)
+	if channel.GroupConversation.Name == b.approvalsChannel {
 		return true
 	}
 
-	log.Debugf("message was received not on approvals channel (%s)", channel.Name)
+	log.Debugf("message was received not on approvals channel (%s)", channel.GroupConversation.Name)
 
 	return false
 }
