@@ -187,6 +187,9 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		secrets = append(secrets, gr.GetImagePullSecrets()...)
 
 		images := gr.GetImages()
+		if schedule, ok := annotations[types.KeelInitContainerAnnotation]; ok && schedule == "true" {
+			images = append(images, gr.GetInitImages()...)
+		}
 		for _, img := range images {
 			ref, err := image.Parse(img)
 			if err != nil {

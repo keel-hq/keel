@@ -275,6 +275,21 @@ func (r *GenericResource) GetImages() (images []string) {
 	return
 }
 
+// GetInitImages - returns init images used by this resource
+func (r *GenericResource) GetInitImages() (images []string) {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		return getContainerImages(obj.Spec.Template.Spec.InitContainers)
+	case *apps_v1.StatefulSet:
+		return getContainerImages(obj.Spec.Template.Spec.InitContainers)
+	case *apps_v1.DaemonSet:
+		return getContainerImages(obj.Spec.Template.Spec.InitContainers)
+	case *batch_v1.CronJob:
+		return getContainerImages(obj.Spec.JobTemplate.Spec.Template.Spec.InitContainers)
+	}
+	return
+}
+
 // Containers - returns containers managed by this resource
 func (r *GenericResource) Containers() (containers []core_v1.Container) {
 	switch obj := r.obj.(type) {
@@ -290,6 +305,21 @@ func (r *GenericResource) Containers() (containers []core_v1.Container) {
 	return
 }
 
+// InitContainers - returns init containers managed by this resource
+func (r *GenericResource) InitContainers() (containers []core_v1.Container) {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		return obj.Spec.Template.Spec.InitContainers
+	case *apps_v1.StatefulSet:
+		return obj.Spec.Template.Spec.InitContainers
+	case *apps_v1.DaemonSet:
+		return obj.Spec.Template.Spec.InitContainers
+	case *batch_v1.CronJob:
+		return obj.Spec.JobTemplate.Spec.Template.Spec.InitContainers
+	}
+	return
+}
+
 // UpdateContainer - updates container image
 func (r *GenericResource) UpdateContainer(index int, image string) {
 	switch obj := r.obj.(type) {
@@ -301,6 +331,20 @@ func (r *GenericResource) UpdateContainer(index int, image string) {
 		updateDaemonsetSetContainer(obj, index, image)
 	case *batch_v1.CronJob:
 		updateCronJobContainer(obj, index, image)
+	}
+}
+
+// UpdateInitContainer - updates init container image
+func (r *GenericResource) UpdateInitContainer(index int, image string) {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		updateDeploymentInitContainer(obj, index, image)
+	case *apps_v1.StatefulSet:
+		updateStatefulSetInitContainer(obj, index, image)
+	case *apps_v1.DaemonSet:
+		updateDaemonsetSetInitContainer(obj, index, image)
+	case *batch_v1.CronJob:
+		updateCronJobInitContainer(obj, index, image)
 	}
 }
 

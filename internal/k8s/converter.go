@@ -33,13 +33,22 @@ func updateDeploymentContainer(d *apps_v1.Deployment, index int, image string) {
 	d.Spec.Template.Spec.Containers[index].Image = image
 }
 
+func updateDeploymentInitContainer(d *apps_v1.Deployment, index int, image string) {
+	d.Spec.Template.Spec.InitContainers[index].Image = image
+}
+
 // stateful sets https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/
+
 func getStatefulSetIdentifier(ss *apps_v1.StatefulSet) string {
 	return "statefulset/" + ss.Namespace + "/" + ss.Name
 }
 
 func updateStatefulSetContainer(ss *apps_v1.StatefulSet, index int, image string) {
 	ss.Spec.Template.Spec.Containers[index].Image = image
+}
+
+func updateStatefulSetInitContainer(ss *apps_v1.StatefulSet, index int, image string) {
+	ss.Spec.Template.Spec.InitContainers[index].Image = image
 }
 
 // daemonsets
@@ -52,6 +61,10 @@ func updateDaemonsetSetContainer(s *apps_v1.DaemonSet, index int, image string) 
 	s.Spec.Template.Spec.Containers[index].Image = image
 }
 
+func updateDaemonsetSetInitContainer(s *apps_v1.DaemonSet, index int, image string) {
+	s.Spec.Template.Spec.InitContainers[index].Image = image
+}
+	
 // cron
 
 func getCronJobIdentifier(s *batch_v1.CronJob) string {
@@ -61,3 +74,8 @@ func getCronJobIdentifier(s *batch_v1.CronJob) string {
 func updateCronJobContainer(s *batch_v1.CronJob, index int, image string) {
 	s.Spec.JobTemplate.Spec.Template.Spec.Containers[index].Image = image
 }
+
+func updateCronJobInitContainer(s *batch_v1.CronJob, index int, image string) {
+	s.Spec.JobTemplate.Spec.Template.Spec.InitContainers[index].Image = image
+}
+	
