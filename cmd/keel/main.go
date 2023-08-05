@@ -39,6 +39,7 @@ import (
 
 	// notification extensions
 	"github.com/keel-hq/keel/extension/notification/auditor"
+	_ "github.com/keel-hq/keel/extension/notification/discord"
 	_ "github.com/keel-hq/keel/extension/notification/hipchat"
 	_ "github.com/keel-hq/keel/extension/notification/mail"
 	_ "github.com/keel-hq/keel/extension/notification/mattermost"
