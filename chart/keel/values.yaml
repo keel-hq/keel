@@ -93,6 +93,11 @@ teams:
   enabled: false
   webhookUrl: ""
 
+# Discord notifications
+discord:
+  enabled: false
+  webhookUrl: ""
+
 # Mail notifications
 mail:
   enabled: false
