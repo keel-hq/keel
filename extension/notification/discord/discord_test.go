@@ -37,7 +37,6 @@ func TestDiscordWebhookRequest(t *testing.T) {
 		}
 
 		t.Log(bodyStr)
-
 	}
 
 	// create test server with handler

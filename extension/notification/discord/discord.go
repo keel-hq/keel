@@ -29,11 +29,12 @@ type Config struct {
 }
 
 func init() {
-	log.Error("RUNNING")
+	log.Info(0)
 	notification.RegisterSender("discord", &sender{})
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
+	log.Info(1)
 	// Get configuration
 	var httpConfig Config
 
@@ -42,7 +43,6 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	} else {
 		return false, nil
 	}
-
 	// Validate endpoint URL.
 	if httpConfig.Endpoint == "" {
 		return false, nil
@@ -62,23 +62,36 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		"name":     "discord",
 		"endpoint": s.endpoint,
 	}).Info("extension.notification.discord: sender configured")
-
+	log.Info(2)
 	return true, nil
 }
 
-// type notificationEnvelope struct {
-// 	types.EventNotification
-// }
-
 type DiscordMessage struct {
-	Content  string `json:"content"`
-	Username string `json:"username"`
+	Username string  `json:"username"`
+	Content  string  `json:"content"`
+	Embeds   []Embed `json:"embeds"`
+}
+
+type Embed struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Footer      Footer `json:"footer"`
+}
+
+type Footer struct {
+	Text string `json:"text"`
 }
 
 func (s *sender) Send(event types.EventNotification) error {
 	discordMessage := DiscordMessage{
-		Content:  fmt.Sprintf("**%s**\n%s", event.Name, event.Message),
 		Username: "Keel",
+		Embeds: []Embed{
+			{
+				Title:       fmt.Sprintf("%s: %s", event.Type.String(), event.Name),
+				Description: event.Message,
+				Footer:      Footer{Text: event.Level.String()},
+			},
+		},
 	}
 
 	jsonMessage, err := json.Marshal(discordMessage)
