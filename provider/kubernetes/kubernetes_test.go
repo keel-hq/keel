@@ -296,6 +296,107 @@ func TestGetImpacted(t *testing.T) {
 	}
 
 }
+
+func TestGetImpactedInit(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+
+	deps := []*apps_v1.Deployment{
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-1",
+				Namespace: "xxxx",
+				Annotations: map[string]string{types.KeelInitContainerAnnotation: "true"},
+				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						InitContainers: []v1.Container{
+							{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-2",
+				Namespace: "xxxx",
+				Annotations: map[string]string{types.KeelInitContainerAnnotation: "false"},
+				Labels:    map[string]string{"whatever": "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						InitContainers: []v1.Container{
+							{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+	}
+
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	// creating "new version" event
+	repo := &types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "1.1.2",
+	}
+
+	plans, err := provider.createUpdatePlans(repo)
+	if err != nil {
+		t.Errorf("failed to get deployments: %s", err)
+	}
+
+	if len(plans) != 1 {
+		t.Fatalf("expected to find 1 deployment update plan but found %d", len(plans))
+	}
+
+	found := false
+	for _, c := range plans[0].Resource.InitContainers() {
+
+		containerImageName := versionreg.ReplaceAllString(c.Image, "")
+
+		if containerImageName == repo.Name {
+			found = true
+		}
+	}
+
+	if !found {
+		t.Errorf("couldn't find expected deployment in impacted deployment list")
+	}
+
+}
+
 func TestGetImpactedPolicyAnnotations(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{
@@ -1010,6 +1111,107 @@ func TestGetImpactedTwoContainersInSameDeployment(t *testing.T) {
 
 }
 
+// Test to check how many deployments are "impacted" if we have two init containers
+func TestGetImpactedTwoInitContainersInSameDeployment(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	deps := []*apps_v1.Deployment{
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-1",
+				Namespace:   "xxxx",
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+				Annotations: map[string]string{types.KeelInitContainerAnnotation: "true"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						InitContainers: []v1.Container{
+							{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+							},
+							{
+								Image: "gcr.io/v2-namespace/greetings-world:1.1.1",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-2",
+				Namespace: "xxxx",
+				Labels:    map[string]string{"whatever": "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						InitContainers: []v1.Container{
+							{
+								Image: "gcr.io/v2-namespace/hello-world:1.1.1",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+	}
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	// creating "new version" event
+	repo := &types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "1.1.2",
+	}
+
+	plans, err := provider.createUpdatePlans(repo)
+	if err != nil {
+		t.Errorf("failed to get deployments: %s", err)
+	}
+
+	if len(plans) != 1 {
+		t.Errorf("expected to find 1 deployment but found %d", len(plans))
+	}
+
+	found := false
+	for _, c := range plans[0].Resource.InitContainers() {
+
+		containerImageName := versionreg.ReplaceAllString(c.Image, "")
+
+		if containerImageName == repo.Name {
+			found = true
+		}
+	}
+
+	if !found {
+		t.Errorf("couldn't find expected deployment in impacted deployment list")
+	}
+
+}
+
 func TestGetImpactedTwoSameContainersInSameDeployment(t *testing.T) {
 
 	fp := &fakeImplementer{}
@@ -1410,6 +1612,77 @@ func TestTrackedImagesWithSecrets(t *testing.T) {
 						ImagePullSecrets: []v1.LocalObjectReference{
 							{
 								Name: "very-secret",
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+	}
+
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	imgs, err := provider.TrackedImages()
+	if err != nil {
+		t.Errorf("failed to get image: %s", err)
+	}
+	if len(imgs) != 1 {
+		t.Errorf("expected to find 1 image, got: %d", len(imgs))
+	}
+
+	if imgs[0].Secrets[0] != "foo-bar" {
+		t.Errorf("expected foo-bar, got: %s", imgs[0].Secrets[0])
+	}
+	if imgs[0].Secrets[1] != "very-secret" {
+		t.Errorf("expected very-secret, got: %s", imgs[0].Secrets[1])
+	}
+}
+
+func TestTrackedInitImagesWithSecrets(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+	deps := []*apps_v1.Deployment{
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:      "dep-1",
+				Namespace: "xxxx",
+				Labels: map[string]string{
+					types.KeelPolicyLabel:               "all",
+					types.KeelImagePullSecretAnnotation: "foo-bar",
+					types.KeelInitContainerAnnotation:   "true",
+				},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						ImagePullSecrets: []v1.LocalObjectReference{
+							{
+								Name: "very-secret",
+							},
+						},
+						InitContainers: []v1.Container{
+							{
+								Image: "gcr.io/v2-namespace/hello-world:1.1",
 							},
 						},
 					},
