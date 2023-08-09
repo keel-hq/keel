@@ -627,6 +627,111 @@ func TestProvider_checkForUpdate(t *testing.T) {
 			wantShouldUpdateDeployment: true,
 			wantErr:                    false,
 		},
+
+		{
+			name: "update init container if tracking is enabled",
+			args: args{
+				policy: policy.NewForcePolicy(false),
+				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "latest"},
+				resource: MustParseGR(&apps_v1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{types.KeelInitContainerAnnotation: "true"},
+						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					},
+					apps_v1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
+							Spec: v1.PodSpec{
+								InitContainers: []v1.Container{
+									{
+										Image: "gcr.io/v2-namespace/hello-world",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DeploymentStatus{},
+				}),
+			},
+			wantUpdatePlan: &UpdatePlan{
+				Resource: MustParseGR(&apps_v1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{types.KeelInitContainerAnnotation: "true"},
+						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					},
+					apps_v1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
+							Spec: v1.PodSpec{
+								InitContainers: []v1.Container{
+									{
+										Image: "gcr.io/v2-namespace/hello-world:latest",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DeploymentStatus{},
+				}),
+				NewVersion:     "latest",
+				CurrentVersion: "latest",
+			},
+			wantShouldUpdateDeployment: true,
+			wantErr:                    false,
+		},
+		{
+			name: "do not update init container if tracking is disabled (default)",
+			args: args{
+				policy: policy.NewForcePolicy(false),
+				repo:   &types.Repository{Name: "gcr.io/v2-namespace/hello-world", Tag: "latest"},
+				resource: MustParseGR(&apps_v1.Deployment{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Annotations: map[string]string{},
+						Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+					},
+					apps_v1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							ObjectMeta: meta_v1.ObjectMeta{
+								Annotations: map[string]string{
+									"this": "that",
+								},
+							},
+							Spec: v1.PodSpec{
+								InitContainers: []v1.Container{
+									{
+										Image: "gcr.io/v2-namespace/hello-world",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DeploymentStatus{},
+				}),
+			},
+			wantUpdatePlan: &UpdatePlan{
+				// Resource: &k8s.GenericResource{},
+				Resource: nil,
+			},
+			wantShouldUpdateDeployment: false,
+			wantErr:                    false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

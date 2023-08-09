@@ -145,6 +145,25 @@ func getImagePullSecretFromMeta(labels map[string]string, annotations map[string
 	return ""
 }
 
+func getInitContainerTrackingFromMeta(labels map[string]string, annotations map[string]string) bool {
+
+	searchKey := strings.ToLower(types.KeelInitContainerAnnotation)
+
+	for k, v := range labels {
+		if strings.ToLower(k) == searchKey {
+			return v == "true"
+		}
+	}
+
+	for k, v := range annotations {
+		if strings.ToLower(k) == searchKey {
+			return v == "true"
+		}
+	}
+
+	return false
+}
+
 // TrackedImages returns a list of tracked images.
 func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 	var trackedImages []*types.TrackedImage
@@ -187,6 +206,9 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		secrets = append(secrets, gr.GetImagePullSecrets()...)
 
 		images := gr.GetImages()
+		if getInitContainerTrackingFromMeta(labels, annotations) {
+			images = append(images, gr.GetInitImages()...)
+		}
 		for _, img := range images {
 			ref, err := image.Parse(img)
 			if err != nil {
