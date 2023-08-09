@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 
 	"github.com/keel-hq/keel/extension/approval"
 	"github.com/keel-hq/keel/pkg/store/sql"
@@ -31,7 +31,7 @@ var approvalsRespCh chan *b.ApprovalResponse
 
 func New(name, token, channel string,
 	k8sImplementer kubernetes.Implementer,
-	approvalsManager approvals.Manager, fi SlackImplementer) *Bot {
+	approvalsManager approvals.Manager) *Bot {
 
 	approvalsRespCh = make(chan *b.ApprovalResponse)
 	botMessagesChannel = make(chan *b.BotMessage)
@@ -39,7 +39,6 @@ func New(name, token, channel string,
 	slack := &Bot{}
 	b.RegisterBot(name, slack)
 	b.Run(k8sImplementer, approvalsManager)
-	slack.slackHTTPClient = fi
 	return slack
 }
 
@@ -125,7 +124,7 @@ func TestBotRequest(t *testing.T) {
 		Store: store,
 	})
 
-	New("keel", token, "approvals", f8s, am, fi)
+	New("keel", token, "approvals", f8s, am)
 	defer b.Stop()
 
 	time.Sleep(1 * time.Second)
@@ -172,7 +171,7 @@ func TestProcessApprovedResponse(t *testing.T) {
 		Store: store,
 	})
 
-	New("keel", token, "approvals", f8s, am, fi)
+	New("keel", token, "approvals", f8s, am)
 	defer b.Stop()
 
 	time.Sleep(1 * time.Second)
@@ -239,7 +238,7 @@ func TestProcessApprovalReply(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
-	bot := New("keel", token, "approvals", f8s, am, fi)
+	bot := New("keel", token, "approvals", f8s, am)
 	defer b.Stop()
 
 	time.Sleep(1 * time.Second)
@@ -309,7 +308,7 @@ func TestProcessRejectedReply(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
-	bot := New("keel", "random", "approvals", f8s, am, fi)
+	bot := New("keel", "random", "approvals", f8s, am)
 	defer b.Stop()
 
 	collector := approval.New()
