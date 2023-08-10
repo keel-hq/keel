@@ -29,12 +29,10 @@ type Config struct {
 }
 
 func init() {
-	log.Info(0)
 	notification.RegisterSender("discord", &sender{})
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	log.Info(1)
 	// Get configuration
 	var httpConfig Config
 
@@ -62,7 +60,6 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		"name":     "discord",
 		"endpoint": s.endpoint,
 	}).Info("extension.notification.discord: sender configured")
-	log.Info(2)
 	return true, nil
 }
 
