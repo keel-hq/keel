@@ -380,7 +380,7 @@ func TestGithubContainerRegistryWebhookHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
-	req.Header.Set("X-GitHub-Event", "package_v2")
+	req.Header.Set("X-GitHub-Event", "package")
 
 	//The response recorder used to record HTTP responses
 	rec := httptest.NewRecorder()
