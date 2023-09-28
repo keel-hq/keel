@@ -69,7 +69,7 @@ func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Reques
 	var imageName, imageTag string
 
 	switch hookEvent {
-	case "package_v2":
+	case "package":
 		payload := new(githubPackageV2Webhook)
 		if err := json.NewDecoder(req.Body).Decode(payload); err != nil {
 			log.WithFields(log.Fields{
@@ -143,8 +143,9 @@ func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Reques
 			return
 		}
 
+		// XXX <jsonroot>.registry_package.package_version.package_url could work too but it ends with colon
 		imageName = strings.Join(
-			[]string{"docker.pkg.github.com", payload.Repository.FullName, payload.RegistryPackage.Name},
+			[]string{"ghcr.io", payload.Repository.FullName},
 			"/",
 		)
 		imageTag = payload.RegistryPackage.PackageVersion.Version

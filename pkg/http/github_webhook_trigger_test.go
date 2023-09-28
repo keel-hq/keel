@@ -119,7 +119,7 @@ var fakeGithubPackageWebhook = `{
       "about_url": "https://help.github.com/about-github-package-registry",
       "name": "GitHub docker registry",
       "type": "docker",
-      "url": "https://docker.pkg.github.com/DingGGu/UtaiteBOX",
+      "url": "https://ghcr.io/DingGGu/UtaiteBOX",
       "vendor": "GitHub Inc"
     }
   },
@@ -361,8 +361,8 @@ func TestGithubPackageWebhookHandler(t *testing.T) {
 		t.Fatalf("unexpected number of events submitted: %d", len(fp.submitted))
 	}
 
-	if fp.submitted[0].Repository.Name != "docker.pkg.github.com/DingGGu/UtaiteBOX/server" {
-		t.Errorf("expected docker.pkg.github.com/DingGGu/UtaiteBOX/server but got %s", fp.submitted[0].Repository.Name)
+	if fp.submitted[0].Repository.Name != "ghcr.io/DingGGu/UtaiteBOX" {
+		t.Errorf("expected ghcr.io/DingGGu/UtaiteBOX but got %s", fp.submitted[0].Repository.Name)
 	}
 
 	if fp.submitted[0].Repository.Tag != "1.2.3" {
@@ -380,7 +380,7 @@ func TestGithubContainerRegistryWebhookHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create req: %s", err)
 	}
-	req.Header.Set("X-GitHub-Event", "package_v2")
+	req.Header.Set("X-GitHub-Event", "package")
 
 	//The response recorder used to record HTTP responses
 	rec := httptest.NewRecorder()
