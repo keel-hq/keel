@@ -2,7 +2,6 @@ package gcr
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 
 	"github.com/keel-hq/keel/extension/credentialshelper"
@@ -26,7 +25,7 @@ func New() *CredentialsHelper {
 		return ch
 	}
 
-	credentials, err := ioutil.ReadFile(credentialsFile)
+	credentials, err := os.ReadFile(credentialsFile)
 	if err != nil {
 		return ch
 	}

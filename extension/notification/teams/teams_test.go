@@ -1,7 +1,7 @@
 package teams
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,7 +24,7 @@ func TestTrimLeftChar(t *testing.T) {
 
 func TestTeamsRequest(t *testing.T) {
 	handler := func(resp http.ResponseWriter, req *http.Request) {
-		body, err := ioutil.ReadAll(req.Body)
+		body, err := io.ReadAll(req.Body)
 		if err != nil {
 			t.Errorf("failed to parse body: %s", err)
 		}

@@ -1,7 +1,7 @@
 package docker
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 
@@ -35,7 +35,7 @@ func (r *Registry) ManifestDigest(repository, reference string) (digest.Digest, 
 
 	// Try to get digest from body instead, should be equal to what would be presented
 	// in Docker-Content-Digest
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
