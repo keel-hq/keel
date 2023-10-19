@@ -77,10 +77,11 @@ func init() {
 // Repository - represents main docker repository fields that
 // keel cares about
 type Repository struct {
-	Host   string `json:"host"`
-	Name   string `json:"name"`
-	Tag    string `json:"tag"`
-	Digest string `json:"digest"` // optional digest field
+	Host      string `json:"host"`
+	Name      string `json:"name"`
+	Tag       string `json:"tag"`
+	Digest    string `json:"digest"`     // optional digest field
+	NewDigest string `json:"new_digest"` // optional field for new digest
 }
 
 // String gives you [host/]team/repo[:tag] identifier

@@ -86,6 +86,8 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 
 			updatePlan.CurrentVersion = containerImageRef.Tag()
 			updatePlan.NewVersion = repo.Tag
+			updatePlan.CurrentVersionFull = fmt.Sprintf("%s:%s", containerImageRef.Tag(), repo.Digest)
+			updatePlan.NewVersionFull = fmt.Sprintf("%s:%s", repo.Tag, repo.NewDigest)
 			updatePlan.Resource = resource
 		}
 	}
@@ -147,6 +149,8 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 
 		updatePlan.CurrentVersion = containerImageRef.Tag()
 		updatePlan.NewVersion = repo.Tag
+		updatePlan.CurrentVersionFull = fmt.Sprintf("%s:%s", containerImageRef.Tag(), repo.Digest)
+		updatePlan.NewVersionFull = fmt.Sprintf("%s:%s", repo.Tag, repo.NewDigest)
 		updatePlan.Resource = resource
 	}
 
