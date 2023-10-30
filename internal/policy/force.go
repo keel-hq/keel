@@ -17,6 +17,10 @@ func (fp *ForcePolicy) ShouldUpdate(current, new string) (bool, error) {
 	return true, nil
 }
 
+func (fp *ForcePolicy) Filter(tags []string) []string {
+	return append([]string{}, tags...)
+}
+
 func (fp *ForcePolicy) Name() string {
 	return "force"
 }

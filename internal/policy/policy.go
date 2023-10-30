@@ -22,6 +22,7 @@ type Policy interface {
 	ShouldUpdate(current, new string) (bool, error)
 	Name() string
 	Type() PolicyType
+	Filter(tags []string) []string
 }
 
 type NilPolicy struct{}
@@ -29,6 +30,7 @@ type NilPolicy struct{}
 func (np *NilPolicy) ShouldUpdate(c, n string) (bool, error) { return false, nil }
 func (np *NilPolicy) Name() string                           { return "nil policy" }
 func (np *NilPolicy) Type() PolicyType                       { return PolicyTypeNone }
+func (np *NilPolicy) Filter(tags []string) []string          { return append([]string{}, tags...) }
 
 // GetPolicyFromLabelsOrAnnotations - gets policy from k8s labels or annotations
 func GetPolicyFromLabelsOrAnnotations(labels map[string]string, annotations map[string]string) Policy {

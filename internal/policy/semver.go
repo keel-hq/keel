@@ -3,6 +3,7 @@ package policy
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -104,4 +105,30 @@ func shouldUpdate(spt SemverPolicyType, matchPreRelease bool, current, new strin
 		return newVersion.Major() == currentVersion.Major() && newVersion.Minor() == currentVersion.Minor(), nil
 	}
 	return false, nil
+}
+
+func (sp *SemverPolicy) Filter(tags []string) []string {
+	var versions []*semver.Version
+	var filtered []string
+
+	for _, t := range tags {
+		if len(strings.SplitN(t, ".", 3)) < 2 {
+			// Keep only X.Y.Z+ semver
+			continue
+		}
+		v, err := semver.NewVersion(t)
+		// Filter out non semver tags
+		if err != nil {
+			continue
+		}
+		versions = append(versions, v)
+	}
+
+	sort.Slice(versions, func(i, j int) bool { return versions[j].LessThan(versions[i]) })
+
+	for _, version := range versions {
+		filtered = append(filtered, version.Original())
+	}
+
+	return filtered
 }

@@ -2,12 +2,10 @@ package poll
 
 import (
 	"errors"
-	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/Masterminds/semver"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/keel-hq/keel/approvals"
@@ -185,27 +183,39 @@ func TestWatchAllTagsMixed(t *testing.T) {
 	testRunHelper(testCases, availableTags, t)
 }
 
+func TestWatchGlobTagsMixed(t *testing.T) {
+	availableTags := []string{"1.3.0-dev", "build-1694132169", "build-1696801785", "build-1695801785"}
+	policy, _ := policy.NewGlobPolicy("glob:build-*")
+	testCases := []runTestCase{
+		{"1.0.0", "build-1696801785", policy},
+	}
+	testRunHelper(testCases, availableTags, t)
+}
+
+func TestWatchRegexpTagsCompareMixed(t *testing.T) {
+	availableTags := []string{"1.3.0-dev", "build-2a3560ef-1694132169", "build-1a3560ef-1696801785", "build-3a3560ef-1695801785"}
+	policy, _ := policy.NewRegexpPolicy("regexp:^build-.*-(?P<compare>.+)$")
+	testCases := []runTestCase{
+		{"1.0.0", "build-1a3560ef-1696801785", policy},
+	}
+	testRunHelper(testCases, availableTags, t)
+}
+
+func TestWatchRegexpTagsMixed(t *testing.T) {
+	availableTags := []string{"1.3.0-dev", "build-2a3560ef-1694132169", "build-1a3560ef-1696801785", "build-3a3560ef-1695801785"}
+	policy, _ := policy.NewRegexpPolicy("regexp:^build-.*$")
+	testCases := []runTestCase{
+		{"1.0.0", "build-3a3560ef-1695801785", policy},
+	}
+	testRunHelper(testCases, availableTags, t)
+}
+
 func TestWatchAllTagsMixedPolicyAll(t *testing.T) {
 	availableTags := []string{"1.3.0-dev", "1.5.0", "1.8.0-alpha"}
 	testCases := []runTestCase{
 		{"1.0.0", "1.5.0", policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true)},
 		{"1.6.0-alpha", "1.8.0-alpha", policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true)}}
 	testRunHelper(testCases, availableTags, t)
-}
-
-func Test_semverSort(t *testing.T) {
-	tags := []string{"1.3.0", "aa1.0.0", "zzz", "1.3.0-dev", "1.5.0", "2.0.0-alpha", "1.3.0-dev1", "1.8.0-alpha", "1.3.1-dev", "123", "1.2.3-rc.1.2+meta"}
-	expectedTags := []string{"2.0.0-alpha", "1.8.0-alpha", "1.5.0", "1.3.1-dev", "1.3.0", "1.3.0-dev1", "1.3.0-dev", "1.2.3-rc.1.2+meta"}
-	expectedVersions := make([]*semver.Version, len(expectedTags))
-	for i, tag := range expectedTags {
-		v, _ := semver.NewVersion(tag)
-		expectedVersions[i] = v
-	}
-	sortedTags := semverSort(tags)
-
-	if !reflect.DeepEqual(sortedTags, expectedVersions) {
-		t.Errorf("Invalid sorted tags; expected: %s; got: %s", expectedVersions, sortedTags)
-	}
 }
 
 type testingCredsHelper struct {

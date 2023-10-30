@@ -2,6 +2,7 @@ package policy
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/ryanuber/go-glob"
@@ -28,6 +29,23 @@ func NewGlobPolicy(policy string) (*GlobPolicy, error) {
 
 func (p *GlobPolicy) ShouldUpdate(current, new string) (bool, error) {
 	return glob.Glob(p.pattern, new), nil
+}
+
+func (p *GlobPolicy) Filter(tags []string) []string {
+	filtered := []string{}
+
+	for _, tag := range tags {
+		if glob.Glob(p.pattern, tag) {
+			filtered = append(filtered, tag)
+		}
+	}
+
+	// sort desc alphabetically
+	sort.Slice(filtered, func(i, j int) bool {
+		return filtered[i] > filtered[j]
+	})
+
+	return filtered
 }
 
 func (p *GlobPolicy) Name() string     { return p.policy }
