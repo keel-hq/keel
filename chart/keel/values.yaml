@@ -98,6 +98,11 @@ discord:
   enabled: false
   webhookUrl: ""
 
+# ntfy notifications
+ntfy:
+  enabled: false
+  webhookUrl: ""
+
 # Mail notifications
 mail:
   enabled: false

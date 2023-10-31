@@ -113,6 +113,11 @@ spec:
             - name: WEBHOOK_ENDPOINT
               value: "{{ .Values.webhook.endpoint }}"
 {{- end }}
+{{- if .Values.ntfy.enabled }}
+            # Enable webhook endpoint
+            - name: WEBHOOK_ENDPOINT
+              value: "{{ .Values.ntfy.webhookUrl }}"
+{{- end }}
 {{- if .Values.mattermost.enabled }}
             # Enable mattermost endpoint
             - name: MATTERMOST_ENDPOINT
