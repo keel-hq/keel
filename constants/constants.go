@@ -37,7 +37,7 @@ const (
 	// Discord webhook url, see https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
 	EnvDiscordWebhookUrl = "DISCORD_WEBHOOK_URL"
 
-	// Discord webhook url, see https://docs.ntfy.sh/publish/
+	// ntfy webhook url, see https://docs.ntfy.sh/publish/
 	EnvNtfyWebhookUrl = "NTFY_WEBHOOK_URL"
 
 	// Mail notification settings
