@@ -1,9 +1,9 @@
-FROM golang:1.20.5
+FROM golang:1.21.3
 COPY . /go/src/github.com/keel-hq/keel
 WORKDIR /go/src/github.com/keel-hq/keel
 RUN make install
 
-FROM node:9.11.1-alpine
+FROM node:16.20.2-alpine
 WORKDIR /app
 COPY ui /app
 RUN yarn
