@@ -21,19 +21,19 @@ func TestNtfyWebhookRequest(t *testing.T) {
 
 		bodyStr := string(body)
 
-		if !strings.Contains(req.Header.Get("Title"), types.NotificationPreDeploymentUpdate.String()) {
-			t.Errorf("missing deployment type")
-		}
-
-		if !strings.Contains(req.Header.Get("Title"), "update deployment") {
-			t.Errorf("missing deployment type")
+		if !strings.Contains(req.Header.Get("Title"), "message here") {
+			t.Errorf("missing message")
 		}
 
 		if !strings.Contains(req.Header.Get("Tags"), "keel") {
 			t.Errorf("missing deployment type")
 		}
 
-		if !strings.Contains(bodyStr, "message here") {
+		if !strings.Contains(bodyStr, "update deployment") {
+			t.Errorf("missing update deployment")
+		}
+
+		if !strings.Contains(bodyStr, types.NotificationPreDeploymentUpdate.String()) {
 			t.Errorf("missing message")
 		}
 
