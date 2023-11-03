@@ -115,7 +115,7 @@ spec:
 {{- end }}
 {{- if .Values.ntfy.enabled }}
             # Enable webhook endpoint
-            - name: WEBHOOK_ENDPOINT
+            - name: NTFY_WEBHOOK_URL
               value: "{{ .Values.ntfy.webhookUrl }}"
 {{- end }}
 {{- if .Values.mattermost.enabled }}
