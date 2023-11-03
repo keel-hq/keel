@@ -64,10 +64,10 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 
 func (s *sender) Send(event types.EventNotification) error {
 
-	req, _ := http.NewRequest("POST", s.endpoint, strings.NewReader(event.Message))
-	req.Header.Set("Title", fmt.Sprintf("%s: %s", event.Type.String(), event.Name))
+	req, _ := http.NewRequest("POST", s.endpoint, strings.NewReader(fmt.Sprintf("%s: %s", event.Type.String(), event.Name)))
+	req.Header.Set("Title", event.Message)
 	req.Header.Set("Tags", "keel")
-	http.DefaultClient.Do(req)
+	req.Header.Set("X-Icon", constants.KeelLogoURL)
 
 	resp, err := s.client.Do(req)
 	if err != nil || resp == nil || (resp.StatusCode != 200 && resp.StatusCode != 204) {
