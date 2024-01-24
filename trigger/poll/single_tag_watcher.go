@@ -67,9 +67,10 @@ func (j *WatchTagJob) Run() {
 
 		event := types.Event{
 			Repository: types.Repository{
-				Name:   j.details.trackedImage.Image.Repository(),
-				Tag:    j.details.trackedImage.Image.Tag(),
-				Digest: currentDigest,
+				Name:      j.details.trackedImage.Image.Repository(),
+				Tag:       j.details.trackedImage.Image.Tag(),
+				Digest:    currentDigest,
+				NewDigest: j.details.digest,
 			},
 			TriggerName: types.TriggerTypePoll.String(),
 		}
