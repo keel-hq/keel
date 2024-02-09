@@ -8,8 +8,8 @@ import (
 
 	"context"
 
+	kingpin "github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	kube "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
