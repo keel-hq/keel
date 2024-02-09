@@ -71,7 +71,8 @@ type buffer struct {
 }
 
 type addEvent struct {
-	obj interface{}
+	obj              interface{}
+	isInIntitialList bool
 }
 
 type updateEvent struct {
@@ -102,7 +103,7 @@ func (b *buffer) loop(stop <-chan struct{}) {
 		case ev := <-b.ev:
 			switch ev := ev.(type) {
 			case *addEvent:
-				b.rh.OnAdd(ev.obj)
+				b.rh.OnAdd(ev.obj, ev.isInIntitialList)
 			case *updateEvent:
 				b.rh.OnUpdate(ev.oldObj, ev.newObj)
 			case *deleteEvent:
@@ -116,8 +117,8 @@ func (b *buffer) loop(stop <-chan struct{}) {
 	}
 }
 
-func (b *buffer) OnAdd(obj interface{}) {
-	b.send(&addEvent{obj})
+func (b *buffer) OnAdd(obj interface{}, isInInitialList bool) {
+	b.send(&addEvent{obj, isInInitialList})
 }
 
 func (b *buffer) OnUpdate(oldObj, newObj interface{}) {
