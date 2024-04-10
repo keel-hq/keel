@@ -86,8 +86,10 @@ spec:
             # Enable GCR with pub/sub support
             - name: PROJECT_ID
               value: "{{ .Values.gcr.projectId }}"
+  {{- if .Values.gcr.pubSub.enabled }}
             - name: PUBSUB
               value: "true"
+  {{- end }}
   {{- if .Values.gcr.clusterName }}
             # Customize the cluster name, mainly useful when outside of GKE
             - name: CLUSTER_NAME
