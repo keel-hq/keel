@@ -3,11 +3,11 @@ entries:
   keel-custom:
   - apiVersion: v1
     appVersion: 0.19.1
-    created: "2024-04-16T10:26:25.219094439+02:00"
+    created: "2024-04-16T10:43:33.22752631+02:00"
     description: Open source, tool for automating Kubernetes deployment updates. This
       is a custom fork of the original Keel project.
-    digest: 6ed223f1103ab2c417631e3b970fc7828935c34866caaa50ab5e91a0c0d32377
-    home: https://keel.sh
+    digest: 993ae9d81b0dc854ee5666ad3d58c0647f730419b7b80c794c86cdb4a0e03460
+    home: https://clem59170.github.io/keel
     icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
     keywords:
     - kubernetes deployment
@@ -18,8 +18,8 @@ entries:
     name: keel-custom
     sources:
     - https://github.com/keel-hq/keel
-    - https://github.com/clem59170/keel/tree/feat/worload-identity-support-for-polling
+    - https://github.com/clem59170/keel
     urls:
     - https://clem59170.github.io/keel/charts/keel-custom-1.0.4.tgz
     version: 1.0.4
-generated: "2024-04-16T10:26:25.216530831+02:00"
+generated: "2024-04-16T10:43:33.225645355+02:00"
