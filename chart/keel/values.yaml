@@ -7,6 +7,8 @@ image:
   tag: null
   pullPolicy: Always
 
+imagePullSecrets: []
+
 # Enable insecure registries
 insecureRegistry: false
 
