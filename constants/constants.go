@@ -11,7 +11,8 @@ const WebhookEndpointEnv = "WEBHOOK_ENDPOINT"
 
 // slack bot/token
 const (
-	EnvSlackToken            = "SLACK_TOKEN"
+	EnvSlackBotToken         = "SLACK_BOT_TOKEN"
+	EnvSlackAppToken         = "SLACK_APP_TOKEN"
 	EnvSlackBotName          = "SLACK_BOT_NAME"
 	EnvSlackChannels         = "SLACK_CHANNELS"
 	EnvSlackApprovalsChannel = "SLACK_APPROVALS_CHANNEL"

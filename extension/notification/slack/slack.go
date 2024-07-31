@@ -33,8 +33,8 @@ func init() {
 func (s *sender) Configure(config *notification.Config) (bool, error) {
 	var token string
 	// Get configuration
-	if os.Getenv(constants.EnvSlackToken) != "" {
-		token = os.Getenv(constants.EnvSlackToken)
+	if os.Getenv(constants.EnvSlackBotToken) != "" {
+		token = os.Getenv(constants.EnvSlackBotToken)
 	} else {
 		return false, nil
 	}
