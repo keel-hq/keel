@@ -1,8 +1,6 @@
 module github.com/keel-hq/keel
 
-go 1.22.4
-
-toolchain go1.22.5
+go 1.19
 
 replace (
 	k8s.io/api => k8s.io/api v0.26.3
