@@ -1,0 +1,16 @@
+services:
+  keel:
+    image: ${IMG_KEEL}
+    container_name: keel
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      -  KUBERNETES_SERVICE_HOST=${KUBERNETES_SERVICE_HOST}
+      -  KUBERNETES_SERVICE_PORT=${KUBERNETES_SERVICE_PORT}
+      -  BASIC_AUTH_USER=admin
+      -  BASIC_AUTH_PASSWORD=admin
+    volumes:
+      - ${SERVICEACCOUNT}:/var/run/secrets/kubernetes.io/serviceaccount
+    ports:
+      - '9300:9300'

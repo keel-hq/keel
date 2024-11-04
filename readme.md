@@ -6,7 +6,7 @@
   <a href="https://goreportcard.com/report/github.com/keel-hq/keel">
     <img src="https://goreportcard.com/badge/github.com/keel-hq/keel" alt="Go Report">
   </a>
-  
+
   <a href="https://img.shields.io/docker/pulls/keelhq/keel.svg">
     <img src="https://img.shields.io/docker/pulls/keelhq/keel.svg" alt="Docker Pulls">
   </a>
@@ -59,7 +59,7 @@ Prerequisites:
 You need to add this Chart repo to Helm:
 
 ```bash
-helm repo add keel https://charts.keel.sh 
+helm repo add keel https://keel-hq.github.io/keel/ 
 helm repo update
 ```
 
@@ -79,6 +79,44 @@ To install for Helm v3, set helmProvider.version="v3" (default is "v2"):
 
 ```bash
 helm install keel keel/keel --set helmProvider.version="v3" 
+```
+
+To install using terraform:
+
+```terraform
+resource "helm_release" "keel" {
+  provider   = helm.helm
+  name       = "keel"
+  namespace  = "keel"
+  repository = "https://keel-hq.github.io/keel"
+  chart      = "keel-chart"
+  version    = "v1.0.4"
+
+  set {
+    name  = "basicauth.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "basicauth.user"
+    value = "admin"
+  }
+
+  set {
+    name  = "basicauth.password"
+    value = "admin"
+  }
+
+  set {
+    name  = "image.repository"
+    value = "keelhq/keel"
+  }
+
+  set {
+    name  = "image.tag"
+    value = "0.19.1"
+  }
+}
 ```
 
 That's it, see [Configuration](https://github.com/keel-hq/keel#configuration) section now.
@@ -180,3 +218,33 @@ Once prerequisites are ready:
 ```bash
 make e2e
 ```
+
+### Debugging keel inside the container against your remote cluster (Windows)
+
+The repository contains a debug version of keel container ready for remote debugging.
+
+You can start the debug container with powershell (docker desktop needed):
+
+```powershell
+.\build.ps1 -StartDebugContainers
+```
+
+To connect to your cluster, copy the authentication details from within the keel pod in your cluster from:
+
+```
+/var/run/secrets/kubernetes.io/serviceaccount
+```
+
+to the serviceaccount folder at the root of the repository and make sure you set the environment variable for the K8S management API endpoint:
+
+```powershell
+# This can be configured in envesttings.ps1 to be picked up automatically by the build script
+$ENV:KUBERNETES_SERVICE_HOST = "mycluster-o5ff3caf.hcp.myregion.azmk8s.io"
+$ENV:KUBERNETES_SERVICE_PORT = "443"
+```
+
+And make sure your API server is accesible from your client (VPN, IP whitelisting or whatever you use to secure your cluster management API).
+
+Once started, simply use the debug option in a Go debugger, such as Jetbrains GoLand:
+
+[Debugging a Go application inside a Docker container | The GoLand Blog](https://blog.jetbrains.com/go/2020/05/06/debugging-a-go-application-inside-a-docker-container/)

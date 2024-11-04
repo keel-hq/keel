@@ -9,3 +9,5 @@ hack/deployment-norbac-helm.yaml
 .vscode
 .idea/
 tests.out
+envsettings.ps1
+serviceaccount/*

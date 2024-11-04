@@ -1,0 +1,11 @@
+FROM golang:1.21.3
+
+# Install tparse and go-junit-report
+RUN go install github.com/mfridman/tparse@latest && \
+    go install github.com/jstemmer/go-junit-report@latest
+
+COPY . /go/src/github.com/keel-hq/keel
+
+WORKDIR /go/src/github.com/keel-hq/keel
+
+ENTRYPOINT ["tail", "-f", "/dev/null"]

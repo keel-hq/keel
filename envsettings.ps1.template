@@ -1,0 +1,7 @@
+$ENV:REGISTRY_PATH = "myregistry.azurecr.io/core/"
+$ENV:IMAGE_VERSION = "1.0.32";
+$ENV:REGISTRY_SERVER = ""
+$ENV:REGISTRY_USER = ""
+$ENV:REGISTRY_PWD = ""
+$ENV:KUBERNETES_SERVICE_HOST = "xxxx.hcp.region.azmk8s.io"
+$ENV:KUBERNETES_SERVICE_PORT = "443"

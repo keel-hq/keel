@@ -1,0 +1,29 @@
+FROM golang:1.21.3
+COPY . /go/src/github.com/keel-hq/keel
+WORKDIR /go/src/github.com/keel-hq/keel
+RUN make install-debug
+
+FROM node:16.20.2-alpine
+WORKDIR /app
+COPY ui /app
+RUN yarn
+RUN yarn run lint --no-fix
+RUN yarn run build
+
+FROM golang:1.21.3
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+VOLUME /data
+ENV XDG_DATA_HOME /data
+
+COPY --from=0 /go/bin/keel /bin/keel
+COPY --from=1 /app/dist /www
+COPY --from=0 /go/bin/dlv /
+#ENTRYPOINT ["/bin/keel"]
+ENTRYPOINT ["/dlv", "--listen=:40000", "--headless=true", "--api-version=2", "--accept-multiclient", "exec", "/bin/keel"]
+
+EXPOSE 9300
+EXPOSE 40000

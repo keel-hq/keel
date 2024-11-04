@@ -1,7 +1,7 @@
 apiVersion: v1
-name: keel-custom
+name: keel-chart
 description: Open source, tool for automating Kubernetes deployment updates. This is a custom fork of the original Keel project.
-version: 1.0.4
+version: 1.0.5
 appVersion: 0.19.1
 keywords:
 - kubernetes deployment

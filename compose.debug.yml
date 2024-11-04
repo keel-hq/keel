@@ -1,0 +1,22 @@
+services:
+  keel-debug:
+    image: ${IMG_KEEL_DEBUG}
+    security_opt:
+      - apparmor=unconfined
+    cap_add:
+      - SYS_PTRACE
+    container_name: keel-debug
+    build:
+      context: .
+      dockerfile: Dockerfile.debug
+    environment:
+      -  KUBERNETES_SERVICE_HOST=${KUBERNETES_SERVICE_HOST}
+      -  KUBERNETES_SERVICE_PORT=${KUBERNETES_SERVICE_PORT}
+      -  BASIC_AUTH_USER=admin
+      -  BASIC_AUTH_PASSWORD=admin
+    volumes:
+      - ${SERVICEACCOUNT}:/var/run/secrets/kubernetes.io/serviceaccount
+    ports:
+      - '9301:9300'
+      - '8000:8000'
+      - '40000:40000'

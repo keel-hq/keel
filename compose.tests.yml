@@ -1,0 +1,7 @@
+services:
+  keel_tests:
+    image: ${IMG_KEEL_TESTS}
+    container_name: keel_tests
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
