@@ -12,7 +12,7 @@ type Translator struct {
 	KeelSelector string
 }
 
-func (t *Translator) OnAdd(obj interface{}) {
+func (t *Translator) OnAdd(obj interface{}, isInInitialList bool) {
 	gr, err := NewGenericResource(obj)
 	if err != nil {
 		t.Errorf("OnAdd failed to add resource %T: %#v", obj, obj)
