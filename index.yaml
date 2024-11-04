@@ -1,0 +1,1081 @@
+apiVersion: v1
+entries:
+  keel:
+  - apiVersion: v1
+    appVersion: 0.19.1
+    created: "2023-09-28T19:18:56.095108072Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: bc1645c88ae250ee1aa363f2cf87ccef5d02292456d80ac47b315daf01c7475d
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-1.0.3.tgz
+    version: 1.0.3
+  - apiVersion: v1
+    appVersion: 0.18.1
+    created: "2023-09-28T19:18:56.094305652Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: d579482b6d81aa29cf246a1be489189b0bdea14bcc37a7a3dc24b488f3e798d2
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-1.0.2.tgz
+    version: 1.0.2
+  - apiVersion: v1
+    appVersion: 0.18.0
+    created: "2023-09-28T19:18:56.093149267Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 502646fb051e75b249d0d17dafd91ff5aee36f931365f8be3e30913c4fb886a3
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-1.0.1.tgz
+    version: 1.0.1
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.092250006Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 882a82045abd8ad3bba09dc032a2139933a45e37f98817dd7dfc2f8e866c3594
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-1.0.0.tgz
+    version: 1.0.0
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.087208983Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: bd746975d9ce2a656fbd02dd1b8ee89b16bfde951674e5030386fd0910c5a864
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.11.tgz
+    version: 0.9.11
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.086743547Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: c9f2368f0ef9e76469f3cca96241fb46853ed3071027d97ac1ead5828a732590
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.10.tgz
+    version: 0.9.10
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.091372085Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: a14058d4c1ad2f727d19d43ed664b43b07591bd839653dfdd0960733b1d7d5e7
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.8.tgz
+    version: 0.9.8
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.090422573Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 2dbd788b2b8d9beb624b69ed58e4862ca0928b082de02adb1335aed4a7cc5e05
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.7.tgz
+    version: 0.9.7
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.089932697Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 1f69981931c0abe743ef439e6384d5e40b041d62a5c9801f3e16006ad0e38e86
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.6.tgz
+    version: 0.9.6
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.08934422Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: b823f75e8df9d5ff00487e02f49f88a3838f0b9d7138b56059f97c6b229ecc22
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.5.tgz
+    version: 0.9.5
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.088823403Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: e2e4043529dc3d01d7202ee023ac302edd104cee61d0859e1153a68b73be3b76
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.4.tgz
+    version: 0.9.4
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.088250526Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 28689fc8fb1411332a493c161cd8475e11b23aa7915c1d473d9001585c789024
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.3.tgz
+    version: 0.9.3
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.087670209Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 369aca6a8a1669851377bba7508bb9cc22bc70c2d28d2a270975d57ff348c956
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.2.tgz
+    version: 0.9.2
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.08618895Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: a3ce8fa37802e962e70f4f4b00a81b61c6747599aec5c99eb828ff464060838f
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.1.tgz
+    version: 0.9.1
+  - apiVersion: v1
+    appVersion: 0.16.1
+    created: "2023-09-28T19:18:56.085745805Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 17ea4145520080ce642e8f60a2f04c81e93ae6e4ff94f37301159936da95b27a
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.9.0.tgz
+    version: 0.9.0
+  - apiVersion: v1
+    appVersion: 0.16.0
+    created: "2023-09-28T19:18:56.079684899Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 2244a44c7546fa301bed32708c3127d25c64b75d8ac7a4e22cd89bb51e4fb96d
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.22.tgz
+    version: 0.8.22
+  - apiVersion: v1
+    appVersion: 0.16.0
+    created: "2023-09-28T19:18:56.079242703Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: ea817e8ed44005dcb607fa4cdd495680915fa7746b0b304b75b66f91baa7da56
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.21.tgz
+    version: 0.8.21
+  - apiVersion: v1
+    appVersion: 0.16.0
+    created: "2023-09-28T19:18:56.078758587Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: a8cbb6d01a12145e728bf9179b03e68b93613be5890c10498d47e22a8d05b825
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.20.tgz
+    version: 0.8.20
+  - apiVersion: v1
+    appVersion: 0.16.0
+    created: "2023-09-28T19:18:56.077904516Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 61defd0d83dd03f3e8d64d4a10740e181191d4546752d41c6db6409c03555e1f
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.19.tgz
+    version: 0.8.19
+  - apiVersion: v1
+    appVersion: 0.15.0-rc1
+    created: "2023-09-28T19:18:56.077063965Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 264cb73af91047439ffaf4763b6623a4095b0a1a0bdffdba8064348c72f51659
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.18.tgz
+    version: 0.8.18
+  - apiVersion: v1
+    appVersion: 0.15.0-rc1
+    created: "2023-09-28T19:18:56.076488558Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: ec79dfbb4097731cd2ff531600895c7135a20f143ab341ba4b29e78048dc383e
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.17.tgz
+    version: 0.8.17
+  - apiVersion: v1
+    appVersion: 0.15.0-rc1
+    created: "2023-09-28T19:18:56.075960211Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 59c693f90765238e7b31a4e33154261338e4ea325e7a03a33fc3c167c94a9b83
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.16.tgz
+    version: 0.8.16
+  - apiVersion: v1
+    appVersion: 0.15.0-rc1
+    created: "2023-09-28T19:18:56.075384164Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: a8a1cdb1f1e3f564b5837426b73ebaecc54c1745bd1d8f860fdab9aa33273338
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.15.tgz
+    version: 0.8.15
+  - apiVersion: v1
+    appVersion: 0.15.0-rc1
+    created: "2023-09-28T19:18:56.074942849Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: dd14b82339b18a0bf76dbb47df99169848478b15caa3712768f0441d5a40d069
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.14.tgz
+    version: 0.8.14
+  - apiVersion: v1
+    appVersion: 0.15.0-rc1
+    created: "2023-09-28T19:18:56.074495013Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: ddec81167f7b2237e89f7ec73ad18d8f3c06b6f2fe7ad867dea0ee9ece6159a1
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.13.tgz
+    version: 0.8.13
+  - apiVersion: v1
+    appVersion: 0.15.0-rc1
+    created: "2023-09-28T19:18:56.074004107Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: b278e35fd84969098f7f1907e5e4a209966d2b4c36df3681543d026ca669f5b0
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.12.tgz
+    version: 0.8.12
+  - apiVersion: v1
+    appVersion: 0.14.3-rc1
+    created: "2023-09-28T19:18:56.073578332Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 09aef831f3131c940f5a36854880d3ecdb3d40420833783996506361dd8587bd
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.10.tgz
+    version: 0.8.10
+  - apiVersion: v1
+    appVersion: 0.14.3-rc1
+    created: "2023-09-28T19:18:56.085309189Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: b99ecb3627a0d16a08567eede5951cd7dbb4e36717e936dd5d877e990ebf7c32
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.9.tgz
+    version: 0.8.9
+  - apiVersion: v1
+    appVersion: 0.14.3-rc1
+    created: "2023-09-28T19:18:56.084821253Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: ca9ab5fba1f6274168cf591bc736fd2dfd38e900ca8b927763d3868639471d26
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.8.tgz
+    version: 0.8.8
+  - apiVersion: v1
+    appVersion: 0.14.3-rc1
+    created: "2023-09-28T19:18:56.084330867Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: b885eab1ce2c708d39f12802fa01fd7479c962569b95e87dd350ca0b26ab3fda
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.7.tgz
+    version: 0.8.7
+  - apiVersion: v1
+    appVersion: 0.14.3-rc1
+    created: "2023-09-28T19:18:56.083872301Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 061de12627b06300a8ec2040dc08ef8bdd1bce76f0b0b9f05fbbc13cf64d2301
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.6.tgz
+    version: 0.8.6
+  - apiVersion: v1
+    appVersion: 0.14.0
+    created: "2023-09-28T19:18:56.083145652Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 7de63acf77c990b38176fd8d03b53bc35d45caf345ab7ea346a9637bb0223e60
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.5.tgz
+    version: 0.8.5
+  - apiVersion: v1
+    appVersion: 0.14.0
+    created: "2023-09-28T19:18:56.081826995Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 7d3d46507311a5ed3c5c890210a864567c43eb3655a241a471f3bc0a7c68d923
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.4.tgz
+    version: 0.8.4
+  - apiVersion: v1
+    appVersion: 0.14.0
+    created: "2023-09-28T19:18:56.080987645Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 87e8aaa57402cb09f75bbb8d5f851f6847056e1608daee6bb26cbc7871fc1e3a
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.3.tgz
+    version: 0.8.3
+  - apiVersion: v1
+    appVersion: 0.14.0
+    created: "2023-09-28T19:18:56.078334571Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 5d863534bf1410af21147d48e24fe0f48aaa9b1cf774b74945e9a36452150e14
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.2.tgz
+    version: 0.8.2
+  - apiVersion: v1
+    appVersion: 0.14.0
+    created: "2023-09-28T19:18:56.073142636Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 68bcd7fa918be64819bf66011fb5700820d37be6cc70243422771da81cfc261e
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.1.tgz
+    version: 0.8.1
+  - apiVersion: v1
+    appVersion: 0.14.0
+    created: "2023-09-28T19:18:56.07264688Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 5a0d2791f6baf3aac4401a460e9f4364f554e2190c7c89cb2dc5cdb0e9fa6994
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.8.0.tgz
+    version: 0.8.0
+  - apiVersion: v1
+    appVersion: 0.13.0
+    created: "2023-09-28T19:18:56.066346811Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: a2764efd3d951e712ac621f7bb0a847dfa4471c15069f76fb433c20126501f63
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.7.10.tgz
+    version: 0.7.10
+  - apiVersion: v1
+    appVersion: 0.13.0
+    created: "2023-09-28T19:18:56.072111553Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 0c399df6b8e00502fa399810b35dd70ee5d6fa2f5cc65a4932e9cc4263937c70
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.7.9.tgz
+    version: 0.7.9
+  - apiVersion: v1
+    appVersion: 0.13.0
+    created: "2023-09-28T19:18:56.070855967Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: b475f30e4c3d59656e2724d6839278df28346cdf744806dc1896793d4831f038
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.7.8.tgz
+    version: 0.7.8
+  - apiVersion: v1
+    appVersion: 0.13.0
+    created: "2023-09-28T19:18:56.069633302Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 29692c69d0573efe047752cc9c6289c68a6c80e45235ee43d1396b7f5a2acff7
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.7.7.tgz
+    version: 0.7.7
+  - apiVersion: v1
+    appVersion: 0.13.0
+    created: "2023-09-28T19:18:56.068813682Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 8d76fa163ee2fe82350ceb9cd33580cd826d1c21c513de82913f7b4bd652b013
+    engine: gotpl
+    home: https://keel.sh
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.7.6.tgz
+    version: 0.7.6
+  - apiVersion: v1
+    appVersion: 0.12.0
+    created: "2023-09-28T19:18:56.067640117Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 3b4e5911bdeae3f17770d0c7d1f93989fab20c181f6fab119d34eee9a29ee856
+    engine: gotpl
+    home: https://keel.sh
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.7.5.tgz
+    version: 0.7.5
+  - apiVersion: v1
+    appVersion: 0.12.0
+    created: "2023-09-28T19:18:56.067242522Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: 2ec56e2a37f40d6e616e711abc20b95272a3517884d1286218e5933deab7426c
+    engine: gotpl
+    home: https://keel.sh
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.7.4.tgz
+    version: 0.7.4
+  - apiVersion: v1
+    appVersion: 0.12.0
+    created: "2023-09-28T19:18:56.066854887Z"
+    description: Open source, tool for automating Kubernetes deployment updates. Keel
+      is stateless, robust and lightweight.
+    digest: bc14e0d8ae34a2bcd2bff5299ce923fedc182154b3044081f98d16d90bf5bfb4
+    engine: gotpl
+    home: https://keel.sh
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    maintainers:
+    - email: rmocius@gmail.com
+      name: rimusz
+    - email: karolis.rusenas@gmail.com
+      name: rusenask
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://charts.keel.sh/keel-0.7.3.tgz
+    version: 0.7.3
+generated: "2023-09-28T19:18:56.065776294Z"
