@@ -9,7 +9,8 @@
 param (
     [switch]$Push = $false,
     [switch]$RunTests = $false,
-    [switch]$StartContainers = $false
+    [switch]$StartContainers = $false,
+    [switch]$StartDebugContainers = $false
 )
 
 $global:ErrorActionPreference = 'Stop'
@@ -74,6 +75,12 @@ ThrowIfError
 
 if ($StartContainers) {
     docker compose up
+    ThrowIfError
+}
+
+if ($StartDebugContainers) {
+    docker compose -f compose.debug.yml up
+    ThrowIfError
 }
 
 if ($RunTests -eq $true) {

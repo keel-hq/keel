@@ -59,7 +59,7 @@ Prerequisites:
 You need to add this Chart repo to Helm:
 
 ```bash
-helm repo add keel https://charts.keel.sh 
+helm repo add keel https://keel-hq.github.io/keel/ 
 helm repo update
 ```
 
@@ -79,6 +79,44 @@ To install for Helm v3, set helmProvider.version="v3" (default is "v2"):
 
 ```bash
 helm install keel keel/keel --set helmProvider.version="v3" 
+```
+
+To install using terraform:
+
+```terraform
+resource "helm_release" "keel" {
+  provider   = helm.helm
+  name       = "keel"
+  namespace  = "keel"
+  repository = "https://keel-hq.github.io/keel"
+  chart      = "keel-chart"
+  version    = "v1.0.4"
+
+  set {
+    name  = "basicauth.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "basicauth.user"
+    value = "admin"
+  }
+
+  set {
+    name  = "basicauth.password"
+    value = "admin"
+  }
+
+  set {
+    name  = "image.repository"
+    value = "keelhq/keel"
+  }
+
+  set {
+    name  = "image.tag"
+    value = "0.19.1"
+  }
+}
 ```
 
 That's it, see [Configuration](https://github.com/keel-hq/keel#configuration) section now.
@@ -181,14 +219,14 @@ Once prerequisites are ready:
 make e2e
 ```
 
-### Debugging keel inside the container against your remote cluster
+### Debugging keel inside the container against your remote cluster (Windows)
 
 The repository contains a debug version of keel container ready for remote debugging.
 
 You can start the debug container with powershell (docker desktop needed):
 
 ```powershell
-.\build.ps1 -startcontainers
+.\build.ps1 -StartDebugContainers
 ```
 
 To connect to your cluster, copy the authentication details from within the keel pod in your cluster from:
