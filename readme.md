@@ -89,7 +89,7 @@ resource "helm_release" "keel" {
   name       = "keel"
   namespace  = "keel"
   repository = "https://keel-hq.github.io/keel"
-  chart      = "keel-chart"
+  chart      = "keel"
   version    = "v1.0.4"
 
   set {
