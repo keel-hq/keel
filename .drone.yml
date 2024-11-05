@@ -7,12 +7,12 @@ workspace:
 
 steps:
 - name: unit-test
-  image: golang:1.21.3
+  image: golang:1.22.8
   commands:
     - make test
 
 - name: build
-  image: golang:1.21.3
+  image: golang:1.22.8
   commands:
     - make install
 

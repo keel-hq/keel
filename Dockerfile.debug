@@ -1,4 +1,4 @@
-FROM golang:1.21.3
+FROM golang:1.22.8
 COPY . /go/src/github.com/keel-hq/keel
 WORKDIR /go/src/github.com/keel-hq/keel
 RUN make install-debug
@@ -10,7 +10,7 @@ RUN yarn
 RUN yarn run lint --no-fix
 RUN yarn run build
 
-FROM golang:1.21.3
+FROM golang:1.22.8
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates && \
