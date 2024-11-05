@@ -70,11 +70,22 @@ type UpdatePlan struct {
 	CurrentVersion string
 	// New version that's already in the deployment
 	NewVersion string
+
+	// Current version with digest
+	CurrentVersionFull string
+	// New version with digest
+	NewVersionFull string
 }
 
 func (p *UpdatePlan) String() string {
 	if p.Resource != nil {
-		return fmt.Sprintf("%s %s->%s", p.Resource.Identifier, p.CurrentVersion, p.NewVersion)
+		// Sometimes only a digest is updated, by a tag stays the same. Then saying latest -> latest
+		// doesn't tell us much
+		if p.CurrentVersion == p.NewVersion {
+			return fmt.Sprintf("%s %s->%s", p.Resource.Identifier, p.CurrentVersionFull, p.NewVersionFull)
+		} else {
+			return fmt.Sprintf("%s %s->%s", p.Resource.Identifier, p.CurrentVersion, p.NewVersion)
+		}
 	}
 	return "empty plan"
 }
@@ -295,7 +306,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 			ResourceKind: resource.Kind(),
 			Identifier:   resource.Identifier,
 			Name:         "preparing to update resource",
-			Message:      fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", ")),
+			Message:      fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersionFull, plan.NewVersionFull, strings.Join(resource.GetImages(), ", ")),
 			CreatedAt:    time.Now(),
 			Type:         types.NotificationPreDeploymentUpdate,
 			Level:        types.LevelDebug,
@@ -310,7 +321,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		var err error
 
 		timestamp := time.Now().Format(time.RFC3339)
-		annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s [%s]", plan.CurrentVersion, plan.NewVersion, timestamp)
+		annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s [%s]", plan.CurrentVersionFull, plan.NewVersionFull, timestamp)
 
 		resource.SetAnnotations(annotations)
 
@@ -329,7 +340,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 				Name:         "update resource",
 				ResourceKind: resource.Kind(),
 				Identifier:   resource.Identifier,
-				Message:      fmt.Sprintf("%s %s/%s update %s->%s failed, error: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, err),
+				Message:      fmt.Sprintf("%s %s/%s update %s->%s failed, error: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersionFull, plan.NewVersionFull, err),
 				CreatedAt:    time.Now(),
 				Type:         types.NotificationDeploymentUpdate,
 				Level:        types.LevelError,
@@ -357,9 +368,9 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		var msg string
 		releaseNotes := types.ParseReleaseNotesURL(resource.GetAnnotations())
 		if releaseNotes != "" {
-			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s). Release notes: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", "), releaseNotes)
+			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s). Release notes: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersionFull, plan.NewVersionFull, strings.Join(resource.GetImages(), ", "), releaseNotes)
 		} else {
-			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", "))
+			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersionFull, plan.NewVersionFull, strings.Join(resource.GetImages(), ", "))
 		}
 
 		err = p.sender.Send(types.EventNotification{
@@ -382,8 +393,8 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 				"error":     err,
 				"name":      resource.Name,
 				"kind":      resource.Kind(),
-				"previous":  plan.CurrentVersion,
-				"new":       plan.NewVersion,
+				"previous":  plan.CurrentVersionFull,
+				"new":       plan.NewVersionFull,
 				"namespace": resource.Namespace,
 			}).Error("provider.kubernetes: got error while sending notification")
 		}
@@ -391,8 +402,8 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		log.WithFields(log.Fields{
 			"name":      resource.Name,
 			"kind":      resource.Kind(),
-			"previous":  plan.CurrentVersion,
-			"new":       plan.NewVersion,
+			"previous":  plan.CurrentVersionFull,
+			"new":       plan.NewVersionFull,
 			"namespace": resource.Namespace,
 		}).Info("provider.kubernetes: resource updated")
 		updated = append(updated, resource)
