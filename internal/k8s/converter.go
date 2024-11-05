@@ -6,10 +6,12 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 )
 
-func getContainerImages(containers []core_v1.Container) []string {
+func getContainerImages(containers []core_v1.Container, filter ContainerFilter) []string {
 	var images []string
 	for _, c := range containers {
-		images = append(images, c.Image)
+		if filter == nil || filter(c) {
+			images = append(images, c.Image)
+		}
 	}
 
 	return images
@@ -64,7 +66,7 @@ func updateDaemonsetSetContainer(s *apps_v1.DaemonSet, index int, image string) 
 func updateDaemonsetSetInitContainer(s *apps_v1.DaemonSet, index int, image string) {
 	s.Spec.Template.Spec.InitContainers[index].Image = image
 }
-	
+
 // cron
 
 func getCronJobIdentifier(s *batch_v1.CronJob) string {
@@ -78,4 +80,3 @@ func updateCronJobContainer(s *batch_v1.CronJob, index int, image string) {
 func updateCronJobInitContainer(s *batch_v1.CronJob, index int, image string) {
 	s.Spec.JobTemplate.Spec.Template.Spec.InitContainers[index].Image = image
 }
-	

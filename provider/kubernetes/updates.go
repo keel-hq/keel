@@ -27,8 +27,14 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 		"policy":    plc.Name(),
 	}).Debug("provider.kubernetes.checkVersionedDeployment: keel policy found, checking resource...")
 	shouldUpdateDeployment = false
+
+	containerFilterFunc := GetMonitorContainersFromMeta(resource.GetAnnotations(), resource.GetLabels())
+
 	if schedule, ok := resource.GetAnnotations()[types.KeelInitContainerAnnotation]; ok && schedule == "true" {
 		for idx, c := range resource.InitContainers() {
+			if !containerFilterFunc(c) {
+				continue
+			}
 			containerImageRef, err := image.Parse(c.Image)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -69,6 +75,16 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 			}
 
 			if !shouldUpdateContainer {
+				log.WithFields(log.Fields{
+					"name":              resource.Name,
+					"namespace":         resource.Namespace,
+					"kind":              resource.Kind(),
+					"parsed_image_name": containerImageRef.Remote(),
+					"target_image_name": repo.Name,
+					"target_tag":        repo.Tag,
+					"policy":            plc.Name(),
+					"image":             c.Image,
+				}).Debug("provider.kubernetes: container name does not match monitorContainers regular expression, ignoring")
 				continue
 			}
 
@@ -90,6 +106,9 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 		}
 	}
 	for idx, c := range resource.Containers() {
+		if !containerFilterFunc(c) {
+			continue
+		}
 		containerImageRef, err := image.Parse(c.Image)
 		if err != nil {
 			log.WithFields(log.Fields{
