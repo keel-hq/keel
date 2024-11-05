@@ -75,16 +75,6 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 			}
 
 			if !shouldUpdateContainer {
-				log.WithFields(log.Fields{
-					"name":              resource.Name,
-					"namespace":         resource.Namespace,
-					"kind":              resource.Kind(),
-					"parsed_image_name": containerImageRef.Remote(),
-					"target_image_name": repo.Name,
-					"target_tag":        repo.Tag,
-					"policy":            plc.Name(),
-					"image":             c.Image,
-				}).Debug("provider.kubernetes: container name does not match monitorContainers regular expression, ignoring")
 				continue
 			}
 
