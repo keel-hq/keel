@@ -1,4 +1,4 @@
-FROM golang:1.21.3
+FROM golang:1.22.8
 COPY . /go/src/github.com/keel-hq/keel
 WORKDIR /go/src/github.com/keel-hq/keel
 RUN make install
@@ -10,7 +10,7 @@ RUN yarn
 RUN yarn run lint --no-fix
 RUN yarn run build
 
-FROM alpine:latest
+FROM alpine:3.20.3
 RUN apk --no-cache add ca-certificates
 
 VOLUME /data
