@@ -145,6 +145,52 @@ func getImagePullSecretFromMeta(labels map[string]string, annotations map[string
 	return ""
 }
 
+func GetMonitorContainersFromMeta(labels map[string]string, annotations map[string]string) k8s.ContainerFilter {
+	monitorContainersRegex := getMonitorContainersFromMeta(labels, annotations)
+	filterFunc := func(container v1.Container) bool {
+		return monitorContainersRegex.MatchString(container.Name)
+	}
+	return filterFunc
+}
+
+/**
+ *
+ */
+func getMonitorContainersFromMeta(labels map[string]string, annotations map[string]string) *regexp.Regexp {
+
+	searchKey := strings.ToLower(types.KeelMonitorContainers)
+
+	for k, v := range labels {
+		if strings.ToLower(k) == searchKey {
+			result, err := regexp.Compile(v)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error": err,
+					"regex": v,
+				}).Error("provider.kubernetes: failed to parse regular expression.")
+				continue
+			}
+			return result
+		}
+	}
+
+	for k, v := range annotations {
+		if strings.ToLower(k) == searchKey {
+			result, err := regexp.Compile(v)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error": err,
+					"regex": v,
+				}).Error("provider.kubernetes: failed to parse regular expression.")
+				continue
+			}
+			return result
+		}
+	}
+
+	return regexp.MustCompile(".*") // Match all to preserve previous behavior
+}
+
 func getInitContainerTrackingFromMeta(labels map[string]string, annotations map[string]string) bool {
 
 	searchKey := strings.ToLower(types.KeelInitContainerAnnotation)
@@ -169,6 +215,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 	var trackedImages []*types.TrackedImage
 
 	for _, gr := range p.cache.Values() {
+
 		labels := gr.GetLabels()
 		annotations := gr.GetAnnotations()
 
@@ -205,10 +252,13 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		}
 		secrets = append(secrets, gr.GetImagePullSecrets()...)
 
-		images := gr.GetImages()
+		filterFunc := GetMonitorContainersFromMeta(annotations, labels)
+
+		images := gr.GetImages(filterFunc)
 		if getInitContainerTrackingFromMeta(labels, annotations) {
-			images = append(images, gr.GetInitImages()...)
+			images = append(images, gr.GetInitImages(filterFunc)...)
 		}
+
 		for _, img := range images {
 			ref, err := image.Parse(img)
 			if err != nil {
@@ -220,6 +270,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				}).Error("provider.kubernetes: failed to parse image")
 				continue
 			}
+
 			svp := make(map[string]string)
 
 			semverTag, err := semver.NewVersion(ref.Tag())
@@ -285,17 +336,26 @@ func (p *Provider) processEvent(event *types.Event) (updated []*k8s.GenericResou
 
 func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.GenericResource, err error) {
 	for _, plan := range plans {
+
 		resource := plan.Resource
 
 		annotations := resource.GetAnnotations()
+		labels := resource.GetLabels()
 
 		notificationChannels := types.ParseEventNotificationChannels(annotations)
+		containerFilterFunction := GetMonitorContainersFromMeta(labels, annotations)
+		trackInitContainers := getInitContainerTrackingFromMeta(labels, annotations)
+
+		images := resource.GetImages(containerFilterFunction)
+		if trackInitContainers {
+			images = append(images, resource.GetInitImages(containerFilterFunction)...)
+		}
 
 		p.sender.Send(types.EventNotification{
 			ResourceKind: resource.Kind(),
 			Identifier:   resource.Identifier,
 			Name:         "preparing to update resource",
-			Message:      fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", ")),
+			Message:      fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(images, ", ")),
 			CreatedAt:    time.Now(),
 			Type:         types.NotificationPreDeploymentUpdate,
 			Level:        types.LevelDebug,
@@ -357,9 +417,9 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		var msg string
 		releaseNotes := types.ParseReleaseNotesURL(resource.GetAnnotations())
 		if releaseNotes != "" {
-			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s). Release notes: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", "), releaseNotes)
+			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s). Release notes: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(images, ", "), releaseNotes)
 		} else {
-			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(resource.GetImages(), ", "))
+			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(images, ", "))
 		}
 
 		err = p.sender.Send(types.EventNotification{

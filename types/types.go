@@ -1,4 +1,5 @@
 // Package types holds most of the types used across Keel
+//
 //go:generate jsonenums -type=Notification
 //go:generate jsonenums -type=Level
 //go:generate jsonenums -type=TriggerType
@@ -41,6 +42,13 @@ const KeelPollScheduleAnnotation = "keel.sh/pollSchedule"
 
 // KeelInitContainerAnnotation - label or annotation to track init containers, defaults to false for backward compatibility
 const KeelInitContainerAnnotation = "keel.sh/initContainers"
+
+// KeelMonitorContainers - you can only have one keel settings per object type, but some of them might have multiple containers. Use this setting to
+// specify with a regular expression which containers should be monitored. If empty, all containers will be monitored.
+// It is currently a limitation that all containers in the same object will share the same configuration (pollSchedule, etc.).
+// Support a per-container configuration would require quite a refactor that would impact the frontend and the current implementation.
+// Future proposal for this would be to have namespaced annotations such as keel.sh/mycontainer/poolSchedule
+const KeelMonitorContainers = "keel.sh/monitorContainers"
 
 // KeelPollDefaultSchedule - defaul polling schedule
 var KeelPollDefaultSchedule = "@every 1m"

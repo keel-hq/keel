@@ -27,8 +27,14 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 		"policy":    plc.Name(),
 	}).Debug("provider.kubernetes.checkVersionedDeployment: keel policy found, checking resource...")
 	shouldUpdateDeployment = false
+
+	containerFilterFunc := GetMonitorContainersFromMeta(resource.GetAnnotations(), resource.GetLabels())
+
 	if schedule, ok := resource.GetAnnotations()[types.KeelInitContainerAnnotation]; ok && schedule == "true" {
 		for idx, c := range resource.InitContainers() {
+			if !containerFilterFunc(c) {
+				continue
+			}
 			containerImageRef, err := image.Parse(c.Image)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -90,6 +96,9 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 		}
 	}
 	for idx, c := range resource.Containers() {
+		if !containerFilterFunc(c) {
+			continue
+		}
 		containerImageRef, err := image.Parse(c.Image)
 		if err != nil {
 			log.WithFields(log.Fields{

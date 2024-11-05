@@ -192,6 +192,24 @@ To test Keel while developing:
 3. Build Keel from `cmd/keel` directory. 
 4. Start Keel with: `keel --no-incluster`. This will use Kubeconfig from your home. 
 
+### Debugging Keel on Windows
+
+```powershell
+# Ensure we have gcc and go
+choco upgrade mingw -y
+choco upgrade golang -y
+
+# Move and build
+cd cmd/keel
+go build
+
+$Env:XDG_DATA_HOME      = $Env:APPDATA; # Data volume for the local database
+$Env:HOME               = $Env:USERPROFILE; # This is where the .kube/config will be read from
+$Env:KUBERNETES_CONTEXT = "mycontext" #Use if you have more than one context in .kube/config
+
+.\keel --no-incluster
+```
+
 ### Running unit tests
 
 Get a test parser (makes output nice):

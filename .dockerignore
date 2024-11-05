@@ -3,8 +3,7 @@ envsettings.ps1
 envsettings.ps1.template
 helpers.ps1
 LICENSE
-compose.yml
-compose.tests.yml
+compose*
 build.ps1
 azure-pipelines.yml
 .gitignore
@@ -12,10 +11,4 @@ azure-pipelines.yml
 readme.md
 serviceaccount/*
 chart/*
-Dockerfile
-Dockerfile.debug
-Dockerfile.aarch64
-Dockerfile.armhf
-Dockerfile.debian
-Dockerfile.local
-Dockerfile.tests
+Dockerfile*

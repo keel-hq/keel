@@ -5,6 +5,8 @@ import (
 
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/policy"
+
+	"github.com/keel-hq/keel/provider/kubernetes"
 )
 
 type resource struct {
@@ -29,6 +31,7 @@ func (s *TriggerServer) resourcesHandler(resp http.ResponseWriter, req *http.Req
 	for _, v := range vals {
 
 		p := policy.GetPolicyFromLabelsOrAnnotations(v.GetLabels(), v.GetAnnotations())
+		filterFunc := kubernetes.GetMonitorContainersFromMeta(v.GetLabels(), v.GetAnnotations())
 
 		res = append(res, resource{
 			Provider:    "kubernetes",
@@ -39,7 +42,7 @@ func (s *TriggerServer) resourcesHandler(resp http.ResponseWriter, req *http.Req
 			Policy:      p.Name(),
 			Labels:      v.GetLabels(),
 			Annotations: v.GetAnnotations(),
-			Images:      v.GetImages(),
+			Images:      v.GetImages(filterFunc),
 			Status:      v.GetStatus(),
 		})
 	}

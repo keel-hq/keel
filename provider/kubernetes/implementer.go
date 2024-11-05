@@ -3,8 +3,9 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-
 	"github.com/keel-hq/keel/internal/k8s"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	apps_v1 "k8s.io/api/apps/v1"
 	batch_v1 "k8s.io/api/batch/v1"
@@ -13,10 +14,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 )
 
 // Implementer - thing wrapper around currently used k8s APIs
@@ -44,7 +43,12 @@ type Opts struct {
 	// if set - kube config options will be ignored
 	InCluster  bool
 	ConfigPath string
-	Master     string
+	// Override the API server URL
+	MasterUrl string
+	// If multiple context in config path, the context to use
+	CurrentContext string
+	// Unused, possibly legacy
+	Master string
 }
 
 // NewKubernetesImplementer - create new k8s implementer
@@ -63,7 +67,10 @@ func NewKubernetesImplementer(opts *Opts) (*KubernetesImplementer, error) {
 		log.Info("provider.kubernetes: using in-cluster configuration")
 	} else if opts.ConfigPath != "" {
 		var err error
-		cfg, err = clientcmd.BuildConfigFromFlags("", opts.ConfigPath)
+		cfg, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			&clientcmd.ClientConfigLoadingRules{ExplicitPath: opts.ConfigPath},
+			&clientcmd.ConfigOverrides{CurrentContext: opts.CurrentContext, ClusterInfo: clientcmdapi.Cluster{Server: opts.MasterUrl}}).ClientConfig()
+
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
