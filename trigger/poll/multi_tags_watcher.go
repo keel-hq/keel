@@ -1,10 +1,6 @@
 package poll
 
 import (
-	"sort"
-	"strings"
-
-	"github.com/Masterminds/semver"
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
@@ -94,43 +90,30 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 
 	events := []types.Event{}
 
-	// Keep only semver tags, sorted desc (to optimize process)
-	versions := semverSort(tags)
+	if j.details.trackedImage.Policy != nil {
+		tags = j.details.trackedImage.Policy.Filter(tags)
+	}
 
 	for _, trackedImage := range getRelatedTrackedImages(j.details.trackedImage, trackedImages) {
-		// Current version tag might not be a valid semver one
-		currentVersion, invalidCurrentVersion := semver.NewVersion(trackedImage.Image.Tag())
-		// matches, going through tags
-		for _, version := range versions {
-			if invalidCurrentVersion == nil && (currentVersion.GreaterThan(version) || currentVersion.Equal(version)) {
-				// Current tag is a valid semver, and is bigger than currently tested one
-				// -> we can stop now, nothing will be worth upgrading in the rest of the sorted list
-				break
-			}
-			update, err := trackedImage.Policy.ShouldUpdate(trackedImage.Image.Tag(), version.Original())
-			// log.WithFields(log.Fields{
-			// 	"current_tag": j.details.trackedImage.Image.Tag(),
-			// 	"image_name":  j.details.trackedImage.Image.Remote(),
-			// }).Debug("trigger.poll.WatchRepositoryTagsJob: tag: ", version.Original(), "; update: ", update, "; err:", err)
+		for _, tag := range tags {
+			update, err := trackedImage.Policy.ShouldUpdate(trackedImage.Image.Tag(), tag)
 			if err != nil {
 				continue
 			}
-			if update && !exists(version.Original(), events) {
+			if update && !exists(tag, events) {
 				event := types.Event{
 					Repository: types.Repository{
-						Name: j.details.trackedImage.Image.Repository(),
-						Tag:  version.Original(),
+						Name: trackedImage.Image.Repository(),
+						Tag:  tag,
 					},
 					TriggerName: types.TriggerTypePoll.String(),
 				}
 				events = append(events, event)
-				// Only keep first match per image (should be the highest usable version)
 				break
 			}
-
 		}
-
 	}
+
 	log.WithFields(log.Fields{
 		"current_tag": j.details.trackedImage.Image.Tag(),
 		"image_name":  j.details.trackedImage.Image.Remote(),
@@ -146,26 +129,6 @@ func exists(tag string, events []types.Event) bool {
 		}
 	}
 	return false
-}
-
-// Filter and sort tags according to semver, desc
-func semverSort(tags []string) []*semver.Version {
-	var versions []*semver.Version
-	for _, t := range tags {
-		if len(strings.SplitN(t, ".", 3)) < 2 {
-			// Keep only X.Y.Z+ semver
-			continue
-		}
-		v, err := semver.NewVersion(t)
-		// Filter out non semver tags
-		if err != nil {
-			continue
-		}
-		versions = append(versions, v)
-	}
-	// Sort desc, following semver
-	sort.Slice(versions, func(i, j int) bool { return versions[j].LessThan(versions[i]) })
-	return versions
 }
 
 func getRelatedTrackedImages(ours *types.TrackedImage, all []*types.TrackedImage) []*types.TrackedImage {

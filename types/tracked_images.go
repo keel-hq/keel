@@ -30,6 +30,7 @@ type TrackedImage struct {
 type Policy interface {
 	ShouldUpdate(current, new string) (bool, error)
 	Name() string
+	Filter(tags []string) []string
 }
 
 func (i TrackedImage) String() string {
