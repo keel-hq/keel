@@ -3,6 +3,7 @@ package policy
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -34,6 +35,29 @@ func NewRegexpPolicy(policy string) (*RegexpPolicy, error) {
 
 func (p *RegexpPolicy) ShouldUpdate(current, new string) (bool, error) {
 	return p.regexp.MatchString(new), nil
+}
+
+func (p *RegexpPolicy) Filter(tags []string) []string {
+	filtered := []string{}
+	compare := p.regexp.SubexpIndex("compare")
+
+	for _, tag := range tags {
+		if p.regexp.MatchString(tag) {
+			filtered = append(filtered, tag)
+		}
+	}
+
+	sort.Slice(filtered, func(i, j int) bool {
+		if compare != -1 {
+			mi := p.regexp.FindStringSubmatch(filtered[i])
+			mj := p.regexp.FindStringSubmatch(filtered[j])
+			return mi[compare] > mj[compare]
+		} else {
+			return filtered[i] > filtered[j]
+		}
+	})
+
+	return filtered
 }
 
 func (p *RegexpPolicy) Name() string     { return p.policy }
