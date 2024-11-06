@@ -1,7 +1,7 @@
 package webhook
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,7 +14,7 @@ import (
 func TestWebhookRequest(t *testing.T) {
 	currentTime := time.Now()
 	handler := func(resp http.ResponseWriter, req *http.Request) {
-		body, err := ioutil.ReadAll(req.Body)
+		body, err := io.ReadAll(req.Body)
 		if err != nil {
 			t.Errorf("failed to parse body: %s", err)
 		}

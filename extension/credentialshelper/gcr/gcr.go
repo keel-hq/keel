@@ -4,7 +4,6 @@ import (
         "context"
         "errors"
         "fmt"
-        "io/ioutil"
         "os"
         "strings"
     
@@ -54,7 +53,7 @@ func readCredentialsFromFile() (*types.Credentials, error) {
             return nil, errors.New("GOOGLE_APPLICATION_CREDENTIALS environment variable not set")
         }
     
-        credentials, err := ioutil.ReadFile(credentialsFile)
+        credentials, err := os.ReadFile(credentialsFile)
         if err != nil {
             return nil, fmt.Errorf("failed to read credentials file: %w", err)
         }
