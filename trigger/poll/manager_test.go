@@ -2,7 +2,6 @@ package poll
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -30,7 +29,7 @@ func (g *FakeSecretsGetter) Get(image *types.TrackedImage) (*types.Credentials, 
 }
 
 func newTestingUtils() (*sql.SQLStore, func()) {
-	dir, err := ioutil.TempDir("", "whstoretest")
+	dir, err := os.MkdirTemp("", "whstoretest")
 	if err != nil {
 		log.Fatal(err)
 	}

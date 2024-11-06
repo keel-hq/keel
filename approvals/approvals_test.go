@@ -2,7 +2,6 @@ package approvals
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,7 +15,7 @@ import (
 )
 
 func NewTestingUtils() (*sql.SQLStore, func()) {
-	dir, err := ioutil.TempDir("", "whstoretest")
+	dir, err := os.MkdirTemp("", "whstoretest")
 	if err != nil {
 		log.Fatal(err)
 	}
