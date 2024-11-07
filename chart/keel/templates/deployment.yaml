@@ -24,6 +24,7 @@ spec:
 {{ toYaml . | indent 8 }}
 {{- end }}
     spec:
+      securityContext: {{ .Values.securityContext | toYaml | nindent 8 }}
       serviceAccountName: {{ template "serviceAccount.name" . }}
 {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
