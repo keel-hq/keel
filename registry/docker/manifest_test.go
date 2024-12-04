@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	manifestV2 "github.com/docker/distribution/manifest/schema2"
+	manifestV2 "github.com/distribution/distribution/v3/manifest/schema2"
 )
 
 func TestGetDigest(t *testing.T) {

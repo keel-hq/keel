@@ -36,7 +36,7 @@ require (
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/containerd/containerd v1.7.24 // indirect
 	github.com/daneharrigan/hipchat v0.0.0-20170512185232-835dc879394a
-	github.com/docker/distribution v2.8.3+incompatible
+	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker v27.3.1+incompatible // indirect
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
@@ -67,6 +67,7 @@ require (
 require (
 	cloud.google.com/go/storage v1.47.0
 	github.com/alecthomas/kingpin/v2 v2.4.0
+	github.com/distribution/distribution/v3 v3.0.0-20230722181636-7b502560cad4
 	github.com/golang-jwt/jwt/v4 v4.5.1
 	golang.org/x/oauth2 v0.24.0
 	helm.sh/helm/v3 v3.16.3
@@ -223,7 +224,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20241127205056-99599406b04f // indirect
 	k8s.io/kubectl v0.31.3 // indirect
 	k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078 // indirect
-	oras.land/oras-go v1.2.6 // indirect
+	oras.land/oras-go v1.2.5 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/kustomize/api v0.18.0 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.18.1 // indirect
