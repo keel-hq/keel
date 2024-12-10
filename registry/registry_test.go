@@ -36,14 +36,14 @@ func TestOCIDigest(t *testing.T) {
 	digest, err := client.Digest(Opts{
 		Registry: "https://index.docker.io",
 		Name:     "vaultwarden/server",
-		Tag:      "1.25.1",
+		Tag:      "1.32.5",
 	})
 
 	if err != nil {
 		t.Errorf("error while getting digest: %s", err)
 	}
 
-	if digest != "sha256:dd8cf61d1997c098cc5686ef3116ca5cfef36f12192c01caa1de79a968397d4c" {
+	if digest != "sha256:84015c9306cc58f4be8b09c1adc62cfc3b2648b1430e9c15901482f3d870bd14" {
 		t.Errorf("unexpected digest: %s", digest)
 	}
 }
