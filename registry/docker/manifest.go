@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	manifestv2 "github.com/docker/distribution/manifest/schema2"
+	manifestv2 "github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/opencontainers/go-digest"
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
 )

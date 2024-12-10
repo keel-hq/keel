@@ -11,3 +11,5 @@ hack/deployment-norbac-helm.yaml
 tests.out
 envsettings.ps1
 serviceaccount/*
+cmd/keel/keel.exe
+test_results.xml
