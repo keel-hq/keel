@@ -191,6 +191,9 @@ affinity: {}
 
 tolerations: {}
 
+# https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+securityContext: {}
+
 # base64 encoded json of GCP service account
 # more info available here: https://cloud.google.com/kubernetes-engine/docs/tutorials/authenticating-to-cloud-platform
 # e.g. --set googleApplicationCredentials=$(cat <JSON_KEY_FIEL> | base64)
