@@ -92,11 +92,12 @@ func (h *CredentialsHelper) IsEnabled() bool {
 // GetCredentials - finds credentials.
 func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
 	if !h.enabled {
-		return nil, fmt.Errorf("not initialised")
+		return nil, fmt.Errorf("not initialized")
 	}
 	registry := image.Image.Registry()
 	creds := h.cache.Get(registry)
 	if creds != nil {
+		log.WithField("registry", registry).Debug("credentialshelper.dockerhelper: cache hit")
 		return creds.Value(), nil
 	}
 	// Run the credentials helper at h.path and pass the registry via stdin.
@@ -113,6 +114,7 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 		Username: dockerSecret.Username,
 		Password: dockerSecret.Secret,
 	}
+	log.WithField("registry", registry).Debug("credentialshelper.dockerhelper: cache miss")
 	h.cache.Set(registry, crds, 0)
 	return crds, nil
 }
