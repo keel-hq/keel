@@ -54,7 +54,7 @@ require (
 	github.com/tbruyelle/hipchat-go v0.0.0-20170717082847-35aebc99209a
 	github.com/urfave/negroni v1.0.0
 	golang.org/x/crypto v0.31.0 // indirect
-	golang.org/x/net v0.31.0
+	golang.org/x/net v0.33.0
 	google.golang.org/api v0.209.0
 	google.golang.org/grpc v1.68.0
 	k8s.io/api v0.31.3
