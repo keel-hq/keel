@@ -96,7 +96,8 @@ The following table lists has the main configurable parameters (polling, trigger
 | `webhook.endpoint`                          | Remote webhook endpoint                |                                                           |
 | `slack.enabled`                             | Enable/disable Slack Notification      | `false`                                                   |
 | `slack.botName`                             | Name of the Slack bot                  |                                                           |
-| `slack.token`                               | Slack token                            |                                                           |
+| `slack.botToken`                            | Slack bot token                        |                                                           |
+| `slack.appToken`                            | Slack application level token          |                                                           |
 | `slack.channel`                             | Slack channel                          |                                                           |
 | `slack.approvalsChannel`                    | Slack channel for approvals            |                                                           |
 | `teams.enabled`                             | Enable/disable MS Teams Notification   | `false`                                                   |
