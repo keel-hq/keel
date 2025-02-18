@@ -29,6 +29,10 @@ spec:
       imagePullSecrets:
 {{- toYaml . | nindent 8 }}
 {{- end }}
+{{- with .Values.podSecurityContext }}
+      securityContext:
+{{- toYaml . | nindent 8 }}
+{{- end }}
       containers:
 {{- if .Values.extraContainers }}
 {{ toYaml .Values.extraContainers | indent 8 }}
@@ -38,6 +42,10 @@ spec:
           image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/keel"]
+{{- with .Values.containerSecurityContext }}
+          securityContext:
+{{- toYaml . | nindent 12 }}
+{{- end }}
           volumeMounts:
 {{- if .Values.persistence.enabled }}
             - name: storage-logs

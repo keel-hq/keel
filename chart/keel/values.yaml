@@ -250,3 +250,9 @@ persistence:
   enabled: false
   storageClass: "-"
   size: 1Gi
+
+# -- Pod security context (runAsUser, etc.)
+podSecurityContext: {}
+
+# -- Container security context (allowPrivilegeEscalation, etc.)
+containerSecurityContext: {}
