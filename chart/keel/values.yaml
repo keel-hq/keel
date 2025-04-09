@@ -72,7 +72,8 @@ webhook:
 slack:
   enabled: false
   botName: ""
-  token: ""
+  appToken: ""
+  botToken: ""
   channel: ""
   approvalsChannel: ""
 
