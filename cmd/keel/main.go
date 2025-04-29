@@ -1,12 +1,11 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"time"
-
-	"context"
 
 	kingpin "github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -50,6 +49,7 @@ import (
 
 	// credentials helpers
 	_ "github.com/keel-hq/keel/extension/credentialshelper/aws"
+	_ "github.com/keel-hq/keel/extension/credentialshelper/dockerhelper"
 	_ "github.com/keel-hq/keel/extension/credentialshelper/gcr"
 	secretsCredentialsHelper "github.com/keel-hq/keel/extension/credentialshelper/secrets"
 
@@ -361,7 +361,6 @@ type TriggerOpts struct {
 // should go through all providers (or not if there is a reason) and submit events)
 // func setupTriggers(ctx context.Context, providers provider.Providers, approvalsManager approvals.Manager, grc *k8s.GenericResourceCache, k8sClient kubernetes.Implementer) (teardown func()) {
 func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
-
 	authenticator := auth.New(&auth.Opts{
 		Username: os.Getenv(constants.EnvBasicAuthUser),
 		Password: os.Getenv(constants.EnvBasicAuthPassword),
