@@ -1,7 +1,6 @@
 package helm3
 
 import (
-	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
@@ -52,7 +51,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 	}
 	log.Infof("policy for release %s/%s parsed: %s", namespace, name, keelCfg.Plc.Name())
 
-	if keelCfg.Plc.Type() == policy.PolicyTypeNone {
+	if keelCfg.Plc.Type() == types.PolicyTypeNone {
 		// policy is not set, ignoring release
 		return plan, false, nil
 	}

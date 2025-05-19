@@ -100,7 +100,13 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 			if err != nil {
 				continue
 			}
-			if update && !exists(tag, events) {
+			if update == false {
+				continue
+			}
+			if trackedImage.Image.Tag() == tag {
+				break
+			}
+			if !exists(tag, events) {
 				event := types.Event{
 					Repository: types.Repository{
 						Name: trackedImage.Image.Repository(),
@@ -138,7 +144,6 @@ func getRelatedTrackedImages(ours *types.TrackedImage, all []*types.TrackedImage
 			b = append(b, x)
 		}
 	}
-
 	return b
 }
 

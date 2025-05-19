@@ -8,20 +8,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type PolicyType int
-
-const (
-	PolicyTypeNone PolicyType = iota
-	PolicyTypeSemver
-	PolicyTypeForce
-	PolicyTypeGlob
-	PolicyTypeRegexp
-)
-
 type Policy interface {
 	ShouldUpdate(current, new string) (bool, error)
 	Name() string
-	Type() PolicyType
+	Type() types.PolicyType
 	Filter(tags []string) []string
 }
 
@@ -29,7 +19,7 @@ type NilPolicy struct{}
 
 func (np *NilPolicy) ShouldUpdate(c, n string) (bool, error) { return false, nil }
 func (np *NilPolicy) Name() string                           { return "nil policy" }
-func (np *NilPolicy) Type() PolicyType                       { return PolicyTypeNone }
+func (np *NilPolicy) Type() types.PolicyType                 { return types.PolicyTypeNone }
 func (np *NilPolicy) Filter(tags []string) []string          { return append([]string{}, tags...) }
 
 // GetPolicyFromLabelsOrAnnotations - gets policy from k8s labels or annotations

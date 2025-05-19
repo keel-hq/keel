@@ -3,6 +3,7 @@ package policy
 import (
 	"errors"
 	"fmt"
+	"github.com/keel-hq/keel/types"
 	"sort"
 	"strings"
 
@@ -62,7 +63,7 @@ func (sp *SemverPolicy) Name() string {
 	return sp.spt.String()
 }
 
-func (sp *SemverPolicy) Type() PolicyType { return PolicyTypeSemver }
+func (sp *SemverPolicy) Type() types.PolicyType { return types.PolicyTypeSemver }
 
 func shouldUpdate(spt SemverPolicyType, matchPreRelease bool, current, new string) (bool, error) {
 	if current == "latest" {

@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-
 	"github.com/keel-hq/keel/util/image"
 )
 
@@ -31,6 +30,7 @@ type Policy interface {
 	ShouldUpdate(current, new string) (bool, error)
 	Name() string
 	Filter(tags []string) []string
+	Type() PolicyType
 }
 
 func (i TrackedImage) String() string {

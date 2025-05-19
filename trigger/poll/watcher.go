@@ -269,34 +269,30 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 	//  - for non-semver types we create a single tag watcher which
 	// checks digest
 	_, err = version.GetVersion(ti.Image.Tag())
-	if err != nil || keepTag == true {
+
+	if keepTag == false && (ti.Policy != nil && (ti.Policy.Type() == types.PolicyTypeGlob || ti.Policy.Type() == types.PolicyTypeRegexp) || err == nil) {
 		// adding new job
-		job := NewWatchTagJob(w.providers, w.registryClient, details)
+		job := NewWatchRepositoryTagsJob(w.providers, w.registryClient, details)
 		log.WithFields(log.Fields{
 			"job_name": key,
 			"image":    ti.Image.String(),
 			"digest":   digest,
 			"schedule": schedule,
-		}).Info("trigger.poll.RepositoryWatcher: new watch tag digest job added")
-
-		// running it now
+		}).Info("trigger.poll.RepositoryWatcher: new watch repository tags job added")
 		job.Run()
-
 		return w.cron.AddJob(key, schedule, job)
 	}
 
 	// adding new job
-	job := NewWatchRepositoryTagsJob(w.providers, w.registryClient, details)
+	job := NewWatchTagJob(w.providers, w.registryClient, details)
 	log.WithFields(log.Fields{
 		"job_name": key,
 		"image":    ti.Image.String(),
 		"digest":   digest,
 		"schedule": schedule,
-	}).Info("trigger.poll.RepositoryWatcher: new watch repository tags job added")
+	}).Info("trigger.poll.RepositoryWatcher: new watch tag digest job added")
 
 	// running it now
 	job.Run()
-
 	return w.cron.AddJob(key, schedule, job)
-
 }

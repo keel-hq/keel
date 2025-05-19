@@ -2,6 +2,7 @@ package policy
 
 import (
 	"fmt"
+	"github.com/keel-hq/keel/types"
 	"regexp"
 	"sort"
 	"strings"
@@ -60,5 +61,5 @@ func (p *RegexpPolicy) Filter(tags []string) []string {
 	return filtered
 }
 
-func (p *RegexpPolicy) Name() string     { return p.policy }
-func (p *RegexpPolicy) Type() PolicyType { return PolicyTypeRegexp }
+func (p *RegexpPolicy) Name() string           { return p.policy }
+func (p *RegexpPolicy) Type() types.PolicyType { return types.PolicyTypeRegexp }
