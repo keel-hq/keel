@@ -1,9 +1,11 @@
 package schedule
 
 import (
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/keel-hq/keel/types"
 	"github.com/rusenask/cron"
 	"github.com/stretchr/testify/assert"
 )
@@ -207,4 +209,178 @@ func TestFindPrevScheduledTime_EdgeCases(t *testing.T) {
 		assert.True(t, duration < 100*time.Millisecond,
 			"Finding prev time took too long: %v", duration)
 	})
+}
+
+func TestParseUpdateSchedule(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		wantErr     bool
+		errMsg      string
+		wantNil     bool
+	}{
+		{
+			name:        "nil annotations",
+			annotations: nil,
+			wantNil:     true,
+		},
+		{
+			name:        "empty annotations",
+			annotations: map[string]string{},
+			wantNil:     true,
+		},
+		{
+			name: "invalid cron format",
+			annotations: map[string]string{
+				types.KeelUpdateScheduleCronTabs: "invalid|5m",
+			},
+			wantErr: true,
+			errMsg:  "Expected 5 to 6 fields, found 1: invalid",
+		},
+		{
+			name: "invalid duration format",
+			annotations: map[string]string{
+				types.KeelUpdateScheduleCronTabs: "0 * * * * *|invalid",
+			},
+			wantErr: true,
+			errMsg:  "time: invalid duration \"invalid\"",
+		},
+		{
+			name: "missing duration part",
+			annotations: map[string]string{
+				types.KeelUpdateScheduleCronTabs: "0 * * * * *",
+			},
+			wantErr: true,
+			errMsg:  "invalid schedule format '0 * * * * *', expected 'CRONTAB|DURATION,CRONTAB2|DURATION2'",
+		},
+		{
+			name: "valid single schedule",
+			annotations: map[string]string{
+				types.KeelUpdateScheduleCronTabs: "0 */5 * * * *|10m",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid multiple schedules",
+			annotations: map[string]string{
+				types.KeelUpdateScheduleCronTabs: "0 0 0 * * *|1h, 0 */30 * * * *|15m",
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty schedule in list",
+			annotations: map[string]string{
+				types.KeelUpdateScheduleCronTabs: "0 0 0 * * *|1h, , 0 */30 * * * *|15m",
+			},
+			wantErr: false,
+		},
+		{
+			name: "whitespace in schedule",
+			annotations: map[string]string{
+				types.KeelUpdateScheduleCronTabs: "  0 0 0 * * *  |  1h  ",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			schedule, err := ParseUpdateSchedule(tt.annotations)
+			if tt.wantNil {
+				if schedule != nil {
+					t.Errorf("ParseUpdateSchedule() = %v, want nil", schedule)
+				}
+				return
+			}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseUpdateSchedule() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && err != nil {
+				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+					t.Errorf("ParseUpdateSchedule() error = %v, want error containing %v", err, tt.errMsg)
+				}
+				return
+			}
+			if !tt.wantErr && schedule == nil {
+				t.Error("ParseUpdateSchedule() = nil, want non-nil")
+			}
+		})
+	}
+}
+
+func TestIsUpdateAllowed(t *testing.T) {
+	// Use a fixed time that aligns with our cron schedules
+	baseTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name       string
+		schedule   string
+		lastUpdate time.Time
+		checkTime  time.Time
+		want       bool
+		wantErr    bool
+	}{
+		{
+			name:     "nil schedule",
+			schedule: "",
+			want:     true,
+		},
+		{
+			name:       "within window",
+			schedule:   "0 0 * * * *|5m", // every hour at minute 0 with 5m window
+			lastUpdate: baseTime.Add(-10 * time.Minute),
+			checkTime:  baseTime, // 12:00:00, which matches the schedule
+			want:       true,
+		},
+		{
+			name:       "outside window",
+			schedule:   "0 0 * * * *|5m", // every hour at minute 0 with 5m window
+			lastUpdate: baseTime.Add(-10 * time.Minute),
+			checkTime:  baseTime.Add(30 * time.Minute), // 12:30, which is outside the window
+			want:       false,
+		},
+		{
+			name:       "multiple schedules - one matches",
+			schedule:   "0 0 0 * * *|1h, 0 0 * * * *|10m", // daily at midnight with 1h window, and hourly with 10m window
+			lastUpdate: baseTime.Add(-30 * time.Minute),
+			checkTime:  baseTime, // 12:00:00, which matches the hourly schedule
+			want:       true,
+		},
+		{
+			name:       "within cooldown period",
+			schedule:   "0 0 * * * *|5m", // every hour with 5m window
+			lastUpdate: baseTime.Add(-2 * time.Minute),
+			checkTime:  baseTime,
+			want:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var schedule *UpdateSchedule
+			var err error
+
+			if tt.schedule != "" {
+				schedule, err = ParseUpdateSchedule(map[string]string{
+					types.KeelUpdateScheduleCronTabs: tt.schedule,
+				})
+				if err != nil {
+					t.Fatalf("Failed to parse schedule: %v", err)
+				}
+			}
+
+			got, err := schedule.IsUpdateAllowed(tt.lastUpdate, tt.checkTime)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("IsUpdateAllowed() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("IsUpdateAllowed() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func contains(s, substr string) bool {
+	return s != "" && substr != "" && s != substr && len(s) > len(substr) && strings.Contains(s, substr)
 }

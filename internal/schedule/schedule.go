@@ -11,9 +11,13 @@ import (
 
 // UpdateSchedule represents the update schedule configuration
 type UpdateSchedule struct {
-	CronTabs []string
-	Duration string
-	CoolDown string
+	Schedules []Schedule
+}
+
+// Schedule represents a single schedule entry with its window duration
+type Schedule struct {
+	Crontab  cron.Schedule
+	Duration time.Duration
 }
 
 // ParseUpdateSchedule parses the update schedule from annotations
@@ -22,46 +26,58 @@ func ParseUpdateSchedule(annotations map[string]string) (*UpdateSchedule, error)
 		return nil, nil
 	}
 
-	schedule := &UpdateSchedule{
-		CronTabs: strings.Split(annotations[types.KeelUpdateScheduleCronTabs], ","),
-		Duration: annotations[types.KeelUpdateScheduleDurationMinutes],
-		CoolDown: annotations[types.KeelUpdateScheduleCoolDownMinutes],
-	}
-
-	// If no schedule is configured, return nil
-	if len(schedule.CronTabs) == 0 || schedule.CronTabs[0] == "" {
+	cronStr := annotations[types.KeelUpdateScheduleCronTabs]
+	if cronStr == "" {
 		return nil, nil
 	}
 
-	// Validate cron schedules
-	for _, cronStr := range schedule.CronTabs {
-		cronStr = strings.TrimSpace(cronStr)
-		if cronStr == "" {
+	// Parse and validate cron schedules
+	cronStrings := strings.Split(cronStr, ",")
+	var schedules []Schedule
+
+	for _, cs := range cronStrings {
+		cs = strings.TrimSpace(cs)
+		if cs == "" {
 			continue
 		}
-		_, err := cron.Parse(cronStr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid cron schedule '%s': %v", cronStr, err)
+
+		// Split into crontab and duration parts
+		parts := strings.Split(cs, "|")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("internal.schedule.schedule: invalid schedule format '%s', expected 'CRONTAB|DURATION,CRONTAB2|DURATION2'", cs)
 		}
+
+		// Parse crontab
+		cronPart := strings.TrimSpace(parts[0])
+		schedule, err := cron.Parse(cronPart)
+		if err != nil {
+			return nil, fmt.Errorf("internal.schedule.schedule: invalid cron schedule '%s': %v", cronPart, err)
+		}
+
+		// Parse duration if provided
+		var duration time.Duration
+		durationStr := strings.TrimSpace(parts[1])
+		if durationStr != "" {
+			duration, err = time.ParseDuration(durationStr)
+			if err != nil {
+				return nil, fmt.Errorf("internal.schedule.schedule: invalid duration '%s': %v", durationStr, err)
+			}
+		}
+
+		schedules = append(schedules, Schedule{
+			Crontab:  schedule,
+			Duration: duration,
+		})
 	}
 
-	// Validate duration if provided
-	if schedule.Duration != "" {
-		_, err := time.ParseDuration(schedule.Duration)
-		if err != nil {
-			return nil, fmt.Errorf("invalid duration: %v", err)
-		}
+	// If no valid schedules found, return nil
+	if len(schedules) == 0 {
+		return nil, nil
 	}
 
-	// Validate cooldown if provided
-	if schedule.CoolDown != "" {
-		_, err := time.ParseDuration(schedule.CoolDown)
-		if err != nil {
-			return nil, fmt.Errorf("invalid cooldown: %v", err)
-		}
-	}
-
-	return schedule, nil
+	return &UpdateSchedule{
+		Schedules: schedules,
+	}, nil
 }
 
 // findPrevScheduledTime finds the most recent time before now that matches the schedule
@@ -91,7 +107,7 @@ func findPrevScheduledTime(schedule cron.Schedule, now time.Time) (time.Time, er
 		loopCount++
 
 		if loopCount > shortCircuit {
-			return time.Time{}, fmt.Errorf("schedule prev() algorithm did not converge soon enough (or at all)")
+			return time.Time{}, fmt.Errorf("internal.schedule.schedule prev() algorithm did not converge soon enough (or at all)")
 		}
 
 		next := schedule.Next(current)
@@ -122,52 +138,30 @@ func findPrevScheduledTime(schedule cron.Schedule, now time.Time) (time.Time, er
 }
 
 // IsUpdateAllowed checks if an update is allowed based on the schedule and last update time
-func (s *UpdateSchedule) IsUpdateAllowed(lastUpdateTime time.Time) (bool, error) {
+func (s *UpdateSchedule) IsUpdateAllowed(lastUpdateTime time.Time, now time.Time) (bool, error) {
 	if s == nil {
 		return true, nil
 	}
 
-	// Check cooldown period
-	if s.CoolDown != "" {
-		cooldown, _ := time.ParseDuration(s.CoolDown)
-		if time.Since(lastUpdateTime) < cooldown {
-			return false, nil
-		}
-	}
-
-	// Check each cron schedule
-	now := time.Now()
-
-	for _, cronStr := range s.CronTabs {
-		cronStr = strings.TrimSpace(cronStr)
-		if cronStr == "" {
+	for _, schedule := range s.Schedules {
+		// Get previous run time
+		prevRun, err := findPrevScheduledTime(schedule.Crontab, now)
+		if err != nil {
 			continue
 		}
-
-		// Parse cron schedule
-		schedule, err := cron.Parse(cronStr)
-		if err != nil {
-			return false, fmt.Errorf("invalid cron schedule '%s': %v", cronStr, err)
-		}
-
-		// Get previous run time
-		prevRun, _ := findPrevScheduledTime(schedule, now)
 		if prevRun.IsZero() {
 			continue
 		}
 
+		// Check if we're within cooldown period
+		if now.Sub(lastUpdateTime) < schedule.Duration {
+			continue
+		}
+
 		// Check if we're within the update window
-		if s.Duration != "" {
-			duration, _ := time.ParseDuration(s.Duration)
-			windowEnd := prevRun.Add(duration)
-			if now.After(prevRun) && now.Before(windowEnd) {
-				return true, nil
-			}
-		} else {
-			// If no duration specified, only allow updates at the exact cron time
-			if now.Equal(prevRun) {
-				return true, nil
-			}
+		windowEnd := prevRun.Add(schedule.Duration)
+		if now.Equal(prevRun) || (now.After(prevRun) && now.Before(windowEnd)) {
+			return true, nil
 		}
 	}
 

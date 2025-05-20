@@ -23,7 +23,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 			"error":     err,
 			"name":      resource.Name,
 			"namespace": resource.Namespace,
-		}).Error("provider.kubernetes: failed to parse update schedule")
+		}).Error("provider.kubernetes.updates.checkForUpdate: failed to parse update schedule")
 		return nil, false, err
 	}
 
@@ -38,7 +38,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 					"error":     err,
 					"name":      resource.Name,
 					"namespace": resource.Namespace,
-				}).Error("provider.kubernetes: failed to parse last update time")
+				}).Error("provider.kubernetes.updates.checkForUpdate: failed to parse last update time")
 				return nil, false, err
 			}
 		}
@@ -49,7 +49,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 				"error":     err,
 				"name":      resource.Name,
 				"namespace": resource.Namespace,
-			}).Error("provider.kubernetes: failed to check update schedule")
+			}).Error("provider.kubernetes.updates.checkForUpdate: failed to check update schedule")
 			return nil, false, err
 		}
 
@@ -57,7 +57,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 			log.WithFields(log.Fields{
 				"name":      resource.Name,
 				"namespace": resource.Namespace,
-			}).Info("provider.kubernetes: update not allowed by schedule")
+			}).Debug("provider.kubernetes.updates.checkForUpdate: update not allowed by schedule")
 			return nil, false, nil
 		}
 	}
@@ -72,7 +72,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 		"namespace": resource.Namespace,
 		"kind":      resource.Kind(),
 		"policy":    plc.Name(),
-	}).Debug("provider.kubernetes.checkVersionedDeployment: keel policy found, checking resource...")
+	}).Debug("provider.kubernetes.updates.checkForUpdate: keel policy found, checking resource...")
 	shouldUpdateDeployment = false
 
 	containerFilterFunc := GetMonitorContainersFromMeta(resource.GetAnnotations(), resource.GetLabels())
@@ -87,7 +87,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 				log.WithFields(log.Fields{
 					"error":      err,
 					"image_name": c.Image,
-				}).Error("provider.kubernetes: failed to parse image name")
+				}).Error("provider.kubernetes.updates.checkForUpdate: failed to parse image name")
 				continue
 			}
 
