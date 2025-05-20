@@ -6,6 +6,7 @@ import (
 
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/policy"
+	"github.com/keel-hq/keel/internal/schedule"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 
@@ -14,6 +15,52 @@ import (
 
 func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.GenericResource) (updatePlan *UpdatePlan, shouldUpdateDeployment bool, err error) {
 	updatePlan = &UpdatePlan{}
+
+	// Get update schedule
+	schedule, err := schedule.ParseUpdateSchedule(resource.GetAnnotations())
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":     err,
+			"name":      resource.Name,
+			"namespace": resource.Namespace,
+		}).Error("provider.kubernetes: failed to parse update schedule")
+		return nil, false, err
+	}
+
+	// Check if update is allowed based on schedule
+	if schedule != nil {
+		lastUpdateStr := resource.GetAnnotations()[types.KeelUpdateTimeAnnotation]
+		var lastUpdate time.Time
+		if lastUpdateStr != "" {
+			lastUpdate, err = time.Parse(time.RFC3339, lastUpdateStr)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":     err,
+					"name":      resource.Name,
+					"namespace": resource.Namespace,
+				}).Error("provider.kubernetes: failed to parse last update time")
+				return nil, false, err
+			}
+		}
+
+		allowed, err := schedule.IsUpdateAllowed(lastUpdate)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":     err,
+				"name":      resource.Name,
+				"namespace": resource.Namespace,
+			}).Error("provider.kubernetes: failed to check update schedule")
+			return nil, false, err
+		}
+
+		if !allowed {
+			log.WithFields(log.Fields{
+				"name":      resource.Name,
+				"namespace": resource.Namespace,
+			}).Info("provider.kubernetes: update not allowed by schedule")
+			return nil, false, nil
+		}
+	}
 
 	eventRepoRef, err := image.Parse(repo.String())
 	if err != nil {
@@ -166,4 +213,88 @@ func setUpdateTime(resource *k8s.GenericResource) {
 	specAnnotations := resource.GetSpecAnnotations()
 	specAnnotations[types.KeelUpdateTimeAnnotation] = time.Now().String()
 	resource.SetSpecAnnotations(specAnnotations)
+}
+
+func (p *Provider) checkForUpdate(resource k8s.GenericResource, repo *types.Repository) error {
+	// Get update schedule
+	schedule, err := schedule.ParseUpdateSchedule(resource.GetAnnotations())
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":     err,
+			"name":      resource.Name,
+			"namespace": resource.Namespace,
+		}).Error("provider.kubernetes: failed to parse update schedule")
+		return err
+	}
+
+	// Check if update is allowed based on schedule
+	if schedule != nil {
+		lastUpdateStr := resource.GetAnnotations()[types.KeelUpdateTimeAnnotation]
+		var lastUpdate time.Time
+		if lastUpdateStr != "" {
+			lastUpdate, err = time.Parse(time.RFC3339, lastUpdateStr)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":     err,
+					"name":      resource.Name,
+					"namespace": resource.Namespace,
+				}).Error("provider.kubernetes: failed to parse last update time")
+				return err
+			}
+		}
+
+		allowed, err := schedule.IsUpdateAllowed(lastUpdate)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":     err,
+				"name":      resource.Name,
+				"namespace": resource.Namespace,
+			}).Error("provider.kubernetes: failed to check update schedule")
+			return err
+		}
+
+		if !allowed {
+			log.WithFields(log.Fields{
+				"name":      resource.Name,
+				"namespace": resource.Namespace,
+			}).Info("provider.kubernetes: update not allowed by schedule")
+			return nil
+		}
+	}
+
+	// Get policy from labels/annotations
+	plc := policy.GetPolicyFromLabelsOrAnnotations(resource.GetLabels(), resource.GetAnnotations())
+	if plc.Type() == types.PolicyTypeNone {
+		return nil
+	}
+
+	// Check for updates
+	updatePlan, shouldUpdate, err := checkForUpdate(plc, repo, &resource)
+	if err != nil {
+		return err
+	}
+
+	if !shouldUpdate {
+		return nil
+	}
+
+	// Submit update plan
+	updated, err := p.updateDeployments([]*UpdatePlan{updatePlan})
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":     err,
+			"name":      resource.Name,
+			"namespace": resource.Namespace,
+		}).Error("provider.kubernetes: failed to submit update plan")
+		return err
+	}
+
+	if len(updated) == 0 {
+		log.WithFields(log.Fields{
+			"name":      resource.Name,
+			"namespace": resource.Namespace,
+		}).Info("provider.kubernetes: no resources were updated")
+	}
+
+	return nil
 }

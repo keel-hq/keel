@@ -75,6 +75,16 @@ const KeelApprovalDeadlineDefault = 24
 // KeelReleasePage - optional release notes URL passed on with notification
 const KeelReleaseNotesURL = "keel.sh/releaseNotes"
 
+// Update schedule annotations
+const (
+	// KeelUpdateScheduleCronTabs - cron schedules for when updates are allowed
+	KeelUpdateScheduleCronTabs = "keel.sh/updateScheduleCronTabs"
+	// KeelUpdateScheduleDurationMinutes - how long the update window stays open
+	KeelUpdateScheduleDurationMinutes = "keel.sh/updateScheduleDurationMinutes"
+	// KeelUpdateScheduleCoolDownMinutes - cooldown period after an update
+	KeelUpdateScheduleCoolDownMinutes = "keel.sh/updateScheduleCoolDownMinutes"
+)
+
 func init() {
 	value, found := os.LookupEnv("POLL_DEFAULTSCHEDULE")
 	if found {

@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+
 	"github.com/keel-hq/keel/util/image"
 )
 
