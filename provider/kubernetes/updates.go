@@ -43,7 +43,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 			}
 		}
 
-		allowed, err := schedule.IsUpdateAllowed(lastUpdate)
+		allowed, err := schedule.IsUpdateAllowed(lastUpdate, time.Now())
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":     err,
@@ -243,7 +243,7 @@ func (p *Provider) checkForUpdate(resource k8s.GenericResource, repo *types.Repo
 			}
 		}
 
-		allowed, err := schedule.IsUpdateAllowed(lastUpdate)
+		allowed, err := schedule.IsUpdateAllowed(lastUpdate, time.Now())
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":     err,
@@ -264,7 +264,7 @@ func (p *Provider) checkForUpdate(resource k8s.GenericResource, repo *types.Repo
 
 	// Get policy from labels/annotations
 	plc := policy.GetPolicyFromLabelsOrAnnotations(resource.GetLabels(), resource.GetAnnotations())
-	if plc.Type() == types.PolicyTypeNone {
+	if plc.Type() == policy.PolicyTypeNone {
 		return nil
 	}
 
