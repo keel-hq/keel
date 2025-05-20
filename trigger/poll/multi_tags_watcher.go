@@ -110,6 +110,7 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 			if update == false {
 				continue
 			}
+			// When using tags watcher we rely completely on tag names to deal with updates.
 			if trackedImage.Image.Tag() == tag {
 				break
 			}
