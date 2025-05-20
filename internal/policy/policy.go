@@ -3,6 +3,9 @@ package policy
 import (
 	"strings"
 
+	"github.com/keel-hq/keel/util/image"
+	"github.com/keel-hq/keel/util/version"
+
 	"github.com/keel-hq/keel/types"
 
 	log "github.com/sirupsen/logrus"
@@ -134,4 +137,20 @@ func getMatchPreRelease(labels map[string]string) bool {
 
 	// Default to true for backward compatibility
 	return true
+}
+
+// LegacyPolicyPopulate creates a policy based on the image tag
+func LegacyPolicyPopulate(ref *image.Reference) Policy {
+	_, err := version.GetVersion(ref.Tag())
+	var policy Policy
+	if err == nil {
+		policy = NewSemverPolicy(SemverPolicyTypeAll, true)
+	} else {
+		policy = NewForcePolicy(true)
+	}
+	log.WithFields(log.Fields{
+		"image":  ref.Name(),
+		"policy": policy.Type(),
+	}).Info("trigger.poll.watcher: image policy was not configured. Automatic policy was set.")
+	return policy
 }

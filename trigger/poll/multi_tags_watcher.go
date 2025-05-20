@@ -99,9 +99,7 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 
 		// The fact that they are related, does not mean they share the exact same Policy configuration, so wee need
 		// to calculate the tags here for each image.
-		if j.details.trackedImage.Policy != nil {
-			filteredTags = j.details.trackedImage.Policy.Filter(tags)
-		}
+		filteredTags = j.details.trackedImage.Policy.Filter(tags)
 
 		for _, tag := range filteredTags {
 
@@ -149,7 +147,7 @@ func exists(tag string, events []types.Event) bool {
 func getRelatedTrackedImages(ours *types.TrackedImage, all []*types.TrackedImage) []*types.TrackedImage {
 	b := all[:0]
 	for _, x := range all {
-		if getImageIdentifier(x) == getImageIdentifier(ours) {
+		if getImageIdentifier(x.Image, x.Policy.KeepTag()) == getImageIdentifier(ours.Image, ours.Policy.KeepTag()) {
 			b = append(b, x)
 		}
 	}

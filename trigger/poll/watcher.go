@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/keel-hq/keel/util/image"
+
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
@@ -90,11 +92,11 @@ func (w *RepositoryWatcher) Start(ctx context.Context) {
 
 // This identifier is used to key the watchers, so that only a watcher
 // is setup per identifier
-func getImageIdentifier(ref *types.TrackedImage) string {
-	if ref.Policy != nil && ref.Policy.KeepTag() == true {
-		return ref.Image.Registry() + "/" + ref.Image.ShortName() + ":" + ref.Image.Tag()
+func getImageIdentifier(ref *image.Reference, keepTag bool) string {
+	if keepTag == true {
+		return ref.Registry() + "/" + ref.ShortName() + ":" + ref.Tag()
 	}
-	return ref.Image.Registry() + "/" + ref.Image.ShortName()
+	return ref.Registry() + "/" + ref.ShortName()
 }
 
 // Unwatch - stop watching for changes
@@ -170,7 +172,7 @@ func (w *RepositoryWatcher) watch(image *types.TrackedImage) (string, error) {
 		return "", fmt.Errorf("invalid cron schedule: %s", err)
 	}
 
-	key := getImageIdentifier(image)
+	key := getImageIdentifier(image.Image, image.Policy.KeepTag())
 
 	// checking whether it's already being watched
 	details, ok := w.watched[key]
@@ -236,7 +238,7 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 		return err
 	}
 
-	key := getImageIdentifier(ti)
+	key := getImageIdentifier(ti.Image, ti.Policy.KeepTag())
 
 	details := &watchDetails{
 		trackedImage: ti,
@@ -249,8 +251,8 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 	w.watched[key] = details
 
 	// read the docs several times, the only legit case when want a tag watcher
-	// is when policy is force and keel.sh/match-tag=true
-	if ti.Policy != nil && ti.Policy.KeepTag() {
+	// is when policy is force and keel.sh/match-tag=true.
+	if ti.Policy.KeepTag() {
 		// adding new job
 		job := NewWatchTagJob(w.providers, w.registryClient, details)
 		log.WithFields(log.Fields{

@@ -25,6 +25,7 @@ func mustParse(img string, schedule string) *types.TrackedImage {
 		Image:        ref,
 		PollSchedule: schedule,
 		Trigger:      types.TriggerTypePoll,
+		Policy:       policy.LegacyPolicyPopulate(ref),
 	}
 }
 
