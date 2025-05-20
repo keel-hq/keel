@@ -90,7 +90,7 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 
 	events := []types.Event{}
 
-	// This contains all tracked images that share the same repository path
+	// This contains all tracked images that share the same imageIdentifier and thus, the same watcher
 	allRelatedTrackedImages := getRelatedTrackedImages(j.details.trackedImage, trackedImages)
 
 	for _, trackedImage := range allRelatedTrackedImages {
@@ -149,7 +149,7 @@ func exists(tag string, events []types.Event) bool {
 func getRelatedTrackedImages(ours *types.TrackedImage, all []*types.TrackedImage) []*types.TrackedImage {
 	b := all[:0]
 	for _, x := range all {
-		if x.Image.Repository() == ours.Image.Repository() {
+		if getImageIdentifier(x) == getImageIdentifier(ours) {
 			b = append(b, x)
 		}
 	}

@@ -63,3 +63,4 @@ func (p *RegexpPolicy) Filter(tags []string) []string {
 
 func (p *RegexpPolicy) Name() string           { return p.policy }
 func (p *RegexpPolicy) Type() types.PolicyType { return types.PolicyTypeRegexp }
+func (p *RegexpPolicy) KeepTag() bool          { return false }

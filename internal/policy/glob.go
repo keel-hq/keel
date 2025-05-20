@@ -51,3 +51,4 @@ func (p *GlobPolicy) Filter(tags []string) []string {
 
 func (p *GlobPolicy) Name() string           { return p.policy }
 func (p *GlobPolicy) Type() types.PolicyType { return types.PolicyTypeGlob }
+func (p *GlobPolicy) KeepTag() bool          { return false }
