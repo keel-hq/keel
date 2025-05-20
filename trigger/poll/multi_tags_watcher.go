@@ -90,12 +90,21 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 
 	events := []types.Event{}
 
-	if j.details.trackedImage.Policy != nil {
-		tags = j.details.trackedImage.Policy.Filter(tags)
-	}
+	// This contains all tracked images that share the same repository path
+	allRelatedTrackedImages := getRelatedTrackedImages(j.details.trackedImage, trackedImages)
 
-	for _, trackedImage := range getRelatedTrackedImages(j.details.trackedImage, trackedImages) {
-		for _, tag := range tags {
+	for _, trackedImage := range allRelatedTrackedImages {
+
+		filteredTags := tags
+
+		// The fact that they are related, does not mean they share the exact same Policy configuration, so wee need
+		// to calculate the tags here for each image.
+		if j.details.trackedImage.Policy != nil {
+			filteredTags = j.details.trackedImage.Policy.Filter(tags)
+		}
+
+		for _, tag := range filteredTags {
+
 			update, err := trackedImage.Policy.ShouldUpdate(trackedImage.Image.Tag(), tag)
 			if err != nil {
 				continue
