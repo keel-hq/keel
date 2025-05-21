@@ -378,3 +378,13 @@ func (t ProviderType) String() string {
 		return ""
 	}
 }
+
+type PolicyType int
+
+const (
+	PolicyTypeNone PolicyType = iota
+	PolicyTypeSemver
+	PolicyTypeForce
+	PolicyTypeGlob
+	PolicyTypeRegexp
+)

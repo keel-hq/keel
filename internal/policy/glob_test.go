@@ -22,7 +22,7 @@ func TestGlobPolicy_ShouldUpdate(t *testing.T) {
 			name:    "test glob latest",
 			fields:  fields{pattern: "latest"},
 			args:    args{current: "latest", new: "latest"},
-			want:    true,
+			want:    false,
 			wantErr: false,
 		},
 		{
@@ -33,10 +33,24 @@ func TestGlobPolicy_ShouldUpdate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "test glob with *",
+			name:    "test glob with lat*",
 			fields:  fields{pattern: "lat*"},
 			args:    args{current: "latest", new: "latest"},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name:    "test glob with latest.*",
+			fields:  fields{pattern: "latest.*"},
+			args:    args{current: "latest.20241321", new: "latest.20251321"},
 			want:    true,
+			wantErr: false,
+		},
+		{
+			name:    "test glob with latest.* reverse",
+			fields:  fields{pattern: "latest.*"},
+			args:    args{current: "latest.20251321", new: "latest.20241321"},
+			want:    false,
 			wantErr: false,
 		},
 	}

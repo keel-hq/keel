@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/keel-hq/keel/types"
+
 	"github.com/Masterminds/semver"
 )
 
@@ -62,7 +64,9 @@ func (sp *SemverPolicy) Name() string {
 	return sp.spt.String()
 }
 
-func (sp *SemverPolicy) Type() PolicyType { return PolicyTypeSemver }
+func (sp *SemverPolicy) Type() types.PolicyType { return types.PolicyTypeSemver }
+
+func (sp *SemverPolicy) KeepTag() bool { return false }
 
 func shouldUpdate(spt SemverPolicyType, matchPreRelease bool, current, new string) (bool, error) {
 	if current == "latest" {

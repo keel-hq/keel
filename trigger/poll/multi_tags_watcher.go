@@ -90,17 +90,31 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 
 	events := []types.Event{}
 
-	if j.details.trackedImage.Policy != nil {
-		tags = j.details.trackedImage.Policy.Filter(tags)
-	}
+	// This contains all tracked images that share the same imageIdentifier and thus, the same watcher
+	allRelatedTrackedImages := getRelatedTrackedImages(j.details.trackedImage, trackedImages)
 
-	for _, trackedImage := range getRelatedTrackedImages(j.details.trackedImage, trackedImages) {
-		for _, tag := range tags {
+	for _, trackedImage := range allRelatedTrackedImages {
+
+		filteredTags := tags
+
+		// The fact that they are related, does not mean they share the exact same Policy configuration, so wee need
+		// to calculate the tags here for each image.
+		filteredTags = j.details.trackedImage.Policy.Filter(tags)
+
+		for _, tag := range filteredTags {
+
 			update, err := trackedImage.Policy.ShouldUpdate(trackedImage.Image.Tag(), tag)
 			if err != nil {
 				continue
 			}
-			if update && !exists(tag, events) {
+			if update == false {
+				continue
+			}
+			// When using tags watcher we rely completely on tag names to deal with updates.
+			if trackedImage.Image.Tag() == tag {
+				break
+			}
+			if !exists(tag, events) {
 				event := types.Event{
 					Repository: types.Repository{
 						Name: trackedImage.Image.Repository(),
@@ -134,11 +148,10 @@ func exists(tag string, events []types.Event) bool {
 func getRelatedTrackedImages(ours *types.TrackedImage, all []*types.TrackedImage) []*types.TrackedImage {
 	b := all[:0]
 	for _, x := range all {
-		if x.Image.Repository() == ours.Image.Repository() {
+		if getImageIdentifier(x.Image, x.Policy.KeepTag()) == getImageIdentifier(ours.Image, ours.Policy.KeepTag()) {
 			b = append(b, x)
 		}
 	}
-
 	return b
 }
 

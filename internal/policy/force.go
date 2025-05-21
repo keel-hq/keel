@@ -1,5 +1,7 @@
 package policy
 
+import "github.com/keel-hq/keel/types"
+
 type ForcePolicy struct {
 	matchTag bool
 }
@@ -18,6 +20,7 @@ func (fp *ForcePolicy) ShouldUpdate(current, new string) (bool, error) {
 }
 
 func (fp *ForcePolicy) Filter(tags []string) []string {
+	// todo: why is this not sorting?
 	return append([]string{}, tags...)
 }
 
@@ -25,4 +28,6 @@ func (fp *ForcePolicy) Name() string {
 	return "force"
 }
 
-func (fp *ForcePolicy) Type() PolicyType { return PolicyTypeForce }
+func (fp *ForcePolicy) Type() types.PolicyType { return types.PolicyTypeForce }
+
+func (fp *ForcePolicy) KeepTag() bool { return fp.matchTag }

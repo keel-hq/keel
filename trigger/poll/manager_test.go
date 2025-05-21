@@ -2,6 +2,7 @@ package poll
 
 import (
 	"context"
+	"github.com/keel-hq/keel/internal/policy"
 	"log"
 	"os"
 	"path/filepath"
@@ -59,6 +60,7 @@ func TestCheckDeployment(t *testing.T) {
 				Trigger:      types.TriggerTypePoll,
 				Provider:     "fp",
 				PollSchedule: types.KeelPollDefaultSchedule,
+				Policy:       policy.LegacyPolicyPopulate(imgA),
 			},
 
 			{
@@ -66,6 +68,7 @@ func TestCheckDeployment(t *testing.T) {
 				Image:        imgB,
 				Provider:     "fp",
 				PollSchedule: types.KeelPollDefaultSchedule,
+				Policy:       policy.LegacyPolicyPopulate(imgB),
 			},
 		},
 	}

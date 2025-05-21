@@ -3,34 +3,29 @@ package policy
 import (
 	"strings"
 
+	"github.com/keel-hq/keel/util/image"
+	"github.com/keel-hq/keel/util/version"
+
 	"github.com/keel-hq/keel/types"
 
 	log "github.com/sirupsen/logrus"
 )
 
-type PolicyType int
-
-const (
-	PolicyTypeNone PolicyType = iota
-	PolicyTypeSemver
-	PolicyTypeForce
-	PolicyTypeGlob
-	PolicyTypeRegexp
-)
-
 type Policy interface {
 	ShouldUpdate(current, new string) (bool, error)
 	Name() string
-	Type() PolicyType
+	Type() types.PolicyType
 	Filter(tags []string) []string
+	KeepTag() bool
 }
 
 type NilPolicy struct{}
 
 func (np *NilPolicy) ShouldUpdate(c, n string) (bool, error) { return false, nil }
 func (np *NilPolicy) Name() string                           { return "nil policy" }
-func (np *NilPolicy) Type() PolicyType                       { return PolicyTypeNone }
+func (np *NilPolicy) Type() types.PolicyType                 { return types.PolicyTypeNone }
 func (np *NilPolicy) Filter(tags []string) []string          { return append([]string{}, tags...) }
+func (np *NilPolicy) KeepTag() bool                          { return false }
 
 // GetPolicyFromLabelsOrAnnotations - gets policy from k8s labels or annotations
 func GetPolicyFromLabelsOrAnnotations(labels map[string]string, annotations map[string]string) Policy {
@@ -142,4 +137,20 @@ func getMatchPreRelease(labels map[string]string) bool {
 
 	// Default to true for backward compatibility
 	return true
+}
+
+// LegacyPolicyPopulate creates a policy based on the image tag
+func LegacyPolicyPopulate(ref *image.Reference) Policy {
+	_, err := version.GetVersion(ref.Tag())
+	var policy Policy
+	if err == nil {
+		policy = NewSemverPolicy(SemverPolicyTypeAll, true)
+	} else {
+		policy = NewForcePolicy(true)
+	}
+	log.WithFields(log.Fields{
+		"image":  ref.Name(),
+		"policy": policy.Type(),
+	}).Info("trigger.poll.watcher: image policy was not configured. Automatic policy was set.")
+	return policy
 }

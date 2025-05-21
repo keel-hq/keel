@@ -221,7 +221,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 
 		// ignoring unlabelled deployments
 		plc := policy.GetPolicyFromLabelsOrAnnotations(labels, annotations)
-		if plc.Type() == policy.PolicyTypeNone {
+		if plc.Type() == types.PolicyTypeNone {
 			continue
 		}
 
@@ -493,7 +493,7 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 		annotations := resource.GetAnnotations()
 
 		plc := policy.GetPolicyFromLabelsOrAnnotations(labels, annotations)
-		if plc.Type() == policy.PolicyTypeNone {
+		if plc.Type() == types.PolicyTypeNone {
 			continue
 		}
 
