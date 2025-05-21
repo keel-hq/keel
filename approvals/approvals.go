@@ -36,6 +36,9 @@ type Manager interface {
 	// Rejects Approval
 	Reject(identifier string) (*types.Approval, error)
 
+	// If the approval exists
+	Exists(identifier string) bool
+
 	Get(identifier string) (*types.Approval, error)
 	List() ([]*types.Approval, error)
 	Delete(*types.Approval) error
@@ -370,6 +373,14 @@ func (m *DefaultManager) Delete(approval *types.Approval) error {
 	m.addAuditEntry(existing, types.AuditActionDeleted, "")
 
 	return m.store.DeleteApproval(existing)
+}
+
+func (m *DefaultManager) Exists(identifier string) bool {
+	_, err := m.Get(identifier)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func (m *DefaultManager) Archive(identifier string) error {
