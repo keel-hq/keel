@@ -10,6 +10,9 @@ image:
 # Image pull secrets
 imagePullSecrets: []
 
+# Extra enviroment values
+extraEnv: []
+
 # Enable insecure registries
 insecureRegistry: false
 

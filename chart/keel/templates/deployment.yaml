@@ -187,6 +187,10 @@ spec:
             - name: AWS_REGION
               value: "{{ .Values.aws.region }}"
 {{- end }}
+{{- range .Values.extraEnv }}
+            - name: {{ .name }}
+              value: "{{ .value }}"
+{{- end }}
 {{- if or .Values.secret.create .Values.secret.name }}
           envFrom:
             - secretRef:
