@@ -99,7 +99,7 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 
 		// The fact that they are related, does not mean they share the exact same Policy configuration, so wee need
 		// to calculate the tags here for each image.
-		filteredTags = j.details.trackedImage.Policy.Filter(tags)
+		filteredTags = trackedImage.Policy.Filter(tags)
 
 		for _, tag := range filteredTags {
 
