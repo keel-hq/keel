@@ -271,8 +271,8 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 	job := NewWatchRepositoryTagsJob(w.providers, w.registryClient, details)
 	log.WithFields(log.Fields{
 		"job_name": key,
-		"image":    ti.Image.String(),
-		"digest":   digest,
+		"image":    ti.Image.Registry() + "/" + ti.Image.ShortName(), // A watcher can be shared, so it makes little sense to specify tag depth here
+		"digest":   "",                                               // A watcher can be shared, so it makes little sense to specify here a specific image digest used by one of the consumers
 		"schedule": schedule,
 	}).Info("trigger.poll.RepositoryWatcher: new watch repository tags job added")
 	job.Run()
