@@ -37,7 +37,12 @@ func (p *Provider) checkForApprovals(event *types.Event, plans []*UpdatePlan) (a
 
 // updateComplete is called after we successfully update resource
 func (p *Provider) updateComplete(plan *UpdatePlan) error {
-	return p.approvalManager.Archive(getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion))
+	approvalIdentifier := getApprovalIdentifier(plan.Resource.Identifier, plan.NewVersion)
+	// There might be no approvals for this plan
+	if p.approvalManager.Exists(approvalIdentifier) {
+		return p.approvalManager.Archive(approvalIdentifier)
+	}
+	return nil
 }
 
 func getInt(key string, labels map[string]string, annotations map[string]string) (int, error) {
