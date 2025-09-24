@@ -5,8 +5,8 @@ metadata:
   name: {{ template "keel.name" . }}
 rules:
 {{- range .Values.rbac.clusterRole.rules }}
-- apiGroups: {{ .apiGroups | toYaml | nindent 4 }}
-  resources: {{ .resources | toYaml | nindent 4 }}
-  verbs: {{ .verbs | toYaml | nindent 4 }}
+  - apiGroups: {{ .apiGroups | toYaml | nindent 6 }}
+    resources: {{ .resources | toYaml | nindent 6 }}
+    verbs: {{ .verbs | toYaml | nindent 6 }}
 {{- end }}
 {{ end }}
