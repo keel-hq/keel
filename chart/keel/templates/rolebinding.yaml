@@ -1,12 +1,13 @@
 {{- if .Values.rbac.enabled }}
-{{- if .Values.rbac.clusterRole.create }}
+{{- if .Values.rbac.role.create }}
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: {{ template "keel.name" . }}
+  namespace: {{ .Release.Namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: {{ template "keel.name" . }}
 subjects:
   - kind: ServiceAccount

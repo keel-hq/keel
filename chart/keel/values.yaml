@@ -180,6 +180,7 @@ rbac:
     create: true
 
   clusterRole:
+    create: true
     rules:
     - apiGroups:
         - ""
@@ -225,6 +226,8 @@ rbac:
         - get
         - create
         - update
+  role:
+    create: false
 
 # Resources
 resources:

@@ -1,11 +1,12 @@
 {{- if .Values.rbac.enabled }}
-{{- if .Values.rbac.clusterRole.create }}
+{{- if .Values.rbac.role.create }}
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: {{ template "keel.name" . }}
+  namespace: {{ .Release.Namespace }}
 rules:
-{{- range .Values.rbac.clusterRole.rules }}
+{{- range .Values.rbac.role.rules }}
   - apiGroups: {{ .apiGroups | toYaml | nindent 6 }}
     resources: {{ .resources | toYaml | nindent 6 }}
     verbs: {{ .verbs | toYaml | nindent 6 }}
