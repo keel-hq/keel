@@ -99,6 +99,7 @@ mattermost:
 teams:
   enabled: false
   webhookUrl: ""
+  format: "auto"  # "auto", "messagecard", "adaptive"
 
 # Discord notifications
 discord:

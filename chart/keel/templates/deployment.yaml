@@ -132,6 +132,11 @@ spec:
             - name: MATTERMOST_ENDPOINT
               value: "{{ .Values.mattermost.endpoint }}"
 {{- end }}
+{{- if .Values.teams.enabled }}
+            # Teams webhook format
+            - name: TEAMS_WEBHOOK_FORMAT
+              value: "{{ .Values.teams.format }}"
+{{- end }}
 {{- if .Values.basicauth.enabled }}
             # Enable basic auth
             - name: BASIC_AUTH_USER
