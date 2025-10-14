@@ -321,11 +321,28 @@ var tagsResp = `{
 	]
   }`
 
+// func TestGetDockerHubManyTags(t *testing.T) {
+// 	client := docker.New("https://quay.io", "", "")
+// 	tags, err := client.Tags("coreos/prometheus-operator-app")
+// 	if err != nil {
+// 		t.Errorf("error while getting repo: %s", err)
+// 	}
+// 	fmt.Println(tags)
+// }
+
 func TestGetDockerHubManyTags(t *testing.T) {
-	client := docker.New("https://quay.io", "", "")
-	tags, err := client.Tags("coreos/prometheus-operator")
-	if err != nil {
-		t.Errorf("error while getting repo: %s", err)
-	}
-	fmt.Println(tags)
+    // Use DockerHub instead of Quay.io, since Quay repos often require authentication now
+    client := docker.New("https://registry.hub.docker.com", "", "")
+
+    // DockerHub official images are under "library/..."
+    tags, err := client.Tags("library/nginx")
+    if err != nil {
+        t.Errorf("error while getting repo: %s", err)
+    }
+
+    if len(tags) == 0 {
+        t.Errorf("expected to get some tags for nginx, got none")
+    }
+
+    fmt.Println("nginx tags:", tags[:5]) // print just a few tags for sanity
 }
