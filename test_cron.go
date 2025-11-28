@@ -17,8 +17,8 @@ import (
 	"github.com/keel-hq/keel/util/image"
 )
 
-// TestCronExample demonstrates how to use the fixed polling system
-// This example shows proper concurrent polling without race conditions
+// TestCronExample demonstrates how to use the fixed polling system with seconds support
+// This example shows that pollSchedule now supports "@every 30s" and other second-based schedules
 func main() {
 	fmt.Println("Starting Keel Polling System Test")
 
