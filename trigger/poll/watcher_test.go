@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/keel-hq/keel/approvals"
@@ -627,5 +628,47 @@ func TestUnwatchAfterNotTrackedAnymore(t *testing.T) {
 
 	if len(watcher.watched) != 3 {
 		t.Errorf("expected to find watching 3 entries, found: %d", len(watcher.watched))
+	}
+}
+
+func TestConcurrentWatchTagJob(t *testing.T) {
+	fp := &fakeProvider{}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	frc := &fakeRegistryClient{
+		digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
+	}
+
+	reference, _ := image.Parse("foo/bar:1.1")
+
+	details := &watchDetails{
+		trackedImage: &types.TrackedImage{
+			Image: reference,
+		},
+		digest: "sha256:123123123",
+	}
+
+	job := NewWatchTagJob(providers, frc, details)
+
+	// Run multiple jobs concurrently to test for race conditions
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			job.Run()
+		}()
+	}
+	wg.Wait()
+
+	// Check that the digest was updated correctly (should be the same value)
+	if job.details.digest != frc.digestToReturn {
+		t.Errorf("expected digest %s, got %s", frc.digestToReturn, job.details.digest)
 	}
 }
