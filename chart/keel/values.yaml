@@ -29,6 +29,17 @@ polling:
 #     imagePullPolicy: IfNotPresent
 #     command: ['sh', '-c', 'echo Container 1 is Running ; sleep 3600']
 
+# Extra Volumes to mount in the pod
+# WARNING: Do not use the reserved volume names "storage-logs" or "secret" in extraVolumes.
+# These names may conflict with the persistence and googleApplicationCredentials volumes.
+# extraVolumes:
+#   - name: config
+#     configMap:
+#       name: my-config
+#   - name: certs
+#     secret:
+#       secretName: my-certs
+
 # Helm provider support
 helmProvider:
   enabled: true
