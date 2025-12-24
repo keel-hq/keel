@@ -13,6 +13,11 @@ imagePullSecrets: []
 # Extra enviroment values
 extraEnv: []
 
+# Extra arguments to pass to the keel command
+# extraArgs:
+#   - "--kubeconfig=/path/to/kubeconfig"
+#   - "--no-incluster"
+
 # Enable insecure registries
 insecureRegistry: false
 

@@ -42,6 +42,12 @@ spec:
           image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/keel"]
+{{- if .Values.extraArgs }}
+          args:
+{{- range .Values.extraArgs }}
+            - {{ . | quote }}
+{{- end }}
+{{- end }}
 {{- with .Values.containerSecurityContext }}
           securityContext:
 {{- toYaml . | nindent 12 }}
