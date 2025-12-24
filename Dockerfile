@@ -4,7 +4,13 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 COPY . /go/src/github.com/keel-hq/keel
 WORKDIR /go/src/github.com/keel-hq/keel
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} make install
+RUN GIT_REVISION=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
+    VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev") && \
+    JOBDATE=$(date -u +%Y-%m-%dT%H%M%SZ) && \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
+    go build -a -tags netgo \
+    -ldflags "-w -s -X github.com/keel-hq/keel/version.Version=${VERSION} -X github.com/keel-hq/keel/version.Revision=${GIT_REVISION} -X github.com/keel-hq/keel/version.BuildDate=${JOBDATE}" \
+    -o /go/bin/keel ./cmd/keel
 
 FROM --platform=$BUILDPLATFORM node:16.20.2-alpine as yarn-build
 WORKDIR /app
