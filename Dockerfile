@@ -40,7 +40,7 @@ ARG USER_ID=666
 ARG GROUP_ID=$USER_ID
 ARG TARGETARCH
 
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates libc6-compat libgcc libstdc++
 RUN addgroup --gid $GROUP_ID $USERNAME \
     && adduser --home /data --ingroup $USERNAME --disabled-password --uid $USER_ID $USERNAME \
     && mkdir -p /data && chown $USERNAME:0 /data && chmod g=u /data
