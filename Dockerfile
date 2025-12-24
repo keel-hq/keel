@@ -1,30 +1,30 @@
-FROM --platform=$BUILDPLATFORM golang:1.23.4 as go-build
+FROM --platform=$BUILDPLATFORM golang:1.23.4-alpine as go-build
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
 COPY . /go/src/github.com/keel-hq/keel
 WORKDIR /go/src/github.com/keel-hq/keel
 
-# Install cross-compilation toolchains
-RUN apt-get update && apt-get install -y \
-    gcc-aarch64-linux-gnu \
-    gcc-arm-linux-gnueabihf \
-    && rm -rf /var/lib/apt/lists/*
+# Install build dependencies and musl-based cross-compilation toolchains
+RUN apk add --no-cache git build-base musl-dev && \
+    if [ "$(uname -m)" = "x86_64" ]; then \
+        apk add --no-cache gcc-aarch64 gcc-arm; \
+    fi
 
-# Build with CGO support for sqlite
+# Build with CGO support for sqlite using musl
 RUN GIT_REVISION=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
     VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev") && \
     JOBDATE=$(date -u +%Y-%m-%dT%H%M%SZ) && \
-    if [ "$TARGETARCH" = "arm64" ]; then \
-        CC=aarch64-linux-gnu-gcc; \
-    elif [ "$TARGETARCH" = "arm" ]; then \
-        CC=arm-linux-gnueabihf-gcc; \
+    if [ "$TARGETARCH" = "arm64" ] && [ "$(uname -m)" != "aarch64" ]; then \
+        CC=aarch64-alpine-linux-musl-gcc; \
+    elif [ "$TARGETARCH" = "arm" ] && [ "$(uname -m)" != "armv7l" ]; then \
+        CC=arm-alpine-linux-musleabihf-gcc; \
     else \
         CC=gcc; \
     fi && \
     CGO_ENABLED=1 CC=$CC GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
     go build -a -tags netgo \
-    -ldflags "-w -s -X github.com/keel-hq/keel/version.Version=${VERSION} -X github.com/keel-hq/keel/version.Revision=${GIT_REVISION} -X github.com/keel-hq/keel/version.BuildDate=${JOBDATE}" \
+    -ldflags "-w -s -linkmode external -extldflags '-static' -X github.com/keel-hq/keel/version.Version=${VERSION} -X github.com/keel-hq/keel/version.Revision=${GIT_REVISION} -X github.com/keel-hq/keel/version.BuildDate=${JOBDATE}" \
     -o /go/bin/keel ./cmd/keel
 
 FROM --platform=$BUILDPLATFORM node:16.20.2-alpine as yarn-build
@@ -40,7 +40,7 @@ ARG USER_ID=666
 ARG GROUP_ID=$USER_ID
 ARG TARGETARCH
 
-RUN apk --no-cache add ca-certificates libc6-compat libgcc libstdc++
+RUN apk --no-cache add ca-certificates
 RUN addgroup --gid $GROUP_ID $USERNAME \
     && adduser --home /data --ingroup $USERNAME --disabled-password --uid $USER_ID $USERNAME \
     && mkdir -p /data && chown $USERNAME:0 /data && chmod g=u /data
