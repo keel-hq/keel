@@ -40,6 +40,17 @@ polling:
 #     secret:
 #       secretName: my-certs
 
+# Extra Volume Mounts to add to the main keel container
+# WARNING: Do not use the reserved mount paths "/data" or "/secret" in extraVolumeMounts.
+# These paths may conflict with the persistence and googleApplicationCredentials volume mounts.
+# extraVolumeMounts:
+#   - name: config
+#     mountPath: /etc/config
+#     readOnly: true
+#   - name: certs
+#     mountPath: /etc/certs
+#     readOnly: true
+
 # Helm provider support
 helmProvider:
   enabled: true

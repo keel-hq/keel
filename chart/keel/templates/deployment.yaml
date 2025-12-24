@@ -56,6 +56,9 @@ spec:
               mountPath: "/secret"
               readOnly: true
 {{- end }}
+{{- if .Values.extraVolumeMounts }}
+{{ toYaml .Values.extraVolumeMounts | indent 12 }}
+{{- end }}
           env:
             - name: NAMESPACE
               valueFrom:
