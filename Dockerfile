@@ -6,7 +6,7 @@ COPY . /go/src/github.com/keel-hq/keel
 WORKDIR /go/src/github.com/keel-hq/keel
 
 # Install build dependencies for musl-based static compilation
-RUN apk add --no-cache git build-base musl-dev
+RUN apk add --no-cache git build-base musl-dev binutils-gold
 
 # Build with CGO support for sqlite using musl - native build per platform
 RUN git config --global --add safe.directory /go/src/github.com/keel-hq/keel && \
