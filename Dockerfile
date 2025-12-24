@@ -9,7 +9,8 @@ WORKDIR /go/src/github.com/keel-hq/keel
 RUN apk add --no-cache git build-base musl-dev
 
 # Build with CGO support for sqlite using musl - native build per platform
-RUN git config --global --add safe.directory /go/src/github.com/keel-hq/keel && \n    GIT_REVISION=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
+RUN git config --global --add safe.directory /go/src/github.com/keel-hq/keel && \
+    GIT_REVISION=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
     VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev") && \
     JOBDATE=$(date -u +%Y-%m-%dT%H%M%SZ) && \
     CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
