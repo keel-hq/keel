@@ -1,9 +1,12 @@
-FROM golang:1.23.4 as go-build
+FROM --platform=$BUILDPLATFORM golang:1.23.4 as go-build
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
 COPY . /go/src/github.com/keel-hq/keel
 WORKDIR /go/src/github.com/keel-hq/keel
-RUN make install
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} make install
 
-FROM node:16.20.2-alpine as yarn-build
+FROM --platform=$BUILDPLATFORM node:16.20.2-alpine as yarn-build
 WORKDIR /app
 COPY ui /app
 RUN yarn
@@ -14,6 +17,7 @@ FROM alpine:3.20.3
 ARG USERNAME=keel
 ARG USER_ID=666
 ARG GROUP_ID=$USER_ID
+ARG TARGETARCH
 
 RUN apk --no-cache add ca-certificates
 RUN addgroup --gid $GROUP_ID $USERNAME \
