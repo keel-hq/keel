@@ -1,28 +1,18 @@
-FROM --platform=$BUILDPLATFORM golang:1.23.4-alpine as go-build
+FROM golang:1.23.4-alpine as go-build
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
 COPY . /go/src/github.com/keel-hq/keel
 WORKDIR /go/src/github.com/keel-hq/keel
 
-# Install build dependencies and musl-based cross-compilation toolchains
-RUN apk add --no-cache git build-base musl-dev && \
-    if [ "$(uname -m)" = "x86_64" ]; then \
-        apk add --no-cache gcc-aarch64 gcc-arm; \
-    fi
+# Install build dependencies for musl-based static compilation
+RUN apk add --no-cache git build-base musl-dev
 
-# Build with CGO support for sqlite using musl
+# Build with CGO support for sqlite using musl - native build per platform
 RUN GIT_REVISION=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
     VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev") && \
     JOBDATE=$(date -u +%Y-%m-%dT%H%M%SZ) && \
-    if [ "$TARGETARCH" = "arm64" ] && [ "$(uname -m)" != "aarch64" ]; then \
-        CC=aarch64-alpine-linux-musl-gcc; \
-    elif [ "$TARGETARCH" = "arm" ] && [ "$(uname -m)" != "armv7l" ]; then \
-        CC=arm-alpine-linux-musleabihf-gcc; \
-    else \
-        CC=gcc; \
-    fi && \
-    CGO_ENABLED=1 CC=$CC GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
+    CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
     go build -a -tags netgo \
     -ldflags "-w -s -linkmode external -extldflags '-static' -X github.com/keel-hq/keel/version.Version=${VERSION} -X github.com/keel-hq/keel/version.Revision=${GIT_REVISION} -X github.com/keel-hq/keel/version.BuildDate=${JOBDATE}" \
     -o /go/bin/keel ./cmd/keel
