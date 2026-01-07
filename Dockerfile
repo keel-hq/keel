@@ -18,6 +18,7 @@ RUN git config --global --add safe.directory /go/src/github.com/keel-hq/keel && 
     -ldflags "-w -s -linkmode external -extldflags '-static' -X github.com/keel-hq/keel/version.Version=${VERSION} -X github.com/keel-hq/keel/version.Revision=${GIT_REVISION} -X github.com/keel-hq/keel/version.BuildDate=${JOBDATE}" \
     -o /go/bin/keel ./cmd/keel
 
+ARG BUILDPLATFORM
 FROM --platform=$BUILDPLATFORM node:16.20.2-alpine AS yarn-build
 WORKDIR /app
 COPY ui /app
