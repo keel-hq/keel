@@ -25,6 +25,9 @@ steps:
 
 - name: publish-image
   image: plugins/docker
+  privileged: true
+  environment:
+    PLUGIN_BUILDX_OPTIONS_SEMICOLON: "--platform=linux/amd64,linux/arm64"
   settings:
     repo: keelhq/keel
     auto_tag: true
