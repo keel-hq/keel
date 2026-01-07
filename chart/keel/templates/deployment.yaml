@@ -42,6 +42,12 @@ spec:
           image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/keel"]
+{{- if .Values.extraArgs }}
+          args:
+{{- range .Values.extraArgs }}
+            - {{ . | quote }}
+{{- end }}
+{{- end }}
 {{- with .Values.containerSecurityContext }}
           securityContext:
 {{- toYaml . | nindent 12 }}
@@ -55,6 +61,9 @@ spec:
             - name: secret
               mountPath: "/secret"
               readOnly: true
+{{- end }}
+{{- if .Values.extraVolumeMounts }}
+{{ toYaml .Values.extraVolumeMounts | indent 12 }}
 {{- end }}
           env:
             - name: NAMESPACE
@@ -233,11 +242,21 @@ spec:
           resources:
 {{ toYaml .Values.resources | indent 12 }}
 {{- end }}
-{{- if .Values.persistence.enabled }}
+{{- if or .Values.persistence.enabled .Values.googleApplicationCredentials .Values.extraVolumes }}
       volumes:
+{{- if .Values.persistence.enabled }}
         - name: storage-logs
           persistentVolumeClaim:
             claimName: {{ template "keel.fullname" . }}
+{{- end }}
+{{- if .Values.googleApplicationCredentials }}
+        - name: secret
+          secret:
+            secretName: {{ .Values.secret.name | default (include "keel.fullname" .) }}
+{{- end }}
+{{- if .Values.extraVolumes }}
+{{ toYaml .Values.extraVolumes | indent 8 }}
+{{- end }}
 {{- end }}
     {{- with .Values.nodeSelector }}
       nodeSelector:
@@ -251,9 +270,3 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
-{{- if .Values.googleApplicationCredentials }}
-      volumes:
-        - name: secret
-          secret:
-            secretName: {{ .Values.secret.name | default (include "keel.fullname" .) }}
-{{- end }}

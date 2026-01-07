@@ -13,6 +13,11 @@ imagePullSecrets: []
 # Extra enviroment values
 extraEnv: []
 
+# Extra arguments to pass to the keel command
+# extraArgs:
+#   - "--kubeconfig=/path/to/kubeconfig"
+#   - "--no-incluster"
+
 # Enable insecure registries
 insecureRegistry: false
 
@@ -28,6 +33,28 @@ polling:
 #     image: busybox
 #     imagePullPolicy: IfNotPresent
 #     command: ['sh', '-c', 'echo Container 1 is Running ; sleep 3600']
+
+# Extra Volumes to mount in the pod
+# WARNING: Do not use the reserved volume names "storage-logs" or "secret" in extraVolumes.
+# These names may conflict with the persistence and googleApplicationCredentials volumes.
+# extraVolumes:
+#   - name: config
+#     configMap:
+#       name: my-config
+#   - name: certs
+#     secret:
+#       secretName: my-certs
+
+# Extra Volume Mounts to add to the main keel container
+# WARNING: Do not use the reserved mount paths "/data" or "/secret" in extraVolumeMounts.
+# These paths may conflict with the persistence and googleApplicationCredentials volume mounts.
+# extraVolumeMounts:
+#   - name: config
+#     mountPath: /etc/config
+#     readOnly: true
+#   - name: certs
+#     mountPath: /etc/certs
+#     readOnly: true
 
 # Helm provider support
 helmProvider:
