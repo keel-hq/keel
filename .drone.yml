@@ -24,10 +24,11 @@ steps:
     - yarn run lint --no-fix
 
 - name: publish-image
-  image: plugins/docker
+  image: plugins/buildx
   settings:
     repo: keelhq/keel
     auto_tag: true
+    platforms: linux/amd64,linux/arm64
     username:
       from_secret: docker_username
     password:
