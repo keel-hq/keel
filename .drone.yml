@@ -36,33 +36,6 @@ steps:
     password:
       from_secret: docker_password
 
-# - name: build-arm
-#   image: golang:1.14.2
-#   commands:
-#     - make arm
-
-# - name: publish-arm-image
-#   image: plugins/docker
-#   settings:
-#     repo: keelhq/keel-arm
-#     dockerfile: dockerfile.armhf
-#     auto_tag: true
-#     username:
-#       from_secret: docker_username
-#     password:
-#       from_secret: docker_password
-
-# - name: publish-aarch64-image
-#   image: plugins/docker
-#   settings:
-#     repo: keelhq/keel-aarch64
-#     dockerfile: dockerfile.aarch64
-#     auto_tag: true
-#     username:
-#       from_secret: docker_username
-#     password:
-#       from_secret: docker_password
-
 - name: slack
   image: plugins/slack
   when:
