@@ -75,6 +75,12 @@ const KeelApprovalDeadlineDefault = 24
 // KeelReleasePage - optional release notes URL passed on with notification
 const KeelReleaseNotesURL = "keel.sh/releaseNotes"
 
+// This allows us to decouple image polling VS image update.
+// Watcher is shared, so there is no real way of having independant polling/update shcedules
+// in different kubernetes objects that rely on using the same repository path
+// KeelUpdateScheduleCronTabs - cron schedules for when updates are allowed, sepparated by commas
+const KeelUpdateScheduleCronTabs = "keel.sh/updateScheduleCronTabs"
+
 func init() {
 	value, found := os.LookupEnv("POLL_DEFAULTSCHEDULE")
 	if found {
