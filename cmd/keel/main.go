@@ -56,6 +56,7 @@ import (
 	// bots
 	_ "github.com/keel-hq/keel/bot/hipchat"
 	_ "github.com/keel-hq/keel/bot/slack"
+	_ "github.com/keel-hq/keel/bot/mail"
 
 	log "github.com/sirupsen/logrus"
 	// importing to ensure correct dependencies
