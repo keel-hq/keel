@@ -34,6 +34,8 @@ const (
 
 	// MS Teams webhook url, see https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using#setting-up-a-custom-incoming-webhook
 	EnvTeamsWebhookUrl = "TEAMS_WEBHOOK_URL"
+	// MS Teams webhook format - "messagecard" (legacy) or "adaptive" (new), defaults to auto-detection
+	EnvTeamsWebhookFormat = "TEAMS_WEBHOOK_FORMAT"
 
 	// Discord webhook url, see https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
 	EnvDiscordWebhookUrl = "DISCORD_WEBHOOK_URL"
