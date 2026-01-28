@@ -4,13 +4,14 @@ set -euo pipefail
 # Project startup script for Keel development
 # This runs when agents start working on this project
 # Idempotent - safe to run multiple times
-# Uses microk8s for local development
+# Uses k3s (lightweight Kubernetes) for local development
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 KEEL_PID_FILE="/tmp/keel.pid"
 KEEL_LOG_FILE="/tmp/keel.log"
 KUBECONFIG_PATH="$HOME/.kube/config"
+K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 
 echo "🚀 Starting project: Keel"
 echo "   Project root: $PROJECT_ROOT"
@@ -119,45 +120,50 @@ else
     log_success "kubectl installed"
 fi
 
-# Check/Install microk8s
-if command_exists microk8s; then
-    log_success "microk8s is already installed"
+# Check/Install k3s
+if command_exists k3s; then
+    log_success "k3s is already installed"
 else
-    log_info "Installing microk8s..."
-    sudo snap install microk8s --classic --channel=1.28/stable
-
-    # Add current user to microk8s group
-    sudo usermod -a -G microk8s $USER
-
-    log_success "microk8s installed"
-    log_warning "Note: Group membership change requires re-login, using sudo for this session"
+    log_info "Installing k3s..."
+    curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644
+    log_success "k3s installed"
 fi
 
 # =============================================================================
 # Cluster Management
 # =============================================================================
 
-log_step "Setting up microk8s cluster..."
+log_step "Setting up k3s cluster..."
 
-# Check if microk8s is running
-if sudo microk8s status --wait-ready --timeout 10 &>/dev/null; then
-    log_success "microk8s is already running"
+# Check if k3s is running
+if systemctl is-active --quiet k3s 2>/dev/null || pgrep -f "k3s server" >/dev/null 2>&1; then
+    log_success "k3s is already running"
 else
-    log_info "Starting microk8s..."
-    sudo microk8s start
-    sudo microk8s status --wait-ready --timeout 60
-    log_success "microk8s started"
+    log_info "Starting k3s..."
+    sudo systemctl start k3s 2>/dev/null || sudo k3s server --write-kubeconfig-mode 644 >/tmp/k3s-server.log 2>&1 &
+    sleep 5
+    log_success "k3s started"
 fi
-
-# Enable required addons
-log_info "Enabling required addons..."
-sudo microk8s enable dns storage 2>/dev/null || true
-log_success "Addons enabled"
 
 # Setup kubeconfig
 mkdir -p "$HOME/.kube"
-sudo microk8s config > "$KUBECONFIG_PATH"
-chmod 600 "$KUBECONFIG_PATH"
+if [[ -f "$K3S_KUBECONFIG" ]]; then
+    sudo cp "$K3S_KUBECONFIG" "$KUBECONFIG_PATH"
+    sudo chown $(id -u):$(id -g) "$KUBECONFIG_PATH"
+    chmod 600 "$KUBECONFIG_PATH"
+    # Replace localhost with 127.0.0.1 for better compatibility
+    sed -i 's/127.0.0.1/127.0.0.1/g' "$KUBECONFIG_PATH"
+    log_success "Kubeconfig configured"
+else
+    log_warning "k3s kubeconfig not found yet, waiting..."
+    sleep 5
+    if [[ -f "$K3S_KUBECONFIG" ]]; then
+        sudo cp "$K3S_KUBECONFIG" "$KUBECONFIG_PATH"
+        sudo chown $(id -u):$(id -g) "$KUBECONFIG_PATH"
+        chmod 600 "$KUBECONFIG_PATH"
+        log_success "Kubeconfig configured"
+    fi
+fi
 export KUBECONFIG="$KUBECONFIG_PATH"
 
 # Wait for cluster to be ready
@@ -266,7 +272,7 @@ echo "=============================================="
 echo "✅ Project startup complete!"
 echo "=============================================="
 echo ""
-echo "📦 microk8s cluster: running"
+echo "📦 k3s cluster: running"
 echo "🔧 Kubeconfig:   $KUBECONFIG_PATH"
 echo "🚀 Keel:         Running on http://localhost:9300"
 echo "📝 Keel logs:    $KEEL_LOG_FILE"
@@ -277,5 +283,5 @@ echo "  kubectl get nodes              # Check cluster nodes"
 echo "  kubectl get pods -A            # List all pods"
 echo "  tail -f $KEEL_LOG_FILE         # Watch Keel logs"
 echo "  kill \$(cat $KEEL_PID_FILE)     # Stop Keel"
-echo "  sudo microk8s stop            # Stop cluster"
+echo "  sudo systemctl stop k3s       # Stop cluster"
 echo ""
