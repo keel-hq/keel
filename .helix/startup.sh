@@ -4,7 +4,10 @@ set -euo pipefail
 # Project startup script for Keel development
 # This runs when agents start working on this project
 # Idempotent - safe to run multiple times
-# Uses k0s (lightweight Kubernetes) for local development - works in containers without cgroup v2
+# Uses k3s (lightweight Kubernetes) for local development
+#
+# NOTE: Running Kubernetes inside Docker containers requires proper cgroup v2 support
+# with memory controller enabled. If this fails, see workarounds at the end of the script.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -120,43 +123,79 @@ else
     log_success "kubectl installed"
 fi
 
-# Check/Install k0s
-if command_exists k0s; then
-    log_success "k0s is already installed"
+# Check/Install k3s
+if command_exists k3s; then
+    log_success "k3s is already installed"
 else
-    log_info "Installing k0s..."
-    curl -sSLf https://get.k0s.sh | sudo sh
-    log_success "k0s installed"
+    log_info "Installing k3s..."
+    curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_ENABLE=true INSTALL_K3S_SKIP_START=true sh -
+    log_success "k3s installed"
 fi
 
 # =============================================================================
 # Cluster Management
 # =============================================================================
 
-log_step "Setting up k0s cluster..."
+log_step "Setting up k3s cluster..."
 
-# Check if k0s is running
-if pgrep -f "k0s controller" >/dev/null 2>&1; then
-    log_success "k0s is already running"
+# Fix cgroup mount for container environments (needs to be rw, not ro)
+if mount | grep -q "cgroup.*\(ro,"; then
+    log_info "Remounting cgroup as read-write..."
+    sudo mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true
+fi
+
+# Check for memory controller availability (required for k3s)
+if ! grep -q "memory" /sys/fs/cgroup/cgroup.controllers 2>/dev/null; then
+    log_warning "Memory cgroup controller not available!"
+    log_warning "This is common in containerized environments."
+    log_warning "K3s will likely fail to start. See workarounds at script end."
+fi
+
+# Check if k3s is running
+if pgrep -f "k3s server" >/dev/null 2>&1; then
+    log_success "k3s is already running"
 else
-    log_info "Starting k0s controller..."
-    # Install k0s as a service and start it
-    sudo k0s install controller --single
-    sudo k0s start
+    log_info "Starting k3s server..."
+    # Run k3s server directly in background (no systemd)
+    sudo k3s server \
+        --write-kubeconfig-mode 644 \
+        --disable-cloud-controller \
+        --disable traefik \
+        >/tmp/k3s-server.log 2>&1 &
 
-    # Wait for k0s to start
-    log_info "Waiting for k0s to initialize..."
-    sleep 15
-    log_success "k0s started"
+    K3S_PID=$!
+
+    # Wait for k3s to start
+    log_info "Waiting for k3s to initialize (checking for up to 30s)..."
+    sleep 5
+
+    # Check if k3s is still running
+    if kill -0 $K3S_PID 2>/dev/null; then
+        log_success "k3s process started (PID: $K3S_PID)"
+    else
+        log_warning "k3s process exited early - check /tmp/k3s-server.log"
+        if grep -q "failed to find memory cgroup" /tmp/k3s-server.log 2>/dev/null; then
+            echo ""
+            echo "   ❌ K3s failed due to missing memory cgroup controller"
+            echo "   This is expected in Docker containers without proper cgroup delegation."
+            echo ""
+        fi
+    fi
 fi
 
 # Setup kubeconfig
 mkdir -p "$HOME/.kube"
-log_info "Exporting kubeconfig..."
-sudo k0s kubeconfig admin > "$KUBECONFIG_PATH"
-chmod 600 "$KUBECONFIG_PATH"
-log_success "Kubeconfig configured"
-export KUBECONFIG="$KUBECONFIG_PATH"
+if [[ -f "/etc/rancher/k3s/k3s.yaml" ]]; then
+    log_info "Exporting kubeconfig..."
+    sudo cp /etc/rancher/k3s/k3s.yaml "$KUBECONFIG_PATH"
+    sudo chown $(id -u):$(id -g) "$KUBECONFIG_PATH"
+    chmod 600 "$KUBECONFIG_PATH"
+    log_success "Kubeconfig configured"
+    export KUBECONFIG="$KUBECONFIG_PATH"
+else
+    log_warning "k3s kubeconfig not found - cluster may not have started successfully"
+    log_info "Check /tmp/k3s-server.log for details"
+fi
 
 # Wait for cluster to be ready
 log_info "Waiting for cluster to be ready..."
@@ -264,8 +303,34 @@ echo "=============================================="
 echo "✅ Project startup complete!"
 echo "=============================================="
 echo ""
-echo "📦 k0s cluster: running"
-echo "🔧 Kubeconfig:   $KUBECONFIG_PATH"
+
+# Check if k3s actually started successfully
+if pgrep -f "k3s server" >/dev/null 2>&1 && [[ -f "$KUBECONFIG_PATH" ]]; then
+    echo "📦 k3s cluster: running"
+    echo "🔧 Kubeconfig:   $KUBECONFIG_PATH"
+else
+    echo "⚠️  k3s cluster: NOT running (see errors above)"
+    echo ""
+    echo "WORKAROUNDS FOR CONTAINERIZED ENVIRONMENTS:"
+    echo "=============================================="
+    echo ""
+    echo "Option 1: Use External Cluster (Recommended)"
+    echo "  - Set up a cloud k8s cluster (GKE, EKS, AKS)"
+    echo "  - Copy kubeconfig to: $KUBECONFIG_PATH"
+    echo "  - Or set KUBECONFIG=/path/to/your/kubeconfig"
+    echo ""
+    echo "Option 2: Use Host Kubernetes"
+    echo "  - If host has k8s running, mount its kubeconfig"
+    echo "  - docker run -v ~/.kube:/root/.kube:ro ..."
+    echo ""
+    echo "Option 3: Fix Host Docker Configuration"
+    echo "  - Enable cgroup v2 delegation in /etc/docker/daemon.json"
+    echo "  - Run container with: --cgroupns=private --privileged"
+    echo ""
+    echo "For details, see: design/tasks/000045_fix-the-project-startup/design.md"
+    echo ""
+fi
+
 echo "🚀 Keel:         Running on http://localhost:9300"
 echo "📝 Keel logs:    $KEEL_LOG_FILE"
 echo "🔑 UI Login:     admin / admin"
@@ -274,6 +339,7 @@ echo "Quick commands:"
 echo "  kubectl get nodes              # Check cluster nodes"
 echo "  kubectl get pods -A            # List all pods"
 echo "  tail -f $KEEL_LOG_FILE         # Watch Keel logs"
+echo "  tail -f /tmp/k3s-server.log    # Watch k3s logs"
 echo "  kill \$(cat $KEEL_PID_FILE)     # Stop Keel"
-echo "  sudo k0s stop                 # Stop cluster"
+echo "  sudo pkill -f 'k3s server'    # Stop k3s"
 echo ""
