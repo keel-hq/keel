@@ -135,6 +135,13 @@ fi
 
 log_step "Setting up k3s cluster..."
 
+# Fix cgroup mount for container environments (needs to be rw, not ro)
+if mount | grep -q "cgroup.*\(ro,"; then
+    log_info "Remounting cgroup as read-write..."
+    sudo mount -o remount,rw /sys/fs/cgroup
+    log_success "Cgroup remounted"
+fi
+
 # Check if k3s is running
 if pgrep -f "k3s server" >/dev/null 2>&1; then
     log_success "k3s is already running"
