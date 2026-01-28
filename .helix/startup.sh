@@ -4,14 +4,15 @@ set -euo pipefail
 # Project startup script for Keel development
 # This runs when agents start working on this project
 # Idempotent - safe to run multiple times
-# Uses k3d (k3s in Docker) for container environments without cgroup support
+# Uses kind (Kubernetes in Docker) for local development
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 KEEL_PID_FILE="/tmp/keel.pid"
 KEEL_LOG_FILE="/tmp/keel.log"
 KUBECONFIG_PATH="$HOME/.kube/config"
-K3D_CLUSTER_NAME="keel-dev"
+KIND_CLUSTER_NAME="keel-dev"
+K8S_VERSION="${K8S_VERSION:-v1.27.3}"
 
 echo "🚀 Starting project: Keel"
 echo "   Project root: $PROJECT_ROOT"
@@ -120,49 +121,61 @@ else
     log_success "kubectl installed"
 fi
 
-# Check/Install k3d
-if command_exists k3d; then
-    log_success "k3d is already installed"
+# Check/Install kind
+if command_exists kind; then
+    log_success "kind is already installed"
 else
-    log_info "Installing k3d..."
-    curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-    log_success "k3d installed"
+    log_info "Installing kind..."
+    curl -Lo /tmp/kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+    chmod +x /tmp/kind
+    sudo mv /tmp/kind /usr/local/bin/kind
+    log_success "kind installed"
 fi
 
 # =============================================================================
 # Cluster Management
 # =============================================================================
 
-log_step "Setting up k3d cluster..."
+log_step "Setting up kind cluster..."
 
-# Check if k3d cluster exists
-if k3d cluster list 2>/dev/null | grep -q "$K3D_CLUSTER_NAME"; then
-    log_success "k3d cluster '$K3D_CLUSTER_NAME' already exists"
+# Check if kind cluster exists
+if kind get clusters 2>/dev/null | grep -q "^${KIND_CLUSTER_NAME}$"; then
+    log_success "kind cluster '$KIND_CLUSTER_NAME' already exists"
 
-    # Make sure it's running
-    if ! k3d cluster list 2>/dev/null | grep "$K3D_CLUSTER_NAME" | grep -q "running"; then
-        log_info "Starting stopped cluster..."
-        k3d cluster start "$K3D_CLUSTER_NAME"
-        log_success "Cluster started"
+    # Verify it's accessible
+    if kubectl cluster-info --context "kind-${KIND_CLUSTER_NAME}" &>/dev/null; then
+        log_success "Cluster is accessible"
+    else
+        log_warning "Cluster exists but not accessible, recreating..."
+        kind delete cluster --name "$KIND_CLUSTER_NAME" 2>/dev/null || true
+        log_info "Creating kind cluster '$KIND_CLUSTER_NAME'..."
+        kind create cluster --name "$KIND_CLUSTER_NAME" --image "kindest/node:${K8S_VERSION}" --wait 300s
+        log_success "kind cluster created"
     fi
 else
-    log_info "Creating k3d cluster '$K3D_CLUSTER_NAME'..."
-    k3d cluster create --agents 3 "$K3D_CLUSTER_NAME" --wait --timeout 1m
-    log_success "k3d cluster created"
+    log_info "Creating kind cluster '$KIND_CLUSTER_NAME'..."
+    kind create cluster --name "$KIND_CLUSTER_NAME" --image "kindest/node:${K8S_VERSION}" --wait 300s
+    log_success "kind cluster created"
 fi
 
 # Setup kubeconfig
 mkdir -p "$HOME/.kube"
-k3d kubeconfig merge "$K3D_CLUSTER_NAME" --kubeconfig-merge-default
+kind export kubeconfig --name "$KIND_CLUSTER_NAME" --kubeconfig "$KUBECONFIG_PATH"
 export KUBECONFIG="$KUBECONFIG_PATH"
 
 # Wait for cluster to be ready
 log_info "Waiting for cluster to be ready..."
-wait_for "Kubernetes API" "kubectl get nodes" 120 3
+JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'
+until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
+    sleep 2
+    echo -n "."
+done
+echo ""
 log_success "Cluster is ready"
 
 # Show cluster info
 kubectl get nodes
+kubectl cluster-info
 
 # =============================================================================
 # Keel Build and Run
@@ -262,7 +275,7 @@ echo "=============================================="
 echo "✅ Project startup complete!"
 echo "=============================================="
 echo ""
-echo "📦 k3d cluster:  $K3D_CLUSTER_NAME (running)"
+echo "📦 kind cluster: $KIND_CLUSTER_NAME (running)"
 echo "🔧 Kubeconfig:   $KUBECONFIG_PATH"
 echo "🚀 Keel:         Running on http://localhost:9300"
 echo "📝 Keel logs:    $KEEL_LOG_FILE"
@@ -273,5 +286,5 @@ echo "  kubectl get nodes              # Check cluster nodes"
 echo "  kubectl get pods -A            # List all pods"
 echo "  tail -f $KEEL_LOG_FILE         # Watch Keel logs"
 echo "  kill \$(cat $KEEL_PID_FILE)     # Stop Keel"
-echo "  k3d cluster delete $K3D_CLUSTER_NAME  # Delete cluster"
+echo "  kind delete cluster --name $KIND_CLUSTER_NAME  # Delete cluster"
 echo ""

@@ -9,12 +9,12 @@
 - [x] Push to origin helix-specs branch
 
 ## In Progress - Switch to Kind
-- [~] Replace k3d with kind based on `.test/e2e-kind.sh` pattern
-- [ ] Remove k3d installation and cluster creation code
-- [ ] Add kind installation (download from storage.googleapis.com)
-- [ ] Add kind cluster creation with appropriate node image
-- [ ] Update kubeconfig setup to use kind's kubeconfig
-- [ ] Test: Run the startup script and verify cluster is created
+- [x] Replace k3d with kind based on `.test/e2e-kind.sh` pattern
+- [x] Remove k3d installation and cluster creation code
+- [x] Add kind installation (download from kind.sigs.k8s.io)
+- [x] Add kind cluster creation with appropriate node image
+- [x] Update kubeconfig setup to use kind's kubeconfig
+- [~] Test: Run the startup script and verify cluster is created
 - [ ] Test: Verify kubectl can connect to the cluster
 - [ ] Test: Run the startup script again to confirm idempotency
 - [ ] Test: Verify Keel starts successfully and cluster accepts deployments
