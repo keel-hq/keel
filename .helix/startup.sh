@@ -125,7 +125,7 @@ if command_exists k3s; then
     log_success "k3s is already installed"
 else
     log_info "Installing k3s..."
-    curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644
+    curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_ENABLE=true INSTALL_K3S_SKIP_START=true sh -
     log_success "k3s installed"
 fi
 
@@ -136,12 +136,20 @@ fi
 log_step "Setting up k3s cluster..."
 
 # Check if k3s is running
-if systemctl is-active --quiet k3s 2>/dev/null || pgrep -f "k3s server" >/dev/null 2>&1; then
+if pgrep -f "k3s server" >/dev/null 2>&1; then
     log_success "k3s is already running"
 else
-    log_info "Starting k3s..."
-    sudo systemctl start k3s 2>/dev/null || sudo k3s server --write-kubeconfig-mode 644 >/tmp/k3s-server.log 2>&1 &
-    sleep 5
+    log_info "Starting k3s server (no systemd mode)..."
+    # Run k3s server directly in background
+    sudo k3s server \
+        --write-kubeconfig-mode 644 \
+        --disable-cloud-controller \
+        --disable traefik \
+        >/tmp/k3s-server.log 2>&1 &
+
+    # Wait for k3s to start
+    log_info "Waiting for k3s to initialize..."
+    sleep 10
     log_success "k3s started"
 fi
 
