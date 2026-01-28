@@ -147,7 +147,7 @@ if k3d cluster list 2>/dev/null | grep -q "$K3D_CLUSTER_NAME"; then
     fi
 else
     log_info "Creating k3d cluster '$K3D_CLUSTER_NAME'..."
-    k3d cluster create --agents 3 "$K3D_CLUSTER_NAME" --wait
+    k3d cluster create --agents 3 "$K3D_CLUSTER_NAME" --wait --timeout 1m
     log_success "k3d cluster created"
 fi
 
