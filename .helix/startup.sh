@@ -12,7 +12,7 @@ KEEL_PID_FILE="/tmp/keel.pid"
 KEEL_LOG_FILE="/tmp/keel.log"
 KUBECONFIG_PATH="$HOME/.kube/config"
 MINIKUBE_PROFILE="keel-dev"
-K8S_VERSION="${K8S_VERSION:-v1.27.3}"
+K8S_VERSION="${K8S_VERSION:-v1.28.0}"
 
 echo "🚀 Starting project: Keel"
 echo "   Project root: $PROJECT_ROOT"
