@@ -4,14 +4,14 @@ set -euo pipefail
 # Project startup script for Keel development
 # This runs when agents start working on this project
 # Idempotent - safe to run multiple times
-# Uses kind (Kubernetes in Docker) for local development
+# Uses minikube with docker driver for local development
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 KEEL_PID_FILE="/tmp/keel.pid"
 KEEL_LOG_FILE="/tmp/keel.log"
 KUBECONFIG_PATH="$HOME/.kube/config"
-KIND_CLUSTER_NAME="keel-dev"
+MINIKUBE_PROFILE="keel-dev"
 K8S_VERSION="${K8S_VERSION:-v1.27.3}"
 
 echo "🚀 Starting project: Keel"
@@ -121,47 +121,51 @@ else
     log_success "kubectl installed"
 fi
 
-# Check/Install kind
-if command_exists kind; then
-    log_success "kind is already installed"
+# Check/Install minikube
+if command_exists minikube; then
+    log_success "minikube is already installed"
 else
-    log_info "Installing kind..."
-    curl -Lo /tmp/kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
-    chmod +x /tmp/kind
-    sudo mv /tmp/kind /usr/local/bin/kind
-    log_success "kind installed"
+    log_info "Installing minikube..."
+    curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+    chmod +x /tmp/minikube
+    sudo install /tmp/minikube /usr/local/bin/minikube
+    rm /tmp/minikube
+    log_success "minikube installed"
 fi
 
 # =============================================================================
 # Cluster Management
 # =============================================================================
 
-log_step "Setting up kind cluster..."
+log_step "Setting up minikube cluster..."
 
-# Check if kind cluster exists
-if kind get clusters 2>/dev/null | grep -q "^${KIND_CLUSTER_NAME}$"; then
-    log_success "kind cluster '$KIND_CLUSTER_NAME' already exists"
+# Check if minikube cluster exists
+if minikube profile list 2>/dev/null | grep -q "$MINIKUBE_PROFILE"; then
+    log_success "minikube profile '$MINIKUBE_PROFILE' already exists"
 
-    # Verify it's accessible
-    if kubectl cluster-info --context "kind-${KIND_CLUSTER_NAME}" &>/dev/null; then
-        log_success "Cluster is accessible"
+    # Check if it's running
+    MINIKUBE_STATUS=$(minikube status -p "$MINIKUBE_PROFILE" --format='{{.Host}}' 2>/dev/null || echo "")
+    if [[ "$MINIKUBE_STATUS" == "Running" ]]; then
+        log_success "Cluster is running"
     else
-        log_warning "Cluster exists but not accessible, recreating..."
-        kind delete cluster --name "$KIND_CLUSTER_NAME" 2>/dev/null || true
-        log_info "Creating kind cluster '$KIND_CLUSTER_NAME'..."
-        kind create cluster --name "$KIND_CLUSTER_NAME" --image "kindest/node:${K8S_VERSION}" --wait 300s
-        log_success "kind cluster created"
+        log_info "Starting stopped cluster..."
+        minikube start -p "$MINIKUBE_PROFILE" --driver=docker --kubernetes-version="$K8S_VERSION"
+        log_success "Cluster started"
     fi
 else
-    log_info "Creating kind cluster '$KIND_CLUSTER_NAME'..."
-    kind create cluster --name "$KIND_CLUSTER_NAME" --image "kindest/node:${K8S_VERSION}" --wait 300s
-    log_success "kind cluster created"
+    log_info "Creating minikube cluster '$MINIKUBE_PROFILE' with 3 nodes..."
+    minikube start -p "$MINIKUBE_PROFILE" \
+        --driver=docker \
+        --nodes=3 \
+        --kubernetes-version="$K8S_VERSION" \
+        --wait=all
+    log_success "minikube cluster created"
 fi
 
 # Setup kubeconfig
 mkdir -p "$HOME/.kube"
-kind export kubeconfig --name "$KIND_CLUSTER_NAME" --kubeconfig "$KUBECONFIG_PATH"
-export KUBECONFIG="$KUBECONFIG_PATH"
+minikube update-context -p "$MINIKUBE_PROFILE"
+export KUBECONFIG="$HOME/.kube/config"
 
 # Wait for cluster to be ready
 log_info "Waiting for cluster to be ready..."
@@ -275,7 +279,7 @@ echo "=============================================="
 echo "✅ Project startup complete!"
 echo "=============================================="
 echo ""
-echo "📦 kind cluster: $KIND_CLUSTER_NAME (running)"
+echo "📦 minikube cluster: $MINIKUBE_PROFILE (running)"
 echo "🔧 Kubeconfig:   $KUBECONFIG_PATH"
 echo "🚀 Keel:         Running on http://localhost:9300"
 echo "📝 Keel logs:    $KEEL_LOG_FILE"
@@ -286,5 +290,5 @@ echo "  kubectl get nodes              # Check cluster nodes"
 echo "  kubectl get pods -A            # List all pods"
 echo "  tail -f $KEEL_LOG_FILE         # Watch Keel logs"
 echo "  kill \$(cat $KEEL_PID_FILE)     # Stop Keel"
-echo "  kind delete cluster --name $KIND_CLUSTER_NAME  # Delete cluster"
+echo "  minikube delete -p $MINIKUBE_PROFILE  # Delete cluster"
 echo ""
