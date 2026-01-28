@@ -2,14 +2,14 @@
 
 ## Architecture Overview
 
-The startup script uses k3s (lightweight Kubernetes) to create a single-node cluster, then builds and runs Keel outside the cluster using an external kubeconfig.
+The startup script uses k3d (k3s in Docker) to create a lightweight Kubernetes cluster, then builds and runs Keel outside the cluster using an external kubeconfig.
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │                   Host Machine                       │
 │                                                      │
 │  ┌──────────────┐      ┌─────────────────────────┐  │
-│  │   Keel       │      │   k3s Service           │  │
+│  │   Keel       │      │   k3d Container         │  │
 │  │ (native Go)  │─────▶│   ┌─────────────────┐   │  │
 │  │              │      │   │  k3s cluster    │   │  │
 │  │ Port 9300    │      │   │  (single node)  │   │  │
@@ -17,15 +17,20 @@ The startup script uses k3s (lightweight Kubernetes) to create a single-node clu
 │         │              │          │              │  │
 │         │              │   Port 6443 (API)       │  │
 │         ▼              └─────────────────────────┘  │
-│  /etc/rancher/k3s/k3s.yaml                          │
-│  (kubeconfig)                                        │
+│  ~/.kube/config                                      │
+│  (k3d-keel-dev context)                              │
 └─────────────────────────────────────────────────────┘
 ```
 
 ## Key Decisions
 
-### Decision 1: Use k3s directly
-**Rationale**: k3s is a lightweight, certified Kubernetes distribution. It installs via a simple script, runs as a systemd service, and includes kubectl. Perfect for development environments.
+### Decision 1: Use k3d (k3s in Docker) instead of k3s directly
+**Rationale**: The development environment runs inside a container without proper cgroup support. k3s directly fails with `failed to find memory cgroup (v2)`. k3d runs k3s inside Docker containers, bypassing cgroup requirements on the host.
+
+**Discovery**: Attempted k3s direct installation first, but it failed due to container environment limitations:
+```
+level=fatal msg="Error: failed to find memory cgroup (v2)"
+```
 
 ### Decision 2: Run Keel natively (not in cluster)
 **Rationale**: For development, running Keel outside the cluster with `--no-incluster` allows:
@@ -38,30 +43,32 @@ The startup script uses k3s (lightweight Kubernetes) to create a single-node clu
 
 ## Component Details
 
-### 1. k3s Installation
-- **Install method**: `curl -sfL https://get.k3s.io | sh -`
-- **Service**: Runs as systemd service, auto-restarts
-- **Kubeconfig**: Written to `/etc/rancher/k3s/k3s.yaml`
-- **kubectl**: Included with k3s installation
+### 1. k3d Installation
+- **Install method**: `curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash`
+- **Prerequisite**: Docker must be available
+- **kubectl**: Installed separately if needed
 
 ### 2. Cluster Configuration
-- **Type**: Single-node server (fully functional cluster)
-- **API Server**: Port 6443 on localhost
-- **Kubeconfig**: `/etc/rancher/k3s/k3s.yaml` (requires sudo to read, or copy with proper permissions)
+- **Name**: `keel-dev`
+- **Type**: Single-node k3s inside Docker container
+- **API Server**: Exposed via k3d on random port, accessible via kubeconfig
+- **Kubeconfig**: Merged into `~/.kube/config` with context `k3d-keel-dev`
 
 ### 3. Keel Configuration
 - **Build**: `go build` in `cmd/keel` directory
 - **Run flags**: `--no-incluster` to use external kubeconfig
 - **Environment**:
-  - `KUBERNETES_CONFIG=/etc/rancher/k3s/k3s.yaml` (or copied to user-accessible location)
+  - `KUBECONFIG=~/.kube/config`
   - `BASIC_AUTH_USER=admin`
   - `BASIC_AUTH_PASSWORD=admin`
 
 ### 4. Idempotency Strategy
 | Component | Check | Action if exists | Action if missing |
 |-----------|-------|------------------|-------------------|
-| k3s | `which k3s` or `systemctl is-active k3s` | Ensure running | Install |
-| k3s service | `systemctl is-active k3s` | Skip start | Start service |
+| Go | `which go` | Skip install | Install |
+| k3d binary | `which k3d` | Skip install | Install |
+| kubectl binary | `which kubectl` | Skip install | Install |
+| k3d cluster | `k3d cluster list \| grep keel-dev` | Skip create | Create |
 | Keel process | Check PID file | Verify running | Start |
 
 ## File Locations
@@ -69,9 +76,8 @@ The startup script uses k3s (lightweight Kubernetes) to create a single-node clu
 | Item | Path |
 |------|------|
 | Startup script | `.helix/startup.sh` |
-| k3s kubeconfig | `/etc/rancher/k3s/k3s.yaml` |
-| User kubeconfig copy | `~/.kube/config` (optional) |
-| Keel binary | `cmd/keel/keel` |
+| Kubeconfig | `~/.kube/config` |
+| Keel binary | `/tmp/keel-source/cmd/keel/keel` |
 | Keel PID file | `/tmp/keel.pid` |
 | Keel log file | `/tmp/keel.log` |
 
@@ -80,5 +86,12 @@ The startup script uses k3s (lightweight Kubernetes) to create a single-node clu
 - Keel uses `kingpin` for CLI flags
 - `--no-incluster` flag enables external kubeconfig mode
 - Default UI port is 9300 (from `types.KeelDefaultPort`)
-- Environment variables: `KUBERNETES_CONFIG`, `KUBERNETES_CONTEXT` override defaults
-- k3s writes kubeconfig to `/etc/rancher/k3s/k3s.yaml` with root ownership
+- Environment variables: `KUBECONFIG` is used by kubectl and Keel
+- k3d automatically manages kubeconfig merging
+
+## Implementation Notes
+
+- **Blocker discovered**: k3s direct install fails in container environments without cgroup v2 support
+- **Solution**: Switched to k3d which runs k3s inside Docker, avoiding host cgroup requirements
+- Go 1.21.6 installed automatically if not present
+- Script clones master branch to `/tmp/keel-source` since helix-specs branch doesn't have source code
