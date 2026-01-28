@@ -4,15 +4,13 @@ set -euo pipefail
 # Project startup script for Keel development
 # This runs when agents start working on this project
 # Idempotent - safe to run multiple times
-# Uses minikube with docker driver for local development
+# Uses microk8s for local development
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 KEEL_PID_FILE="/tmp/keel.pid"
 KEEL_LOG_FILE="/tmp/keel.log"
 KUBECONFIG_PATH="$HOME/.kube/config"
-MINIKUBE_PROFILE="keel-dev"
-K8S_VERSION="${K8S_VERSION:-v1.28.0}"
 
 echo "🚀 Starting project: Keel"
 echo "   Project root: $PROJECT_ROOT"
@@ -121,65 +119,54 @@ else
     log_success "kubectl installed"
 fi
 
-# Check/Install minikube
-if command_exists minikube; then
-    log_success "minikube is already installed"
+# Check/Install microk8s
+if command_exists microk8s; then
+    log_success "microk8s is already installed"
 else
-    log_info "Installing minikube..."
-    curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-    chmod +x /tmp/minikube
-    sudo install /tmp/minikube /usr/local/bin/minikube
-    rm /tmp/minikube
-    log_success "minikube installed"
+    log_info "Installing microk8s..."
+    sudo snap install microk8s --classic --channel=1.28/stable
+
+    # Add current user to microk8s group
+    sudo usermod -a -G microk8s $USER
+
+    log_success "microk8s installed"
+    log_warning "Note: Group membership change requires re-login, using sudo for this session"
 fi
 
 # =============================================================================
 # Cluster Management
 # =============================================================================
 
-log_step "Setting up minikube cluster..."
+log_step "Setting up microk8s cluster..."
 
-# Check if minikube cluster exists
-if minikube profile list 2>/dev/null | grep -q "$MINIKUBE_PROFILE"; then
-    log_success "minikube profile '$MINIKUBE_PROFILE' already exists"
-
-    # Check if it's running
-    MINIKUBE_STATUS=$(minikube status -p "$MINIKUBE_PROFILE" --format='{{.Host}}' 2>/dev/null || echo "")
-    if [[ "$MINIKUBE_STATUS" == "Running" ]]; then
-        log_success "Cluster is running"
-    else
-        log_info "Starting stopped cluster..."
-        minikube start -p "$MINIKUBE_PROFILE" --driver=docker --kubernetes-version="$K8S_VERSION"
-        log_success "Cluster started"
-    fi
+# Check if microk8s is running
+if sudo microk8s status --wait-ready --timeout 10 &>/dev/null; then
+    log_success "microk8s is already running"
 else
-    log_info "Creating minikube cluster '$MINIKUBE_PROFILE' with 3 nodes..."
-    minikube start -p "$MINIKUBE_PROFILE" \
-        --driver=docker \
-        --nodes=3 \
-        --kubernetes-version="$K8S_VERSION" \
-        --wait=all
-    log_success "minikube cluster created"
+    log_info "Starting microk8s..."
+    sudo microk8s start
+    sudo microk8s status --wait-ready --timeout 60
+    log_success "microk8s started"
 fi
+
+# Enable required addons
+log_info "Enabling required addons..."
+sudo microk8s enable dns storage 2>/dev/null || true
+log_success "Addons enabled"
 
 # Setup kubeconfig
 mkdir -p "$HOME/.kube"
-minikube update-context -p "$MINIKUBE_PROFILE"
-export KUBECONFIG="$HOME/.kube/config"
+sudo microk8s config > "$KUBECONFIG_PATH"
+chmod 600 "$KUBECONFIG_PATH"
+export KUBECONFIG="$KUBECONFIG_PATH"
 
 # Wait for cluster to be ready
 log_info "Waiting for cluster to be ready..."
-JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'
-until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
-    sleep 2
-    echo -n "."
-done
-echo ""
+wait_for "Kubernetes API" "kubectl get nodes" 120 3
 log_success "Cluster is ready"
 
 # Show cluster info
 kubectl get nodes
-kubectl cluster-info
 
 # =============================================================================
 # Keel Build and Run
@@ -279,7 +266,7 @@ echo "=============================================="
 echo "✅ Project startup complete!"
 echo "=============================================="
 echo ""
-echo "📦 minikube cluster: $MINIKUBE_PROFILE (running)"
+echo "📦 microk8s cluster: running"
 echo "🔧 Kubeconfig:   $KUBECONFIG_PATH"
 echo "🚀 Keel:         Running on http://localhost:9300"
 echo "📝 Keel logs:    $KEEL_LOG_FILE"
@@ -290,5 +277,5 @@ echo "  kubectl get nodes              # Check cluster nodes"
 echo "  kubectl get pods -A            # List all pods"
 echo "  tail -f $KEEL_LOG_FILE         # Watch Keel logs"
 echo "  kill \$(cat $KEEL_PID_FILE)     # Stop Keel"
-echo "  minikube delete -p $MINIKUBE_PROFILE  # Delete cluster"
+echo "  sudo microk8s stop            # Stop cluster"
 echo ""
