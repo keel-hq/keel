@@ -1,9 +1,9 @@
 # Implementation Tasks
 
 ## Prerequisites Setup
-- [ ] Add function to check if k3s is already installed (`which k3s`)
-- [ ] Add function to install k3s via official install script (`curl -sfL https://get.k3s.io | sh -`)
-- [ ] Add function to verify Go is installed (required for building Keel)
+- [~] Add function to check if k3s is already installed (`which k3s`)
+- [~] Add function to install k3s via official install script (`curl -sfL https://get.k3s.io | sh -`)
+- [~] Add function to verify Go is installed (required for building Keel)
 
 ## Cluster Management
 - [ ] Add function to check if k3s service is running (`systemctl is-active k3s`)
