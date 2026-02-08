@@ -67,3 +67,31 @@ None - this is a documentation-only change.
 
 - Documentation may drift from code over time
 - Mitigate: Include instructions for keeping it updated
+
+## Implementation Notes
+
+### Approach Taken
+- Created a single comprehensive `ARCHITECTURE.md` file in the repository root
+- Structured for AI agents: starts with "Quick Start - Read These First" section
+- Used ASCII diagrams for data flow (git-friendly, portable)
+- Included tables for quick reference (directories, annotations, env vars)
+
+### Key Discoveries During Implementation
+- The codebase uses a clean plugin pattern via blank imports and `init()` registration
+- All notifications registered in `cmd/keel/main.go` via `_ "github.com/keel-hq/keel/extension/notification/..."`
+- Same pattern for credentials helpers and bots
+- Providers are explicitly wired in `setupProviders()` function
+- The `types/types.go` file is the best starting point - contains all core domain concepts
+
+### File Created
+- `keel/ARCHITECTURE.md` - 301 lines covering:
+  - Quick start reading list
+  - High-level ASCII architecture diagram
+  - Directory structure table
+  - Core concepts (Providers, Triggers, Policies, Notifications, Approvals)
+  - Data flow explanation
+  - Key annotations reference
+  - Environment variables reference
+  - Extension points guide (how to add notifiers, webhooks, providers, credentials helpers)
+  - Build/run/test commands
+  - Common tasks lookup table
