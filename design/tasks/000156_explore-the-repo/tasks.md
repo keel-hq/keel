@@ -1,6 +1,6 @@
 # Implementation Tasks
 
-- [ ] Create `ARCHITECTURE.md` file in keel repository root
+- [~] Create `ARCHITECTURE.md` file in keel repository root
 - [ ] Document directory structure with one-line descriptions for each top-level folder
 - [ ] Explain core concepts: Providers, Triggers, Policies, Approvals, Notifications
 - [ ] Document the main entry point (`cmd/keel/main.go`) and startup flow
