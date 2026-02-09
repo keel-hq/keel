@@ -5,7 +5,7 @@ description: Open source tool for automating Kubernetes deployment updates.
 # replaced during the chart build, see .github/workflows/releasechart.yaml
 # The way to trigger a chart release is using a tag "chart-{CHART_VERSION}"
 version: 1.1.0
-appVersion: 0.21.0
+appVersion: 0.21.1
 keywords:
 - kubernetes deployment
 - helm release
@@ -13,5 +13,4 @@ keywords:
 home: https://github.com/keel-hq/keel
 sources:
 - https://github.com/keel-hq/keel
-engine: gotpl
 icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
