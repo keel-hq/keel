@@ -10,10 +10,7 @@
   <a href="https://img.shields.io/docker/pulls/keelhq/keel.svg">
     <img src="https://img.shields.io/docker/pulls/keelhq/keel.svg" alt="Docker Pulls">
   </a>
-
-  <a href="https://drone-kr.webrelay.io/keel-hq/keel">
-    <img src="https://drone-kr.webrelay.io/api/badges/keel-hq/keel/status.svg" alt="Drone Status">
-  </a>
+  
 </p>
 
 # Keel - automated Kubernetes deployments for the rest of us
