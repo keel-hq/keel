@@ -4,7 +4,7 @@ description: Open source tool for automating Kubernetes deployment updates.
 # The chart version number here is just a template. The actual version number is
 # replaced during the chart build, see .github/workflows/releasechart.yaml
 # The way to trigger a chart release is using a tag "chart-{CHART_VERSION}"
-version: 1.1.0
+version: 1.2.0
 appVersion: 0.21.1
 keywords:
 - kubernetes deployment
