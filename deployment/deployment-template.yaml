@@ -185,6 +185,8 @@ spec:
             # Enable MS Teams webhook endpoint
             - name: TEAMS_WEBHOOK_URL
               value: "{{ .teams_webhook_url }}"
+            - name: TEAMS_WEBHOOK_FORMAT
+              value: "{{ .teams_webhook_format | default \"auto\" }}"
             - name: SLACK_APP_TOKEN
               value: "{{ .slack_app_token }}"
             - name: SLACK_BOT_TOKEN
