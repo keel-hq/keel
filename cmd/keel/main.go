@@ -84,9 +84,6 @@ const (
 	EnvKubernetesContext   = "KUBERNETES_CONTEXT"
 )
 
-// EnvDebug - set to 1 or anything else to enable debug logging
-const EnvDebug = "DEBUG"
-
 func main() {
 	ver := version.GetKeelVersion()
 
@@ -107,7 +104,7 @@ func main() {
 		"arch":       ver.Arch,
 	}).Info("keel starting...")
 
-	if os.Getenv(EnvDebug) == "true" {
+	if os.Getenv(constants.EnvDebug) == "true" {
 		log.SetLevel(log.DebugLevel)
 	}
 
