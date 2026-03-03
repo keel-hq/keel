@@ -45,6 +45,9 @@ const (
 	EnvMailSmtpPort   = "MAIL_SMTP_PORT"
 	EnvMailSmtpUser   = "MAIL_SMTP_USER"
 	EnvMailSmtpPass   = "MAIL_SMTP_PASS"
+
+	// EnvDebug - set to 1 or anything else to enable debug logging
+	EnvDebug = "DEBUG"
 )
 
 // EnvNotificationLevel - minimum level for notifications, defaults to info

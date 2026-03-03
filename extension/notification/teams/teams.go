@@ -58,9 +58,15 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		Timeout:   timeout,
 	}
 
+	webhookLog := s.endpoint
+	if os.Getenv(constants.EnvDebug) != "true" {
+		if u, err := url.Parse(s.endpoint); err == nil {
+			webhookLog = u.Scheme + "://" + u.Host
+		}
+	}
 	log.WithFields(log.Fields{
-		"name":     "teams",
-		"webhook": s.endpoint,
+		"name":    "teams",
+		"webhook": webhookLog,
 	}).Info("extension.notification.teams: sender configured")
 
 	return true, nil
@@ -140,3 +146,4 @@ func (s *sender) Send(event types.EventNotification) error {
 
 	return nil
 }
+
