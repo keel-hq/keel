@@ -214,6 +214,10 @@ func getInitContainerTrackingFromMeta(labels map[string]string, annotations map[
 func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 	var trackedImages []*types.TrackedImage
 
+	// podsByNamespace lazily caches pod lists so we make at most one API call
+	// per namespace rather than one per tracked image.
+	podsByNamespace := make(map[string][]v1.Pod)
+
 	for _, gr := range p.cache.Values() {
 
 		labels := gr.GetLabels()
@@ -278,6 +282,21 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				if semverTag.Prerelease() != "" {
 					svp[semverTag.Prerelease()] = ref.Tag()
 				}
+			}
+
+			// Resolve the running pod's digest for this namespace (cached per namespace).
+			pods, ok := podsByNamespace[gr.Namespace]
+			if !ok {
+				podList, listErr := p.implementer.Pods(gr.Namespace, "")
+				if listErr != nil {
+					log.WithFields(log.Fields{
+						"error":     listErr,
+						"namespace": gr.Namespace,
+					}).Warn("provider.kubernetes: failed to list pods for digest baseline, will fall back to registry")
+				} else if podList != nil {
+					pods = podList.Items
+				}
+				podsByNamespace[gr.Namespace] = pods
 			}
 
 			trackedImages = append(trackedImages, &types.TrackedImage{
