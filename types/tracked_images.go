@@ -24,6 +24,10 @@ type TrackedImage struct {
 	// combined semver tags
 	Tags   []string `json:"tags"`
 	Policy Policy   `json:"policy"`
+	// PodDigest is the digest extracted from a live pod's imageID at watcher
+	// registration time. When non-empty it is used as the poll baseline instead
+	// of the registry state, so that pre-existing drift is detected immediately.
+	PodDigest string `json:"podDigest,omitempty"`
 }
 
 type Policy interface {

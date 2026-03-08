@@ -289,6 +289,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				Secrets:      secrets,
 				Meta:         make(map[string]string),
 				Policy:       plc,
+				PodDigest:    k8s.FindPodImageDigest(pods, ref.Repository()),
 			})
 		}
 	}
