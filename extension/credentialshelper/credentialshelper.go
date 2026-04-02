@@ -2,6 +2,7 @@ package credentialshelper
 
 import (
 	"errors"
+	"sort"
 	"sync"
 
 	"github.com/keel-hq/keel/types"
@@ -20,6 +21,13 @@ type CredentialsHelper interface {
 var (
 	ErrCredentialsNotAvailable = errors.New("no credentials available for this registry")
 	ErrUnsupportedRegistry     = errors.New("unsupported registry")
+)
+
+// Well-known helper names used at registration and for call-order priority.
+const (
+	HelperNameSecrets = "secrets"
+	HelperNameAWS     = "aws"
+	HelperNameGCR     = "gcr"
 )
 
 var (
@@ -63,17 +71,44 @@ func UnregisterCredentialsHelper(name string) {
 	delete(credHelpers, name)
 }
 
-// GetCredentials - generic function for getting credentials
-// func (ch *CredentialsHelpers) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
+// helperCallOrder returns helper names in a stable, intentional order. Map iteration
+// in Go is randomised; without this, cloud ADC helpers (e.g. gcr) could run before
+// the Kubernetes secrets helper and win with workload-identity tokens even when the
+// tracked image references imagePullSecrets (e.g. docker-registries), causing flaky
+// 403 responses against private registries.
+func helperCallOrder(helpers map[string]CredentialsHelper) []string {
+	priority := []string{HelperNameSecrets, HelperNameAWS, HelperNameGCR}
+	seen := make(map[string]struct{}, len(helpers))
+	out := make([]string, 0, len(helpers))
+	for _, name := range priority {
+		if _, ok := helpers[name]; ok {
+			out = append(out, name)
+			seen[name] = struct{}{}
+		}
+	}
+	rest := make([]string, 0, len(helpers))
+	for name := range helpers {
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		rest = append(rest, name)
+	}
+	sort.Strings(rest)
+	return append(out, rest...)
+}
+
+// GetCredentials iterates registered helpers in priority order and returns the
+// first successful credentials, or ErrCredentialsNotAvailable if none match.
 func GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
 	credHelpersM.RLock()
 	defer credHelpersM.RUnlock()
 
-	for name, credHelper := range credHelpers {
+	for _, name := range helperCallOrder(credHelpers) {
+		credHelper := credHelpers[name]
 		if credHelper.IsEnabled() {
 			foundCredentials, err := credHelper.GetCredentials(image)
 			if err != nil {
-				if err == ErrUnsupportedRegistry {
+				if errors.Is(err, ErrUnsupportedRegistry) {
 					log.WithFields(log.Fields{
 						"helper":        name,
 						"error":         err,

@@ -249,7 +249,7 @@ func main() {
 	secretsGetter := secrets.NewGetter(implementer, dockerConfig)
 
 	ch := secretsCredentialsHelper.New(secretsGetter)
-	credentialshelper.RegisterCredentialsHelper("secrets", ch)
+	credentialshelper.RegisterCredentialsHelper(credentialshelper.HelperNameSecrets, ch)
 
 	// trigger setup
 	// teardownTriggers := setupTriggers(ctx, providers, approvalsManager, &t.GenericResourceCache, implementer)

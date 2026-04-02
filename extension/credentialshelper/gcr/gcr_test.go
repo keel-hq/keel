@@ -103,17 +103,25 @@ func TestCredentialsHelper_GetCredentials_jsonKeyFromFile(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetCredentials: %v", err)
 			}
-			if creds.Username != "_json_key" || creds.Password != jsonKey {
+			if creds.Username != jsonKeyUsername || creds.Password != jsonKey {
 				t.Fatalf("unexpected creds: username=%q passwordLen=%d", creds.Username, len(creds.Password))
 			}
 		})
 	}
 }
 
-func TestCredentialsHelper_GetCredentials_workloadIdentity(t *testing.T) {
-	if err := os.Unsetenv("GOOGLE_APPLICATION_CREDENTIALS"); err != nil {
+func unsetEnvWithRestore(t *testing.T, key string) {
+	t.Helper()
+	if orig, ok := os.LookupEnv(key); ok {
+		t.Cleanup(func() { os.Setenv(key, orig) })
+	}
+	if err := os.Unsetenv(key); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestCredentialsHelper_GetCredentials_workloadIdentity(t *testing.T) {
+	unsetEnvWithRestore(t, "GOOGLE_APPLICATION_CREDENTIALS")
 
 	origTS := tokenSourceProvider
 	t.Cleanup(func() { tokenSourceProvider = origTS })
@@ -123,23 +131,17 @@ func TestCredentialsHelper_GetCredentials_workloadIdentity(t *testing.T) {
 	tests := []struct {
 		name     string
 		ref      string
-		provider func(t *testing.T) func(context.Context, ...string) (oauth2.TokenSource, error)
+		provider func(ctx context.Context, scopes ...string) (oauth2.TokenSource, error)
 		check    func(t *testing.T, creds *types.Credentials, err error)
 	}{
 		{
 			name: "requests cloud platform scope and returns bearer creds",
 			ref:  "europe-west4-docker.pkg.dev/prj/repo/img:3",
-			provider: func(t *testing.T) func(context.Context, ...string) (oauth2.TokenSource, error) {
-				var gotScopes []string
-				t.Cleanup(func() {
-					if len(gotScopes) != 1 || gotScopes[0] != scopeCloudPlatform {
-						t.Errorf("token source scopes: got %v want single scope %q", gotScopes, scopeCloudPlatform)
-					}
-				})
-				return func(ctx context.Context, scopes ...string) (oauth2.TokenSource, error) {
-					gotScopes = append([]string(nil), scopes...)
-					return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "fake-wi-token"}), nil
+			provider: func(ctx context.Context, scopes ...string) (oauth2.TokenSource, error) {
+				if len(scopes) != 1 || scopes[0] != scopeCloudPlatform {
+					return nil, errors.New("unexpected scopes: want single scope " + scopeCloudPlatform)
 				}
+				return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "fake-wi-token"}), nil
 			},
 			check: func(t *testing.T, creds *types.Credentials, err error) {
 				if err != nil {
@@ -153,10 +155,8 @@ func TestCredentialsHelper_GetCredentials_workloadIdentity(t *testing.T) {
 		{
 			name: "token source error",
 			ref:  "gcr.io/x/y:1",
-			provider: func(t *testing.T) func(context.Context, ...string) (oauth2.TokenSource, error) {
-				return func(ctx context.Context, scopes ...string) (oauth2.TokenSource, error) {
-					return nil, errors.New("no metadata server")
-				}
+			provider: func(ctx context.Context, scopes ...string) (oauth2.TokenSource, error) {
+				return nil, errors.New("no metadata server")
 			},
 			check: func(t *testing.T, creds *types.Credentials, err error) {
 				if err == nil {
@@ -167,10 +167,8 @@ func TestCredentialsHelper_GetCredentials_workloadIdentity(t *testing.T) {
 		{
 			name: "token error from Token()",
 			ref:  "gcr.io/x/y:1",
-			provider: func(t *testing.T) func(context.Context, ...string) (oauth2.TokenSource, error) {
-				return func(ctx context.Context, scopes ...string) (oauth2.TokenSource, error) {
-					return errTokenSource{err: errTokenRefresh}, nil
-				}
+			provider: func(ctx context.Context, scopes ...string) (oauth2.TokenSource, error) {
+				return errTokenSource{err: errTokenRefresh}, nil
 			},
 			check: func(t *testing.T, creds *types.Credentials, err error) {
 				if err == nil {
@@ -182,7 +180,7 @@ func TestCredentialsHelper_GetCredentials_workloadIdentity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokenSourceProvider = tt.provider(t)
+			tokenSourceProvider = tt.provider
 			h := New()
 			creds, err := h.GetCredentials(tracked(mustParseRef(t, tt.ref)))
 			tt.check(t, creds, err)

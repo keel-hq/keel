@@ -28,7 +28,7 @@ const AWSCredentialsExpiry = 2 * time.Hour
 var registryRegxp *regexp.Regexp
 
 func init() {
-	credentialshelper.RegisterCredentialsHelper("aws", New())
+	credentialshelper.RegisterCredentialsHelper(credentialshelper.HelperNameAWS, New())
 	registryRegxp = regexp.MustCompile(`(?P<registryID>\d+)\.dkr\.ecr\.(?P<region>\S+)\.amazonaws\.com`)
 }
 
@@ -117,7 +117,7 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 			"token":            *ad.AuthorizationToken,
 			"registry":         registry,
 		}).Debug("checking registry")
-		if strings.SplitN(u.Host,".",2)[1] == strings.SplitN(registry,".",2)[1] {
+		if strings.SplitN(u.Host, ".", 2)[1] == strings.SplitN(registry, ".", 2)[1] {
 			username, password, err := decodeBase64Secret(*ad.AuthorizationToken)
 			if err != nil {
 				return nil, fmt.Errorf("failed to decode authentication token: %s, error: %s", *ad.AuthorizationToken, err)
