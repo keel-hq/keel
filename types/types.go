@@ -387,4 +387,5 @@ const (
 	PolicyTypeForce
 	PolicyTypeGlob
 	PolicyTypeRegexp
+	PolicyTypeNewest
 )

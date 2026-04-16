@@ -1,9 +1,12 @@
 package docker
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	manifestv2 "github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/opencontainers/go-digest"
@@ -40,6 +43,67 @@ func (r *Registry) ManifestDigest(repository, reference string) (digest.Digest, 
 		return "", err
 	}
 	return digest.FromBytes(body), nil
+}
+
+// manifestResponse is used to extract the config digest from a v2 manifest.
+type manifestResponse struct {
+	Config struct {
+		Digest string `json:"digest"`
+	} `json:"config"`
+}
+
+// configResponse is used to extract the creation timestamp from an image config blob.
+type configResponse struct {
+	Created time.Time `json:"created"`
+}
+
+// ImageCreatedAt fetches the image creation timestamp by reading the config blob.
+func (r *Registry) ImageCreatedAt(repository, reference string) (time.Time, error) {
+	// Fetch the manifest to get the config digest
+	url := r.url("/v2/%s/manifests/%s", repository, reference)
+	r.Logf("registry.manifest.createdAt url=%s repository=%s reference=%s", url, repository, reference)
+
+	resp, err := r.request("GET", url)
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	var manifest manifestResponse
+	if err := json.Unmarshal(body, &manifest); err != nil {
+		return time.Time{}, err
+	}
+
+	if manifest.Config.Digest == "" {
+		return time.Time{}, fmt.Errorf("no config digest in manifest for %s:%s", repository, reference)
+	}
+
+	// Fetch the config blob to get the creation date
+	blobURL := r.url("/v2/%s/blobs/%s", repository, manifest.Config.Digest)
+	r.Logf("registry.blob.get url=%s", blobURL)
+
+	blobResp, err := r.Client.Get(blobURL)
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer blobResp.Body.Close()
+
+	blobBody, err := io.ReadAll(blobResp.Body)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	var config configResponse
+	if err := json.Unmarshal(blobBody, &config); err != nil {
+		return time.Time{}, err
+	}
+
+	return config.Created, nil
 }
 
 // request performs a request against a url
