@@ -190,6 +190,74 @@ func TestStatefulSetMultipleContainers(t *testing.T) {
 	}
 }
 
+func TestDeploymentImageVolume(t *testing.T) {
+	d := &apps_v1.Deployment{
+		meta_v1.TypeMeta{},
+		meta_v1.ObjectMeta{
+			Name:      "dep-1",
+			Namespace: "xxxx",
+		},
+		apps_v1.DeploymentSpec{
+			Template: core_v1.PodTemplateSpec{
+				Spec: core_v1.PodSpec{
+					Containers: []core_v1.Container{
+						{Image: "gcr.io/v2-namespace/hello-world:1.1.1"},
+					},
+					Volumes: []core_v1.Volume{
+						{
+							Name: "config",
+							VolumeSource: core_v1.VolumeSource{
+								ConfigMap: &core_v1.ConfigMapVolumeSource{},
+							},
+						},
+						{
+							Name: "oci-config",
+							VolumeSource: core_v1.VolumeSource{
+								Image: &core_v1.ImageVolumeSource{
+									Reference:  "gcr.io/v2-namespace/oci-config:1.0.0",
+									PullPolicy: core_v1.PullIfNotPresent,
+								},
+							},
+						},
+						{
+							Name: "oci-empty",
+							VolumeSource: core_v1.VolumeSource{
+								Image: &core_v1.ImageVolumeSource{},
+							},
+						},
+					},
+				},
+			},
+		},
+		apps_v1.DeploymentStatus{},
+	}
+
+	gr, err := NewGenericResource(d)
+	if err != nil {
+		t.Fatalf("failed to create generic resource: %s", err)
+	}
+
+	refs := gr.GetImageVolumeReferences(nil)
+	if len(refs) != 1 || refs[0] != "gcr.io/v2-namespace/oci-config:1.0.0" {
+		t.Fatalf("unexpected image volume references: %v", refs)
+	}
+
+	gr.UpdateImageVolume(1, "gcr.io/v2-namespace/oci-config:1.1.0")
+
+	updated, ok := gr.GetResource().(*apps_v1.Deployment)
+	if !ok {
+		t.Fatalf("conversion failed")
+	}
+	if got := updated.Spec.Template.Spec.Volumes[1].Image.Reference; got != "gcr.io/v2-namespace/oci-config:1.1.0" {
+		t.Errorf("unexpected updated reference: %s", got)
+	}
+
+	filter := func(v core_v1.Volume) bool { return v.Name == "config" }
+	if refs := gr.GetImageVolumeReferences(filter); len(refs) != 0 {
+		t.Errorf("expected zero references when filter excludes image volume, got %v", refs)
+	}
+}
+
 func TestDaemonsetlSetMultipleContainers(t *testing.T) {
 	d := &apps_v1.DaemonSet{
 		meta_v1.TypeMeta{},

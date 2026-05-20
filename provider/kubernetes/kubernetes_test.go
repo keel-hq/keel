@@ -396,6 +396,188 @@ func TestGetImpactedInit(t *testing.T) {
 
 }
 
+func TestGetImpactedImageVolume(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+
+	deps := []*apps_v1.Deployment{
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-with-image-volume",
+				Namespace:   "xxxx",
+				Annotations: map[string]string{types.KeelImageVolumeAnnotation: "true"},
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{Image: "gcr.io/v2-namespace/sidecar:1.0.0"},
+						},
+						Volumes: []v1.Volume{
+							{
+								Name: "oci-config",
+								VolumeSource: v1.VolumeSource{
+									Image: &v1.ImageVolumeSource{
+										Reference: "gcr.io/v2-namespace/hello-world:1.1.1",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+		{
+			meta_v1.TypeMeta{},
+			meta_v1.ObjectMeta{
+				Name:        "dep-without-annotation",
+				Namespace:   "xxxx",
+				Annotations: map[string]string{},
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+			},
+			apps_v1.DeploymentSpec{
+				Template: v1.PodTemplateSpec{
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{Image: "gcr.io/v2-namespace/sidecar:1.0.0"},
+						},
+						Volumes: []v1.Volume{
+							{
+								Name: "oci-config",
+								VolumeSource: v1.VolumeSource{
+									Image: &v1.ImageVolumeSource{
+										Reference: "gcr.io/v2-namespace/hello-world:1.1.1",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			apps_v1.DeploymentStatus{},
+		},
+	}
+
+	grs := MustParseGRS(deps)
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	repo := &types.Repository{
+		Name: "gcr.io/v2-namespace/hello-world",
+		Tag:  "1.1.2",
+	}
+
+	plans, err := provider.createUpdatePlans(repo)
+	if err != nil {
+		t.Errorf("failed to get deployments: %s", err)
+	}
+
+	if len(plans) != 1 {
+		t.Fatalf("expected 1 update plan, got %d", len(plans))
+	}
+
+	if plans[0].Resource.Name != "dep-with-image-volume" {
+		t.Fatalf("unexpected resource updated: %s", plans[0].Resource.Name)
+	}
+
+	vols := plans[0].Resource.Volumes()
+	if len(vols) != 1 || vols[0].Image == nil {
+		t.Fatalf("expected one image volume, got %v", vols)
+	}
+	if got := vols[0].Image.Reference; got != "gcr.io/v2-namespace/hello-world:1.1.2" {
+		t.Errorf("expected updated image volume reference, got %s", got)
+	}
+}
+
+func TestTrackedImagesIncludeImageVolumes(t *testing.T) {
+	fp := &fakeImplementer{}
+	fp.namespaces = &v1.NamespaceList{
+		Items: []v1.Namespace{
+			{
+				meta_v1.TypeMeta{},
+				meta_v1.ObjectMeta{Name: "xxxx"},
+				v1.NamespaceSpec{},
+				v1.NamespaceStatus{},
+			},
+		},
+	}
+
+	dep := &apps_v1.Deployment{
+		meta_v1.TypeMeta{},
+		meta_v1.ObjectMeta{
+			Name:        "dep-1",
+			Namespace:   "xxxx",
+			Annotations: map[string]string{types.KeelImageVolumeAnnotation: "true"},
+			Labels:      map[string]string{types.KeelPolicyLabel: "all"},
+		},
+		apps_v1.DeploymentSpec{
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{Image: "gcr.io/v2-namespace/sidecar:1.0.0"},
+					},
+					Volumes: []v1.Volume{
+						{
+							Name: "oci-config",
+							VolumeSource: v1.VolumeSource{
+								Image: &v1.ImageVolumeSource{
+									Reference: "gcr.io/v2-namespace/oci-config:1.0.0",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		apps_v1.DeploymentStatus{},
+	}
+
+	grs := MustParseGRS([]*apps_v1.Deployment{dep})
+	grc := &k8s.GenericResourceCache{}
+	grc.Add(grs...)
+
+	approver, teardown := approver()
+	defer teardown()
+	provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
+	if err != nil {
+		t.Fatalf("failed to get provider: %s", err)
+	}
+
+	tracked, err := provider.TrackedImages()
+	if err != nil {
+		t.Fatalf("failed to get tracked images: %s", err)
+	}
+
+	found := false
+	for _, ti := range tracked {
+		if ti.Image.Remote() == "gcr.io/v2-namespace/oci-config:1.0.0" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected image volume reference to be tracked; got %v", tracked)
+	}
+}
+
 func TestGetImpactedPolicyAnnotations(t *testing.T) {
 	fp := &fakeImplementer{}
 	fp.namespaces = &v1.NamespaceList{

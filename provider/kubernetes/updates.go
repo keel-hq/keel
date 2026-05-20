@@ -29,6 +29,76 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 	shouldUpdateDeployment = false
 
 	containerFilterFunc := GetMonitorContainersFromMeta(resource.GetAnnotations(), resource.GetLabels())
+	volumeFilterFunc := GetMonitorVolumesFromMeta(resource.GetAnnotations(), resource.GetLabels())
+
+	if track, ok := resource.GetAnnotations()[types.KeelImageVolumeAnnotation]; ok && track == "true" {
+		for idx, vol := range resource.Volumes() {
+			if vol.Image == nil || vol.Image.Reference == "" {
+				continue
+			}
+			if !volumeFilterFunc(vol) {
+				continue
+			}
+
+			volumeImageRef, err := image.Parse(vol.Image.Reference)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":      err,
+					"image_name": vol.Image.Reference,
+				}).Error("provider.kubernetes: failed to parse image volume reference")
+				continue
+			}
+
+			log.WithFields(log.Fields{
+				"name":              resource.Name,
+				"namespace":         resource.Namespace,
+				"kind":              resource.Kind(),
+				"volume":            vol.Name,
+				"parsed_image_name": volumeImageRef.Remote(),
+				"target_image_name": repo.Name,
+				"target_tag":        repo.Tag,
+				"policy":            plc.Name(),
+				"image":             vol.Image.Reference,
+			}).Debug("provider.kubernetes: checking image volume")
+
+			if volumeImageRef.Repository() != eventRepoRef.Repository() {
+				log.WithFields(log.Fields{
+					"parsed_image_name": volumeImageRef.Remote(),
+					"target_image_name": repo.Name,
+				}).Debug("provider.kubernetes: image volume reference does not match, ignoring")
+				continue
+			}
+
+			shouldUpdateVolume, err := plc.ShouldUpdate(volumeImageRef.Tag(), eventRepoRef.Tag())
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":             err,
+					"parsed_image_name": volumeImageRef.Remote(),
+					"target_image_name": repo.Name,
+					"policy":            plc.Name(),
+				}).Error("provider.kubernetes: failed to check whether image volume should be updated")
+				continue
+			}
+
+			if !shouldUpdateVolume {
+				continue
+			}
+
+			setUpdateTime(resource)
+
+			if volumeImageRef.Registry() == image.DefaultRegistryHostname {
+				resource.UpdateImageVolume(idx, fmt.Sprintf("%s:%s", volumeImageRef.ShortName(), repo.Tag))
+			} else {
+				resource.UpdateImageVolume(idx, fmt.Sprintf("%s:%s", volumeImageRef.Repository(), repo.Tag))
+			}
+
+			shouldUpdateDeployment = true
+
+			updatePlan.CurrentVersion = volumeImageRef.Tag()
+			updatePlan.NewVersion = repo.Tag
+			updatePlan.Resource = resource
+		}
+	}
 
 	if schedule, ok := resource.GetAnnotations()[types.KeelInitContainerAnnotation]; ok && schedule == "true" {
 		for idx, c := range resource.InitContainers() {

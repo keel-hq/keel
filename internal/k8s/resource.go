@@ -25,6 +25,10 @@ type genericResource []*GenericResource
 
 type ContainerFilter func(container core_v1.Container) bool
 
+// VolumeFilter is invoked for every volume of a resource; volumes for which
+// it returns false are skipped when collecting image references.
+type VolumeFilter func(volume core_v1.Volume) bool
+
 func (c genericResource) Len() int {
 	return len(c)
 }
@@ -347,6 +351,43 @@ func (r *GenericResource) UpdateInitContainer(index int, image string) {
 		updateDaemonsetSetInitContainer(obj, index, image)
 	case *batch_v1.CronJob:
 		updateCronJobInitContainer(obj, index, image)
+	}
+}
+
+// Volumes - returns the pod volumes managed by this resource
+func (r *GenericResource) Volumes() (volumes []core_v1.Volume) {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		return obj.Spec.Template.Spec.Volumes
+	case *apps_v1.StatefulSet:
+		return obj.Spec.Template.Spec.Volumes
+	case *apps_v1.DaemonSet:
+		return obj.Spec.Template.Spec.Volumes
+	case *batch_v1.CronJob:
+		return obj.Spec.JobTemplate.Spec.Template.Spec.Volumes
+	}
+	return
+}
+
+// GetImageVolumeReferences returns the OCI image references mounted as
+// volumes (spec.volumes[].image.reference). Non-image volumes and volumes
+// with an empty reference are excluded.
+func (r *GenericResource) GetImageVolumeReferences(filter VolumeFilter) (images []string) {
+	return getImageVolumeReferences(r.Volumes(), filter)
+}
+
+// UpdateImageVolume - updates an OCI image volume reference at the given
+// index in spec.volumes. The volume at that index must have an Image source.
+func (r *GenericResource) UpdateImageVolume(index int, image string) {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		updateDeploymentImageVolume(obj, index, image)
+	case *apps_v1.StatefulSet:
+		updateStatefulSetImageVolume(obj, index, image)
+	case *apps_v1.DaemonSet:
+		updateDaemonsetSetImageVolume(obj, index, image)
+	case *batch_v1.CronJob:
+		updateCronJobImageVolume(obj, index, image)
 	}
 }
 

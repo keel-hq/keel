@@ -43,6 +43,11 @@ const KeelPollScheduleAnnotation = "keel.sh/pollSchedule"
 // KeelInitContainerAnnotation - label or annotation to track init containers, defaults to false for backward compatibility
 const KeelInitContainerAnnotation = "keel.sh/initContainers"
 
+// KeelImageVolumeAnnotation - label or annotation to track OCI image volume
+// sources (spec.volumes[].image.reference), defaults to false for backward
+// compatibility. Requires Kubernetes 1.31+ with the ImageVolume feature gate.
+const KeelImageVolumeAnnotation = "keel.sh/imageVolumes"
+
 // KeelMonitorContainers - you can only have one keel settings per object type, but some of them might have multiple containers. Use this setting to
 // specify with a regular expression which containers should be monitored. If empty, all containers will be monitored.
 // It is currently a limitation that all containers in the same object will share the same configuration (pollSchedule, etc.).
