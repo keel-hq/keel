@@ -189,6 +189,7 @@ Set via `keel.sh/approvals: "2"` annotation to require N approvals.
 | `keel.sh/imagePullSecret` | Registry credentials secret | `my-registry-secret` |
 | `keel.sh/releaseNotes` | Release notes URL | `https://...` |
 | `keel.sh/initContainers` | Track init containers | `true` |
+| `keel.sh/imageVolumes` | Track OCI image volume sources (Kubernetes 1.31+) | `true` |
 
 ## Environment Variables
 

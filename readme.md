@@ -161,6 +161,35 @@ spec:
 
 No additional configuration is required. Enabling continuous delivery for your workloads has never been this easy!
 
+#### Tracking OCI image volumes (Kubernetes 1.31+)
+
+Keel can also watch and update [OCI image volume sources](https://kubernetes.io/docs/tasks/configure-pod-container/image-volumes/)
+(`spec.volumes[].image.reference`). It is opt-in per resource, mirroring
+`keel.sh/initContainers`:
+
+```yaml
+metadata:
+  annotations:
+    keel.sh/policy: minor
+    keel.sh/imageVolumes: "true" # <-- also track image volume references
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          image: karolisr/webhook-demo:0.0.8
+          volumeMounts:
+            - name: oci-config
+              mountPath: /etc/config
+      volumes:
+        - name: oci-config
+          image:
+            reference: karolisr/webhook-demo:0.0.8
+            pullPolicy: IfNotPresent
+```
+
+Requires the `ImageVolume` feature gate on your cluster.
+
 ### Documentation
 
 Documentation is viewable on the Keel Website:
