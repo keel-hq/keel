@@ -2,7 +2,6 @@ package notification
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -118,7 +117,11 @@ func (m *DefaultNotificationSender) Senders() map[string]Sender {
 	return ret
 }
 
-// Send - send notifications through all configured senders
+// Send - send notifications through all configured senders.
+// Notification failures are logged but never returned as errors to ensure
+// that a broken sender (e.g. a misconfigured webhook) cannot block the
+// update pipeline. Each sender is attempted independently; a failure in
+// one sender does not prevent the remaining senders from being tried.
 func (m *DefaultNotificationSender) Send(event types.EventNotification) error {
 	if event.Level < m.config.Level {
 		return nil
@@ -128,7 +131,6 @@ func (m *DefaultNotificationSender) Send(event types.EventNotification) error {
 	defer sendersM.RUnlock()
 
 	for senderName, sender := range m.Senders() {
-		// TODO: move this into goroutine if we have enough senders
 		var attempts int
 		var backOff time.Duration
 		for {
@@ -138,8 +140,8 @@ func (m *DefaultNotificationSender) Send(event types.EventNotification) error {
 					logNotiName:    event.Name,
 					logSenderName:  senderName,
 					"max attempts": m.config.Attempts,
-				}).Info("giving up on sending notification : max attempts exceeded")
-				return fmt.Errorf("failed to send notification, max attempts (%d) reached", m.config.Attempts)
+				}).Warn("giving up on sending notification: max attempts exceeded, moving on")
+				break
 			}
 
 			// Backoff

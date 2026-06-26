@@ -162,3 +162,77 @@ func TestSendLevelNotificationC(t *testing.T) {
 		t.Errorf("unexpected level: %s", fs.sent.Level)
 	}
 }
+
+// TestSendFailedSenderDoesNotReturnError verifies that when a sender
+// fails all attempts, Send() logs the failure but does NOT return an error.
+// This is critical: a broken webhook must never block the update pipeline.
+func TestSendFailedSenderDoesNotReturnError(t *testing.T) {
+	sndr := New(context.Background())
+
+	sndr.Configure(&Config{
+		Level:    types.LevelDebug,
+		Attempts: 1,
+	})
+
+	fs := &fakeSender{
+		shouldConfigure: true,
+		shouldError:     fmt.Errorf("webhook endpoint unreachable"),
+	}
+
+	RegisterSender("failingSender", fs)
+	defer sndr.UnregisterSender("failingSender")
+
+	err := sndr.Send(types.EventNotification{
+		Level:   types.LevelInfo,
+		Type:    types.NotificationDeploymentUpdate,
+		Message: "update successful",
+	})
+
+	if err != nil {
+		t.Errorf("expected no error from Send() when sender fails, got: %s", err)
+	}
+}
+
+// TestSendFailingSenderDoesNotBlockOtherSenders verifies that when one
+// sender fails, the remaining senders still receive the notification.
+func TestSendFailingSenderDoesNotBlockOtherSenders(t *testing.T) {
+	sndr := New(context.Background())
+
+	sndr.Configure(&Config{
+		Level:    types.LevelDebug,
+		Attempts: 1,
+	})
+
+	brokenSender := &fakeSender{
+		shouldConfigure: true,
+		shouldError:     fmt.Errorf("webhook endpoint unreachable"),
+	}
+
+	healthySender := &fakeSender{
+		shouldConfigure: true,
+		shouldError:     nil,
+	}
+
+	RegisterSender("brokenSender", brokenSender)
+	defer sndr.UnregisterSender("brokenSender")
+	RegisterSender("healthySender", healthySender)
+	defer sndr.UnregisterSender("healthySender")
+
+	err := sndr.Send(types.EventNotification{
+		Level:   types.LevelInfo,
+		Type:    types.NotificationDeploymentUpdate,
+		Message: "update successful",
+	})
+
+	if err != nil {
+		t.Errorf("expected no error from Send(), got: %s", err)
+	}
+
+	if healthySender.sent == nil {
+		t.Error("expected healthy sender to receive the notification, but it did not")
+	}
+
+	if healthySender.sent != nil && healthySender.sent.Message != "update successful" {
+		t.Errorf("unexpected message on healthy sender: %s", healthySender.sent.Message)
+	}
+}
