@@ -97,9 +97,9 @@ func (s *sender) Send(event types.EventNotification) error {
 	}
 
 	resp, err := s.client.Post(s.endpoint, "application/json", bytes.NewBuffer(jsonMessage))
-	if err != nil || resp == nil || (resp.StatusCode != 200 && resp.StatusCode != 204) {
+	if err != nil || resp == nil || resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		if resp != nil {
-			return fmt.Errorf("got status %d, expected 200/204", resp.StatusCode)
+			return fmt.Errorf("got status %d, expected 2xx", resp.StatusCode)
 		}
 		return err
 	}
