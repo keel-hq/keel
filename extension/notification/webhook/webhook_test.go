@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -56,4 +57,56 @@ func TestWebhookRequest(t *testing.T) {
 		Type:      types.NotificationPreDeploymentUpdate,
 		Level:     types.LevelDebug,
 	})
+}
+
+func TestWebhookAccepts2xxStatusCodes(t *testing.T) {
+	for _, code := range []int{200, 201, 202, 204} {
+		t.Run(fmt.Sprintf("status_%d", code), func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(code)
+			}))
+			defer ts.Close()
+
+			s := &sender{
+				endpoint: ts.URL,
+				client:   &http.Client{},
+			}
+
+			err := s.Send(types.EventNotification{
+				Name:    "test",
+				Message: "test",
+				Type:    types.NotificationPreDeploymentUpdate,
+				Level:   types.LevelDebug,
+			})
+			if err != nil {
+				t.Errorf("expected status %d to be accepted, got error: %v", code, err)
+			}
+		})
+	}
+}
+
+func TestWebhookRejectsNon2xxStatusCodes(t *testing.T) {
+	for _, code := range []int{400, 500} {
+		t.Run(fmt.Sprintf("status_%d", code), func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(code)
+			}))
+			defer ts.Close()
+
+			s := &sender{
+				endpoint: ts.URL,
+				client:   &http.Client{},
+			}
+
+			err := s.Send(types.EventNotification{
+				Name:    "test",
+				Message: "test",
+				Type:    types.NotificationPreDeploymentUpdate,
+				Level:   types.LevelDebug,
+			})
+			if err == nil {
+				t.Errorf("expected status %d to be rejected, got no error", code)
+			}
+		})
+	}
 }
