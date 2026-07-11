@@ -38,7 +38,9 @@ func (r *Registry) getPaginatedJSON(url string, response interface{}) (string, e
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(response)
