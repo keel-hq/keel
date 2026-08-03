@@ -113,19 +113,29 @@ write_k3s_config() {
 }
 
 start_k3s() {
+  local node_name="keel-e2e-${RUN_ID}"
+  local pid
   write_k3s_config
   log "starting task-owned k3s process"
-  sudo sh -c 'printf "%s\n" "$$" >"$1"; exec setsid "$2" server --config "$3"' \
-    sh "${K3S_PID_FILE}" "${K3S_BIN}" "${K3S_CONFIG}" \
-    >"${K3S_LOG}" 2>&1 &
+  sudo setsid "${K3S_BIN}" server --config "${K3S_CONFIG}" >"${K3S_LOG}" 2>&1 &
+
+  for _ in $(seq 1 30); do
+    pid="$(sudo pgrep -f -x "${K3S_BIN} server" || true)"
+    if [[ "${pid}" =~ ^[0-9]+$ ]]; then
+      printf '%s\n' "${pid}" >"${K3S_PID_FILE}"
+      break
+    fi
+    sleep 1
+  done
+  [[ -s "${K3S_PID_FILE}" ]] || fail "could not record task-owned k3s process"
 
   for _ in $(seq 1 120); do
     if [[ -s "${KUBECONFIG}" ]] && sudo "${K3S_BIN}" kubectl \
-      --kubeconfig "${KUBECONFIG}" get nodes >/dev/null 2>&1; then
+      --kubeconfig "${KUBECONFIG}" get "node/${node_name}" >/dev/null 2>&1; then
       sudo chown "$(id -u):$(id -g)" "${KUBECONFIG}"
       export KUBECONFIG
       sudo "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" \
-        wait --for=condition=Ready node --all --timeout=120s
+        wait --for=condition=Ready "node/${node_name}" --timeout=120s
       return
     fi
     sleep 1
