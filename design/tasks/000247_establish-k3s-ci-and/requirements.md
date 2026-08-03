@@ -2,7 +2,7 @@
 
 ## Goal
 
-Provide a deterministic end-to-end path that builds the Keel container, runs it inside a fresh native k3s cluster with production-equivalent RBAC, and verifies the highest-value update flows without changing Keel production behavior or the existing fast test jobs.
+Provide a deterministic end-to-end path that builds the Keel container, runs it inside a fresh native k3s cluster with production-equivalent RBAC, and verifies the highest-value update flows without changing Keel production logic or the existing fast test jobs.
 
 ## User Stories
 
@@ -14,6 +14,7 @@ Provide a deterministic end-to-end path that builds the Keel container, runs it 
 
 - A fresh GitHub-hosted Ubuntu runner downloads native k3s `v1.35.6+k3s1` and its official checksum file, verifies the binary, and prints the exact version. No floating or unverified executable is downloaded.
 - The checked-out Dockerfile builds the Keel image under test. That exact image digest runs as a pod inside k3s with a dedicated ServiceAccount, the minimum chart-equivalent ClusterRole/ClusterRoleBinding needed by the Kubernetes provider, readiness/liveness probes, and a ClusterIP Service.
+- The non-root image contains traversable ServiceAccount projected-volume parent directories. This narrowly fixes the clean-cluster deployability defect demonstrated by root and UID-666 probes without changing Keel logic or token permissions.
 - Tests wait with deadlines for the node, registry, Keel Deployment, and `/healthz`. A task-owned `kubectl port-forward` to the Keel Service drives webhooks without exposing Keel externally, and Keel failures are diagnosed from pod logs.
 - The Go suite uses `github.com/stretchr/testify/suite`. Suite setup/teardown owns the Keel test namespace, RBAC, Deployment, Service, and port-forward; per-test setup creates a generated namespace; per-test teardown deletes it and waits for deletion.
 - Every scenario uses a repository name containing the run ID and test identity. Only that scenario's immutable tags are seeded, the test verifies the registry's exact tag set before exercising Keel, and no repository/tag state from another test can affect discovery.
@@ -34,4 +35,3 @@ Provide a deterministic end-to-end path that builds the Keel container, runs it 
 ## Open Questions
 
 - Does Nessie approve the proposed one-runner, 6–8 minute smoke job on every pull request and `master` push, with `workflow_dispatch` retained? Until cost approval, the implementation may prepare the job but must keep the cadence decision visibly pending rather than representing it as approved.
-
