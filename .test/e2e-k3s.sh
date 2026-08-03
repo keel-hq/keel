@@ -7,6 +7,7 @@ readonly K3S_VERSION="v1.35.6+k3s1"
 readonly K3S_RELEASE_URL="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}"
 readonly REGISTRY_IMAGE="registry@sha256:46faa9a1ae6813194b53921a370f2f4f8c5e1aae228a89bceafef5847a6a3278"
 readonly FIXTURE_IMAGE="busybox@sha256:7a3ebe5bfd1a4a19797d20b0c0bb39d44393e9a03fd852c0865b0f540d868df0"
+readonly REGISTRY_ADDRESS="10.53.0.50:5000"
 
 RUN_ID="${KEEL_E2E_RUN_ID:-$(date -u +%Y%m%d%H%M%S)-$$}"
 RUN_DIR="${KEEL_E2E_RUN_DIR:-${REPO_ROOT}/.test/.runs/${RUN_ID}}"
@@ -16,6 +17,7 @@ K3S_BIN="${BIN_DIR}/k3s"
 K3S_DATA_DIR="${RUN_DIR}/k3s-data"
 KUBECONFIG="${RUN_DIR}/kubeconfig"
 K3S_CONFIG="${RUN_DIR}/k3s.yaml"
+REGISTRIES_CONFIG="${RUN_DIR}/registries.yaml"
 K3S_PID_FILE="${RUN_DIR}/k3s.pid"
 K3S_LOG="${ARTIFACT_DIR}/k3s.log"
 PORT_FORWARD_PID_FILE="${RUN_DIR}/port-forward.pid"
@@ -97,8 +99,15 @@ write_k3s_config() {
     printf 'cluster-cidr: 10.52.0.0/16\n'
     printf 'service-cidr: 10.53.0.0/16\n'
     printf 'cluster-dns: 10.53.0.10\n'
+    printf 'private-registry: %s\n' "${REGISTRIES_CONFIG}"
     printf 'disable:\n  - traefik\n  - servicelb\n  - metrics-server\n  - local-storage\n'
   } >"${K3S_CONFIG}"
+  {
+    printf 'mirrors:\n'
+    printf '  "%s":\n' "${REGISTRY_ADDRESS}"
+    printf '    endpoint:\n'
+    printf '      - "http://%s"\n' "${REGISTRY_ADDRESS}"
+  } >"${REGISTRIES_CONFIG}"
 }
 
 start_k3s() {
@@ -121,6 +130,77 @@ start_k3s() {
   done
   log "k3s did not become ready; see ${K3S_LOG}"
   return 1
+}
+
+kubectl() {
+  "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" "$@"
+}
+
+deploy_registry() {
+  log "deploying isolated registry at ${REGISTRY_ADDRESS}"
+  kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keel-e2e-infra-${RUN_ID}
+  labels:
+    keel.sh/e2e-run: ${RUN_ID}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  namespace: keel-e2e-infra-${RUN_ID}
+  labels:
+    app: keel-e2e-registry
+    keel.sh/e2e-run: ${RUN_ID}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keel-e2e-registry
+  template:
+    metadata:
+      labels:
+        app: keel-e2e-registry
+        keel.sh/e2e-run: ${RUN_ID}
+    spec:
+      containers:
+        - name: registry
+          image: ${REGISTRY_IMAGE}
+          ports:
+            - name: registry
+              containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /v2/
+              port: registry
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: keel-e2e-infra-${RUN_ID}
+  labels:
+    keel.sh/e2e-run: ${RUN_ID}
+spec:
+  clusterIP: 10.53.0.50
+  selector:
+    app: keel-e2e-registry
+  ports:
+    - name: registry
+      port: 5000
+      targetPort: registry
+EOF
+  kubectl -n "keel-e2e-infra-${RUN_ID}" rollout status deployment/registry --timeout=120s
+  curl --fail --show-error --silent "http://${REGISTRY_ADDRESS}/v2/" >/dev/null
 }
 
 stop_k3s() {
@@ -189,6 +269,7 @@ main() {
   print_versions
   start_k3s
   log "k3s is ready"
+  deploy_registry
 }
 
 main "$@"
