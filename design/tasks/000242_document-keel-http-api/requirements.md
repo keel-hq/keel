@@ -2,22 +2,38 @@
 
 ## User Stories
 
-- As a Keel contributor, I can regenerate an accurate Swagger description from handler annotations with pinned tools.
-- As a future frontend developer, I can use a generated browser JavaScript client whose operations and models match Keel's current wire contract.
-- As a reviewer, I can audit every registered route as documented or deliberately excluded.
+- As a Keel contributor, I can regenerate and validate the Swagger description from handler annotations on a clean checkout with pinned tools.
+- As a future frontend developer, I can import a generated browser JavaScript client with stable operations, accurate models, and Keel-compatible authentication.
+- As a reviewer, I can audit every registered route as either one of the 25 documented operations or a justified exclusion.
+
+## Functional Requirements
+
+- Annotate all 21 in-scope paths and 25 non-OPTIONS operations registered by `pkg/http/http.go`, including both auth aliases, both logout methods, all admin methods, and all eight provider-specific webhooks.
+- Each operation must define a unique explicit `operationId`, method/path, tag, summary/description, enabling condition, security, parameters/headers, real request schema, success schema/status, and meaningful error responses verified from its handler.
+- Reuse existing domain models where their JSON is the wire contract. Add documentation-only named wrappers for handler-local/anonymous payloads, including each provider webhook and the two GitHub event shapes, without changing decoding or runtime behavior.
+- Model HTTP Basic and `Authorization: Bearer` as alternative admin authentication schemes. Login is public when auth routes are enabled; other admin routes require authorization. Seven webhooks are optionally protected by `AuthenticatedWebhooks`; `/v1/webhooks/registry` remains public exactly as currently registered. Keel has no cookie-auth requirement.
+- Exclude OPTIONS/CORS, `/metrics`, static UI/assets/index catch-alls, and DEBUG-only expvar/pprof routes. Record each exclusion and rationale in machine-checked coverage evidence.
+- Client generation is in scope; migrating existing UI calls or redesigning/replacing the frontend is not.
+- Do not add a Swagger UI or public docs endpoint, hard-code a deployment host, expose secrets, or change routes, payloads, status codes, authentication, CORS, deployment, or current frontend behavior.
+
+## Generation Requirements
+
+- Pin `github.com/swaggo/swag` at Go-1.23-compatible `v1.16.6` in a tooling module and invoke it through `go run` from Make; never use `@latest`, a global install, or an assumed `GOPATH/bin`.
+- Commit deterministic `docs/api/swagger.json` and `docs/api/swagger.yaml`. Do not generate or commit `docs.go`: Keel does not serve Swagger at runtime, so an importable generated Go package has no justified use.
+- Pin `@openapitools/openapi-generator-cli` at Node-16-compatible `2.20.2`, its Java generator engine at `7.22.0`, and generated runtime dependencies in `ui/yarn.lock`.
+- Generate and commit Promise-based browser JavaScript ES modules under `ui/src/api/generated/`. The client must remain configurable for the deployment base URL and support Basic auth, Bearer headers, ordinary request headers, response headers, and the actual request/response models; it must not invent cookie behavior.
+- Generated operation names come only from explicit handler `operationId` values and remain stable across regeneration. Generated files are owned by the generation command, marked as generated where the format permits, and never hand-edited.
+- Document clean-checkout prerequisites and Make targets for spec generation, client generation, validation, route coverage, client smoke testing, and aggregate drift checking.
 
 ## Acceptance Criteria
 
-- `github.com/swaggo/swag` is pinned to the Go-1.23-compatible stable release `v1.16.6`, and a documented repository command generates committed Swagger JSON, YAML, and Go metadata without exposing a runtime documentation endpoint.
-- All 25 Keel-owned, non-OPTIONS operations registered in `pkg/http/http.go` are documented: health and version (2); auth routes including both logout methods (6); approvals, resources, policies, tracked images, audit, and stats (9); and webhooks (8).
-- Each operation has a unique, stable `operationId`, method/path, summary, description, tag, applicable Basic/Bearer security, parameters, body schema, success response, and meaningful error responses matching existing behavior.
-- Reusable request, response, error, and webhook schemas describe the actual JSON and header wire formats. Documentation work does not change handlers, status codes, authentication, or public semantics.
-- Webhook security reflects current configuration: seven provider webhooks may require Basic or Bearer authentication when authenticated webhooks are enabled; registry notifications remain unauthenticated as currently registered.
-- OPTIONS preflight, `/metrics`, static UI/assets, and conditional debug/pprof handlers are excluded because they are middleware, third-party/standard-library, or non-client API surfaces. The coverage evidence records these exclusions and their rationale.
-- OpenAPI Generator CLI `2.20.2` (compatible with the repository's Node 16 CI) and generator engine `7.22.0` are pinned. It generates committed browser JavaScript ES modules into `ui/src/api/generated`, with models and authentication support usable by the existing Vue 2/Babel toolchain.
-- Contributor documentation lists Go 1.23, Node 16/Yarn, and Java 11+ prerequisites and exact commands to generate, validate, test, and check for drift.
-- Automated checks validate the Swagger document, compare registered routes with documented operations plus the explicit exclusion list, exercise the generated client in the UI toolchain, and verify regeneration leaves no git diff.
-- `go test ./...`, focused HTTP tests, the relevant UI lint/build or client smoke checks, Swagger validation, route coverage, and deterministic regeneration pass; environment-specific failures are reported rather than hidden.
+- `make api-spec`, `make api-client`, `make api-generate`, `make api-validate`, `make api-coverage`, and `make api-check` are reproducible from a clean checkout after documented dependency installation.
+- Pinned validation accepts both committed spec formats and a route-to-operation test accounts for exactly 25 operations plus the explicit exclusions.
+- The generated client exposes callable, meaningful methods for every documented operation and accurately represents Basic/Bearer configuration, `Authorization` response headers, the GitHub event header, audit query parameters, and typed provider payloads.
+- A focused Jest smoke test imports generated APIs/models and exercises base URL plus authentication/header configuration; existing UI lint and build checks remain green. Generated code may be style-lint-excluded, but it must be parsed/imported by the smoke test.
+- Focused `pkg/http` tests and `go test ./...` pass. Any environment-dependent integration limitation is reported explicitly rather than skipped silently.
+- Running spec and client regeneration followed by `git diff --exit-code` produces no diff, including specs, client output, configuration, and lockfiles.
+- No runtime API, auth, deployment, or existing frontend behavior changes.
 
 ## Open Questions
 
