@@ -18,6 +18,7 @@ BIN_DIR="${RUN_DIR}/bin"
 ARTIFACT_DIR="${KEEL_E2E_ARTIFACT_DIR:-${REPO_ROOT}/.test/artifacts/${RUN_ID}}"
 K3S_BIN="${BIN_DIR}/k3s"
 K3S_DATA_DIR="/var/lib/keel-e2e-k3s-${RUN_ID}"
+K3S_CLIENT_DATA_DIR="${RUN_DIR}/client-data"
 KUBECONFIG="${RUN_DIR}/kubeconfig"
 K3S_CONFIG="${RUN_DIR}/k3s.yaml"
 REGISTRIES_CONFIG="${RUN_DIR}/registries.yaml"
@@ -93,7 +94,7 @@ download_k3s() {
 }
 
 print_versions() {
-  "${K3S_BIN}" --version
+  env K3S_DATA_DIR="${K3S_CLIENT_DATA_DIR}" "${K3S_BIN}" --version
   log "registry image: ${REGISTRY_IMAGE}"
   log "fixture image: ${FIXTURE_IMAGE}"
 }
@@ -141,11 +142,11 @@ start_k3s() {
   [[ -s "${K3S_PID_FILE}" ]] || fail "could not record task-owned k3s process"
 
   for _ in $(seq 1 120); do
-    if [[ -s "${KUBECONFIG}" ]] && sudo "${K3S_BIN}" kubectl \
+    if [[ -s "${KUBECONFIG}" ]] && sudo env K3S_DATA_DIR="${K3S_DATA_DIR}" "${K3S_BIN}" kubectl \
       --kubeconfig "${KUBECONFIG}" get "node/${node_name}" >/dev/null 2>&1; then
       sudo chown "$(id -u):$(id -g)" "${KUBECONFIG}"
       export KUBECONFIG
-      sudo "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" \
+      sudo env K3S_DATA_DIR="${K3S_DATA_DIR}" "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" \
         wait --for=condition=Ready "node/${node_name}" --timeout=120s
       return
     fi
@@ -156,11 +157,12 @@ start_k3s() {
 }
 
 kubectl() {
-  "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" "$@"
+  env K3S_DATA_DIR="${K3S_CLIENT_DATA_DIR}" \
+    "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" "$@"
 }
 
 ctr() {
-  sudo "${K3S_BIN}" ctr \
+  sudo env K3S_DATA_DIR="${K3S_DATA_DIR}" "${K3S_BIN}" ctr \
     --address "${K3S_RUNTIME_DIR}/containerd/containerd.sock" \
     --namespace k8s.io "$@"
 }
@@ -263,6 +265,7 @@ build_keel_image() {
     printf 'KEEL_E2E_REPOSITORY_PREFIX=%q\n' "${REGISTRY_ADDRESS}/${RUN_ID}"
     printf 'KEEL_E2E_IMAGE=%q\n' "${REGISTRY_ADDRESS}/keel-under-test@${digest}"
     printf 'KEEL_E2E_KUBECTL=%q\n' "${K3S_BIN}"
+    printf 'KEEL_E2E_K3S_DATA_DIR=%q\n' "${K3S_CLIENT_DATA_DIR}"
     printf 'KEEL_E2E_KUBECONFIG=%q\n' "${KUBECONFIG}"
     printf 'KEEL_E2E_ARTIFACT_DIR=%q\n' "${ARTIFACT_DIR}"
   } >"${E2E_ENV_FILE}"
@@ -366,7 +369,8 @@ collect_diagnostics() {
 
 delete_suite_resources() {
   [[ -x "${K3S_BIN}" && -s "${KUBECONFIG}" ]] || return 0
-  "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" delete \
+  env K3S_DATA_DIR="${K3S_CLIENT_DATA_DIR}" \
+    "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" delete \
     namespaces,clusterroles,clusterrolebindings \
     --selector "keel.sh/e2e-run=${RUN_ID}" --ignore-not-found --wait=true \
     >/dev/null 2>&1 || true

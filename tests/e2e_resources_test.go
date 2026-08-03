@@ -22,6 +22,7 @@ type e2eConfig struct {
 	keelImage        string
 	kubeconfig       string
 	kubectl          string
+	k3sDataDir       string
 	artifactDir      string
 	repositoryPrefix string
 }
@@ -33,10 +34,11 @@ func loadE2EConfig() (e2eConfig, error) {
 		keelImage:        os.Getenv("KEEL_E2E_IMAGE"),
 		kubeconfig:       os.Getenv("KEEL_E2E_KUBECONFIG"),
 		kubectl:          os.Getenv("KEEL_E2E_KUBECTL"),
+		k3sDataDir:       os.Getenv("KEEL_E2E_K3S_DATA_DIR"),
 		artifactDir:      os.Getenv("KEEL_E2E_ARTIFACT_DIR"),
 		repositoryPrefix: os.Getenv("KEEL_E2E_REPOSITORY_PREFIX"),
 	}
-	if cfg.runID == "" || cfg.registry == "" || cfg.keelImage == "" || cfg.kubeconfig == "" || cfg.kubectl == "" || cfg.artifactDir == "" || cfg.repositoryPrefix == "" {
+	if cfg.runID == "" || cfg.registry == "" || cfg.keelImage == "" || cfg.kubeconfig == "" || cfg.kubectl == "" || cfg.k3sDataDir == "" || cfg.artifactDir == "" || cfg.repositoryPrefix == "" {
 		return e2eConfig{}, fmt.Errorf("all KEEL_E2E_* runtime variables are required; run through make e2e")
 	}
 	return cfg, nil

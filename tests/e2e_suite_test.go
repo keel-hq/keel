@@ -56,6 +56,7 @@ func (s *E2ESuite) SetupSuite() {
 	require.NoError(s.T(), err)
 	s.portForward = exec.Command(s.cfg.kubectl, "kubectl", "--kubeconfig", s.cfg.kubeconfig,
 		"--namespace", s.cfg.systemNamespace(), "port-forward", "service/keel", "19300:9300")
+	s.portForward.Env = append(os.Environ(), "K3S_DATA_DIR="+s.cfg.k3sDataDir)
 	s.portForward.Stdout = logFile
 	s.portForward.Stderr = logFile
 	require.NoError(s.T(), s.portForward.Start())
