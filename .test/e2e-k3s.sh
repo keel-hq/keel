@@ -110,6 +110,7 @@ write_k3s_config() {
     printf 'cluster-cidr: 10.52.0.0/16\n'
     printf 'service-cidr: 10.53.0.0/16\n'
     printf 'cluster-dns: 10.53.0.10\n'
+    printf 'snapshotter: native\n'
     printf 'private-registry: %s\n' "${REGISTRIES_CONFIG}"
     printf 'kubelet-arg:\n  - root-dir=%s/agent/kubelet\n' "${K3S_DATA_DIR}"
     printf 'disable:\n  - traefik\n  - servicelb\n  - metrics-server\n  - local-storage\n'
