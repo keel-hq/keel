@@ -67,6 +67,7 @@ preflight() {
   port_is_listening 6443 && fail "Kubernetes API port 6443 is already in use"
   port_is_listening 5000 && fail "registry port 5000 is already in use"
   port_is_listening 19300 && fail "Keel port-forward port 19300 is already in use"
+  return 0
 }
 
 download_k3s() {
