@@ -1,6 +1,6 @@
 # Implementation Tasks: Align Image-Volume Opt-In Updates and Compatibility Documentation
 
-- [~] Replace the annotation-only image-volume gate in `checkForUpdate` with `getImageVolumeTrackingFromMeta(resource.GetLabels(), resource.GetAnnotations())` without changing unrelated update logic.
+- [x] Replace the annotation-only image-volume gate in `checkForUpdate` with `getImageVolumeTrackingFromMeta(resource.GetLabels(), resource.GetAnnotations())` without changing unrelated update logic.
 - [ ] Add update-path regression tests for canonical label-only, case-variant, canonical annotation, and no-true-opt-in metadata cases.
 - [ ] Confirm existing `monitorContainers`, workload-kind, standard container, and init-container coverage remains passing.
 - [ ] Update `readme.md` with the Kubernetes 1.31-1.34, 1.35, and 1.36+ feature-state matrix, runtime support requirement, and both official Kubernetes links.

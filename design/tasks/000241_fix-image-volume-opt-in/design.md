@@ -17,3 +17,7 @@ Update `readme.md` with the Kubernetes version matrix and runtime prerequisite, 
 ## Verification
 
 Run `gofmt` on changed Go files, focused `provider/kubernetes` tests including the new cases, `go test ./internal/k8s/... ./provider/kubernetes/...`, and `go test ./...` when practical. Report pre-existing or environment-related failures separately and confirm the final diff contains only this follow-up.
+
+## Implementation Notes
+
+- `provider/kubernetes/updates.go` now delegates image-volume eligibility to the existing metadata helper with labels and annotations in its declared order; the rewrite loop is unchanged.
