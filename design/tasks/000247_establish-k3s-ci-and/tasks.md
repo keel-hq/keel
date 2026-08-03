@@ -5,7 +5,7 @@
 - [x] Add fail-closed local guards for existing k3s services/processes/data/kubeconfig/network state and occupied API, registry, or port-forward ports; never overwrite or uninstall an existing cluster.
 - [x] Implement idempotent, ownership-recorded teardown that captures diagnostics first and removes only this run's Kubernetes resources, port-forward, transient process/cgroup, registry state, and temporary paths.
 - [x] Deploy the digest-pinned registry fixture in k3s and configure runner, pod, and containerd access through a reserved task-owned ClusterIP without credentials or a public listener.
-- [ ] Build the checked-out Keel Dockerfile, push the image to the fixture registry, resolve its digest, and deploy that exact artifact inside k3s.
+- [~] Build the checked-out Keel Dockerfile, push the image to the fixture registry, resolve its digest, and deploy that exact artifact inside k3s.
 - [ ] Create run-scoped Keel ServiceAccount/RBAC, Deployment probes/resource bounds, and Service; validate permissions are the minimum chart-equivalent set required by the tested provider path.
 - [ ] Refactor the acceptance entry point into a `testify/suite` lifecycle that owns Keel resources and a tracked Service port-forward and polls Deployment plus `/healthz` readiness.
 - [ ] Refactor helpers to use contexts, generated per-test namespaces, awaited deletion, bounded condition polling, and last-observed-state assertion messages without fixed correctness sleeps.
