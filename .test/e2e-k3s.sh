@@ -9,6 +9,7 @@ readonly REGISTRY_IMAGE="registry@sha256:46faa9a1ae6813194b53921a370f2f4f8c5e1aa
 readonly FIXTURE_IMAGE="busybox@sha256:7a3ebe5bfd1a4a19797d20b0c0bb39d44393e9a03fd852c0865b0f540d868df0"
 readonly REGISTRY_ADDRESS="10.53.0.50:5000"
 readonly K3S_RUNTIME_DIR="/run/k3s"
+readonly DEFAULT_K3S_DATA_DIR="/var/lib/rancher/k3s"
 
 RUN_ID="${KEEL_E2E_RUN_ID:-$(date -u +%Y%m%d%H%M%S)-$$}"
 RUN_DIR="${KEEL_E2E_RUN_DIR:-${REPO_ROOT}/.test/.runs/${RUN_ID}}"
@@ -41,7 +42,7 @@ port_is_listening() {
 
 preflight() {
   local command
-  for command in awk curl docker grep ip setsid sha256sum ss sudo; do
+  for command in awk curl docker findmnt grep ip ps setsid sha256sum sort ss sudo; do
     command -v "${command}" >/dev/null || fail "required command not found: ${command}"
   done
   sudo -n true 2>/dev/null || fail "passwordless sudo is required"
@@ -61,7 +62,7 @@ preflight() {
   fi
   pgrep -x k3s >/dev/null 2>&1 && fail "an existing k3s process is active"
   [[ ! -e /etc/rancher/k3s/k3s.yaml ]] || fail "existing k3s kubeconfig found"
-  [[ ! -e /var/lib/rancher/k3s ]] || fail "existing k3s data directory found"
+  [[ ! -e "${DEFAULT_K3S_DATA_DIR}" ]] || fail "existing k3s data directory found"
   [[ ! -e "${K3S_RUNTIME_DIR}" ]] || fail "existing k3s runtime directory found"
   [[ ! -e "${HOME}/.kube/config" ]] || fail "existing default kubeconfig found"
   ip link show cni0 >/dev/null 2>&1 && fail "existing cni0 interface found"
@@ -119,7 +120,8 @@ start_k3s() {
   local pid
   write_k3s_config
   log "starting task-owned k3s process"
-  sudo setsid "${K3S_BIN}" server --config "${K3S_CONFIG}" >"${K3S_LOG}" 2>&1 &
+  sudo env K3S_DATA_DIR="${K3S_DATA_DIR}" \
+    setsid "${K3S_BIN}" server --config "${K3S_CONFIG}" >"${K3S_LOG}" 2>&1 &
 
   for _ in $(seq 1 30); do
     pid="$(sudo pgrep -f -x "${K3S_BIN} server" || true)"
@@ -296,6 +298,35 @@ stop_k3s() {
   fi
 }
 
+stop_task_runtime() {
+  local endpoint="${K3S_RUNTIME_DIR}/containerd/containerd.sock"
+  local pid
+  local pids
+  pids="$(ps -eo pid=,cmd= | awk -v endpoint="${endpoint}" \
+    '$0 ~ /containerd-shim-runc-v2/ && index($0, "-address " endpoint) {print $1}')"
+  for pid in ${pids}; do
+    sudo kill -TERM "${pid}" 2>/dev/null || true
+  done
+  for _ in $(seq 1 15); do
+    pids="$(ps -eo pid=,cmd= | awk -v endpoint="${endpoint}" \
+      '$0 ~ /containerd-shim-runc-v2/ && index($0, "-address " endpoint) {print $1}')"
+    [[ -n "${pids}" ]] || return 0
+    sleep 1
+  done
+  for pid in ${pids}; do
+    sudo kill -KILL "${pid}" 2>/dev/null || true
+  done
+}
+
+unmount_task_runtime() {
+  local target
+  findmnt -rn -o TARGET | awk -v runtime="${K3S_RUNTIME_DIR}" -v data="${K3S_DATA_DIR}" \
+    '$0 == runtime || index($0, runtime "/") == 1 || $0 == data || index($0, data "/") == 1' | \
+    sort -r | while IFS= read -r target; do
+      sudo umount -l "${target}" 2>/dev/null || true
+    done
+}
+
 collect_diagnostics() {
   mkdir -p "${ARTIFACT_DIR}"
   if [[ -s "${K3S_LOG}" ]]; then
@@ -349,6 +380,8 @@ cleanup() {
   delete_suite_resources
   stop_port_forward
   stop_k3s
+  stop_task_runtime
+  unmount_task_runtime
   if ip link show cni0 >/dev/null 2>&1; then
     sudo ip link delete cni0 2>/dev/null || true
   fi
@@ -357,6 +390,9 @@ cleanup() {
   fi
   if [[ -d "${K3S_RUNTIME_DIR}" ]] && ! pgrep -x k3s >/dev/null 2>&1; then
     sudo find "${K3S_RUNTIME_DIR}" -depth -delete
+  fi
+  if [[ -d "${DEFAULT_K3S_DATA_DIR}" ]] && ! pgrep -x k3s >/dev/null 2>&1; then
+    sudo find "${DEFAULT_K3S_DATA_DIR}" -depth -delete
   fi
   if [[ -d "${RUN_DIR}" ]]; then
     sudo find "${RUN_DIR}" -depth -delete
