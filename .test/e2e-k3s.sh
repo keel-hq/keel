@@ -18,6 +18,8 @@ KUBECONFIG="${RUN_DIR}/kubeconfig"
 K3S_CONFIG="${RUN_DIR}/k3s.yaml"
 K3S_PID_FILE="${RUN_DIR}/k3s.pid"
 K3S_LOG="${ARTIFACT_DIR}/k3s.log"
+PORT_FORWARD_PID_FILE="${RUN_DIR}/port-forward.pid"
+CLEANUP_STARTED=0
 
 log() {
   printf '[keel-e2e] %s\n' "$*"
@@ -135,8 +137,44 @@ stop_k3s() {
   fi
 }
 
+collect_diagnostics() {
+  mkdir -p "${ARTIFACT_DIR}"
+  if [[ -s "${K3S_LOG}" ]]; then
+    cp "${K3S_LOG}" "${ARTIFACT_DIR}/k3s-server.log" 2>/dev/null || true
+  fi
+}
+
+delete_suite_resources() {
+  [[ -x "${K3S_BIN}" && -s "${KUBECONFIG}" ]] || return 0
+  "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" delete \
+    namespaces,clusterroles,clusterrolebindings \
+    --selector "keel.sh/e2e-run=${RUN_ID}" --ignore-not-found --wait=true \
+    >/dev/null 2>&1 || true
+}
+
+stop_port_forward() {
+  [[ -s "${PORT_FORWARD_PID_FILE}" ]] || return 0
+  local pid
+  pid="$(<"${PORT_FORWARD_PID_FILE}")"
+  if kill -0 "${pid}" 2>/dev/null; then
+    kill -TERM "${pid}" 2>/dev/null || true
+    wait "${pid}" 2>/dev/null || true
+  fi
+}
+
 cleanup() {
+  ((CLEANUP_STARTED == 0)) || return 0
+  CLEANUP_STARTED=1
+  collect_diagnostics
+  delete_suite_resources
+  stop_port_forward
   stop_k3s
+  if ip link show cni0 >/dev/null 2>&1; then
+    sudo ip link delete cni0 2>/dev/null || true
+  fi
+  if ip link show flannel.1 >/dev/null 2>&1; then
+    sudo ip link delete flannel.1 2>/dev/null || true
+  fi
   if [[ -d "${RUN_DIR}" ]]; then
     sudo find "${RUN_DIR}" -depth -delete
   fi
@@ -144,7 +182,9 @@ cleanup() {
 
 main() {
   preflight
-  trap cleanup EXIT INT TERM
+  trap cleanup EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   download_k3s
   print_versions
   start_k3s
