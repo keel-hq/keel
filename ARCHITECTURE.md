@@ -286,6 +286,18 @@ make test
 make e2e
 ```
 
+`make e2e` now owns the complete environment: it verifies pinned native k3s
+`v1.35.6+k3s1`, builds and runs the Keel container in-cluster with the chart-derived
+ServiceAccount/RBAC shape, starts a digest-pinned private registry fixture, and runs
+three isolated testify/suite scenarios. It refuses to touch an existing cluster and
+deletes only resources/processes labeled or recorded for its run. The expected runtime
+is 6–8 minutes (hard target: 10 minutes); failure evidence is written to
+`.test/artifacts/` before cleanup.
+
+Keel uses client-go `v0.31.3` against Kubernetes 1.35 intentionally to validate the
+stable APIs Keel ships against. This does not claim newer API feature parity and does
+not involve the image-volume feature; dependency upgrades are outside the e2e task.
+
 Test files follow Go convention: `*_test.go` alongside source files.
 
 ## Frontend (UI)

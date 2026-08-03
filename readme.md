@@ -227,6 +227,20 @@ To test Keel while developing:
 3. Build Keel from `cmd/keel` directory. 
 4. Start Keel with: `keel --no-incluster`. This will use Kubeconfig from your home. 
 
+#### End-to-end tests
+
+The PR smoke suite builds the checked-out Keel Docker image and runs it inside a temporary native k3s cluster:
+
+```bash
+make e2e
+```
+
+Prerequisites are Linux/amd64, Go 1.23, Make, Docker, `curl`, `sudo`, `setsid`, and iproute2 (`ip`/`ss`). Passwordless sudo is required for the task-owned k3s process. For safety, the command refuses to run when it detects an existing k3s installation, default kubeconfig, k3s network interface, or occupied test port. It never invokes the k3s installer or uninstaller.
+
+k3s is pinned to `v1.35.6+k3s1` and verified with its official checksum. Registry and workload fixtures are digest-pinned and isolated by run/test repository. The expected runtime is 6–8 minutes, with a hard 10-minute target. Diagnostics are retained under `.test/artifacts/` and exclude Secrets, tokens, environment dumps, and kubeconfig contents.
+
+`make test` remains the fast unit-test path. Automatic PR/`master` e2e cadence is pending cost approval and is enabled with the `KEEL_E2E_PR_GATE=true` repository variable; `workflow_dispatch` runs the job directly.
+
 ### Debugging Keel on Windows
 
 ```powershell
