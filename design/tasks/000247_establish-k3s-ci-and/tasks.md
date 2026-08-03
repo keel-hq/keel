@@ -17,7 +17,7 @@
 - [x] Keep PR/`master`/`workflow_dispatch` cadence visibly pending until Nessie's cost approval; do not represent it as approved in workflow documentation.
 - [x] Collect Go test output, registry and Keel pod logs, k3s/server/containerd logs, Kubernetes get/describe data, sorted events, and node/pod state while excluding Secrets, tokens, kubeconfig contents, and environment dumps.
 - [x] Update the Makefile, `readme.md`, and `ARCHITECTURE.md` narrowly with prerequisites, exact command, pin/compatibility rationale, safety guards, diagnostics, and the 6–8 minute expectation/10-minute limit.
-- [ ] Run `gofmt`, focused helper tests, `make test`, shell/workflow lint, and repeated clean-cluster e2e runs; record end-to-end runtime and flakiness.
+- [~] Run `gofmt`, focused helper tests, `make test`, shell/workflow lint, and repeated clean-cluster e2e runs; record end-to-end runtime and flakiness.
 - [ ] Stop before enabling the gate if measured runtime exceeds 10 minutes, and report timings and runner-cost tradeoffs for review.
 - [ ] Induce a controlled failure when practical and verify diagnostics precede cleanup and all run-owned resources disappear after both success and failure.
 - [ ] Review the final diff for floating artifacts, secret exposure, broad permissions/deletion, client/server compatibility failures, unrelated job expansion, and production/runtime/UI changes.
