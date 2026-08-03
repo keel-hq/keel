@@ -59,7 +59,7 @@ Add repository Make targets with explicit commands:
 
 - `api-spec`: run `go run github.com/swaggo/swag/cmd/swag@v1.16.6 init` from the repository root with the general-info entry point, internal/dependency parsing needed for referenced Keel models, output directory `docs`, and `--outputTypes yaml` only.
 - `api-client`: run the official `openapitools/openapi-generator-cli:v7.22.0` container with the repository bind-mounted, generator `javascript`, the committed config/ignore files, and input `docs/swagger.yaml`.
-- `api-validate`: run Spectral 6.16.1 from the exact Yarn lock and the route/spec coverage checker.
+- `api-validate`: run the official Spectral 6.16.1 container and the route/spec coverage checker.
 - `api-generate`: run spec then client generation from a clean generated-client directory so deleted models cannot linger.
 - `api-check`: run generation and validation, then `git diff --exit-code -- docs/swagger.yaml ui/src/api/generated ui/package.json ui/yarn.lock` (and other committed generator config/notice files) to reject stale or nondeterministic output.
 
@@ -101,7 +101,7 @@ Only comments, exact schema types, route-specific forwarding wrappers, generated
 - The workspace image does not contain GNU Make, so implementation validation invokes each target's pinned underlying command directly. `make` remains the contributor-facing interface and is documented as a prerequisite.
 - OpenAPI Generator v7.22.0 ignores `--ignore-file-override` for initial supporting-file generation in this setup. The deterministic target instead copies the checked-in ignore file into the clean output directory before generation, then removes that temporary copy and `.openapi-generator` metadata.
 - When a Swagger 2.0 document omits `host`, OpenAPI Generator defaults JavaScript clients to `http://localhost`. The generation target deterministically replaces that generated constructor default with an empty string, producing same-origin relative URLs without putting a deployment host in the spec.
-- The repository's canonical UI workflow uses Yarn v1, but this workspace has neither Yarn nor Node 16. Lockfiles were updated with explicitly invoked Yarn 1.22.22 and npm 6.14.18 (to preserve package-lock v1); runtime dependencies are exactly SuperAgent 10.3.0 and Spectral CLI 6.16.1.
+- The repository's canonical UI workflow uses Yarn v1, but this workspace has neither Yarn nor Node 16. Lockfiles were updated with explicitly invoked Yarn 1.22.22 and npm 6.14.18 (to preserve package-lock v1); the added client runtime dependency is exactly SuperAgent 10.3.0.
 - The generated provider enum uses JavaScript class fields. Vue CLI 3's existing Babel configuration did not transform them, so `@babel/plugin-proposal-class-properties` 7.4.0 is now an explicit pinned dev dependency and Babel plugin; the Node 16.20 Jest smoke import then passes.
 - Jest 23 cannot resolve SuperAgent 10's transitive `node:fs` import even though Node 16 supports it. The unit test mocks transport-only SuperAgent and validates generated imports/configuration/call metadata; the real browser dependency is exercised by the UI production build.
 - Spectral CLI 6.16.1 advertises Node 16 support, but its current unconstrained transitive resolution selects `jsonpath-plus` 10.4.0, which requires Node 18. Validation therefore uses the official pinned `stoplight/spectral:6.16.1` image instead of adding lint-only dependencies to the legacy UI package.
