@@ -113,6 +113,7 @@ func keelDeployment(cfg e2eConfig) *appsv1.Deployment {
 	replicas := int32(1)
 	nonRoot := true
 	noPrivilegeEscalation := false
+	userID := int64(666)
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "keel", Namespace: cfg.systemNamespace(), Labels: labels},
 		Spec: appsv1.DeploymentSpec{
@@ -122,7 +123,12 @@ func keelDeployment(cfg e2eConfig) *appsv1.Deployment {
 				ObjectMeta: metav1.ObjectMeta{Labels: labels},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: "keel",
-					SecurityContext:    &corev1.PodSecurityContext{RunAsNonRoot: &nonRoot},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: &nonRoot,
+						RunAsUser:    &userID,
+						RunAsGroup:   &userID,
+						FSGroup:      &userID,
+					},
 					Containers: []corev1.Container{{
 						Name:            "keel",
 						Image:           cfg.keelImage,
@@ -135,6 +141,7 @@ func keelDeployment(cfg e2eConfig) *appsv1.Deployment {
 							{Name: "POLL_DEFAULTSCHEDULE", Value: "@every 2s"},
 						},
 						Ports:          []corev1.ContainerPort{{Name: "http", ContainerPort: 9300}},
+						VolumeMounts:   []corev1.VolumeMount{{Name: "data", MountPath: "/data"}},
 						ReadinessProbe: &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/healthz", Port: intstr.FromString("http")}}, InitialDelaySeconds: 1, PeriodSeconds: 1, FailureThreshold: 30},
 						LivenessProbe:  &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/healthz", Port: intstr.FromString("http")}}, InitialDelaySeconds: 5, PeriodSeconds: 5},
 						Resources: corev1.ResourceRequirements{
@@ -142,6 +149,7 @@ func keelDeployment(cfg e2eConfig) *appsv1.Deployment {
 							Limits:   corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("500m"), corev1.ResourceMemory: resource.MustParse("256Mi")},
 						},
 					}},
+					Volumes: []corev1.Volume{{Name: "data", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
 				},
 			},
 		},
