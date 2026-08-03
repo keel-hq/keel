@@ -254,6 +254,15 @@ seed_fixture_repositories() {
   done
 }
 
+run_tests() {
+  log "running testify end-to-end suite"
+  set -a
+  # shellcheck disable=SC1090
+  source "${E2E_ENV_FILE}"
+  set +a
+  go test -count=1 -v ./tests 2>&1 | tee "${ARTIFACT_DIR}/go-test.log"
+}
+
 stop_k3s() {
   [[ -s "${K3S_PID_FILE}" ]] || return 0
   local pid
@@ -323,6 +332,7 @@ main() {
   deploy_registry
   seed_fixture_repositories
   build_keel_image
+  run_tests
 }
 
 main "$@"
