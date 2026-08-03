@@ -12,7 +12,7 @@
 - [x] Seed unique `<run-id>/<test-id>` repositories with only each scenario's immutable tags and assert the exact registry tag set before every test.
 - [x] Implement the three-test smoke suite: eligible webhook update, eligible polling update, and patch-policy rejection of a minor update; keep optional regressions only if isolated and within budget.
 - [x] Remove or relocate duplicated, skipped, credential-dependent, and mutable-public-tag acceptance cases so the smoke suite requires no secrets or external registry state.
-- [~] Keep `make test` and existing CI job steps unchanged; make `make e2e` invoke the sole clean-cluster path.
+- [x] Keep `make test` and existing CI job steps unchanged; make `make e2e` invoke the sole clean-cluster path.
 - [ ] Add only `End-to-End Tests (k3s)` with `contents: read`, always-run diagnostics/artifact upload with bounded retention, and always-run cleanup; add only its dependency to the Docker job.
 - [ ] Keep PR/`master`/`workflow_dispatch` cadence visibly pending until Nessie's cost approval; do not represent it as approved in workflow documentation.
 - [ ] Collect Go test output, registry and Keel pod logs, k3s/server/containerd logs, Kubernetes get/describe data, sorted events, and node/pod state while excluding Secrets, tokens, kubeconfig contents, and environment dumps.
