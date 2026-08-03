@@ -6,6 +6,6 @@
 - [x] Run `go mod tidy` with the selected toolchain and retain only required, scope-reviewed module metadata changes.
 - [x] Make only minimal source or tooling compatibility adjustments proven necessary by Go 1.26.x.
 - [x] Run formatting, vet/lint, unit, integration/e2e, API-generation, and binary-build validation; capture evidence for any environmental or pre-existing failure.
-- [ ] Build the default `linux/amd64` and `linux/arm64` container path and validate the Debian, debug, and test Dockerfiles where supported.
+- [~] Build the default `linux/amd64` and `linux/arm64` container path and validate the Debian, debug, and test Dockerfiles where supported.
 - [ ] Re-scan version references, review the final diff for unrelated changes, and document changed pins, exclusions, compatibility changes, platforms, and verification results.
 - [ ] Confirm that no release, push, deployment, publication, merge, or unrelated modernization was performed.
