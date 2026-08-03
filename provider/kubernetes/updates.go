@@ -31,7 +31,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 	containerFilterFunc := GetMonitorContainersFromMeta(resource.GetAnnotations(), resource.GetLabels())
 	volumeFilterFunc := GetMonitorVolumesFromMeta(resource.GetAnnotations(), resource.GetLabels())
 
-	if track, ok := resource.GetAnnotations()[types.KeelImageVolumeAnnotation]; ok && track == "true" {
+	if getImageVolumeTrackingFromMeta(resource.GetLabels(), resource.GetAnnotations()) {
 		for idx, vol := range resource.Volumes() {
 			if vol.Image == nil || vol.Image.Reference == "" {
 				continue
