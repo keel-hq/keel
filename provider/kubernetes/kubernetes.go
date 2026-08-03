@@ -210,6 +210,35 @@ func getInitContainerTrackingFromMeta(labels map[string]string, annotations map[
 	return false
 }
 
+func getImageVolumeTrackingFromMeta(labels map[string]string, annotations map[string]string) bool {
+
+	searchKey := strings.ToLower(types.KeelImageVolumeAnnotation)
+
+	for k, v := range labels {
+		if strings.ToLower(k) == searchKey {
+			return v == "true"
+		}
+	}
+
+	for k, v := range annotations {
+		if strings.ToLower(k) == searchKey {
+			return v == "true"
+		}
+	}
+
+	return false
+}
+
+// GetMonitorVolumesFromMeta returns a VolumeFilter that matches volume names
+// against the keel.sh/monitorContainers regex (shared with containers so a
+// single annotation governs all image references on the resource).
+func GetMonitorVolumesFromMeta(labels map[string]string, annotations map[string]string) k8s.VolumeFilter {
+	monitorRegex := getMonitorContainersFromMeta(labels, annotations)
+	return func(volume v1.Volume) bool {
+		return monitorRegex.MatchString(volume.Name)
+	}
+}
+
 // TrackedImages returns a list of tracked images.
 func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 	var trackedImages []*types.TrackedImage
@@ -257,6 +286,10 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		images := gr.GetImages(filterFunc)
 		if getInitContainerTrackingFromMeta(labels, annotations) {
 			images = append(images, gr.GetInitImages(filterFunc)...)
+		}
+		if getImageVolumeTrackingFromMeta(labels, annotations) {
+			volumeFilter := GetMonitorVolumesFromMeta(annotations, labels)
+			images = append(images, gr.GetImageVolumeReferences(volumeFilter)...)
 		}
 
 		for _, img := range images {
@@ -345,10 +378,14 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		notificationChannels := types.ParseEventNotificationChannels(annotations)
 		containerFilterFunction := GetMonitorContainersFromMeta(labels, annotations)
 		trackInitContainers := getInitContainerTrackingFromMeta(labels, annotations)
+		trackImageVolumes := getImageVolumeTrackingFromMeta(labels, annotations)
 
 		images := resource.GetImages(containerFilterFunction)
 		if trackInitContainers {
 			images = append(images, resource.GetInitImages(containerFilterFunction)...)
+		}
+		if trackImageVolumes {
+			images = append(images, resource.GetImageVolumeReferences(GetMonitorVolumesFromMeta(labels, annotations))...)
 		}
 
 		p.sender.Send(types.EventNotification{
