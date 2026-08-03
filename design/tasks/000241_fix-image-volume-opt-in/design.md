@@ -21,3 +21,4 @@ Run `gofmt` on changed Go files, focused `provider/kubernetes` tests including t
 ## Implementation Notes
 
 - `provider/kubernetes/updates.go` now delegates image-volume eligibility to the existing metadata helper with labels and annotations in its declared order; the rewrite loop is unchanged.
+- `provider/kubernetes/updates_test.go` directly exercises rewriting for label-only, mixed-case annotation, canonical annotation, no opt-in, and label-precedence cases. This avoids relying on helper/discovery-only assertions.
