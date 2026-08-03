@@ -139,7 +139,6 @@ func keelDeployment(cfg e2eConfig) *appsv1.Deployment {
 							{Name: "INSECURE_REGISTRY", Value: "true"},
 							{Name: "POLL", Value: "true"},
 							{Name: "POLL_DEFAULTSCHEDULE", Value: "@every 2s"},
-							{Name: "XDG_DATA_HOME", Value: "/tmp"},
 						},
 						Ports:          []corev1.ContainerPort{{Name: "http", ContainerPort: 9300}},
 						ReadinessProbe: &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/healthz", Port: intstr.FromString("http")}}, InitialDelaySeconds: 1, PeriodSeconds: 1, FailureThreshold: 30},

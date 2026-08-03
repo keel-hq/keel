@@ -17,7 +17,7 @@ RUN_DIR="${KEEL_E2E_RUN_DIR:-${REPO_ROOT}/.test/.runs/${RUN_ID}}"
 BIN_DIR="${RUN_DIR}/bin"
 ARTIFACT_DIR="${KEEL_E2E_ARTIFACT_DIR:-${REPO_ROOT}/.test/artifacts/${RUN_ID}}"
 K3S_BIN="${BIN_DIR}/k3s"
-K3S_DATA_DIR="${RUN_DIR}/k3s-data"
+K3S_DATA_DIR="/var/lib/keel-e2e-k3s-${RUN_ID}"
 KUBECONFIG="${RUN_DIR}/kubeconfig"
 K3S_CONFIG="${RUN_DIR}/k3s.yaml"
 REGISTRIES_CONFIG="${RUN_DIR}/registries.yaml"
@@ -56,7 +56,10 @@ preflight() {
     fail "run directory must be under ${REPO_ROOT}/.test/.runs"
   [[ "${ARTIFACT_DIR}" == "${REPO_ROOT}/.test/artifacts/"* ]] || \
     fail "artifact directory must be under ${REPO_ROOT}/.test/artifacts"
+  [[ "${K3S_DATA_DIR}" == "/var/lib/keel-e2e-k3s-${RUN_ID}" ]] || \
+    fail "k3s data directory does not match this run"
   [[ ! -e "${RUN_DIR}" ]] || fail "run directory already exists: ${RUN_DIR}"
+  [[ ! -e "${K3S_DATA_DIR}" ]] || fail "run data directory already exists: ${K3S_DATA_DIR}"
 
   if command -v systemctl >/dev/null && systemctl is-active --quiet k3s 2>/dev/null; then
     fail "an existing k3s service is active"
@@ -96,7 +99,8 @@ print_versions() {
 }
 
 write_k3s_config() {
-  mkdir -p "${K3S_DATA_DIR}" "${ARTIFACT_DIR}"
+  mkdir -p "${ARTIFACT_DIR}"
+  sudo install -d -m 0755 -o root -g root "${K3S_DATA_DIR}"
   umask 077
   {
     printf 'data-dir: %s\n' "${K3S_DATA_DIR}"
@@ -399,6 +403,9 @@ cleanup() {
   fi
   if [[ -d "${DEFAULT_KUBELET_DIR}" ]] && ! pgrep -x k3s >/dev/null 2>&1; then
     sudo find "${DEFAULT_KUBELET_DIR}" -depth -delete
+  fi
+  if [[ -d "${K3S_DATA_DIR}" ]] && ! pgrep -x k3s >/dev/null 2>&1; then
+    sudo find "${K3S_DATA_DIR}" -depth -delete
   fi
   if [[ -d "${RUN_DIR}" ]]; then
     sudo find "${RUN_DIR}" -depth -delete
