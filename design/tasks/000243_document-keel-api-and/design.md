@@ -94,3 +94,5 @@ Only comments, exact schema types, route-specific forwarding wrappers, generated
 ## Implementation Notes
 
 - `api_inventory_test.go` is the checked-in source of the expected 25-operation mapping. Router walking filters OPTIONS and non-application endpoints, while request-level cases pin authenticator and webhook-security conditions, including registry's deliberate exception.
+- Handler-local and anonymous webhook structs were promoted to named exported models while retaining their JSON tags and field types. `GitHubWebhook` is a documentation union of the exact `package` and `registry_package` fields selected by `X-GitHub-Event`.
+- This workspace defaults to `CGO_ENABLED=0`; existing HTTP tests that call the SQLite-backed `NewTestingUtils` retry until timeout because `go-sqlite3` is a CGO stub. The new inventory/security tests do not require SQLite and pass in this environment.
