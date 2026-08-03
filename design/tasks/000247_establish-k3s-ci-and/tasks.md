@@ -21,4 +21,4 @@
 - [x] Run `gofmt`, focused helper tests, `make test`, shell/workflow lint, and repeated clean-cluster e2e runs; record end-to-end runtime and flakiness.
 - [x] Confirm the measured three-test path remains below 10 minutes; report timings and runner-cost tradeoffs if it does not.
 - [x] Induce a controlled failure when practical and verify diagnostics precede cleanup and all run-owned resources disappear after both success and failure.
-- [~] Review the final diff for floating artifacts, secret exposure, broad permissions/deletion, client/server compatibility failures, unrelated job expansion, and production/runtime/UI changes.
+- [x] Review the final diff for floating artifacts, secret exposure, broad permissions/deletion, client/server compatibility failures, unrelated job expansion, and production/runtime/UI changes.
