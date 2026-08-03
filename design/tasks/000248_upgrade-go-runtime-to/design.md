@@ -28,3 +28,8 @@ Finish with a repository-wide Go-version search and `git diff` review. The imple
 - Recheck the official feed at implementation time because a newer 1.26 patch may supersede the planning-time 1.26.5 release.
 - Preserve Keel's existing direct-version pattern; previous upgrades changed the current module and Docker declarations without adding a version abstraction.
 - Treat dependency and source edits as compatibility exceptions requiring evidence, not as part of routine modernization.
+
+## Implementation Notes
+
+- On 2026-08-03, the implementation-time query of `https://go.dev/dl/?mode=json` returned `go1.26.5` as the first entry with `stable: true`; implementation therefore selects Go 1.26.5.
+- The Keel feature branch was absent in the initial clone and was created from the clean local `master` as `feature/000248-upgrade-keel-to-the`.
