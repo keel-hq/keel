@@ -21,9 +21,10 @@ const keelForwardURL = "http://127.0.0.1:19300"
 
 type E2ESuite struct {
 	suite.Suite
-	cfg         e2eConfig
-	client      *kubernetes.Clientset
-	portForward *exec.Cmd
+	cfg           e2eConfig
+	client        *kubernetes.Clientset
+	portForward   *exec.Cmd
+	testNamespace string
 }
 
 func TestE2ESuite(t *testing.T) {
