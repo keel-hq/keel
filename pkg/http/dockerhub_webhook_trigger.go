@@ -53,36 +53,56 @@ func init() {
 // 	}
 // }
 
-type dockerHubWebhook struct {
-	PushData struct {
-		PushedAt int           `json:"pushed_at"`
-		Images   []interface{} `json:"images"`
-		Tag      string        `json:"tag"`
-		Pusher   string        `json:"pusher"`
-	} `json:"push_data"`
-	CallbackURL string `json:"callback_url"`
-	Repository  struct {
-		Status          string `json:"status"`
-		Description     string `json:"description"`
-		IsTrusted       bool   `json:"is_trusted"`
-		FullDescription string `json:"full_description"`
-		RepoURL         string `json:"repo_url"`
-		Owner           string `json:"owner"`
-		IsOfficial      bool   `json:"is_official"`
-		IsPrivate       bool   `json:"is_private"`
-		Name            string `json:"name"`
-		Namespace       string `json:"namespace"`
-		StarCount       int    `json:"star_count"`
-		CommentCount    int    `json:"comment_count"`
-		DateCreated     int    `json:"date_created"`
-		Dockerfile      string `json:"dockerfile"`
-		RepoName        string `json:"repo_name"`
-	} `json:"repository"`
+// DockerHubWebhook is the Docker Hub push webhook payload.
+type DockerHubWebhook struct {
+	PushData    DockerHubPushData   `json:"push_data"`
+	CallbackURL string              `json:"callback_url"`
+	Repository  DockerHubRepository `json:"repository"`
+}
+
+// DockerHubPushData describes the pushed tag.
+type DockerHubPushData struct {
+	PushedAt int           `json:"pushed_at"`
+	Images   []interface{} `json:"images"`
+	Tag      string        `json:"tag"`
+	Pusher   string        `json:"pusher"`
+}
+
+// DockerHubRepository describes the affected repository.
+type DockerHubRepository struct {
+	Status          string `json:"status"`
+	Description     string `json:"description"`
+	IsTrusted       bool   `json:"is_trusted"`
+	FullDescription string `json:"full_description"`
+	RepoURL         string `json:"repo_url"`
+	Owner           string `json:"owner"`
+	IsOfficial      bool   `json:"is_official"`
+	IsPrivate       bool   `json:"is_private"`
+	Name            string `json:"name"`
+	Namespace       string `json:"namespace"`
+	StarCount       int    `json:"star_count"`
+	CommentCount    int    `json:"comment_count"`
+	DateCreated     int    `json:"date_created"`
+	Dockerfile      string `json:"dockerfile"`
+	RepoName        string `json:"repo_name"`
 }
 
 // dockerHubHandler - used to react to dockerhub webhooks
+// dockerHubHandler accepts Docker Hub pushes.
+// @Summary Receive a Docker Hub webhook
+// @Description Requires Basic or Bearer authorization only when authenticatedWebhooks is enabled.
+// @Tags Webhooks
+// @ID receiveDockerHubWebhook
+// @Accept json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Param body body DockerHubWebhook true "Docker Hub push"
+// @Success 200 "Accepted"
+// @Failure 400 {string} string "Malformed payload, missing repository name, or missing tag"
+// @Failure 401 {string} string "Unauthorized when authenticated webhooks are enabled"
+// @Router /v1/webhooks/dockerhub [post]
 func (s *TriggerServer) dockerHubHandler(resp http.ResponseWriter, req *http.Request) {
-	dw := dockerHubWebhook{}
+	dw := DockerHubWebhook{}
 	if err := json.NewDecoder(req.Body).Decode(&dw); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,

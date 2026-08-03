@@ -135,9 +135,10 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 		log.Info("authentication enabled, setting up admin HTTP handlers")
 		// auth
 		mux.HandleFunc("/v1/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
-		mux.HandleFunc("/v1/auth/info", s.requireAdminAuthorization(s.userInfoHandler)).Methods("GET", "OPTIONS")
-		mux.HandleFunc("/v1/auth/user", s.requireAdminAuthorization(s.userInfoHandler)).Methods("GET", "OPTIONS")
-		mux.HandleFunc("/v1/auth/logout", s.requireAdminAuthorization(s.logoutHandler)).Methods("POST", "GET", "OPTIONS")
+		mux.HandleFunc("/v1/auth/info", s.requireAdminAuthorization(s.authInfoHandler)).Methods("GET", "OPTIONS")
+		mux.HandleFunc("/v1/auth/user", s.requireAdminAuthorization(s.authUserHandler)).Methods("GET", "OPTIONS")
+		mux.HandleFunc("/v1/auth/logout", s.requireAdminAuthorization(s.logoutGetHandler)).Methods("GET", "OPTIONS")
+		mux.HandleFunc("/v1/auth/logout", s.requireAdminAuthorization(s.logoutPostHandler)).Methods("POST", "OPTIONS")
 		mux.HandleFunc("/v1/auth/refresh", s.requireAdminAuthorization(s.refreshHandler)).Methods("GET", "OPTIONS")
 
 		// approvals
@@ -207,10 +208,26 @@ func (s *TriggerServer) registerWebhookRoutes(mux *mux.Router) {
 	}
 }
 
+// healthHandler reports whether the HTTP process is available.
+// @Summary Check service health
+// @Description Returns an empty 200 response while the Keel HTTP process is running.
+// @Tags System
+// @ID healthCheck
+// @Success 200 "Healthy"
+// @Router /healthz [get]
 func (s *TriggerServer) healthHandler(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusOK)
 }
 
+// versionHandler returns build and runtime version information.
+// @Summary Get Keel version
+// @Description Returns Keel build, API, Go runtime, operating system, and architecture information.
+// @Tags System
+// @ID getVersion
+// @Produce json
+// @Success 200 {object} types.VersionInfo
+// @Failure 500 "Version serialization failed"
+// @Router /version [get]
 func (s *TriggerServer) versionHandler(resp http.ResponseWriter, req *http.Request) {
 	v := version.GetKeelVersion()
 
@@ -313,6 +330,36 @@ func (s *TriggerServer) userInfoHandler(resp http.ResponseWriter, req *http.Requ
 	}
 
 	response(&ui, 200, nil, resp, req)
+}
+
+// authInfoHandler documents the auth info alias.
+// @Summary Get authentication info
+// @Description Returns the current administrator profile. This route exists only when the authenticator is enabled.
+// @Tags Auth
+// @ID getAuthInfo
+// @Produce json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Success 200 {object} UserInfo
+// @Failure 401 {string} string "Unauthorized"
+// @Router /v1/auth/info [get]
+func (s *TriggerServer) authInfoHandler(resp http.ResponseWriter, req *http.Request) {
+	s.userInfoHandler(resp, req)
+}
+
+// authUserHandler documents the auth user alias.
+// @Summary Get current user
+// @Description Returns the current administrator profile. This route exists only when the authenticator is enabled.
+// @Tags Auth
+// @ID getAuthUser
+// @Produce json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Success 200 {object} UserInfo
+// @Failure 401 {string} string "Unauthorized"
+// @Router /v1/auth/user [get]
+func (s *TriggerServer) authUserHandler(resp http.ResponseWriter, req *http.Request) {
+	s.userInfoHandler(resp, req)
 }
 
 type APIResponse struct {

@@ -87,20 +87,67 @@ func extractToken(req *http.Request) string {
 	return token
 }
 
+// logoutGetHandler documents the legacy GET logout operation.
+// @Summary Log out with GET
+// @Description Returns an empty JSON object. This route exists only when the authenticator is enabled.
+// @Tags Auth
+// @ID logoutViaGet
+// @Produce json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Success 200 {object} EmptyResponse
+// @Failure 401 {string} string "Unauthorized"
+// @Router /v1/auth/logout [get]
+func (s *TriggerServer) logoutGetHandler(resp http.ResponseWriter, req *http.Request) {
+	s.logoutHandler(resp, req)
+}
+
+// logoutPostHandler documents the POST logout operation.
+// @Summary Log out
+// @Description Returns an empty JSON object. This route exists only when the authenticator is enabled.
+// @Tags Auth
+// @ID logout
+// @Produce json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Success 200 {object} EmptyResponse
+// @Failure 401 {string} string "Unauthorized"
+// @Router /v1/auth/logout [post]
+func (s *TriggerServer) logoutPostHandler(resp http.ResponseWriter, req *http.Request) {
+	s.logoutHandler(resp, req)
+}
+
 func (s *TriggerServer) logoutHandler(resp http.ResponseWriter, req *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{}`))
 }
 
-type loginRequest struct {
+// LoginRequest is the JSON payload accepted by the login endpoint.
+type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
+// EmptyResponse documents endpoints that return an empty JSON object.
+type EmptyResponse struct{}
+
+// loginHandler authenticates an administrator.
+// @Summary Log in
+// @Description Authenticates Basic credentials supplied as JSON. This route exists only when the authenticator is enabled.
+// @Tags Auth
+// @ID login
+// @Accept json
+// @Produce json
+// @Param body body LoginRequest true "Login credentials"
+// @Success 200 {object} auth.AuthResponse
+// @Header 200 {string} Authorization "Bearer token"
+// @Failure 400 {string} string "Malformed request"
+// @Failure 401 {string} string "Incorrect username or password"
+// @Router /v1/auth/login [post]
 func (s *TriggerServer) loginHandler(resp http.ResponseWriter, req *http.Request) {
 
-	var lr loginRequest
+	var lr LoginRequest
 	dec := json.NewDecoder(req.Body)
 	defer req.Body.Close()
 
@@ -131,6 +178,19 @@ func (s *TriggerServer) loginHandler(resp http.ResponseWriter, req *http.Request
 	response(authResp, 200, nil, resp, req)
 }
 
+// refreshHandler refreshes an administrator token.
+// @Summary Refresh authentication
+// @Description Generates a new bearer token. This route exists only when the authenticator is enabled.
+// @Tags Auth
+// @ID refreshAuth
+// @Produce json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Success 200 {object} auth.AuthResponse
+// @Header 200 {string} Authorization "Refreshed bearer token"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Token generation failed"
+// @Router /v1/auth/refresh [get]
 func (s *TriggerServer) refreshHandler(resp http.ResponseWriter, req *http.Request) {
 	user := auth.GetAccountFromCtx(req.Context())
 

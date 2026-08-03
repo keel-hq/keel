@@ -71,29 +71,49 @@ func init() {
 }
 **/
 
-type jfrogWebhook struct {
-	Domain    string `json:"domain"`
-	EventType string `json:"event_type"`
-	Data      struct {
-		RepoKey   string `json:"repo_key"`
-		Path      string `json:"path"`
-		Name      string `json:"name"`
-		Sha256    string `json:"sha256"`
-		Size      int32  `json:"size"`
-		ImageName string `json:"image_name"`
-		Tag       string `json:"tag"`
-		Platforms []struct {
-			Architecture string `json:"architecture"`
-			Os           string `json:"os"`
-		}
-	}
-	SubscriptionKey string `json:"subscription_key"`
-	JpdOrigin       string `json:"jpd_origin"`
-	Source          string `json:"source"`
+// JFrogWebhook is the JFrog Docker push webhook payload.
+type JFrogWebhook struct {
+	Domain          string           `json:"domain"`
+	EventType       string           `json:"event_type"`
+	Data            JFrogWebhookData `json:"data"`
+	SubscriptionKey string           `json:"subscription_key"`
+	JpdOrigin       string           `json:"jpd_origin"`
+	Source          string           `json:"source"`
 }
 
+// JFrogWebhookData describes the pushed image and platforms.
+type JFrogWebhookData struct {
+	RepoKey   string          `json:"repo_key"`
+	Path      string          `json:"path"`
+	Name      string          `json:"name"`
+	Sha256    string          `json:"sha256"`
+	Size      int32           `json:"size"`
+	ImageName string          `json:"image_name"`
+	Tag       string          `json:"tag"`
+	Platforms []JFrogPlatform `json:"platforms"`
+}
+
+// JFrogPlatform identifies an image platform in a manifest list.
+type JFrogPlatform struct {
+	Architecture string `json:"architecture"`
+	OS           string `json:"os"`
+}
+
+// jfrogHandler accepts JFrog Docker pushes.
+// @Summary Receive a JFrog webhook
+// @Description Requires Basic or Bearer authorization only when authenticatedWebhooks is enabled.
+// @Tags Webhooks
+// @ID receiveJFrogWebhook
+// @Accept json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Param body body JFrogWebhook true "JFrog Docker push"
+// @Success 200 "Accepted"
+// @Failure 400 {string} string "Malformed payload, missing image name, or missing tag"
+// @Failure 401 {string} string "Unauthorized when authenticated webhooks are enabled"
+// @Router /v1/webhooks/jfrog [post]
 func (s *TriggerServer) jfrogHandler(resp http.ResponseWriter, req *http.Request) {
-	jw := jfrogWebhook{}
+	jw := JFrogWebhook{}
 	if err := json.NewDecoder(req.Body).Decode(&jw); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,

@@ -1,0 +1,1426 @@
+basePath: /
+definitions:
+  github_com_keel-hq_keel_internal_k8s.Status:
+    properties:
+      availableReplicas:
+        description: |-
+          Total number of available pods (ready for at least minReadySeconds) targeted by this deployment.
+          +optional
+        type: integer
+      readyReplicas:
+        description: |-
+          Total number of ready pods targeted by this deployment.
+          +optional
+        type: integer
+      replicas:
+        description: |-
+          Total number of non-terminated pods targeted by this deployment (their labels match the selector).
+          +optional
+        type: integer
+      unavailableReplica:
+        description: |-
+          Total number of unavailable pods targeted by this deployment. This is the total number of
+          pods that are still required for the deployment to have 100% available capacity. They may
+          either be pods that are running but not yet available or pods that still have not been created.
+          +optional
+        type: integer
+      updatedReplicas:
+        description: |-
+          Total number of non-terminated pods targeted by this deployment that have the desired template spec.
+          +optional
+        type: integer
+    type: object
+  github_com_keel-hq_keel_pkg_auth.AuthResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  pkg_http.APIResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  pkg_http.ApproveRequest:
+    properties:
+      action:
+        description: defaults to approve
+        type: string
+      id:
+        type: string
+      identifier:
+        type: string
+      voter:
+        type: string
+    type: object
+  pkg_http.AuditLogsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/types.AuditLog'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  pkg_http.AzureWebhook:
+    properties:
+      request:
+        $ref: '#/definitions/pkg_http.AzureWebhookRequest'
+      target:
+        $ref: '#/definitions/pkg_http.AzureWebhookTarget'
+    type: object
+  pkg_http.AzureWebhookRequest:
+    properties:
+      host:
+        type: string
+    type: object
+  pkg_http.AzureWebhookTarget:
+    properties:
+      digest:
+        type: string
+      repository:
+        type: string
+      tag:
+        type: string
+    type: object
+  pkg_http.DockerHubPushData:
+    properties:
+      images:
+        items: {}
+        type: array
+      pushed_at:
+        type: integer
+      pusher:
+        type: string
+      tag:
+        type: string
+    type: object
+  pkg_http.DockerHubRepository:
+    properties:
+      comment_count:
+        type: integer
+      date_created:
+        type: integer
+      description:
+        type: string
+      dockerfile:
+        type: string
+      full_description:
+        type: string
+      is_official:
+        type: boolean
+      is_private:
+        type: boolean
+      is_trusted:
+        type: boolean
+      name:
+        type: string
+      namespace:
+        type: string
+      owner:
+        type: string
+      repo_name:
+        type: string
+      repo_url:
+        type: string
+      star_count:
+        type: integer
+      status:
+        type: string
+    type: object
+  pkg_http.DockerHubWebhook:
+    properties:
+      callback_url:
+        type: string
+      push_data:
+        $ref: '#/definitions/pkg_http.DockerHubPushData'
+      repository:
+        $ref: '#/definitions/pkg_http.DockerHubRepository'
+    type: object
+  pkg_http.EmptyResponse:
+    type: object
+  pkg_http.GitHubContainerMetadata:
+    properties:
+      tag:
+        $ref: '#/definitions/pkg_http.GitHubContainerTag'
+    type: object
+  pkg_http.GitHubContainerTag:
+    properties:
+      digest:
+        type: string
+      name:
+        type: string
+    type: object
+  pkg_http.GitHubPackage:
+    properties:
+      ecosystem:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      namespace:
+        type: string
+      package_version:
+        $ref: '#/definitions/pkg_http.GitHubPackageVersion'
+    type: object
+  pkg_http.GitHubPackageVersion:
+    properties:
+      container_metadata:
+        $ref: '#/definitions/pkg_http.GitHubContainerMetadata'
+      name:
+        type: string
+    type: object
+  pkg_http.GitHubRegistryPackage:
+    properties:
+      name:
+        type: string
+      package_type:
+        type: string
+      package_version:
+        $ref: '#/definitions/pkg_http.GitHubRegistryPackageVersion'
+      updated_at:
+        type: string
+    type: object
+  pkg_http.GitHubRegistryPackageVersion:
+    properties:
+      version:
+        type: string
+    type: object
+  pkg_http.GitHubRepository:
+    properties:
+      full_name:
+        type: string
+    type: object
+  pkg_http.GitHubWebhook:
+    properties:
+      action:
+        type: string
+      package:
+        $ref: '#/definitions/pkg_http.GitHubPackage'
+      registry_package:
+        $ref: '#/definitions/pkg_http.GitHubRegistryPackage'
+      repository:
+        $ref: '#/definitions/pkg_http.GitHubRepository'
+    type: object
+  pkg_http.HarborEventData:
+    properties:
+      repository:
+        $ref: '#/definitions/pkg_http.HarborRepository'
+      resources:
+        items:
+          $ref: '#/definitions/pkg_http.HarborResource'
+        type: array
+    type: object
+  pkg_http.HarborRepository:
+    properties:
+      date_created:
+        type: integer
+      name:
+        type: string
+      namespace:
+        type: string
+      repo_full_name:
+        type: string
+      repo_type:
+        type: string
+    type: object
+  pkg_http.HarborResource:
+    properties:
+      digest:
+        type: string
+      resource_url:
+        type: string
+      tag:
+        type: string
+    type: object
+  pkg_http.HarborWebhook:
+    properties:
+      event_data:
+        $ref: '#/definitions/pkg_http.HarborEventData'
+      occur_at:
+        type: integer
+      operator:
+        type: string
+      type:
+        type: string
+    type: object
+  pkg_http.JFrogPlatform:
+    properties:
+      architecture:
+        type: string
+      os:
+        type: string
+    type: object
+  pkg_http.JFrogWebhook:
+    properties:
+      data:
+        $ref: '#/definitions/pkg_http.JFrogWebhookData'
+      domain:
+        type: string
+      event_type:
+        type: string
+      jpd_origin:
+        type: string
+      source:
+        type: string
+      subscription_key:
+        type: string
+    type: object
+  pkg_http.JFrogWebhookData:
+    properties:
+      image_name:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      platforms:
+        items:
+          $ref: '#/definitions/pkg_http.JFrogPlatform'
+        type: array
+      repo_key:
+        type: string
+      sha256:
+        type: string
+      size:
+        type: integer
+      tag:
+        type: string
+    type: object
+  pkg_http.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  pkg_http.QuayWebhook:
+    properties:
+      docker_url:
+        type: string
+      homepage:
+        type: string
+      name:
+        type: string
+      namespace:
+        type: string
+      repository:
+        type: string
+      updated_tags:
+        items:
+          type: string
+        type: array
+    type: object
+  pkg_http.RegistryActor:
+    properties:
+      name:
+        type: string
+    type: object
+  pkg_http.RegistryEvent:
+    properties:
+      action:
+        type: string
+      actor:
+        $ref: '#/definitions/pkg_http.RegistryActor'
+      id:
+        type: string
+      request:
+        $ref: '#/definitions/pkg_http.RegistryRequest'
+      source:
+        $ref: '#/definitions/pkg_http.RegistrySource'
+      target:
+        $ref: '#/definitions/pkg_http.RegistryTarget'
+      timestamp:
+        type: string
+    type: object
+  pkg_http.RegistryNotification:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/pkg_http.RegistryEvent'
+        type: array
+    type: object
+  pkg_http.RegistryRequest:
+    properties:
+      addr:
+        type: string
+      host:
+        type: string
+      id:
+        type: string
+      method:
+        type: string
+      useragent:
+        type: string
+    type: object
+  pkg_http.RegistrySource:
+    properties:
+      addr:
+        type: string
+      instanceID:
+        type: string
+    type: object
+  pkg_http.RegistryTarget:
+    properties:
+      digest:
+        type: string
+      length:
+        type: integer
+      mediaType:
+        type: string
+      repository:
+        type: string
+      size:
+        type: integer
+      tag:
+        type: string
+      url:
+        type: string
+    type: object
+  pkg_http.ResourceApprovalsUpdateRequest:
+    properties:
+      identifier:
+        type: string
+      provider:
+        type: string
+      votesRequired:
+        type: integer
+    type: object
+  pkg_http.ResourcePolicyUpdateRequest:
+    properties:
+      identifier:
+        type: string
+      policy:
+        type: string
+      provider:
+        type: string
+    type: object
+  pkg_http.ResourceResponse:
+    properties:
+      annotations:
+        additionalProperties:
+          type: string
+        type: object
+      identifier:
+        type: string
+      images:
+        items:
+          type: string
+        type: array
+      kind:
+        type: string
+      labels:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      namespace:
+        type: string
+      policy:
+        type: string
+      provider:
+        type: string
+      status:
+        $ref: '#/definitions/github_com_keel-hq_keel_internal_k8s.Status'
+    type: object
+  pkg_http.TrackRequest:
+    properties:
+      identifier:
+        type: string
+      provider:
+        type: string
+      schedule:
+        type: string
+      trigger:
+        type: string
+    type: object
+  pkg_http.TrackedImage:
+    properties:
+      image:
+        type: string
+      namespace:
+        type: string
+      policy:
+        type: string
+      pollSchedule:
+        type: string
+      provider:
+        type: string
+      registry:
+        type: string
+      trigger:
+        type: string
+    type: object
+  pkg_http.UserInfo:
+    properties:
+      avatar:
+        type: string
+      id:
+        type: string
+      last_login_ip:
+        type: string
+      last_login_time:
+        type: integer
+      name:
+        type: string
+      role_id:
+        type: string
+      status:
+        type: integer
+      username:
+        type: string
+    type: object
+  types.Approval:
+    properties:
+      archived:
+        description: Archived is set to true once approval is finally approved/rejected
+        type: boolean
+      createdAt:
+        description: When this approval was created
+        type: string
+      currentVersion:
+        type: string
+      deadline:
+        description: Deadline for this request
+        type: string
+      digest:
+        description: |-
+          Digest is used to verify that images are the ones that got the approvals.
+          If digest doesn't match for the image, votes are reset.
+        type: string
+      event:
+        allOf:
+        - $ref: '#/definitions/types.Event'
+        description: Event that triggered evaluation
+      id:
+        type: string
+      identifier:
+        description: |-
+          Identifier is used to inform user about specific
+          Helm release or k8s deployment
+          ie: k8s <namespace>/<deployment name>
+              helm: <namespace>/<release name>
+        type: string
+      message:
+        type: string
+      newVersion:
+        type: string
+      provider:
+        allOf:
+        - $ref: '#/definitions/types.ProviderType'
+        description: Provider name - Kubernetes/Helm
+      rejected:
+        description: |-
+          Explicitly rejected approval
+          can be set directly by user
+          so even if deadline is not reached approval
+          could be turned down
+        type: boolean
+      updatedAt:
+        description: WHen this approval was updated
+        type: string
+      voters:
+        allOf:
+        - $ref: '#/definitions/types.JSONB'
+        description: |-
+          Voters is a list of voter
+          IDs for audit
+      votesReceived:
+        type: integer
+      votesRequired:
+        description: |-
+          Requirements for the update such as number of votes
+          and deadline
+        type: integer
+    type: object
+  types.AuditLog:
+    properties:
+      accountId:
+        type: string
+      action:
+        description: create/delete/update
+        type: string
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      identifier:
+        type: string
+      message:
+        type: string
+      metadata:
+        $ref: '#/definitions/types.JSONB'
+      payload:
+        description: can be used for bigger messages such as webhook payload
+        type: string
+      payloadType:
+        type: string
+      resourceKind:
+        description: approval/deployment/daemonset/statefulset/etc...
+        type: string
+      updatedAt:
+        type: string
+      username:
+        type: string
+    type: object
+  types.AuditLogStats:
+    properties:
+      approved:
+        type: integer
+      date:
+        type: string
+      rejected:
+        type: integer
+      updates:
+        type: integer
+      webhooks:
+        type: integer
+    type: object
+  types.Event:
+    properties:
+      createdAt:
+        type: string
+      repository:
+        $ref: '#/definitions/types.Repository'
+      triggerName:
+        description: optional field to identify trigger
+        type: string
+    type: object
+  types.JSONB:
+    additionalProperties: true
+    type: object
+  types.ProviderType:
+    enum:
+    - 0
+    - 1
+    - 2
+    type: integer
+    x-enum-varnames:
+    - ProviderTypeUnknown
+    - ProviderTypeKubernetes
+    - ProviderTypeHelm
+  types.Repository:
+    properties:
+      digest:
+        description: optional digest field
+        type: string
+      host:
+        type: string
+      name:
+        type: string
+      tag:
+        type: string
+    type: object
+  types.VersionInfo:
+    properties:
+      apiVersion:
+        type: string
+      arch:
+        type: string
+      buildDate:
+        type: string
+      experimental:
+        type: boolean
+      goVersion:
+        type: string
+      kernelVersion:
+        type: string
+      name:
+        type: string
+      os:
+        type: string
+      revision:
+        type: string
+      version:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: HTTP API exposed by Keel. Admin routes are registered only when an
+    authenticator is enabled. Provider webhooks require Basic or Bearer authorization
+    only when authenticated webhooks are enabled; the registry webhook is always unauthenticated.
+  title: Keel HTTP API
+  version: "1.0"
+paths:
+  /healthz:
+    get:
+      description: Returns an empty 200 response while the Keel HTTP process is running.
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Healthy
+      summary: Check service health
+      tags:
+      - System
+  /v1/approvals:
+    get:
+      description: Lists active and archived approvals. This route exists only when
+        the authenticator is enabled. Legacy store and serialization error paths write
+        text with status 200.
+      operationId: listApprovals
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/types.Approval'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: List approvals
+      tags:
+      - Admin
+    post:
+      consumes:
+      - application/json
+      description: Approves, rejects, deletes, or archives an approval. Delete returns
+        JSON null; legacy delete/archive error paths write text with status 200. This
+        route exists only when the authenticator is enabled.
+      operationId: updateApproval
+      parameters:
+      - description: Approval action
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.ApproveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Approval'
+        "400":
+          description: Malformed request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Approval not found
+          schema:
+            type: string
+        "500":
+          description: Approval update failed
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Update an approval
+      tags:
+      - Admin
+    put:
+      consumes:
+      - application/json
+      description: Sets a Kubernetes resource's required vote count. This route exists
+        only when the authenticator is enabled.
+      operationId: setResourceApprovals
+      parameters:
+      - description: Approval requirement
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.ResourceApprovalsUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_http.APIResponse'
+        "400":
+          description: Malformed or unsupported request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Permission denied
+          schema:
+            type: string
+        "404":
+          description: Resource not found
+          schema:
+            type: string
+        "500":
+          description: Update failed
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Set required approvals
+      tags:
+      - Admin
+  /v1/audit:
+    get:
+      description: Lists audit entries. Invalid limit or offset values are silently
+        treated as zero. This route exists only when the authenticator is enabled.
+      operationId: listAuditLogs
+      parameters:
+      - description: Maximum entries
+        in: query
+        name: limit
+        type: integer
+      - description: Entry offset
+        in: query
+        name: offset
+        type: integer
+      - description: Comma-separated resource kinds
+        in: query
+        name: filter
+        type: string
+      - description: Account email
+        in: query
+        name: email
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_http.AuditLogsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Permission denied
+          schema:
+            type: string
+        "500":
+          description: Store query failed
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: List audit logs
+      tags:
+      - Admin
+  /v1/auth/info:
+    get:
+      description: Returns the current administrator profile. This route exists only
+        when the authenticator is enabled.
+      operationId: getAuthInfo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_http.UserInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Get authentication info
+      tags:
+      - Auth
+  /v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates Basic credentials supplied as JSON. This route exists
+        only when the authenticator is enabled.
+      operationId: login
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            Authorization:
+              description: Bearer token
+              type: string
+          schema:
+            $ref: '#/definitions/github_com_keel-hq_keel_pkg_auth.AuthResponse'
+        "400":
+          description: Malformed request
+          schema:
+            type: string
+        "401":
+          description: Incorrect username or password
+          schema:
+            type: string
+      summary: Log in
+      tags:
+      - Auth
+  /v1/auth/logout:
+    get:
+      description: Returns an empty JSON object. This route exists only when the authenticator
+        is enabled.
+      operationId: logoutViaGet
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_http.EmptyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Log out with GET
+      tags:
+      - Auth
+    post:
+      description: Returns an empty JSON object. This route exists only when the authenticator
+        is enabled.
+      operationId: logout
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_http.EmptyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Log out
+      tags:
+      - Auth
+  /v1/auth/refresh:
+    get:
+      description: Generates a new bearer token. This route exists only when the authenticator
+        is enabled.
+      operationId: refreshAuth
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            Authorization:
+              description: Refreshed bearer token
+              type: string
+          schema:
+            $ref: '#/definitions/github_com_keel-hq_keel_pkg_auth.AuthResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Token generation failed
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Refresh authentication
+      tags:
+      - Auth
+  /v1/auth/user:
+    get:
+      description: Returns the current administrator profile. This route exists only
+        when the authenticator is enabled.
+      operationId: getAuthUser
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_http.UserInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - Auth
+  /v1/policies:
+    put:
+      consumes:
+      - application/json
+      description: Updates the policy annotation for a Kubernetes resource. This route
+        exists only when the authenticator is enabled.
+      operationId: updateResourcePolicy
+      parameters:
+      - description: Policy update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.ResourcePolicyUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_http.APIResponse'
+        "400":
+          description: Malformed request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Permission denied
+          schema:
+            type: string
+        "404":
+          description: Resource not found
+          schema:
+            type: string
+        "500":
+          description: Update failed
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Update resource policy
+      tags:
+      - Admin
+  /v1/resources:
+    get:
+      description: Returns monitored Kubernetes resources, or JSON null when the source
+        slice is nil. This route exists only when the authenticator is enabled.
+      operationId: listResources
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/pkg_http.ResourceResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: List resources
+      tags:
+      - Admin
+  /v1/stats:
+    get:
+      description: Returns daily webhook, approval, rejection, and update counts.
+        This route exists only when the authenticator is enabled.
+      operationId: getStats
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/types.AuditLogStats'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Permission denied
+          schema:
+            type: string
+        "500":
+          description: Store query failed
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Get audit statistics
+      tags:
+      - Admin
+  /v1/tracked:
+    get:
+      description: Returns image polling configuration, or JSON null when the source
+        slice is nil. This route exists only when the authenticator is enabled.
+      operationId: listTrackedImages
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/pkg_http.TrackedImage'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Permission denied
+          schema:
+            type: string
+        "500":
+          description: Provider lookup failed
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: List tracked images
+      tags:
+      - Admin
+    put:
+      consumes:
+      - application/json
+      description: Sets the trigger and polling schedule for a Kubernetes resource.
+        This route exists only when the authenticator is enabled.
+      operationId: updateTrackedImage
+      parameters:
+      - description: Tracking update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.TrackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pkg_http.APIResponse'
+        "400":
+          description: Malformed or unsupported request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Permission denied
+          schema:
+            type: string
+        "404":
+          description: Resource not found
+          schema:
+            type: string
+        "500":
+          description: Update failed
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Update image tracking
+      tags:
+      - Admin
+  /v1/webhooks/azure:
+    post:
+      consumes:
+      - application/json
+      description: Requires Basic or Bearer authorization only when authenticatedWebhooks
+        is enabled.
+      operationId: receiveAzureWebhook
+      parameters:
+      - description: Azure Container Registry push
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.AzureWebhook'
+      responses:
+        "200":
+          description: Accepted
+        "400":
+          description: Malformed payload or missing tag
+          schema:
+            type: string
+        "401":
+          description: Unauthorized when authenticated webhooks are enabled
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Receive an Azure webhook
+      tags:
+      - Webhooks
+  /v1/webhooks/dockerhub:
+    post:
+      consumes:
+      - application/json
+      description: Requires Basic or Bearer authorization only when authenticatedWebhooks
+        is enabled.
+      operationId: receiveDockerHubWebhook
+      parameters:
+      - description: Docker Hub push
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.DockerHubWebhook'
+      responses:
+        "200":
+          description: Accepted
+        "400":
+          description: Malformed payload, missing repository name, or missing tag
+          schema:
+            type: string
+        "401":
+          description: Unauthorized when authenticated webhooks are enabled
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Receive a Docker Hub webhook
+      tags:
+      - Webhooks
+  /v1/webhooks/github:
+    post:
+      consumes:
+      - application/json
+      description: X-GitHub-Event selects package or registry_package decoding; absent
+        and other values currently submit an empty event and return 200. Requires
+        Basic or Bearer authorization only when authenticatedWebhooks is enabled.
+      operationId: receiveGitHubWebhook
+      parameters:
+      - description: 'Payload type: package or registry_package'
+        in: header
+        name: X-GitHub-Event
+        type: string
+      - description: GitHub Packages or GHCR push
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.GitHubWebhook'
+      responses:
+        "200":
+          description: Accepted
+        "400":
+          description: Malformed or incomplete supported payload
+          schema:
+            type: string
+        "401":
+          description: Unauthorized when authenticated webhooks are enabled
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Receive a GitHub webhook
+      tags:
+      - Webhooks
+  /v1/webhooks/harbor:
+    post:
+      consumes:
+      - application/json
+      description: Processes pushImage and PUSH_ARTIFACT resources. Other event types
+        return 200 without submitting an event. Requires Basic or Bearer authorization
+        only when authenticatedWebhooks is enabled.
+      operationId: receiveHarborWebhook
+      parameters:
+      - description: Harbor artifact push
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.HarborWebhook'
+      responses:
+        "200":
+          description: Accepted
+        "400":
+          description: Malformed payload or resource URL
+          schema:
+            type: string
+        "401":
+          description: Unauthorized when authenticated webhooks are enabled
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Receive a Harbor webhook
+      tags:
+      - Webhooks
+  /v1/webhooks/jfrog:
+    post:
+      consumes:
+      - application/json
+      description: Requires Basic or Bearer authorization only when authenticatedWebhooks
+        is enabled.
+      operationId: receiveJFrogWebhook
+      parameters:
+      - description: JFrog Docker push
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.JFrogWebhook'
+      responses:
+        "200":
+          description: Accepted
+        "400":
+          description: Malformed payload, missing image name, or missing tag
+          schema:
+            type: string
+        "401":
+          description: Unauthorized when authenticated webhooks are enabled
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Receive a JFrog webhook
+      tags:
+      - Webhooks
+  /v1/webhooks/native:
+    post:
+      consumes:
+      - application/json
+      description: Requires Basic or Bearer authorization only when authenticatedWebhooks
+        is enabled.
+      operationId: receiveNativeWebhook
+      parameters:
+      - description: Repository event
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.Repository'
+      responses:
+        "200":
+          description: Accepted
+        "400":
+          description: Malformed repository, missing name, or missing tag
+          schema:
+            type: string
+        "401":
+          description: Unauthorized when authenticated webhooks are enabled
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Receive a native webhook
+      tags:
+      - Webhooks
+  /v1/webhooks/quay:
+    post:
+      consumes:
+      - application/json
+      description: Requires Basic or Bearer authorization only when authenticatedWebhooks
+        is enabled.
+      operationId: receiveQuayWebhook
+      parameters:
+      - description: Quay repository push
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.QuayWebhook'
+      responses:
+        "200":
+          description: Accepted
+        "400":
+          description: Malformed payload, missing Docker URL, or no updated tags
+          schema:
+            type: string
+        "401":
+          description: Unauthorized when authenticated webhooks are enabled
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      - BearerAuth: []
+      summary: Receive a Quay webhook
+      tags:
+      - Webhooks
+  /v1/webhooks/registry:
+    post:
+      consumes:
+      - application/json
+      description: Processes push events with tags. This endpoint is always unauthenticated,
+        including when authenticatedWebhooks is enabled.
+      operationId: receiveRegistryWebhook
+      parameters:
+      - description: Docker Registry notification
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_http.RegistryNotification'
+      responses:
+        "200":
+          description: Accepted
+        "400":
+          description: Malformed payload
+      summary: Receive a Docker Registry webhook
+      tags:
+      - Webhooks
+  /version:
+    get:
+      description: Returns Keel build, API, Go runtime, operating system, and architecture
+        information.
+      operationId: getVersion
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.VersionInfo'
+        "500":
+          description: Version serialization failed
+      summary: Get Keel version
+      tags:
+      - System
+securityDefinitions:
+  BasicAuth:
+    type: basic
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

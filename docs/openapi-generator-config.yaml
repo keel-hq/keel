@@ -1,0 +1,17 @@
+additionalProperties:
+  disallowAdditionalPropertiesIfNotPresent: false
+  emitJSDoc: true
+  hideGenerationTimestamp: true
+  modelPropertyNaming: original
+  projectDescription: Generated JavaScript client for the Keel HTTP API
+  projectName: keel-api-client
+  projectVersion: 1.0.0
+  skipDefaultUserAgent: true
+  sourceFolder: .
+  usePromises: true
+  useURLSearchParams: true
+globalProperties:
+  apiDocs: false
+  apiTests: false
+  modelDocs: false
+  modelTests: false

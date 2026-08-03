@@ -87,6 +87,14 @@ const (
 // EnvDebug - set to 1 or anything else to enable debug logging
 const EnvDebug = "DEBUG"
 
+// @title Keel HTTP API
+// @version 1.0
+// @description HTTP API exposed by Keel. Admin routes are registered only when an authenticator is enabled. Provider webhooks require Basic or Bearer authorization only when authenticated webhooks are enabled; the registry webhook is always unauthenticated.
+// @BasePath /
+// @securityDefinitions.basic BasicAuth
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	ver := version.GetKeelVersion()
 

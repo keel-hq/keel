@@ -8,6 +8,23 @@ import (
 	"github.com/keel-hq/keel/types"
 )
 
+// adminAuditLogHandler returns a page of audit logs.
+// @Summary List audit logs
+// @Description Lists audit entries. Invalid limit or offset values are silently treated as zero. This route exists only when the authenticator is enabled.
+// @Tags Admin
+// @ID listAuditLogs
+// @Produce json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Param limit query int false "Maximum entries"
+// @Param offset query int false "Entry offset"
+// @Param filter query string false "Comma-separated resource kinds"
+// @Param email query string false "Account email"
+// @Success 200 {object} AuditLogsResponse
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 403 {string} string "Permission denied"
+// @Failure 500 {string} string "Store query failed"
+// @Router /v1/audit [get]
 func (s *TriggerServer) adminAuditLogHandler(resp http.ResponseWriter, req *http.Request) {
 
 	query := &types.AuditLogQuery{}
@@ -44,7 +61,7 @@ func (s *TriggerServer) adminAuditLogHandler(resp http.ResponseWriter, req *http
 		return
 	}
 
-	result := auditLogsResponse{
+	result := AuditLogsResponse{
 		Data:   entries,
 		Offset: query.Offset,
 		Limit:  query.Limit,
@@ -58,7 +75,8 @@ func (s *TriggerServer) adminAuditLogHandler(resp http.ResponseWriter, req *http
 	response(result, http.StatusOK, err, resp, req)
 }
 
-type auditLogsResponse struct {
+// AuditLogsResponse is a page of audit log entries.
+type AuditLogsResponse struct {
 	Data   []*types.AuditLog `json:"data"`
 	Total  int               `json:"total"`
 	Limit  int               `json:"limit"`

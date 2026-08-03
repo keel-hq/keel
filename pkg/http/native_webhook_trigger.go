@@ -25,6 +25,19 @@ func init() {
 }
 
 // nativeHandler - used to trigger event directly
+// nativeHandler accepts a direct Keel repository event.
+// @Summary Receive a native webhook
+// @Description Requires Basic or Bearer authorization only when authenticatedWebhooks is enabled.
+// @Tags Webhooks
+// @ID receiveNativeWebhook
+// @Accept json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Param body body types.Repository true "Repository event"
+// @Success 200 "Accepted"
+// @Failure 400 {string} string "Malformed repository, missing name, or missing tag"
+// @Failure 401 {string} string "Unauthorized when authenticated webhooks are enabled"
+// @Router /v1/webhooks/native [post]
 func (s *TriggerServer) nativeHandler(resp http.ResponseWriter, req *http.Request) {
 	repo := types.Repository{}
 	if err := json.NewDecoder(req.Body).Decode(&repo); err != nil {
