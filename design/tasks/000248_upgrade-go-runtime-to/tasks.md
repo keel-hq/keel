@@ -1,7 +1,7 @@
 # Implementation Tasks: Upgrade Keel to the Latest Go 1.26.x Release
 
 - [x] Query the official Go releases feed at implementation time, select the newest stable Go 1.26.x patch, and record the evidence.
-- [~] Re-scan Keel for active and non-authoritative Go references and finalize the changed/excluded inventory.
+- [x] Re-scan Keel for active and non-authoritative Go references and finalize the changed/excluded inventory.
 - [ ] Update `go.mod`, both GitHub Actions Go setup steps, all Go-based stages in the active Dockerfiles, and contributor/tooling prerequisites to the exact selected patch.
 - [ ] Run `go mod tidy` with the selected toolchain and retain only required, scope-reviewed module metadata changes.
 - [ ] Make only minimal source or tooling compatibility adjustments proven necessary by Go 1.26.x.

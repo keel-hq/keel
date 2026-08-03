@@ -33,3 +33,5 @@ Finish with a repository-wide Go-version search and `git diff` review. The imple
 
 - On 2026-08-03, the implementation-time query of `https://go.dev/dl/?mode=json` returned `go1.26.5` as the first entry with `stable: true`; implementation therefore selects Go 1.26.5.
 - The Keel feature branch was absent in the initial clone and was created from the clean local `master` as `feature/000248-upgrade-keel-to-the`.
+- The final active inventory is `go.mod`; two setup steps in `.github/workflows/ci.yml`; `Dockerfile`; `Dockerfile.debian`; both Go stages in `Dockerfile.debug`; `Dockerfile.tests`; `docs/README.md`; and the active development prerequisite in `readme.md`. Compose files consume the same Dockerfiles and contain no separate Go pin.
+- `Dockerfile.local` contains only an Alpine runtime and has no Go declaration. The two `golang:1.8.1-alpine` strings under `pkg/http` are an external Docker Hub webhook payload example and its test fixture, so they remain unchanged.
