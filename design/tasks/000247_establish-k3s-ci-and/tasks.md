@@ -14,7 +14,7 @@
 - [x] Remove or relocate duplicated, skipped, credential-dependent, and mutable-public-tag acceptance cases so the smoke suite requires no secrets or external registry state.
 - [x] Keep `make test` and existing CI job steps unchanged; make `make e2e` invoke the sole clean-cluster path.
 - [x] Add only `End-to-End Tests (k3s)` with `contents: read`, always-run diagnostics/artifact upload with bounded retention, and always-run cleanup; add only its dependency to the Docker job.
-- [ ] Keep PR/`master`/`workflow_dispatch` cadence visibly pending until Nessie's cost approval; do not represent it as approved in workflow documentation.
+- [~] Keep PR/`master`/`workflow_dispatch` cadence visibly pending until Nessie's cost approval; do not represent it as approved in workflow documentation.
 - [ ] Collect Go test output, registry and Keel pod logs, k3s/server/containerd logs, Kubernetes get/describe data, sorted events, and node/pod state while excluding Secrets, tokens, kubeconfig contents, and environment dumps.
 - [ ] Update the Makefile, `readme.md`, and `ARCHITECTURE.md` narrowly with prerequisites, exact command, pin/compatibility rationale, safety guards, diagnostics, and the 6–8 minute expectation/10-minute limit.
 - [ ] Run `gofmt`, focused helper tests, `make test`, shell/workflow lint, and repeated clean-cluster e2e runs; record end-to-end runtime and flakiness.
