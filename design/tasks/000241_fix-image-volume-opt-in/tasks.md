@@ -6,5 +6,5 @@
 - [x] Update `readme.md` with the Kubernetes 1.31-1.34, 1.35, and 1.36+ feature-state matrix, runtime support requirement, and both official Kubernetes links.
 - [x] Correct stale image-volume compatibility comments introduced by PR #857, keeping `ARCHITECTURE.md` changes limited to wording that is genuinely inaccurate.
 - [x] Run `gofmt` on changed Go files and the focused `provider/kubernetes` tests.
-- [~] Run `go test ./internal/k8s/... ./provider/kubernetes/...` and, if practical, `go test ./...`; separate pre-existing or environmental failures from regressions.
+- [x] Run `go test ./internal/k8s/... ./provider/kubernetes/...` and, if practical, `go test ./...`; separate pre-existing or environmental failures from regressions.
 - [ ] Review the final diff to ensure the change is narrowly scoped to image-volume opt-in consistency and compatibility documentation.
