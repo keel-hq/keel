@@ -351,6 +351,11 @@ collect_diagnostics() {
     sudo cp "${K3S_DATA_DIR}/agent/containerd/containerd.log" \
       "${ARTIFACT_DIR}/containerd.log" 2>/dev/null || true
     sudo chown "$(id -u):$(id -g)" "${ARTIFACT_DIR}/containerd.log" 2>/dev/null || true
+  elif [[ -s "${K3S_LOG}" ]]; then
+    {
+      printf 'k3s embeds containerd output; extracted containerd-related server lines follow.\n'
+      grep -Ei 'containerd|snapshotter|shim' "${K3S_LOG}" || true
+    } >"${ARTIFACT_DIR}/containerd.log"
   fi
   [[ -x "${K3S_BIN}" && -s "${KUBECONFIG}" ]] || return 0
 
