@@ -188,7 +188,16 @@ spec:
             pullPolicy: IfNotPresent
 ```
 
-Requires the `ImageVolume` feature gate on your cluster.
+Image volumes require Kubernetes 1.31 or later and a container runtime that
+supports image volumes. Kubernetes compatibility is:
+
+- 1.31-1.34: the `ImageVolume` feature gate must be explicitly enabled;
+- 1.35: the feature is beta and enabled by default;
+- 1.36+: the feature is stable (GA).
+
+See the official Kubernetes [feature-gate table](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/)
+and [image-volume documentation](https://kubernetes.io/docs/tasks/configure-pod-container/image-volumes/)
+for cluster configuration details.
 
 ### Documentation
 

@@ -45,7 +45,8 @@ const KeelInitContainerAnnotation = "keel.sh/initContainers"
 
 // KeelImageVolumeAnnotation - label or annotation to track OCI image volume
 // sources (spec.volumes[].image.reference), defaults to false for backward
-// compatibility. Requires Kubernetes 1.31+ with the ImageVolume feature gate.
+// compatibility. Requires Kubernetes 1.31+ and container-runtime image-volume
+// support; ImageVolume feature-gate defaults vary by Kubernetes version.
 const KeelImageVolumeAnnotation = "keel.sh/imageVolumes"
 
 // KeelMonitorContainers - you can only have one keel settings per object type, but some of them might have multiple containers. Use this setting to
