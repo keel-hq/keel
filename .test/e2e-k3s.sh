@@ -10,6 +10,7 @@ readonly FIXTURE_IMAGE="docker.io/library/busybox@sha256:7a3ebe5bfd1a4a19797d20b
 readonly REGISTRY_ADDRESS="10.53.0.50:5000"
 readonly K3S_RUNTIME_DIR="/run/k3s"
 readonly DEFAULT_K3S_DATA_DIR="/var/lib/rancher/k3s"
+readonly DEFAULT_KUBELET_DIR="/var/lib/kubelet"
 
 RUN_ID="${KEEL_E2E_RUN_ID:-$(date -u +%Y%m%d%H%M%S)-$$}"
 RUN_DIR="${KEEL_E2E_RUN_DIR:-${REPO_ROOT}/.test/.runs/${RUN_ID}}"
@@ -63,6 +64,7 @@ preflight() {
   pgrep -x k3s >/dev/null 2>&1 && fail "an existing k3s process is active"
   [[ ! -e /etc/rancher/k3s/k3s.yaml ]] || fail "existing k3s kubeconfig found"
   [[ ! -e "${DEFAULT_K3S_DATA_DIR}" ]] || fail "existing k3s data directory found"
+  [[ ! -e "${DEFAULT_KUBELET_DIR}" ]] || fail "existing kubelet data directory found"
   [[ ! -e "${K3S_RUNTIME_DIR}" ]] || fail "existing k3s runtime directory found"
   [[ ! -e "${HOME}/.kube/config" ]] || fail "existing default kubeconfig found"
   ip link show cni0 >/dev/null 2>&1 && fail "existing cni0 interface found"
@@ -105,6 +107,7 @@ write_k3s_config() {
     printf 'service-cidr: 10.53.0.0/16\n'
     printf 'cluster-dns: 10.53.0.10\n'
     printf 'private-registry: %s\n' "${REGISTRIES_CONFIG}"
+    printf 'kubelet-arg:\n  - root-dir=%s/agent/kubelet\n' "${K3S_DATA_DIR}"
     printf 'disable:\n  - traefik\n  - servicelb\n  - metrics-server\n  - local-storage\n'
   } >"${K3S_CONFIG}"
   {
@@ -393,6 +396,9 @@ cleanup() {
   fi
   if [[ -d "${DEFAULT_K3S_DATA_DIR}" ]] && ! pgrep -x k3s >/dev/null 2>&1; then
     sudo find "${DEFAULT_K3S_DATA_DIR}" -depth -delete
+  fi
+  if [[ -d "${DEFAULT_KUBELET_DIR}" ]] && ! pgrep -x k3s >/dev/null 2>&1; then
+    sudo find "${DEFAULT_KUBELET_DIR}" -depth -delete
   fi
   if [[ -d "${RUN_DIR}" ]]; then
     sudo find "${RUN_DIR}" -depth -delete
