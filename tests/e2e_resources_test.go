@@ -139,9 +139,9 @@ func keelDeployment(cfg e2eConfig) *appsv1.Deployment {
 							{Name: "INSECURE_REGISTRY", Value: "true"},
 							{Name: "POLL", Value: "true"},
 							{Name: "POLL_DEFAULTSCHEDULE", Value: "@every 2s"},
+							{Name: "XDG_DATA_HOME", Value: "/tmp"},
 						},
 						Ports:          []corev1.ContainerPort{{Name: "http", ContainerPort: 9300}},
-						VolumeMounts:   []corev1.VolumeMount{{Name: "data", MountPath: "/data"}},
 						ReadinessProbe: &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/healthz", Port: intstr.FromString("http")}}, InitialDelaySeconds: 1, PeriodSeconds: 1, FailureThreshold: 30},
 						LivenessProbe:  &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/healthz", Port: intstr.FromString("http")}}, InitialDelaySeconds: 5, PeriodSeconds: 5},
 						Resources: corev1.ResourceRequirements{
@@ -149,7 +149,6 @@ func keelDeployment(cfg e2eConfig) *appsv1.Deployment {
 							Limits:   corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("500m"), corev1.ResourceMemory: resource.MustParse("256Mi")},
 						},
 					}},
-					Volumes: []corev1.Volume{{Name: "data", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
 				},
 			},
 		},
