@@ -9,7 +9,7 @@
 - [x] Create run-scoped Keel ServiceAccount/RBAC, Deployment probes/resource bounds, and Service; validate permissions are the minimum chart-equivalent set required by the tested provider path.
 - [x] Refactor the acceptance entry point into a `testify/suite` lifecycle that owns Keel resources and a tracked Service port-forward and polls Deployment plus `/healthz` readiness.
 - [x] Refactor helpers to use contexts, generated per-test namespaces, awaited deletion, bounded condition polling, and last-observed-state assertion messages without fixed correctness sleeps.
-- [~] Seed unique `<run-id>/<test-id>` repositories with only each scenario's immutable tags and assert the exact registry tag set before every test.
+- [x] Seed unique `<run-id>/<test-id>` repositories with only each scenario's immutable tags and assert the exact registry tag set before every test.
 - [ ] Implement the three-test smoke suite: eligible webhook update, eligible polling update, and patch-policy rejection of a minor update; keep optional regressions only if isolated and within budget.
 - [ ] Remove or relocate duplicated, skipped, credential-dependent, and mutable-public-tag acceptance cases so the smoke suite requires no secrets or external registry state.
 - [ ] Keep `make test` and existing CI job steps unchanged; make `make e2e` invoke the sole clean-cluster path.
