@@ -21,6 +21,7 @@ REGISTRIES_CONFIG="${RUN_DIR}/registries.yaml"
 K3S_PID_FILE="${RUN_DIR}/k3s.pid"
 K3S_LOG="${ARTIFACT_DIR}/k3s.log"
 PORT_FORWARD_PID_FILE="${RUN_DIR}/port-forward.pid"
+E2E_ENV_FILE="${RUN_DIR}/e2e.env"
 CLEANUP_STARTED=0
 
 log() {
@@ -136,6 +137,12 @@ kubectl() {
   "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" "$@"
 }
 
+ctr() {
+  sudo "${K3S_BIN}" ctr \
+    --address "${K3S_DATA_DIR}/agent/containerd/containerd.sock" \
+    --namespace k8s.io "$@"
+}
+
 deploy_registry() {
   log "deploying isolated registry at ${REGISTRY_ADDRESS}"
   kubectl apply -f - <<EOF
@@ -201,6 +208,36 @@ spec:
 EOF
   kubectl -n "keel-e2e-infra-${RUN_ID}" rollout status deployment/registry --timeout=120s
   curl --fail --show-error --silent "http://${REGISTRY_ADDRESS}/v2/" >/dev/null
+}
+
+build_keel_image() {
+  local local_image="keel-e2e:${RUN_ID}"
+  local registry_image="${REGISTRY_ADDRESS}/keel-under-test:${RUN_ID}"
+  local image_archive="${RUN_DIR}/keel-image.tar"
+  local digest
+
+  log "building Keel container from ${REPO_ROOT}/Dockerfile"
+  docker build --tag "${local_image}" --file "${REPO_ROOT}/Dockerfile" "${REPO_ROOT}"
+  docker save --output "${image_archive}" "${local_image}"
+  ctr images import "${image_archive}"
+  ctr images tag "docker.io/library/${local_image}" "${registry_image}"
+  ctr images push --plain-http "${registry_image}"
+
+  digest="$(curl --fail --show-error --silent --head \
+    --header 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+    "http://${REGISTRY_ADDRESS}/v2/keel-under-test/manifests/${RUN_ID}" | \
+    awk 'tolower($1) == "docker-content-digest:" {gsub("\\r", "", $2); print $2}')"
+  [[ "${digest}" =~ ^sha256:[a-f0-9]{64}$ ]] || fail "could not resolve Keel image digest"
+
+  {
+    printf 'KEEL_E2E_RUN_ID=%q\n' "${RUN_ID}"
+    printf 'KEEL_E2E_REGISTRY=%q\n' "${REGISTRY_ADDRESS}"
+    printf 'KEEL_E2E_IMAGE=%q\n' "${REGISTRY_ADDRESS}/keel-under-test@${digest}"
+    printf 'KEEL_E2E_KUBECTL=%q\n' "${K3S_BIN}"
+    printf 'KEEL_E2E_KUBECONFIG=%q\n' "${KUBECONFIG}"
+    printf 'KEEL_E2E_ARTIFACT_DIR=%q\n' "${ARTIFACT_DIR}"
+  } >"${E2E_ENV_FILE}"
+  log "Keel image: ${REGISTRY_ADDRESS}/keel-under-test@${digest}"
 }
 
 stop_k3s() {
@@ -270,6 +307,7 @@ main() {
   start_k3s
   log "k3s is ready"
   deploy_registry
+  build_keel_image
 }
 
 main "$@"
