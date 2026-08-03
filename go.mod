@@ -1,6 +1,6 @@
 module github.com/keel-hq/keel
 
-go 1.23
+go 1.26.5
 
 replace (
 	k8s.io/api => k8s.io/api v0.31.3

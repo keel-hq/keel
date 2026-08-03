@@ -4,7 +4,7 @@
 
 ## Prerequisites
 
-- Go 1.23
+- Go 1.26.5
 - GNU Make
 - Docker (for OpenAPI Generator v7.22.0 and Spectral v6.16.1)
 - Node.js 16.20 and Yarn 1.x for UI verification
