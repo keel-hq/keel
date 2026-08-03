@@ -245,7 +245,7 @@ build_keel_image() {
   ctr images push --plain-http "${registry_image}"
 
   digest="$(curl --fail --show-error --silent --head \
-    --header 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+    --header 'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
     "http://${REGISTRY_ADDRESS}/v2/keel-under-test/manifests/${RUN_ID}" | \
     awk 'tolower($1) == "docker-content-digest:" {gsub("\\r", "", $2); print $2}')"
   [[ "${digest}" =~ ^sha256:[a-f0-9]{64}$ ]] || fail "could not resolve Keel image digest"
