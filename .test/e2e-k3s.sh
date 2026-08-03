@@ -23,6 +23,47 @@ log() {
   printf '[keel-e2e] %s\n' "$*"
 }
 
+fail() {
+  log "ERROR: $*"
+  exit 1
+}
+
+port_is_listening() {
+  local port="$1"
+  ss -ltnH | awk '{print $4}' | grep -Eq "(^|:)${port}$"
+}
+
+preflight() {
+  local command
+  for command in awk curl docker grep ip setsid sha256sum ss sudo; do
+    command -v "${command}" >/dev/null || fail "required command not found: ${command}"
+  done
+  sudo -n true 2>/dev/null || fail "passwordless sudo is required"
+  docker info >/dev/null 2>&1 || fail "Docker daemon is not available"
+
+  [[ "${RUN_ID}" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]] || \
+    fail "KEEL_E2E_RUN_ID must contain only lowercase letters, digits, and hyphens"
+  ((${#RUN_ID} <= 40)) || fail "KEEL_E2E_RUN_ID must be at most 40 characters"
+  [[ "${RUN_DIR}" == "${REPO_ROOT}/.test/.runs/"* ]] || \
+    fail "run directory must be under ${REPO_ROOT}/.test/.runs"
+  [[ "${ARTIFACT_DIR}" == "${REPO_ROOT}/.test/artifacts/"* ]] || \
+    fail "artifact directory must be under ${REPO_ROOT}/.test/artifacts"
+  [[ ! -e "${RUN_DIR}" ]] || fail "run directory already exists: ${RUN_DIR}"
+
+  if command -v systemctl >/dev/null && systemctl is-active --quiet k3s 2>/dev/null; then
+    fail "an existing k3s service is active"
+  fi
+  pgrep -x k3s >/dev/null 2>&1 && fail "an existing k3s process is active"
+  [[ ! -e /etc/rancher/k3s/k3s.yaml ]] || fail "existing k3s kubeconfig found"
+  [[ ! -e /var/lib/rancher/k3s ]] || fail "existing k3s data directory found"
+  [[ ! -e "${HOME}/.kube/config" ]] || fail "existing default kubeconfig found"
+  ip link show cni0 >/dev/null 2>&1 && fail "existing cni0 interface found"
+  ip link show flannel.1 >/dev/null 2>&1 && fail "existing flannel.1 interface found"
+  port_is_listening 6443 && fail "Kubernetes API port 6443 is already in use"
+  port_is_listening 5000 && fail "registry port 5000 is already in use"
+  port_is_listening 19300 && fail "Keel port-forward port 19300 is already in use"
+}
+
 download_k3s() {
   mkdir -p "${BIN_DIR}" "${ARTIFACT_DIR}"
   curl --fail --location --show-error --silent \
@@ -102,6 +143,7 @@ cleanup() {
 }
 
 main() {
+  preflight
   trap cleanup EXIT INT TERM
   download_k3s
   print_versions
