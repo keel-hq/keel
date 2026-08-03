@@ -22,3 +22,4 @@ Run `gofmt` on changed Go files, focused `provider/kubernetes` tests including t
 
 - `provider/kubernetes/updates.go` now delegates image-volume eligibility to the existing metadata helper with labels and annotations in its declared order; the rewrite loop is unchanged.
 - `provider/kubernetes/updates_test.go` directly exercises rewriting for label-only, mixed-case annotation, canonical annotation, no opt-in, and label-precedence cases. This avoids relying on helper/discovery-only assertions.
+- Existing pure update and internal Kubernetes resource tests pass, covering standard/init-container updates, filtering, and supported generic-resource paths. Integration tests that construct the SQLite approval store cannot start here because the environment sets `CGO_ENABLED=0` while `go-sqlite3` requires cgo; this is environmental and occurs before provider behavior runs.
