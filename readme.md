@@ -218,7 +218,7 @@ We use pull requests, so:
 
 ### Developing Keel
 
-If you wish to work on Keel itself, you will need Go 1.12+ installed. Make sure you put Keel into correct Gopath and `go build` (dependency management is done through [dep](https://github.com/golang/dep)). 
+If you wish to work on Keel itself, install Go 1.26.5 and use the module-based build from this repository checkout.
 
 To test Keel while developing:
 
