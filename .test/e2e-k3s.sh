@@ -2,7 +2,8 @@
 
 set -Eeuo pipefail
 
-readonly REPO_ROOT="$(git rev-parse --show-toplevel)"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+readonly REPO_ROOT
 readonly K3S_VERSION="v1.35.6+k3s1"
 readonly K3S_RELEASE_URL="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}"
 readonly REGISTRY_IMAGE="registry@sha256:46faa9a1ae6813194b53921a370f2f4f8c5e1aae228a89bceafef5847a6a3278"
@@ -128,6 +129,8 @@ start_k3s() {
   local pid
   write_k3s_config
   log "starting task-owned k3s process"
+  # The calling user owns the artifact log; only the k3s process needs sudo.
+  # shellcheck disable=SC2024
   sudo env K3S_DATA_DIR="${K3S_DATA_DIR}" \
     setsid "${K3S_BIN}" server --config "${K3S_CONFIG}" >"${K3S_LOG}" 2>&1 &
 
