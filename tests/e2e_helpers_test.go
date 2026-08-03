@@ -69,6 +69,56 @@ func waitForDeploymentImage(ctx context.Context, client kubernetes.Interface, na
 	}
 }
 
+func waitForDeploymentAvailable(ctx context.Context, client kubernetes.Interface, namespace, name string) error {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	last := "<not observed>"
+	for {
+		deployment, err := client.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			last = "get error: " + err.Error()
+		} else {
+			desired := int32(1)
+			if deployment.Spec.Replicas != nil {
+				desired = *deployment.Spec.Replicas
+			}
+			last = fmt.Sprintf("generation=%d observedGeneration=%d available=%d desired=%d",
+				deployment.Generation, deployment.Status.ObservedGeneration, deployment.Status.AvailableReplicas, desired)
+			if deployment.Status.ObservedGeneration >= deployment.Generation && deployment.Status.AvailableReplicas >= desired {
+				return nil
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("deployment %s/%s did not become available; last observed %s: %w", namespace, name, last, ctx.Err())
+		case <-ticker.C:
+		}
+	}
+}
+
+func waitForHTTPReady(ctx context.Context, client *http.Client, url string) error {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	last := "<not observed>"
+	for {
+		response, err := client.Get(url)
+		if err != nil {
+			last = "request error: " + err.Error()
+		} else {
+			_ = response.Body.Close()
+			last = fmt.Sprintf("HTTP %d", response.StatusCode)
+			if response.StatusCode == http.StatusOK {
+				return nil
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("endpoint %s did not become ready; last observed %s: %w", url, last, ctx.Err())
+		case <-ticker.C:
+		}
+	}
+}
+
 func ensureDeploymentImageUnchanged(ctx context.Context, client kubernetes.Interface, namespace, name, expected string) error {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()

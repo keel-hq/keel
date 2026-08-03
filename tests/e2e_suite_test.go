@@ -45,11 +45,9 @@ func (s *E2ESuite) SetupSuite() {
 	require.NoError(s.T(), err)
 	require.NoError(s.T(), createKeelResources(context.Background(), s.client, s.cfg))
 
-	require.Eventually(s.T(), func() bool {
-		deployment, getErr := s.client.AppsV1().Deployments(s.cfg.systemNamespace()).Get(
-			context.Background(), "keel", metav1.GetOptions{})
-		return getErr == nil && deployment.Status.AvailableReplicas == 1
-	}, 2*time.Minute, time.Second, "Keel Deployment did not become available")
+	deploymentCtx, deploymentCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer deploymentCancel()
+	require.NoError(s.T(), waitForDeploymentAvailable(deploymentCtx, s.client, s.cfg.systemNamespace(), "keel"))
 
 	logPath := filepath.Join(s.cfg.artifactDir, "port-forward.log")
 	logFile, err := os.Create(logPath)
@@ -64,14 +62,9 @@ func (s *E2ESuite) SetupSuite() {
 		[]byte(fmt.Sprintf("%d\n", s.portForward.Process.Pid)), 0o600))
 
 	httpClient := &http.Client{Timeout: 2 * time.Second}
-	require.Eventually(s.T(), func() bool {
-		response, requestErr := httpClient.Get(keelForwardURL + "/healthz")
-		if requestErr != nil {
-			return false
-		}
-		defer response.Body.Close()
-		return response.StatusCode == http.StatusOK
-	}, 30*time.Second, 500*time.Millisecond, "Keel /healthz did not become ready through the Service port-forward")
+	healthCtx, healthCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer healthCancel()
+	require.NoError(s.T(), waitForHTTPReady(healthCtx, httpClient, keelForwardURL+"/healthz"))
 }
 
 func (s *E2ESuite) TearDownSuite() {

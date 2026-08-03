@@ -31,6 +31,19 @@ func TestEnsureDeploymentImageUnchangedObservesWholeWindow(t *testing.T) {
 	}
 }
 
+func TestWaitForDeploymentAvailableReportsLastObservation(t *testing.T) {
+	deployment := testDeployment("ns", "app", "registry/app:1.0.0")
+	deployment.Generation = 2
+	deployment.Status.ObservedGeneration = 1
+	client := fake.NewSimpleClientset(deployment)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	err := waitForDeploymentAvailable(ctx, client, "ns", "app")
+	if err == nil || !strings.Contains(err.Error(), "generation=2 observedGeneration=1 available=0 desired=1") {
+		t.Fatalf("expected last observed readiness state in error, got %v", err)
+	}
+}
+
 func testDeployment(namespace, name, image string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
