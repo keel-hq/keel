@@ -113,7 +113,6 @@ func keelDeployment(cfg e2eConfig) *appsv1.Deployment {
 	replicas := int32(1)
 	nonRoot := true
 	noPrivilegeEscalation := false
-	userID := int64(666)
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "keel", Namespace: cfg.systemNamespace(), Labels: labels},
 		Spec: appsv1.DeploymentSpec{
@@ -123,12 +122,7 @@ func keelDeployment(cfg e2eConfig) *appsv1.Deployment {
 				ObjectMeta: metav1.ObjectMeta{Labels: labels},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: "keel",
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &nonRoot,
-						RunAsUser:    &userID,
-						RunAsGroup:   &userID,
-						FSGroup:      &userID,
-					},
+					SecurityContext:    &corev1.PodSecurityContext{RunAsNonRoot: &nonRoot},
 					Containers: []corev1.Container{{
 						Name:            "keel",
 						Image:           cfg.keelImage,
