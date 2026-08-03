@@ -8,6 +8,7 @@ readonly K3S_RELEASE_URL="https://github.com/k3s-io/k3s/releases/download/${K3S_
 readonly REGISTRY_IMAGE="registry@sha256:46faa9a1ae6813194b53921a370f2f4f8c5e1aae228a89bceafef5847a6a3278"
 readonly FIXTURE_IMAGE="busybox@sha256:7a3ebe5bfd1a4a19797d20b0c0bb39d44393e9a03fd852c0865b0f540d868df0"
 readonly REGISTRY_ADDRESS="10.53.0.50:5000"
+readonly K3S_RUNTIME_DIR="/run/k3s"
 
 RUN_ID="${KEEL_E2E_RUN_ID:-$(date -u +%Y%m%d%H%M%S)-$$}"
 RUN_DIR="${KEEL_E2E_RUN_DIR:-${REPO_ROOT}/.test/.runs/${RUN_ID}}"
@@ -61,6 +62,7 @@ preflight() {
   pgrep -x k3s >/dev/null 2>&1 && fail "an existing k3s process is active"
   [[ ! -e /etc/rancher/k3s/k3s.yaml ]] || fail "existing k3s kubeconfig found"
   [[ ! -e /var/lib/rancher/k3s ]] || fail "existing k3s data directory found"
+  [[ ! -e "${K3S_RUNTIME_DIR}" ]] || fail "existing k3s runtime directory found"
   [[ ! -e "${HOME}/.kube/config" ]] || fail "existing default kubeconfig found"
   ip link show cni0 >/dev/null 2>&1 && fail "existing cni0 interface found"
   ip link show flannel.1 >/dev/null 2>&1 && fail "existing flannel.1 interface found"
@@ -150,7 +152,7 @@ kubectl() {
 
 ctr() {
   sudo "${K3S_BIN}" ctr \
-    --address "${K3S_DATA_DIR}/agent/containerd/containerd.sock" \
+    --address "${K3S_RUNTIME_DIR}/containerd/containerd.sock" \
     --namespace k8s.io "$@"
 }
 
@@ -352,6 +354,9 @@ cleanup() {
   fi
   if ip link show flannel.1 >/dev/null 2>&1; then
     sudo ip link delete flannel.1 2>/dev/null || true
+  fi
+  if [[ -d "${K3S_RUNTIME_DIR}" ]] && ! pgrep -x k3s >/dev/null 2>&1; then
+    sudo find "${K3S_RUNTIME_DIR}" -depth -delete
   fi
   if [[ -d "${RUN_DIR}" ]]; then
     sudo find "${RUN_DIR}" -depth -delete
