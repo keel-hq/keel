@@ -10,4 +10,4 @@
 - [x] Add the generated-client Jest smoke/contract test and run it in the existing Node 16/Vue 2/Babel environment.
 - [x] Add the pinned Swagger lint/validation, 25-operation mapping/exclusion report, deterministic clean-generation check, and corresponding CI coverage.
 - [x] Document prerequisites, artifact ownership/versioning, and exact generation, validation, client smoke-test, UI lint/build, focused Go test, full Go test, and clean-diff commands.
-- [~] Run all verification commands, record any genuine environment limitations, confirm only generated/docs/tooling changes are present, and verify no API, security, UI, runtime, or deployment behavior changed.
+- [x] Run all verification commands, record any genuine environment limitations, confirm only generated/docs/tooling changes are present, and verify no API, security, UI, runtime, or deployment behavior changed.
