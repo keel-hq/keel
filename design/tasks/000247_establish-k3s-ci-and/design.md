@@ -2,45 +2,62 @@
 
 ## Current-State Findings
 
-`ci.yml` runs `make test`, and that target deliberately excludes `./tests`. `make e2e` installs Keel and runs `go test` from `tests/`, assuming a usable default kubeconfig, a writable runtime data location, and external registry access. Nothing currently provisions a cluster, waits for Keel, captures diagnostics, or guarantees teardown.
+`ci.yml` runs `make test`, which deliberately excludes `./tests`. `make e2e` runs the tests against an assumed kubeconfig. Each current acceptance test starts a host Keel process and repeats namespace lifecycle; readiness uses fixed sleeps, namespace deletion is not awaited, and failures lack cluster diagnostics.
 
 | Current scenario | Confidence provided | Main failure modes |
 | --- | --- | --- |
-| Docker Hub webhook `0.0.14` to `0.0.15` | Webhook parsing reaches the Kubernetes deployment update path | Mutable public image, fixed startup sleep, repeated process/namespace lifecycle |
-| Integer tag `45000` rejection | Regression coverage that a plain integer is not treated as semver | Fixed observation sleep; the existing final check can succeed immediately and weakly proves non-update |
-| Approval flows | Approval creation and authenticated API behavior | One test is unconditionally skipped; the other uses fixed sleeps/public images and is outside the minimum smoke path |
-| Four public polling variants | Semver and prerelease selection through registry polling | Mutable/removed tags, network/rate limits, tight ten-second deadlines, duplicated manifests |
-| Private Docker Hub/GitLab polling | Registry-secret discovery and authenticated polling | Usually skipped, requires long-lived credentials, depends on private external state, and one test prints encoded credentials |
+| Docker Hub webhook `0.0.14` to `0.0.15` | Webhook-to-Kubernetes update path | Mutable public image, fixed sleep, host process rather than deployable image/RBAC |
+| Integer tag rejection | Semver regression coverage | Weak time-based no-update proof |
+| Approval flows | Approval/authentication behavior | One is skipped; the other uses sleeps and public state; not part of this smoke scope |
+| Four polling variants | Semver/prerelease selection | Mutable tags, rate limits, tight deadlines, duplicated manifests |
+| Private registry polling | Secret discovery/authenticated polling | Usually skipped, long-lived credentials, private state, and encoded credential output |
 
-`tests/helpers.go` already centralizes kubeconfig loading, namespace creation/deletion, Keel process control, and image polling, but errors are often converted to panics, namespace deletion is not awaited, process startup has no readiness handshake, child environment handling is incomplete, and timeout messages omit useful resource context. `.test/e2e-kind.sh` is a chart-install experiment rather than the current acceptance-test path; it downloads floating binaries from obsolete locations, uses outdated kind commands, depends on undeclared variables, and does not remove the cluster.
+`tests/helpers.go` contains useful kubeconfig, namespace, and image polling primitives, but panics instead of test-aware failures and does not manage readiness or deterministic cleanup. `.test/e2e-kind.sh` is an obsolete chart-install experiment with floating downloads, outdated kind commands, undeclared inputs, and no safe cluster teardown.
 
-## Architecture
+## Execution Architecture
 
-The repository will have one orchestration script, `.test/e2e-k3s.sh`, used by both `make e2e` and GitHub Actions. It will download the exact k3s release binary and its official `sha256sum-amd64.txt`, verify the checksum, start a minimal native k3s service with a task-owned kubeconfig, wait for the node and core services, start a digest-pinned Docker Registry container, seed deterministic semver tags, build Keel into a temporary directory, run `go test -v ./tests`, gather diagnostics, and tear everything down through an idempotent trap. The initial pin is `v1.35.5+k3s1`; upgrades are explicit reviewable changes.
+One `.test/e2e-k3s.sh` script is the entry point for `make e2e` and CI. It creates a unique run directory under the repository, verifies the official k3s `v1.35.6+k3s1` release checksum, and starts that binary as a uniquely named transient service/cgroup with explicit task-owned data, kubeconfig, config, log, PID/unit, and artifact paths. It does not install into `/usr/local`, create a normal `k3s.service`, write the default kubeconfig, or call the k3s uninstall script.
 
-The local registry will bind only to loopback. k3s receives an explicit `registries.yaml` mirror configuration for that HTTP endpoint, and Keel runs with `INSECURE_REGISTRY=true` only in this isolated test environment. A small, runnable image pinned by digest is copied into the registry under fixed tags such as `1.0.0`, `1.0.1`, and `1.1.0`. This permits eligible and ineligible policy assertions without mutable third-party tags. The upstream image digest and registry container digest are pinned; no credentials are needed.
+Before startup, guards fail closed if a k3s service/process, standard k3s data or kubeconfig, API listener, default k3s network interface, or requested registry/forward port already exists. The run records every created identity. Cleanup first deletes labeled suite resources and waits, then stops only the recorded port-forward and transient service/cgroup and removes only recorded run paths/resources. Repeated cleanup is harmless. Pre-existing installations or clusters are never stopped or removed.
 
-The Go entry point becomes one `suite.Run` over an `E2ESuite`. `SetupSuite` validates configuration, creates the Kubernetes client, launches the freshly built Keel process with inherited safe environment plus explicit kubeconfig/data settings, and polls `/healthz`. `SetupTest` creates a generated namespace and common deployment fixture. `TearDownTest` deletes and waits for that namespace, while `TearDownSuite` stops Keel and reports its exit/log state. Helpers accept `context.Context` and `testing.T`, return errors rather than panic, use `require` for prerequisites and `assert` for scenario results, and include namespace, resource, expected image, last image, and relevant conditions in failures.
+The script deploys a registry pod from a digest-pinned registry image in a run-labeled infrastructure namespace and exposes it through a reserved, task-owned ClusterIP usable by the runner, Keel pods, and k3s containerd without a public listener. k3s receives a run-specific registry configuration for this HTTP test endpoint. A digest-pinned runnable source image is copied into three unique repositories:
 
-The initial smoke suite contains three focused tests:
+- `<run-id>/webhook`: `1.0.0`, `1.0.1`
+- `<run-id>/polling`: `1.0.0`, `1.0.1`
+- `<run-id>/negative`: `1.0.0`, `1.1.0`
 
-1. Create a deployment at `1.0.0`, submit a Docker Registry notification payload for eligible `1.0.1`, and wait for the deployment template image to change.
-2. Create a poll-enabled deployment at `1.0.0`, expose `1.0.1` in the local registry, and wait for Keel polling to update it.
-3. Create a patch-policy deployment at `1.0.0` while only `1.1.0` is newer, then prove the image remains unchanged across at least two poll intervals.
+The repositories are never reused or mutated after seeding. Before each test, the suite queries the registry catalog/tags and requires exactly its expected repository and tag set. The negative test therefore cannot discover the polling test's `1.0.1` tag.
 
-The existing integer-tag regression remains useful but is not required in the first PR gate; retain it only if it can share the same fixture and adds negligible runtime. Approval/authentication and private-registry coverage should remain unit/integration coverage or a future extended suite rather than bringing secrets and public mutable state into the smoke gate.
+The checked-out Dockerfile builds Keel once. The image is pushed to the test registry and referenced by its resulting digest. `SetupSuite` creates a dedicated namespace, ServiceAccount, ClusterRole, ClusterRoleBinding, Keel Deployment, and Service. RBAC follows the chart's production permissions but is reduced to resources exercised by the Kubernetes provider; it grants no secret mutation, impersonation, or cluster administration. The pod uses in-cluster configuration, `INSECURE_REGISTRY=true` only for the isolated fixture, resource bounds, and `/healthz` readiness/liveness probes.
 
-## CI and Diagnostics
+`SetupSuite` waits for the Deployment and starts a uniquely tracked `kubectl port-forward` from loopback to the Keel Service, then polls `/healthz`. `TearDownSuite` removes and awaits all suite-owned Kubernetes resources. `SetupTest` creates a generated workload namespace tied to the test identity; `TearDownTest` deletes and awaits it. Helpers accept contexts, use `require` for prerequisites and `assert` for outcomes, and report last-observed resource/image/condition details.
 
-`ci.yml` gains `End-to-End Tests (k3s)` with `contents: read`, a job timeout, and the same checked-in command used locally. It runs for every current CI trigger, including pull requests and `workflow_dispatch`. The Docker image job adds the e2e job to `needs`, so publication cannot proceed after an e2e failure. This is estimated at 8–12 minutes and one standard Ubuntu runner, with no external cluster cost.
+## Scenarios
 
-The script writes test output and Keel logs to a task-owned diagnostics directory. On failure, the workflow adds `kubectl get/describe` output, sorted events, logs from failing workload pods, k3s version/status/journal, and registry logs before teardown, then uploads the directory with short retention. Kubeconfig content, service-account tokens, Secrets, and environment dumps are excluded. Expected external dependencies are GitHub release assets, the digest-pinned registry/fixture images, and Go modules; all versionable tools/images are pinned and checksummed or digest-addressed.
+1. Deploy `<run-id>/webhook:1.0.0`, send a Docker Registry notification for `1.0.1` through the port-forward, and wait for the Deployment template to reference `1.0.1`.
+2. Deploy poll-enabled `<run-id>/polling:1.0.0`, allow the configured poller to discover `1.0.1`, and wait for the Deployment template update.
+3. Deploy patch-policy `<run-id>/negative:1.0.0` where the repository contains only `1.1.0` as a newer version, then require the image to remain unchanged across at least two poll intervals.
 
-## Key Decisions and Constraints
+The integer-tag regression is retained only if it uses its own repository and keeps the total path within the limit. Approval and credential-dependent private-registry cases remain outside this three-test smoke suite; this task does not expand their scope.
 
-- Use native k3s, not k3d: the requested platform is exercised directly and GitHub Ubuntu runners support the required privileged/system service operations. k3d would add another pinned CLI and Docker wrapper layer.
-- Run the built Keel binary on the host with `--no-incluster`: this preserves the existing acceptance-test model, directly tests the checked-out code, makes logs/process cleanup simple, and still exercises the real k3s API and Kubernetes provider. Deploying Keel via its chart is a separate chart test.
-- Gate every PR with only the three deterministic scenarios. Add scheduled/full coverage only after runtime and flakiness data justify it.
-- Replace `.test/e2e-kind.sh` instead of maintaining two cluster paths. Update `readme.md`, `ARCHITECTURE.md`, and the Makefile narrowly with prerequisites, exact commands, ownership boundaries, and troubleshooting.
-- Keep unit tests separate and do not alter production behavior. Any discovered product defect must be reported and separately justified before changing runtime code.
+## Compatibility Decision
 
+Pin k3s to `v1.35.6+k3s1`, a maintained Kubernetes 1.35 release, and verify its official checksum. Keel currently resolves `k8s.io/client-go` and related libraries to `v0.31.3`. Kubernetes' [component version-skew policy](https://kubernetes.io/releases/version-skew-policy/) does not define client-go skew. The official [client-go compatibility matrix](https://github.com/kubernetes/client-go#compatibility-client-go--kubernetes-clusters) gives exact feature parity only when client and server minors match, but states that older clients work with many newer clusters and that shared APIs continue to work; it does not promise all newer APIs to an older client.
+
+This is a deliberate deployability check, not an assertion that client-go 0.31 has Kubernetes 1.35 feature parity. Keel's tested path uses stable core/apps/RBAC APIs shared by both versions. The suite must fail if those operations are incompatible; dependency upgrades are not hidden inside this CI task. Kubernetes image-volume feature maturity is unrelated because these scenarios do not create image volumes. Using an end-of-life 1.31 server merely to match the library would provide weaker shipping confidence.
+
+## CI, Runtime, and Diagnostics
+
+The only workflow addition is `End-to-End Tests (k3s)` with `contents: read`, a job timeout, and the checked-in local command. The existing `test`, `lint-ui`, and Docker job steps remain unchanged; only the Docker job's `needs` gains e2e. Proposed PR/`master`/manual cadence remains pending Nessie's cost approval.
+
+The three-test path is expected to take 6–8 minutes and has a hard 10-minute acceptance limit measured from provisioning through cleanup on a standard Ubuntu runner. If repeated measurement exceeds 10 minutes, implementation stops before enabling the gate and reports timings and cost/options for review.
+
+Before any cleanup, an `if: always()` step collects and uploads with bounded retention: Go test output; registry pod logs; current and previous Keel pod logs; k3s server and containerd logs; node/pod state; scoped and cluster `kubectl get`/`describe` output; and timestamp-sorted events. Collection excludes Kubernetes Secrets, token-bearing objects, kubeconfig contents, and full environment dumps. Artifact upload and teardown remain useful even when tests or earlier diagnostic commands fail.
+
+## Key Decisions
+
+- Native k3s, not k3d, directly exercises the requested distribution without another wrapper CLI.
+- Keel runs in-cluster from the built image with production-equivalent identity, RBAC, probes, and Service access; host `--no-incluster` execution is removed.
+- Each test gets a unique immutable registry repository, not merely a namespace.
+- `.test/e2e-k3s.sh` replaces the kind helper as the sole local/CI path.
+- Unit/UI/build jobs and production behavior stay unchanged; only e2e infrastructure and focused acceptance coverage are in scope.

@@ -1,15 +1,23 @@
 # Implementation Tasks: Establish Reliable k3s End-to-End Testing for Keel
 
-- [ ] Record the final supported k3s version, official checksum source, digest-pinned registry/fixture images, expected runner privileges, and measured baseline runtime.
-- [ ] Replace `.test/e2e-kind.sh` with one idempotent `.test/e2e-k3s.sh` path that provisions verified native k3s, configures kubeconfig and the loopback registry, builds Keel, runs tests, captures diagnostics, and always tears down.
-- [ ] Refactor `tests/helpers.go` into context-aware testify helpers for Kubernetes clients, Keel process/readiness management, generated namespaces, bounded state polling, and deletion verification with actionable failures.
-- [ ] Restructure the acceptance tests under a shared `testify/suite` lifecycle and remove duplicated Keel and namespace setup.
-- [ ] Add deterministic local-registry coverage for an eligible webhook update, an eligible polling update, and a policy-ineligible no-update case; retain the integer-tag regression if it remains focused and deterministic.
-- [ ] Remove or relocate skipped, credential-dependent, mutable-public-tag scenarios so the required smoke suite needs no external registry state or secrets.
-- [ ] Keep `make test` unchanged as the fast unit path and make `make e2e` invoke the authoritative clean-cluster workflow with documented configuration overrides.
-- [ ] Add the least-privilege `End-to-End Tests (k3s)` GitHub Actions job for pull requests, `master` pushes, and manual dispatch, with a timeout, always-run diagnostics upload, and always-run cleanup.
-- [ ] Require the e2e job before Docker image publication while preserving pull-request build-only behavior and existing unit/UI/API checks.
-- [ ] Update `readme.md` and `ARCHITECTURE.md` with local prerequisites, the exact e2e command, version pins, expected duration, failure artifacts, and the unit/e2e separation.
-- [ ] Run `gofmt`, focused helper tests, `make test`, shell/workflow validation, and the full e2e path on a fresh cluster; record actual duration and flakiness observations.
-- [ ] Deliberately induce one test failure when practical, verify diagnostics are produced before cleanup, and confirm namespaces, Keel, registry, and k3s are removed after both successful and failed runs.
-- [ ] Review the final diff for secret exposure, floating downloads/tags, overly broad permissions, unrelated production/deployment/UI changes, and any unreported external dependency.
+- [ ] Pin native k3s `v1.35.6+k3s1`, official checksum verification, and digest-pinned registry and runnable fixture images; print and record all resolved versions/digests.
+- [ ] Replace `.test/e2e-kind.sh` with an authoritative `.test/e2e-k3s.sh` that uses a unique run directory, explicit data/kubeconfig/log paths, and a uniquely named transient service/cgroup.
+- [ ] Add fail-closed local guards for existing k3s services/processes/data/kubeconfig/network state and occupied API, registry, or port-forward ports; never overwrite or uninstall an existing cluster.
+- [ ] Implement idempotent, ownership-recorded teardown that captures diagnostics first and removes only this run's Kubernetes resources, port-forward, transient process/cgroup, registry state, and temporary paths.
+- [ ] Deploy the digest-pinned registry fixture in k3s and configure runner, pod, and containerd access through a reserved task-owned ClusterIP without credentials or a public listener.
+- [ ] Build the checked-out Keel Dockerfile, push the image to the fixture registry, resolve its digest, and deploy that exact artifact inside k3s.
+- [ ] Create run-scoped Keel ServiceAccount/RBAC, Deployment probes/resource bounds, and Service; validate permissions are the minimum chart-equivalent set required by the tested provider path.
+- [ ] Refactor the acceptance entry point into a `testify/suite` lifecycle that owns Keel resources and a tracked Service port-forward and polls Deployment plus `/healthz` readiness.
+- [ ] Refactor helpers to use contexts, generated per-test namespaces, awaited deletion, bounded condition polling, and last-observed-state assertion messages without fixed correctness sleeps.
+- [ ] Seed unique `<run-id>/<test-id>` repositories with only each scenario's immutable tags and assert the exact registry tag set before every test.
+- [ ] Implement the three-test smoke suite: eligible webhook update, eligible polling update, and patch-policy rejection of a minor update; keep optional regressions only if isolated and within budget.
+- [ ] Remove or relocate duplicated, skipped, credential-dependent, and mutable-public-tag acceptance cases so the smoke suite requires no secrets or external registry state.
+- [ ] Keep `make test` and existing CI job steps unchanged; make `make e2e` invoke the sole clean-cluster path.
+- [ ] Add only `End-to-End Tests (k3s)` with `contents: read`, always-run diagnostics/artifact upload with bounded retention, and always-run cleanup; add only its dependency to the Docker job.
+- [ ] Keep PR/`master`/`workflow_dispatch` cadence visibly pending until Nessie's cost approval; do not represent it as approved in workflow documentation.
+- [ ] Collect Go test output, registry and Keel pod logs, k3s/server/containerd logs, Kubernetes get/describe data, sorted events, and node/pod state while excluding Secrets, tokens, kubeconfig contents, and environment dumps.
+- [ ] Update the Makefile, `readme.md`, and `ARCHITECTURE.md` narrowly with prerequisites, exact command, pin/compatibility rationale, safety guards, diagnostics, and the 6–8 minute expectation/10-minute limit.
+- [ ] Run `gofmt`, focused helper tests, `make test`, shell/workflow lint, and repeated clean-cluster e2e runs; record end-to-end runtime and flakiness.
+- [ ] Stop before enabling the gate if measured runtime exceeds 10 minutes, and report timings and runner-cost tradeoffs for review.
+- [ ] Induce a controlled failure when practical and verify diagnostics precede cleanup and all run-owned resources disappear after both success and failure.
+- [ ] Review the final diff for floating artifacts, secret exposure, broad permissions/deletion, client/server compatibility failures, unrelated job expansion, and production/runtime/UI changes.

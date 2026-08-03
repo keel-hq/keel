@@ -2,33 +2,36 @@
 
 ## Goal
 
-Provide a deterministic, maintainable end-to-end test path that builds Keel, runs it against a fresh single-node k3s cluster, and gates pull requests and image publication without slowing or changing the existing unit-test path.
+Provide a deterministic end-to-end path that builds the Keel container, runs it inside a fresh native k3s cluster with production-equivalent RBAC, and verifies the highest-value update flows without changing Keel production behavior or the existing fast test jobs.
 
 ## User Stories
 
-- As a maintainer, I can run one documented command locally or in GitHub Actions to provision k3s, execute isolated end-to-end tests, collect useful failure evidence, and clean up.
-- As a contributor, I get fast feedback that webhook and polling updates work through the real Kubernetes provider, including an ineligible update that must not be applied.
-- As an investigator, I can diagnose a failed run from retained Keel logs, test output, Kubernetes state, events, and pod logs without reproducing it first.
+- As a maintainer, I can run one documented command locally or in GitHub Actions to create an isolated k3s environment, execute the smoke suite, retain useful diagnostics, and safely clean up only that run.
+- As a contributor, I can prove that the deployable Keel image can update Kubernetes workloads through webhook and polling triggers and reject an ineligible update.
+- As an investigator, I can diagnose a failure from the uploaded test, cluster, registry, and in-cluster Keel evidence.
 
 ## Acceptance Criteria
 
-- A fresh GitHub-hosted Ubuntu runner provisions native single-node k3s with no pre-existing Kubernetes context. The k3s version is exact and visible in source, downloads are verified against the official release checksum, and the workflow prints the installed version.
-- The authoritative local command provisions and tears down k3s and its registry fixture. The obsolete kind helper is removed, and the Makefile and contributor/architecture documentation point to the same path.
-- The freshly built Keel binary runs outside the cluster with an explicit kubeconfig and isolated writable data directory. Tests poll the Kubernetes API and Keel `/healthz` endpoint with deadlines before scenarios begin.
-- The Go tests use `github.com/stretchr/testify/suite`. Suite setup/teardown owns the Keel process and Kubernetes client; per-test setup creates a generated namespace; per-test teardown deletes it and waits for deletion. Cleanup errors fail the test and do not hide the original failure.
-- Readiness and state transitions use bounded polling with the last observed state in timeout messages. No correctness assertion relies on a fixed sleep. A negative assertion observes the unchanged image for at least two configured polling cycles.
-- The PR-gating suite covers: a successful registry-webhook-driven semver update, a successful polling-driven semver update, and rejection of an update outside the configured policy. Existing webhook and polling intent is retained; redundant public-registry variants and credential-dependent cases may be replaced by deterministic fixtures.
-- Core assertions use a local registry populated with explicitly versioned fixture tags derived from a digest-pinned image. Tests require no Docker Hub, GitLab, GHCR, or other registry credentials and do not print credential payloads.
-- `make test` remains the fast unit-test command and continues to exclude `./tests`. A separate, clearly named `make e2e` path runs the end-to-end suite.
-- GitHub Actions includes a clearly named `End-to-End Tests (k3s)` job on pull requests, pushes to `master`, and `workflow_dispatch`. Image build/publication depends on unit tests, UI lint/tests, and this e2e job; pull requests still build without pushing.
-- The e2e job has least-privilege `contents: read` permissions. Package-write permission remains confined to the image job, secrets are not required, and logs/artifacts do not contain tokens or kubeconfig credentials.
-- On every test failure, and before cleanup, the workflow captures test output, Keel logs, k3s service logs, node and namespace resource descriptions, events, and relevant pod/container logs. Diagnostics upload uses `if: always()` and a bounded retention period.
-- Teardown runs with `if: always()`/shell traps, removes test namespaces, stops the local registry and Keel, uninstalls k3s, and verifies that no task-owned processes or cluster state remain. Cleanup is also exercised after a deliberately failed local test when practical.
-- Existing unit, UI, API-contract, and image-build behavior remains intact. No production Keel behavior, runtime dependency, Helm deployment behavior, or UI is changed to accommodate the tests.
-- Verification includes `gofmt` on changed Go files, focused helper tests, `make test`, the full e2e command on clean k3s, workflow and shell lint where available, and a report of duration, flakiness, external downloads, runner privileges, and cleanup results.
+- A fresh GitHub-hosted Ubuntu runner downloads native k3s `v1.35.6+k3s1` and its official checksum file, verifies the binary, and prints the exact version. No floating or unverified executable is downloaded.
+- The checked-out Dockerfile builds the Keel image under test. That exact image digest runs as a pod inside k3s with a dedicated ServiceAccount, the minimum chart-equivalent ClusterRole/ClusterRoleBinding needed by the Kubernetes provider, readiness/liveness probes, and a ClusterIP Service.
+- Tests wait with deadlines for the node, registry, Keel Deployment, and `/healthz`. A task-owned `kubectl port-forward` to the Keel Service drives webhooks without exposing Keel externally, and Keel failures are diagnosed from pod logs.
+- The Go suite uses `github.com/stretchr/testify/suite`. Suite setup/teardown owns the Keel test namespace, RBAC, Deployment, Service, and port-forward; per-test setup creates a generated namespace; per-test teardown deletes it and waits for deletion.
+- Every scenario uses a repository name containing the run ID and test identity. Only that scenario's immutable tags are seeded, the test verifies the registry's exact tag set before exercising Keel, and no repository/tag state from another test can affect discovery.
+- Registry and fixture source images are digest-pinned. Core assertions need no public mutable tags, registry credentials, GitHub tokens, or private registry state, and no secret or encoded credential is logged.
+- The smoke suite covers: a successful registry-webhook semver update, a successful polling semver update, and a patch-policy case that rejects a minor update. The negative case observes the unchanged image across at least two poll cycles.
+- Fixed sleeps are not used for readiness or correctness. Bounded polling failures include the namespace/resource, expected condition or image, last observed state, and timeout.
+- `make test`, the existing `Unit Tests` job, the existing `Lint UI` job and its steps, and existing Docker build/push behavior remain unchanged. `make e2e` is separate and authoritative; no new UI-test or API-contract job is introduced.
+- The only CI addition is a clearly named `End-to-End Tests (k3s)` job plus adding it to the Docker job's `needs` so image publication cannot follow an e2e failure. The proposed pull-request, `master`, and `workflow_dispatch` cadence remains pending cost approval.
+- The complete three-test PR smoke path targets 6–8 minutes and must finish in at most 10 minutes on a standard GitHub Ubuntu runner. Implementation records measured end-to-end runtime; if it cannot meet 10 minutes, gating is not enabled and the evidence and cost tradeoff are reported for a decision.
+- The e2e job has `contents: read` only. Package-write permission remains confined to the Docker job.
+- An `if: always()` diagnostics step runs before cleanup and uploads an artifact with bounded retention containing registry logs, Keel pod logs, k3s server and containerd logs, Go test output, Kubernetes `get`/`describe` output, sorted events, and node/pod state. Secrets, tokens, environment dumps, and kubeconfig contents are excluded.
+- Local startup refuses to overwrite, reuse, uninstall, or stop an existing k3s installation, standard kubeconfig, active API port, or existing k3s network state. It uses a unique run directory, kubeconfig, data directory, transient service/process identity, namespaces, labels, registry resources, and port-forward.
+- Teardown is idempotent, captures diagnostics first, and deletes/stops only resources and process identities recorded as created by the run. It never invokes a broad k3s uninstall or unscoped process kill. Cleanup is verified after success and, when practical, a deliberately induced failure.
+- The obsolete kind helper is replaced so there is one e2e path. The Makefile, `readme.md`, and `ARCHITECTURE.md` document prerequisites, exact local command, version pin, expected duration, diagnostics, and cleanup guards.
+- Verification includes `gofmt`, focused helper tests, `make test`, the full clean-cluster e2e command, shell/workflow lint where available, and separate reporting of runtime, flakiness, external downloads, permissions, and cleanup results.
+- No unrelated runtime dependency, production behavior, Helm behavior, deployment behavior, UI, unit-test, lint, or build change is included.
 
 ## Open Questions
 
-- Is an estimated 8–12 minute, one-runner e2e job acceptable as a required check on every pull request? The design recommends this small suite on every PR; path filtering or a larger scheduled suite can be added later if measured cost or queue time is excessive.
-- The proposed initial pin is k3s `v1.35.5+k3s1`, a supported stable release verified from the official release assets. Should the implementation instead pin another supported minor to match the project's Kubernetes compatibility policy before CI is enabled?
+- Does Nessie approve the proposed one-runner, 6–8 minute smoke job on every pull request and `master` push, with `workflow_dispatch` retained? Until cost approval, the implementation may prepare the job but must keep the cadence decision visibly pending rather than representing it as approved.
 
