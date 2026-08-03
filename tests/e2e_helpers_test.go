@@ -76,7 +76,9 @@ func ensureDeploymentImageUnchanged(ctx context.Context, client kubernetes.Inter
 	for {
 		deployment, err := client.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			last = "get error: " + err.Error()
+			if ctx.Err() == nil {
+				last = "get error: " + err.Error()
+			}
 		} else if len(deployment.Spec.Template.Spec.Containers) == 0 {
 			last = "deployment has no containers"
 		} else {
