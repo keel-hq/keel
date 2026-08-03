@@ -90,3 +90,7 @@ The documented verification sequence is: generate; Spectral 6.16.1 lint/Swagger 
 ## Compatibility and Security
 
 Only comments, exact schema types, route-specific forwarding wrappers, generated artifacts, tests, docs, and build/CI commands change. Route registration conditions, middleware order, request parsing, responses/statuses, CORS, UI serving, and deployment binaries remain behaviorally identical. Generated outputs contain no credentials or fixed environment URL, and implementation does not expose docs, migrate the frontend, merge, publish, or deploy.
+
+## Implementation Notes
+
+- `api_inventory_test.go` is the checked-in source of the expected 25-operation mapping. Router walking filters OPTIONS and non-application endpoints, while request-level cases pin authenticator and webhook-security conditions, including registry's deliberate exception.
