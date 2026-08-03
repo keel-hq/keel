@@ -218,7 +218,13 @@ spec:
       targetPort: registry
 EOF
   kubectl -n "keel-e2e-infra-${RUN_ID}" rollout status deployment/registry --timeout=120s
-  curl --fail --show-error --silent "http://${REGISTRY_ADDRESS}/v2/" >/dev/null
+  for _ in $(seq 1 60); do
+    if curl --fail --show-error --silent "http://${REGISTRY_ADDRESS}/v2/" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+  fail "registry Service did not become reachable at ${REGISTRY_ADDRESS}"
 }
 
 build_keel_image() {
