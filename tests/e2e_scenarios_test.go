@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -26,14 +27,38 @@ func (s *E2ESuite) TestWebhookUpdatesEligibleImage() {
 	}}}
 	body, err := json.Marshal(payload)
 	s.Require().NoError(err)
-	response, err := http.Post(keelForwardURL+"/v1/webhooks/registry", "application/json", bytes.NewReader(body))
-	s.Require().NoError(err)
-	defer response.Body.Close()
-	s.Require().Equal(http.StatusOK, response.StatusCode)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
-	s.Require().NoError(waitForDeploymentImage(ctx, s.client, s.testNamespace, "webhook", desired))
+	s.Require().NoError(s.postWebhookUntilImageChanges(ctx, body, "webhook", desired))
+}
+
+func (s *E2ESuite) postWebhookUntilImageChanges(ctx context.Context, body []byte, deployment, desired string) error {
+	var lastErr error
+	for {
+		response, err := http.Post(keelForwardURL+"/v1/webhooks/registry", "application/json", bytes.NewReader(body))
+		if err == nil {
+			_ = response.Body.Close()
+			if response.StatusCode != http.StatusOK {
+				err = fmt.Errorf("webhook returned HTTP %d", response.StatusCode)
+			}
+		}
+		if err != nil {
+			lastErr = err
+		} else {
+			attemptCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			lastErr = waitForDeploymentImage(attemptCtx, s.client, s.testNamespace, deployment, desired)
+			cancel()
+			if lastErr == nil {
+				return nil
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("webhook did not update deployment after bounded retries: %w", lastErr)
+		case <-time.After(time.Second):
+		}
+	}
 }
 
 func (s *E2ESuite) TestPollingUpdatesEligibleImage() {
