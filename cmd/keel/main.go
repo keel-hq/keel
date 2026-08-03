@@ -91,6 +91,14 @@ const EnvDebug = "DEBUG"
 // @version 1.0
 // @description HTTP API exposed by Keel. Admin routes are registered only when an authenticator is enabled. Provider webhooks require Basic or Bearer authorization only when authenticated webhooks are enabled; the registry webhook is always unauthenticated.
 // @BasePath /
+// @tag.name System
+// @tag.description Health and version operations.
+// @tag.name Auth
+// @tag.description Administrator authentication operations.
+// @tag.name Admin
+// @tag.description Authenticator-enabled administration operations.
+// @tag.name Webhooks
+// @tag.description Container registry webhook receivers.
 // @securityDefinitions.basic BasicAuth
 // @securityDefinitions.apikey BearerAuth
 // @in header

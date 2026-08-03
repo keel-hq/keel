@@ -1424,3 +1424,12 @@ securityDefinitions:
     name: Authorization
     type: apiKey
 swagger: "2.0"
+tags:
+- description: Health and version operations.
+  name: System
+- description: Administrator authentication operations.
+  name: Auth
+- description: Authenticator-enabled administration operations.
+  name: Admin
+- description: Container registry webhook receivers.
+  name: Webhooks

@@ -6,6 +6,8 @@ SWAG_VERSION	= v1.16.6
 SWAG		= go run github.com/swaggo/swag/cmd/swag@$(SWAG_VERSION)
 OPENAPI_GENERATOR_VERSION = v7.22.0
 OPENAPI_GENERATOR_IMAGE = openapitools/openapi-generator-cli:$(OPENAPI_GENERATOR_VERSION)
+SPECTRAL_VERSION = 6.16.1
+SPECTRAL_IMAGE = stoplight/spectral:$(SPECTRAL_VERSION)
 API_CLIENT_DIR = ui/src/api/generated
 
 LDFLAGS		+= -linkmode external -extldflags -static
@@ -18,7 +20,7 @@ ARMFLAGS		+= -X github.com/keel-hq/keel/version.Version=$(VERSION)
 ARMFLAGS		+= -X github.com/keel-hq/keel/version.Revision=$(GIT_REVISION)
 ARMFLAGS		+= -X github.com/keel-hq/keel/version.BuildDate=$(JOBDATE)
 
-.PHONY: release api-spec api-client api-generate
+.PHONY: release api-spec api-client api-generate api-validate api-check
 
 api-spec:
 	$(SWAG) init -g cmd/keel/main.go -d . --parseInternal --parseDependency --outputTypes yaml -o docs
@@ -37,6 +39,13 @@ api-client:
 	find $(API_CLIENT_DIR)/.openapi-generator-ignore -delete
 
 api-generate: api-spec api-client
+
+api-validate:
+	docker run --rm -v "$(CURDIR):/local" $(SPECTRAL_IMAGE) lint /local/docs/swagger.yaml --ruleset /local/docs/spectral.yaml
+	go test -v ./pkg/http -run TestOpenAPIContract
+
+api-check: api-generate api-validate
+	git diff --exit-code -- docs/swagger.yaml ui/src/api/generated
 
 fetch-certs:
 	curl --remote-name --time-cond cacert.pem https://curl.haxx.se/ca/cacert.pem

@@ -3,12 +3,14 @@ package http
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
 	"github.com/keel-hq/keel/pkg/auth"
+	"sigs.k8s.io/yaml"
 )
 
 type apiOperation struct {
@@ -129,6 +131,64 @@ func TestConditionalRouteAndWebhookAuthentication(t *testing.T) {
 				t.Fatalf("status = %d, want %d; body: %s", resp.Code, tt.wantStatus, resp.Body.String())
 			}
 		})
+	}
+}
+
+func TestOpenAPIContract(t *testing.T) {
+	document, err := os.ReadFile("../../docs/swagger.yaml")
+	if err != nil {
+		t.Fatalf("read Swagger document: %v", err)
+	}
+
+	var spec struct {
+		Paths map[string]map[string]struct {
+			OperationID string `json:"operationId"`
+		} `json:"paths"`
+	}
+	if err := yaml.Unmarshal(document, &spec); err != nil {
+		t.Fatalf("parse Swagger document: %v", err)
+	}
+
+	want := make(map[string]string, len(documentedAPIOperations))
+	for _, operation := range documentedAPIOperations {
+		want[operation.method+" "+operation.path] = operation.operationID
+	}
+
+	got := make(map[string]string)
+	for path, pathItem := range spec.Paths {
+		for method, operation := range pathItem {
+			method = strings.ToUpper(method)
+			switch method {
+			case http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodHead:
+				got[method+" "+path] = operation.OperationID
+			}
+		}
+	}
+
+	if len(got) != len(want) {
+		t.Fatalf("Swagger operation count = %d, want %d", len(got), len(want))
+	}
+
+	keys := make([]string, 0, len(want))
+	for key := range want {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		operationID, ok := got[key]
+		if !ok {
+			t.Errorf("Swagger operation missing: %s -> %s", key, want[key])
+			continue
+		}
+		if operationID != want[key] {
+			t.Errorf("Swagger operation ID for %s = %q, want %q", key, operationID, want[key])
+			continue
+		}
+		t.Logf("API operation: %s -> %s", key, operationID)
+	}
+
+	for _, exclusion := range documentedAPIExclusions {
+		t.Logf("Excluded from application API: %s", exclusion)
 	}
 }
 
