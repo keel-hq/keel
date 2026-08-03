@@ -7,4 +7,4 @@
 - [x] Write the directory summary table (grouped: Go code, frontend, deployment, tests/tooling, dot-dirs)
 - [x] Verify `git status` in `/home/retro/work/keel/` is clean — no files created, edited or deleted
 - [x] Deliver the summary to the user in the chat response
-- [~] Record implementation notes and write `pull_request.md`
+- [x] Record implementation notes and write `pull_request.md`

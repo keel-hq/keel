@@ -80,6 +80,28 @@ variants (debug, tests, local, debian), `azure-pipelines.yml`, `values.yaml`,
 - **Scope resolved to `keel`.** It is flagged as the primary project; `b-alex`
   was left untouched. Flagged in Open Questions.
 
+## Implementation Notes
+
+- **No code was written and no feature branch was created.** The request was
+  explicitly read-only, so `keel` stayed on `master` with a clean working tree
+  (`git status --porcelain` empty, verified twice — after the survey and again
+  at the end of implementation). There is nothing to push to
+  `feature/000246-summarise-top-level`; that branch was never created.
+- The entire deliverable is the directory table above plus the chat response.
+  Everything written to disk lives in `helix-specs`.
+- Scope was resolved to `keel` (the designated primary project) rather than
+  `b-alex`; the assumption was stated in `requirements.md` under Open Questions
+  and carried through design review unchallenged. `b-alex` was never opened.
+- **Gotcha — commit hook:** `helix-specs` enforces conventional commit format
+  via a `commit-msg` hook. The message template suggested in the task brief
+  ("Design docs for ...") is rejected. Use `docs(specs): ...` /
+  `chore(specs): ...` instead. This cost one failed commit.
+- Method that worked for the survey, in order: `ls -la` at the root, then a
+  single `for` loop running `ls <dir> | head -15` over every entry, then
+  `find <dir> -maxdepth 2 -type d` for the dirs with meaningful nesting
+  (`ui`, `util`, `pkg`, `internal`, `extension`, `trigger`, `provider`, `bot`).
+  Three shell calls total — no need to open individual source files.
+
 ## Learnings for future agents
 
 - Keel already contains `ARCHITECTURE.md` — a well-maintained, agent-oriented
