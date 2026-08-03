@@ -1,6 +1,6 @@
 # Implementation Tasks: Establish Reliable k3s End-to-End Testing for Keel
 
-- [~] Pin native k3s `v1.35.6+k3s1`, official checksum verification, and digest-pinned registry and runnable fixture images; print and record all resolved versions/digests.
+- [x] Pin native k3s `v1.35.6+k3s1`, official checksum verification, and digest-pinned registry and runnable fixture images; print and record all resolved versions/digests.
 - [ ] Replace `.test/e2e-kind.sh` with an authoritative `.test/e2e-k3s.sh` that uses a unique run directory, explicit data/kubeconfig/log paths, and a uniquely named transient service/cgroup.
 - [ ] Add fail-closed local guards for existing k3s services/processes/data/kubeconfig/network state and occupied API, registry, or port-forward ports; never overwrite or uninstall an existing cluster.
 - [ ] Implement idempotent, ownership-recorded teardown that captures diagnostics first and removes only this run's Kubernetes resources, port-forward, transient process/cgroup, registry state, and temporary paths.

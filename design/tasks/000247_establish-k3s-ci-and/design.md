@@ -61,3 +61,8 @@ Before any cleanup, an `if: always()` step collects and uploads with bounded ret
 - Each test gets a unique immutable registry repository, not merely a namespace.
 - `.test/e2e-k3s.sh` replaces the kind helper as the sole local/CI path.
 - Unit/UI/build jobs and production behavior stay unchanged; only e2e infrastructure and focused acceptance coverage are in scope.
+
+## Implementation Notes
+
+- The verified amd64 image pins are `registry@sha256:46faa9a1ae6813194b53921a370f2f4f8c5e1aae228a89bceafef5847a6a3278` and `busybox@sha256:7a3ebe5bfd1a4a19797d20b0c0bb39d44393e9a03fd852c0865b0f540d868df0`.
+- The official k3s `v1.35.6+k3s1` binary checksum was successfully validated with `sha256sum-amd64.txt`; the resolved build reports commit `87243446` and Go `1.25.11`.
