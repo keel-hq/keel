@@ -17,25 +17,27 @@ import (
 const e2eRunLabel = "keel.sh/e2e-run"
 
 type e2eConfig struct {
-	runID       string
-	registry    string
-	keelImage   string
-	kubeconfig  string
-	kubectl     string
-	artifactDir string
+	runID            string
+	registry         string
+	keelImage        string
+	kubeconfig       string
+	kubectl          string
+	artifactDir      string
+	repositoryPrefix string
 }
 
 func loadE2EConfig() (e2eConfig, error) {
 	cfg := e2eConfig{
-		runID:       os.Getenv("KEEL_E2E_RUN_ID"),
-		registry:    os.Getenv("KEEL_E2E_REGISTRY"),
-		keelImage:   os.Getenv("KEEL_E2E_IMAGE"),
-		kubeconfig:  os.Getenv("KEEL_E2E_KUBECONFIG"),
-		kubectl:     os.Getenv("KEEL_E2E_KUBECTL"),
-		artifactDir: os.Getenv("KEEL_E2E_ARTIFACT_DIR"),
+		runID:            os.Getenv("KEEL_E2E_RUN_ID"),
+		registry:         os.Getenv("KEEL_E2E_REGISTRY"),
+		keelImage:        os.Getenv("KEEL_E2E_IMAGE"),
+		kubeconfig:       os.Getenv("KEEL_E2E_KUBECONFIG"),
+		kubectl:          os.Getenv("KEEL_E2E_KUBECTL"),
+		artifactDir:      os.Getenv("KEEL_E2E_ARTIFACT_DIR"),
+		repositoryPrefix: os.Getenv("KEEL_E2E_REPOSITORY_PREFIX"),
 	}
-	if cfg.runID == "" || cfg.registry == "" || cfg.keelImage == "" || cfg.kubeconfig == "" || cfg.kubectl == "" || cfg.artifactDir == "" {
-		return e2eConfig{}, fmt.Errorf("KEEL_E2E_RUN_ID, KEEL_E2E_REGISTRY, KEEL_E2E_IMAGE, KEEL_E2E_KUBECONFIG, KEEL_E2E_KUBECTL, and KEEL_E2E_ARTIFACT_DIR are required")
+	if cfg.runID == "" || cfg.registry == "" || cfg.keelImage == "" || cfg.kubeconfig == "" || cfg.kubectl == "" || cfg.artifactDir == "" || cfg.repositoryPrefix == "" {
+		return e2eConfig{}, fmt.Errorf("all KEEL_E2E_* runtime variables are required; run through make e2e")
 	}
 	return cfg, nil
 }

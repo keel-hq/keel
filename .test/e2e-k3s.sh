@@ -232,12 +232,26 @@ build_keel_image() {
   {
     printf 'KEEL_E2E_RUN_ID=%q\n' "${RUN_ID}"
     printf 'KEEL_E2E_REGISTRY=%q\n' "${REGISTRY_ADDRESS}"
+    printf 'KEEL_E2E_REPOSITORY_PREFIX=%q\n' "${REGISTRY_ADDRESS}/${RUN_ID}"
     printf 'KEEL_E2E_IMAGE=%q\n' "${REGISTRY_ADDRESS}/keel-under-test@${digest}"
     printf 'KEEL_E2E_KUBECTL=%q\n' "${K3S_BIN}"
     printf 'KEEL_E2E_KUBECONFIG=%q\n' "${KUBECONFIG}"
     printf 'KEEL_E2E_ARTIFACT_DIR=%q\n' "${ARTIFACT_DIR}"
   } >"${E2E_ENV_FILE}"
   log "Keel image: ${REGISTRY_ADDRESS}/keel-under-test@${digest}"
+}
+
+seed_fixture_repositories() {
+  local destination
+  log "seeding isolated registry repositories"
+  ctr images pull --platform linux/amd64 "${FIXTURE_IMAGE}"
+  for destination in \
+    "${RUN_ID}/webhook:1.0.0" "${RUN_ID}/webhook:1.0.1" \
+    "${RUN_ID}/polling:1.0.0" "${RUN_ID}/polling:1.0.1" \
+    "${RUN_ID}/negative:1.0.0" "${RUN_ID}/negative:1.1.0"; do
+    ctr images tag "${FIXTURE_IMAGE}" "${REGISTRY_ADDRESS}/${destination}"
+    ctr images push --plain-http "${REGISTRY_ADDRESS}/${destination}"
+  done
 }
 
 stop_k3s() {
@@ -307,6 +321,7 @@ main() {
   start_k3s
   log "k3s is ready"
   deploy_registry
+  seed_fixture_repositories
   build_keel_image
 }
 

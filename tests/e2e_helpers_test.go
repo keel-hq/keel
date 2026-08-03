@@ -2,8 +2,11 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -91,4 +94,18 @@ func ensureDeploymentImageUnchanged(ctx context.Context, client kubernetes.Inter
 		case <-ticker.C:
 		}
 	}
+}
+
+func (s *E2ESuite) requireRegistryTags(repository string, expected ...string) {
+	response, err := (&http.Client{Timeout: 5 * time.Second}).Get("http://" + s.cfg.registry + "/v2/" + s.cfg.runID + "/" + repository + "/tags/list")
+	s.Require().NoError(err, "query tags for isolated repository %s", repository)
+	defer response.Body.Close()
+	s.Require().Equal(http.StatusOK, response.StatusCode, "query tags for isolated repository %s", repository)
+	var result struct {
+		Tags []string `json:"tags"`
+	}
+	s.Require().NoError(json.NewDecoder(response.Body).Decode(&result))
+	sort.Strings(result.Tags)
+	sort.Strings(expected)
+	s.Require().Equal(expected, result.Tags, "repository %s must contain only scenario-owned tags", repository)
 }
