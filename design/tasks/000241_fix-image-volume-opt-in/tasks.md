@@ -7,4 +7,4 @@
 - [x] Correct stale image-volume compatibility comments introduced by PR #857, keeping `ARCHITECTURE.md` changes limited to wording that is genuinely inaccurate.
 - [x] Run `gofmt` on changed Go files and the focused `provider/kubernetes` tests.
 - [x] Run `go test ./internal/k8s/... ./provider/kubernetes/...` and, if practical, `go test ./...`; separate pre-existing or environmental failures from regressions.
-- [ ] Review the final diff to ensure the change is narrowly scoped to image-volume opt-in consistency and compatibility documentation.
+- [~] Review the final diff to ensure the change is narrowly scoped to image-volume opt-in consistency and compatibility documentation.
