@@ -112,7 +112,6 @@ write_k3s_config() {
     printf 'cluster-dns: 10.53.0.10\n'
     printf 'snapshotter: native\n'
     printf 'private-registry: %s\n' "${REGISTRIES_CONFIG}"
-    printf 'kubelet-arg:\n  - root-dir=%s/agent/kubelet\n' "${K3S_DATA_DIR}"
     printf 'disable:\n  - traefik\n  - servicelb\n  - metrics-server\n  - local-storage\n'
   } >"${K3S_CONFIG}"
   {
@@ -329,7 +328,9 @@ stop_task_runtime() {
 unmount_task_runtime() {
   local target
   findmnt -rn -o TARGET | awk -v runtime="${K3S_RUNTIME_DIR}" -v data="${K3S_DATA_DIR}" \
-    '$0 == runtime || index($0, runtime "/") == 1 || $0 == data || index($0, data "/") == 1' | \
+    -v kubelet="${DEFAULT_KUBELET_DIR}" \
+    '$0 == runtime || index($0, runtime "/") == 1 || $0 == data || index($0, data "/") == 1 || \
+      $0 == kubelet || index($0, kubelet "/") == 1' | \
     sort -r | while IFS= read -r target; do
       sudo umount -l "${target}" 2>/dev/null || true
     done
