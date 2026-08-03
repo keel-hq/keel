@@ -45,19 +45,39 @@ func init() {
 //  }
 //}
 
-type azureWebhook struct {
-	Target struct {
-		Repository string `json:"repository"`
-		Tag        string `json:"tag"`
-		Digest     string `json:"digest"`
-	} `json:"target"`
-	Request struct {
-		Host string `json:"host"`
-	} `json:"request"`
+// AzureWebhook is the Azure Container Registry push webhook payload.
+type AzureWebhook struct {
+	Target  AzureWebhookTarget  `json:"target"`
+	Request AzureWebhookRequest `json:"request"`
 }
 
+// AzureWebhookTarget identifies the pushed manifest.
+type AzureWebhookTarget struct {
+	Repository string `json:"repository"`
+	Tag        string `json:"tag"`
+	Digest     string `json:"digest"`
+}
+
+// AzureWebhookRequest identifies the registry host.
+type AzureWebhookRequest struct {
+	Host string `json:"host"`
+}
+
+// azureHandler accepts Azure Container Registry pushes.
+// @Summary Receive an Azure webhook
+// @Description Requires Basic or Bearer authorization only when authenticatedWebhooks is enabled.
+// @Tags Webhooks
+// @ID receiveAzureWebhook
+// @Accept json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Param body body AzureWebhook true "Azure Container Registry push"
+// @Success 200 "Accepted"
+// @Failure 400 {string} string "Malformed payload or missing tag"
+// @Failure 401 {string} string "Unauthorized when authenticated webhooks are enabled"
+// @Router /v1/webhooks/azure [post]
 func (s *TriggerServer) azureHandler(resp http.ResponseWriter, req *http.Request) {
-	aw := azureWebhook{}
+	aw := AzureWebhook{}
 	if err := json.NewDecoder(req.Body).Decode(&aw); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,

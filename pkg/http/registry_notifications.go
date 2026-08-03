@@ -57,39 +57,65 @@ func init() {
 // 	]
 //  }
 
-type registryNotification struct {
-	Events []struct {
-		ID        string    `json:"id"`
-		Timestamp time.Time `json:"timestamp"`
-		Action    string    `json:"action"`
-		Target    struct {
-			MediaType  string `json:"mediaType"`
-			Size       int    `json:"size"`
-			Digest     string `json:"digest"`
-			Length     int    `json:"length"`
-			Repository string `json:"repository"`
-			URL        string `json:"url"`
-			Tag        string `json:"tag"`
-		} `json:"target"`
-		Request struct {
-			ID        string `json:"id"`
-			Addr      string `json:"addr"`
-			Host      string `json:"host"`
-			Method    string `json:"method"`
-			Useragent string `json:"useragent"`
-		} `json:"request"`
-		Actor struct {
-			Name string `json:"name"`
-		} `json:"actor"`
-		Source struct {
-			Addr       string `json:"addr"`
-			InstanceID string `json:"instanceID"`
-		} `json:"source"`
-	} `json:"events"`
+// RegistryNotification is a Docker Registry notification envelope.
+type RegistryNotification struct {
+	Events []RegistryEvent `json:"events"`
 }
 
+// RegistryEvent is one Docker Registry notification event.
+type RegistryEvent struct {
+	ID        string          `json:"id"`
+	Timestamp time.Time       `json:"timestamp"`
+	Action    string          `json:"action"`
+	Target    RegistryTarget  `json:"target"`
+	Request   RegistryRequest `json:"request"`
+	Actor     RegistryActor   `json:"actor"`
+	Source    RegistrySource  `json:"source"`
+}
+
+// RegistryTarget identifies the affected manifest.
+type RegistryTarget struct {
+	MediaType  string `json:"mediaType"`
+	Size       int    `json:"size"`
+	Digest     string `json:"digest"`
+	Length     int    `json:"length"`
+	Repository string `json:"repository"`
+	URL        string `json:"url"`
+	Tag        string `json:"tag"`
+}
+
+// RegistryRequest describes the request that caused a registry event.
+type RegistryRequest struct {
+	ID        string `json:"id"`
+	Addr      string `json:"addr"`
+	Host      string `json:"host"`
+	Method    string `json:"method"`
+	Useragent string `json:"useragent"`
+}
+
+// RegistryActor identifies the registry user.
+type RegistryActor struct {
+	Name string `json:"name"`
+}
+
+// RegistrySource identifies the registry instance.
+type RegistrySource struct {
+	Addr       string `json:"addr"`
+	InstanceID string `json:"instanceID"`
+}
+
+// registryNotificationHandler accepts Docker Registry notifications.
+// @Summary Receive a Docker Registry webhook
+// @Description Processes push events with tags. This endpoint is always unauthenticated, including when authenticatedWebhooks is enabled.
+// @Tags Webhooks
+// @ID receiveRegistryWebhook
+// @Accept json
+// @Param body body RegistryNotification true "Docker Registry notification"
+// @Success 200 "Accepted"
+// @Failure 400 "Malformed payload"
+// @Router /v1/webhooks/registry [post]
 func (s *TriggerServer) registryNotificationHandler(resp http.ResponseWriter, req *http.Request) {
-	rn := registryNotification{}
+	rn := RegistryNotification{}
 	if err := json.NewDecoder(req.Body).Decode(&rn); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,

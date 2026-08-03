@@ -36,7 +36,8 @@ func init() {
 //   ]
 // }
 
-type quayWebhook struct {
+// QuayWebhook is the Quay repository push webhook payload.
+type QuayWebhook struct {
 	Name        string   `json:"name"`
 	Repository  string   `json:"repository"`
 	Namespace   string   `json:"namespace"`
@@ -45,8 +46,21 @@ type quayWebhook struct {
 	UpdatedTags []string `json:"updated_tags"`
 }
 
+// quayHandler accepts Quay repository pushes.
+// @Summary Receive a Quay webhook
+// @Description Requires Basic or Bearer authorization only when authenticatedWebhooks is enabled.
+// @Tags Webhooks
+// @ID receiveQuayWebhook
+// @Accept json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Param body body QuayWebhook true "Quay repository push"
+// @Success 200 "Accepted"
+// @Failure 400 {string} string "Malformed payload, missing Docker URL, or no updated tags"
+// @Failure 401 {string} string "Unauthorized when authenticated webhooks are enabled"
+// @Router /v1/webhooks/quay [post]
 func (s *TriggerServer) quayHandler(resp http.ResponseWriter, req *http.Request) {
-	qw := quayWebhook{}
+	qw := QuayWebhook{}
 	if err := json.NewDecoder(req.Body).Decode(&qw); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,

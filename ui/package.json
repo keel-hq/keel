@@ -8,6 +8,7 @@
     "build:preview": "vue-cli-service build --mode preview",
     "lint": "vue-cli-service lint",
     "lint:nofix": "vue-cli-service lint --no-fix",
+    "test:generated-api": "vue-cli-service test:unit --runInBand tests/unit/generated-api.spec.js",
     "test:unit": "vue-cli-service test:unit",
     "postinstall": "opencollective-postinstall"
   },
@@ -24,6 +25,7 @@
     "mockjs2": "^1.0.5",
     "moment": "^2.24.0",
     "nprogress": "^0.2.0",
+    "superagent": "10.3.0",
     "viser-vue": "^2.3.3",
     "vue": "^2.5.22",
     "vue-clipboard2": "^0.2.1",
@@ -35,6 +37,7 @@
     "vuex": "^3.1.0"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-class-properties": "7.4.0",
     "@babel/polyfill": "^7.2.5",
     "@vue/cli-plugin-babel": "^3.3.0",
     "@vue/cli-plugin-eslint": "^3.3.0",

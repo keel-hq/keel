@@ -1,0 +1,10 @@
+extends: spectral:oas
+
+rules:
+  info-contact: off
+  info-license: off
+  oas2-api-host: off
+  oas2-api-schemes: off
+  operation-description: error
+  operation-operationId: error
+  operation-tags: error

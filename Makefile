@@ -2,6 +2,14 @@ JOBDATE		?= $(shell date -u +%Y-%m-%dT%H%M%SZ)
 GIT_REVISION	= $(shell git rev-parse --short HEAD)
 VERSION		?= $(shell git describe --tags --abbrev=0)
 
+SWAG_VERSION	= v1.16.6
+SWAG		= go run github.com/swaggo/swag/cmd/swag@$(SWAG_VERSION)
+OPENAPI_GENERATOR_VERSION = v7.22.0
+OPENAPI_GENERATOR_IMAGE = openapitools/openapi-generator-cli:$(OPENAPI_GENERATOR_VERSION)
+SPECTRAL_VERSION = 6.16.1
+SPECTRAL_IMAGE = stoplight/spectral:$(SPECTRAL_VERSION)
+API_CLIENT_DIR = ui/src/api/generated
+
 LDFLAGS		+= -linkmode external -extldflags -static
 LDFLAGS		+= -X github.com/keel-hq/keel/version.Version=$(VERSION)
 LDFLAGS		+= -X github.com/keel-hq/keel/version.Revision=$(GIT_REVISION)
@@ -12,7 +20,32 @@ ARMFLAGS		+= -X github.com/keel-hq/keel/version.Version=$(VERSION)
 ARMFLAGS		+= -X github.com/keel-hq/keel/version.Revision=$(GIT_REVISION)
 ARMFLAGS		+= -X github.com/keel-hq/keel/version.BuildDate=$(JOBDATE)
 
-.PHONY: release
+.PHONY: release api-spec api-client api-generate api-validate api-check
+
+api-spec:
+	$(SWAG) init -g cmd/keel/main.go -d . --parseInternal --parseDependency --outputTypes yaml -o docs
+
+api-client:
+	mkdir -p $(API_CLIENT_DIR)
+	find $(API_CLIENT_DIR) -mindepth 1 -delete
+	cp docs/openapi-generator-ignore $(API_CLIENT_DIR)/.openapi-generator-ignore
+	docker run --rm --user "$$(id -u):$$(id -g)" -v "$(CURDIR):/local" $(OPENAPI_GENERATOR_IMAGE) generate \
+		-i /local/docs/swagger.yaml \
+		-g javascript \
+		-o /local/$(API_CLIENT_DIR) \
+		-c /local/docs/openapi-generator-config.yaml
+	sed -i "s|constructor(basePath = 'http://localhost')|constructor(basePath = '')|" $(API_CLIENT_DIR)/ApiClient.js
+	find $(API_CLIENT_DIR)/.openapi-generator -depth -delete
+	find $(API_CLIENT_DIR)/.openapi-generator-ignore -delete
+
+api-generate: api-spec api-client
+
+api-validate:
+	docker run --rm -v "$(CURDIR):/local" $(SPECTRAL_IMAGE) lint /local/docs/swagger.yaml --ruleset /local/docs/spectral.yaml
+	go test -v ./pkg/http -run TestOpenAPIContract
+
+api-check: api-generate api-validate
+	git diff --exit-code -- docs/swagger.yaml ui/src/api/generated
 
 fetch-certs:
 	curl --remote-name --time-cond cacert.pem https://curl.haxx.se/ca/cacert.pem

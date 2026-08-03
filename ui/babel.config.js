@@ -7,6 +7,9 @@ module.exports = {
         'useBuiltIns': 'entry'
       }
     ]
+  ],
+  plugins: [
+    '@babel/plugin-proposal-class-properties'
   ]
   // if your use import on Demand, Use this code
   // ,

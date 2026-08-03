@@ -1,0 +1,15 @@
+# The existing UI package owns dependencies and build configuration.
+.babelrc
+.gitignore
+.openapi-generator-ignore
+.openapi-generator/**
+.travis.yml
+README.md
+git_push.sh
+mocha.opts
+package-lock.json
+package.json
+
+# Do not commit redundant generated documentation or tests.
+docs/**
+test/**

@@ -48,28 +48,51 @@ func init() {
 //         }
 //     }
 
-type harborWebhook struct {
-	Type      string `json:"type"`
-	OccurAt   int    `json:"occur_at"`
-	Operator  string `json:"operator"`
-	EventData struct {
-		Resources []struct {
-			Digest      string `json:"digest"`
-			Tag         string `json:"tag"`
-			ResourceURL string `json:"resource_url"`
-		} `json:"resources"`
-		Repository struct {
-			DateCreated  int    `json:"date_created"`
-			Name         string `json:"name"`
-			Namespace    string `json:"namespace"`
-			RepoFullName string `json:"repo_full_name"`
-			RepoType     string `json:"repo_type"`
-		} `json:"repository"`
-	} `json:"event_data"`
+// HarborWebhook is the Harbor image push webhook payload.
+type HarborWebhook struct {
+	Type      string          `json:"type"`
+	OccurAt   int             `json:"occur_at"`
+	Operator  string          `json:"operator"`
+	EventData HarborEventData `json:"event_data"`
 }
 
+// HarborEventData contains pushed resources and their repository.
+type HarborEventData struct {
+	Resources  []HarborResource `json:"resources"`
+	Repository HarborRepository `json:"repository"`
+}
+
+// HarborResource identifies a pushed artifact.
+type HarborResource struct {
+	Digest      string `json:"digest"`
+	Tag         string `json:"tag"`
+	ResourceURL string `json:"resource_url"`
+}
+
+// HarborRepository describes the repository containing an artifact.
+type HarborRepository struct {
+	DateCreated  int    `json:"date_created"`
+	Name         string `json:"name"`
+	Namespace    string `json:"namespace"`
+	RepoFullName string `json:"repo_full_name"`
+	RepoType     string `json:"repo_type"`
+}
+
+// harborHandler accepts Harbor artifact pushes.
+// @Summary Receive a Harbor webhook
+// @Description Processes pushImage and PUSH_ARTIFACT resources. Other event types return 200 without submitting an event. Requires Basic or Bearer authorization only when authenticatedWebhooks is enabled.
+// @Tags Webhooks
+// @ID receiveHarborWebhook
+// @Accept json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Param body body HarborWebhook true "Harbor artifact push"
+// @Success 200 "Accepted"
+// @Failure 400 {string} string "Malformed payload or resource URL"
+// @Failure 401 {string} string "Unauthorized when authenticated webhooks are enabled"
+// @Router /v1/webhooks/harbor [post]
 func (s *TriggerServer) harborHandler(resp http.ResponseWriter, req *http.Request) {
-	hn := harborWebhook{}
+	hn := HarborWebhook{}
 	if err := json.NewDecoder(req.Body).Decode(&hn); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -81,7 +104,7 @@ func (s *TriggerServer) harborHandler(resp http.ResponseWriter, req *http.Reques
 		"event": hn,
 	}).Debug("harborHandler: received event, looking for a pushImage tag")
 
-	if hn.Type == "pushImage" || hn.Type == "PUSH_ARTIFACT" { 
+	if hn.Type == "pushImage" || hn.Type == "PUSH_ARTIFACT" {
 		// go trough all the ressource items
 		for _, e := range hn.EventData.Resources {
 			imageRepo, err := image.Parse(e.ResourceURL)

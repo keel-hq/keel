@@ -8,14 +8,32 @@ import (
 	"github.com/keel-hq/keel/types"
 )
 
-type resourcePolicyUpdateRequest struct {
+// ResourcePolicyUpdateRequest changes the update policy for a resource.
+type ResourcePolicyUpdateRequest struct {
 	Policy     string `json:"policy"`
 	Identifier string `json:"identifier"`
 	Provider   string `json:"provider"`
 }
 
+// policyUpdateHandler changes a resource update policy.
+// @Summary Update resource policy
+// @Description Updates the policy annotation for a Kubernetes resource. This route exists only when the authenticator is enabled.
+// @Tags Admin
+// @ID updateResourcePolicy
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Param body body ResourcePolicyUpdateRequest true "Policy update"
+// @Success 200 {object} APIResponse
+// @Failure 400 {string} string "Malformed request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 403 {string} string "Permission denied"
+// @Failure 404 {string} string "Resource not found"
+// @Failure 500 {string} string "Update failed"
+// @Router /v1/policies [put]
 func (s *TriggerServer) policyUpdateHandler(resp http.ResponseWriter, req *http.Request) {
-	var policyRequest resourcePolicyUpdateRequest
+	var policyRequest ResourcePolicyUpdateRequest
 	dec := json.NewDecoder(req.Body)
 	defer req.Body.Close()
 

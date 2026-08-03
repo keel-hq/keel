@@ -24,41 +24,86 @@ func init() {
 	prometheus.MustRegister(newGithubWebhooksCounter)
 }
 
-type githubRegistryPackageWebhook struct {
-	Action          string `json:"action"`
-	RegistryPackage struct {
-		Name           string `json:"name"`
-		PackageType    string `json:"package_type"`
-		PackageVersion struct {
-			Version string `json:"version"`
-		} `json:"package_version"`
-		UpdatedAt string `json:"updated_at"`
-	} `json:"registry_package"`
-	Repository struct {
-		FullName string `json:"full_name"`
-	} `json:"repository"`
+// GitHubWebhook documents the two payload variants selected by X-GitHub-Event.
+type GitHubWebhook struct {
+	Action          string                 `json:"action"`
+	RegistryPackage *GitHubRegistryPackage `json:"registry_package,omitempty"`
+	Repository      *GitHubRepository      `json:"repository,omitempty"`
+	Package         *GitHubPackage         `json:"package,omitempty"`
 }
 
-type githubPackageV2Webhook struct {
-	Action  string `json:"action"`
-	Package struct {
-		Id             int    `json:"id"`
-		Name           string `json:"name"`
-		Namespace      string `json:"namespace"`
-		Ecosystem      string `json:"ecosystem"`
-		PackageVersion struct {
-			Name              string `json:"name"`
-			ContainerMetadata struct {
-				Tag struct {
-					Name   string `json:"name"`
-					Digest string `json:"digest"`
-				} `json:"tag"`
-			} `json:"container_metadata"`
-		} `json:"package_version"`
-	} `json:"package"`
+// GitHubRegistryPackageWebhook is the registry_package event payload.
+type GitHubRegistryPackageWebhook struct {
+	Action          string                `json:"action"`
+	RegistryPackage GitHubRegistryPackage `json:"registry_package"`
+	Repository      GitHubRepository      `json:"repository"`
+}
+
+// GitHubRegistryPackage describes a GitHub Packages container version.
+type GitHubRegistryPackage struct {
+	Name           string                       `json:"name"`
+	PackageType    string                       `json:"package_type"`
+	PackageVersion GitHubRegistryPackageVersion `json:"package_version"`
+	UpdatedAt      string                       `json:"updated_at"`
+}
+
+// GitHubRegistryPackageVersion identifies the published version.
+type GitHubRegistryPackageVersion struct {
+	Version string `json:"version"`
+}
+
+// GitHubRepository identifies the repository for a registry_package event.
+type GitHubRepository struct {
+	FullName string `json:"full_name"`
+}
+
+// GitHubPackageV2Webhook is the package event payload used by GHCR.
+type GitHubPackageV2Webhook struct {
+	Action  string        `json:"action"`
+	Package GitHubPackage `json:"package"`
+}
+
+// GitHubPackage describes a GHCR package.
+type GitHubPackage struct {
+	ID             int                  `json:"id"`
+	Name           string               `json:"name"`
+	Namespace      string               `json:"namespace"`
+	Ecosystem      string               `json:"ecosystem"`
+	PackageVersion GitHubPackageVersion `json:"package_version"`
+}
+
+// GitHubPackageVersion contains GHCR container metadata.
+type GitHubPackageVersion struct {
+	Name              string                  `json:"name"`
+	ContainerMetadata GitHubContainerMetadata `json:"container_metadata"`
+}
+
+// GitHubContainerMetadata contains the published tag.
+type GitHubContainerMetadata struct {
+	Tag GitHubContainerTag `json:"tag"`
+}
+
+// GitHubContainerTag identifies a GHCR tag and digest.
+type GitHubContainerTag struct {
+	Name   string `json:"name"`
+	Digest string `json:"digest"`
 }
 
 // githubHandler - used to react to github webhooks
+// githubHandler accepts GitHub Packages and GHCR pushes.
+// @Summary Receive a GitHub webhook
+// @Description X-GitHub-Event selects package or registry_package decoding; absent and other values currently submit an empty event and return 200. Requires Basic or Bearer authorization only when authenticatedWebhooks is enabled.
+// @Tags Webhooks
+// @ID receiveGitHubWebhook
+// @Accept json
+// @Security BasicAuth
+// @Security BearerAuth
+// @Param X-GitHub-Event header string false "Payload type: package or registry_package"
+// @Param body body GitHubWebhook true "GitHub Packages or GHCR push"
+// @Success 200 "Accepted"
+// @Failure 400 {string} string "Malformed or incomplete supported payload"
+// @Failure 401 {string} string "Unauthorized when authenticated webhooks are enabled"
+// @Router /v1/webhooks/github [post]
 func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Request) {
 	// GitHub provides different webhook events for each registry.
 	// Github Package uses 'registry_package'
@@ -70,7 +115,7 @@ func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Reques
 
 	switch hookEvent {
 	case "package":
-		payload := new(githubPackageV2Webhook)
+		payload := new(GitHubPackageV2Webhook)
 		if err := json.NewDecoder(req.Body).Decode(payload); err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
@@ -111,7 +156,7 @@ func (s *TriggerServer) githubHandler(resp http.ResponseWriter, req *http.Reques
 		break
 
 	case "registry_package":
-		payload := new(githubRegistryPackageWebhook)
+		payload := new(GitHubRegistryPackageWebhook)
 		if err := json.NewDecoder(req.Body).Decode(payload); err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
