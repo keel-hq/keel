@@ -282,6 +282,27 @@ collect_diagnostics() {
   if [[ -s "${K3S_LOG}" ]]; then
     cp "${K3S_LOG}" "${ARTIFACT_DIR}/k3s-server.log" 2>/dev/null || true
   fi
+  if [[ -s "${K3S_DATA_DIR}/agent/containerd/containerd.log" ]]; then
+    sudo cp "${K3S_DATA_DIR}/agent/containerd/containerd.log" \
+      "${ARTIFACT_DIR}/containerd.log" 2>/dev/null || true
+    sudo chown "$(id -u):$(id -g)" "${ARTIFACT_DIR}/containerd.log" 2>/dev/null || true
+  fi
+  [[ -x "${K3S_BIN}" && -s "${KUBECONFIG}" ]] || return 0
+
+  kubectl get nodes -o wide >"${ARTIFACT_DIR}/nodes.txt" 2>&1 || true
+  kubectl get pods -A -o wide >"${ARTIFACT_DIR}/pods.txt" 2>&1 || true
+  kubectl get deployments,statefulsets,daemonsets,jobs,cronjobs,services -A -o wide \
+    >"${ARTIFACT_DIR}/resources.txt" 2>&1 || true
+  kubectl describe nodes >"${ARTIFACT_DIR}/describe-nodes.txt" 2>&1 || true
+  kubectl describe pods -A >"${ARTIFACT_DIR}/describe-pods.txt" 2>&1 || true
+  kubectl get events -A --sort-by=.metadata.creationTimestamp \
+    >"${ARTIFACT_DIR}/events.txt" 2>&1 || true
+  kubectl -n "keel-e2e-infra-${RUN_ID}" logs deployment/registry --all-containers=true \
+    >"${ARTIFACT_DIR}/registry.log" 2>&1 || true
+  kubectl -n "keel-e2e-system-${RUN_ID}" logs deployment/keel --all-containers=true \
+    >"${ARTIFACT_DIR}/keel.log" 2>&1 || true
+  kubectl -n "keel-e2e-system-${RUN_ID}" logs deployment/keel --all-containers=true --previous \
+    >"${ARTIFACT_DIR}/keel-previous.log" 2>&1 || true
 }
 
 delete_suite_resources() {
