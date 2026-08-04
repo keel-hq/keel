@@ -8,7 +8,7 @@
 - [x] Share the resolver/resource index with the Helm provider and map Helm releases/images to their owned Kubernetes workloads without inferring platform from values or Keel's runtime.
 - [x] Preserve Docker/OCI single-manifest config resolution, Docker manifest-list and OCI index resolution, and candidate-resolution fail-closed behavior.
 - [x] Carry compatibility evidence far enough into Kubernetes and Helm update selection to prevent an incompatible or stale polling event from being applied.
-- [ ] Keep policy filtering, ordering, comparison, tag spelling, webhook semantics, approval behavior, and unrelated registry/provider behavior unchanged.
+- [~] Keep policy filtering, ordering, comparison, tag spelling, webhook semantics, approval behavior, and unrelated registry/provider behavior unchanged.
 - [ ] Add focused resolver tests for stable/legacy selectors, required-affinity operators/term semantics, conservative supersets, pod evidence, mixed nodes, empty/unavailable node metadata, and diagnostic reasons.
 - [ ] Add Helm tests for one owned workload, multiple/mixed owned workloads, multi-arch compatibility, missing ownership mapping, and unresolved child workload platforms.
 - [ ] Retain focused registry tests for amd64, arm/v7, arm64, Docker manifest lists, OCI indexes, single-manifest configs, malformed/missing metadata, and media-type negotiation.
