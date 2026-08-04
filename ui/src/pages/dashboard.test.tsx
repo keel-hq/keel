@@ -84,6 +84,34 @@ describe("Dashboard resource actions", () => {
     )
   })
 
+  it("populates glob and regexp patterns from explained examples", async () => {
+    const user = userEvent.setup()
+    render(<DashboardPage />)
+
+    await openActions(user)
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Change update policy" })
+    )
+
+    await user.click(screen.getByRole("button", { name: "glob" }))
+    expect(screen.getAllByRole("button", { name: /^Use / })).toHaveLength(3)
+    expect(
+      screen.getByText(/Matches tags beginning with release-/)
+    ).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Use release-*" }))
+    expect(screen.getByLabelText("Wildcard pattern")).toHaveValue("release-*")
+
+    await user.click(screen.getByRole("button", { name: "regexp" }))
+    expect(screen.getAllByRole("button", { name: /^Use / })).toHaveLength(3)
+    expect(screen.getByText(/Matches exact v-prefixed versions/)).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: String.raw`Use ^v\d+\.\d+\.\d+$` })
+    )
+    expect(screen.getByLabelText("RE2 expression")).toHaveValue(
+      String.raw`^v\d+\.\d+\.\d+$`
+    )
+  })
+
   it("confirms pausing updates", async () => {
     const user = userEvent.setup()
     render(<DashboardPage />)

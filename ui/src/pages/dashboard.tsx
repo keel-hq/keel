@@ -46,22 +46,46 @@ type ActionKind = "approvals" | "policy" | "pause"
 type ActionDialog = { resource: Resource; kind: ActionKind } | null
 
 const policyOptions = ["patch", "minor", "major", "all", "force"] as const
-const policyDescriptions: Record<string, string> = {
-  patch: "Only apply patch version updates, such as 1.2.3 to 1.2.4.",
-  minor:
-    "Apply minor and patch updates while staying on the current major version.",
-  major: "Allow major, minor, and patch version updates.",
-  all: "Apply any newer semantic version, including prereleases.",
-  force: "Apply updates even when the image tag is not a semantic version.",
-  glob: "Only apply image tags matching a wildcard pattern.",
-  regexp: "Only apply image tags matching an RE2 regular expression.",
+const policyPickerOptions = [...policyOptions, "glob", "regexp"] as const
+const policyExamples: Record<string, string> = {
+  patch: "Patch updates only. For example, 1.2.3 → 1.2.4.",
+  minor: "Minor and patch updates. For example, 1.2.3 → 1.3.0.",
+  major: "Major, minor, and patch updates. For example, 1.2.3 → 2.0.0.",
+  all: "Any newer semantic version, including prereleases.",
+  force: "Update even when tags are not semantic versions.",
+  glob: "Match wildcard tag patterns, such as release-*.",
+  regexp: String.raw`Match tags with RE2, such as ^v\d+\.\d+\.\d+$.`,
 }
-const policyExamples: Partial<Record<string, string>> = {
-  patch: "1.2.3 → 1.2.4",
-  minor: "1.2.3 → 1.3.0",
-  major: "1.2.3 → 2.0.0",
-  glob: "build-*",
-  regexp: String.raw`^v\d+\.\d+\.\d+$`,
+const patternPresets = {
+  glob: [
+    {
+      pattern: "release-*",
+      description:
+        "Matches tags beginning with release-, such as release-2026.08.",
+    },
+    {
+      pattern: "v1.*",
+      description: "Matches only v1 tags, such as v1.12.0.",
+    },
+    {
+      pattern: "*-alpine",
+      description: "Matches tags ending in -alpine.",
+    },
+  ],
+  regexp: [
+    {
+      pattern: String.raw`^v\d+\.\d+\.\d+$`,
+      description: "Matches exact v-prefixed versions, such as v2.4.1.",
+    },
+    {
+      pattern: String.raw`^release-\d{8}$`,
+      description: "Matches dated tags, such as release-20260804.",
+    },
+    {
+      pattern: String.raw`^(main|stable)-\d+$`,
+      description: "Matches numbered main or stable builds.",
+    },
+  ],
 }
 
 export function DashboardPage() {
@@ -285,7 +309,7 @@ export function DashboardPage() {
       </Card>
       <Dialog open={Boolean(actionDialog)} onOpenChange={closeAction}>
         {actionDialog && (
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>
                 {actionDialog.kind === "approvals" &&
@@ -550,28 +574,32 @@ function ResourceRow({
 function PolicyButtons({
   value,
   onChange,
+  options = policyOptions,
 }: {
   value: string
   onChange: (value: string) => void
+  options?: readonly string[]
 }) {
   return (
     <div className="grid gap-2">
-      {policyOptions.map((policy) => (
-        <Button
+      {options.map((policy) => (
+        <div
           key={policy}
-          type="button"
-          aria-label={policy}
-          variant={value === policy ? "default" : "outline"}
-          onClick={() => onChange(policy)}
-          className="h-10 w-full justify-between px-3 capitalize"
+          className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-3"
         >
-          <span>{policy}</span>
-          {policyExamples[policy] && (
-            <span className="font-mono text-xs font-normal normal-case opacity-60">
-              {policyExamples[policy]}
-            </span>
-          )}
-        </Button>
+          <Button
+            type="button"
+            aria-label={policy}
+            variant={value === policy ? "default" : "outline"}
+            onClick={() => onChange(policy)}
+            className="w-full capitalize"
+          >
+            {policy}
+          </Button>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {policyExamples[policy]}
+          </p>
+        </div>
       ))}
     </div>
   )
@@ -591,29 +619,13 @@ function PolicyPicker({
   return (
     <div className="grid gap-3">
       <Label>Policy</Label>
-      <PolicyButtons value={value} onChange={onChange} />
-      <div className="grid gap-2">
-        {(["glob", "regexp"] as const).map((policy) => (
-          <Button
-            key={policy}
-            type="button"
-            aria-label={policy}
-            variant={value === policy ? "default" : "outline"}
-            onClick={() => onChange(policy)}
-            className="h-10 w-full justify-between px-3 capitalize"
-          >
-            <span>{policy}</span>
-            <span className="font-mono text-xs font-normal normal-case opacity-60">
-              {policyExamples[policy]}
-            </span>
-          </Button>
-        ))}
-      </div>
-      <p className="text-xs leading-5 text-muted-foreground">
-        {policyDescriptions[value]}
-      </p>
+      <PolicyButtons
+        value={value}
+        onChange={onChange}
+        options={policyPickerOptions}
+      />
       {(value === "glob" || value === "regexp") && (
-        <div className="grid gap-2">
+        <div className="ml-[6.25rem] grid gap-2 border-l pl-3">
           <Label htmlFor="policy-pattern">
             {value === "glob" ? "Wildcard pattern" : "RE2 expression"}
           </Label>
@@ -624,6 +636,31 @@ function PolicyPicker({
             value={pattern}
             onChange={(event) => onPatternChange(event.target.value)}
           />
+          <p className="text-xs text-muted-foreground">
+            Choose an example or enter your own pattern.
+          </p>
+          <div className="grid gap-2">
+            {patternPresets[value].map((preset) => (
+              <div
+                className="flex flex-wrap items-center gap-2"
+                key={preset.pattern}
+              >
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  aria-label={`Use ${preset.pattern}`}
+                  className="font-mono"
+                  onClick={() => onPatternChange(preset.pattern)}
+                >
+                  {preset.pattern}
+                </Button>
+                <span className="min-w-48 flex-1 text-xs leading-5 text-muted-foreground">
+                  {preset.description}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
