@@ -977,8 +977,9 @@ paths:
     put:
       consumes:
       - application/json
-      description: Updates the policy annotation for a Kubernetes resource. This route
-        exists only when the authenticator is enabled.
+      description: Updates the policy annotation for a Kubernetes resource. An empty
+        policy removes the policy configuration. This route exists only when the authenticator
+        is enabled.
       operationId: updateResourcePolicy
       parameters:
       - description: Policy update

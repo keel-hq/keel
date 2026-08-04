@@ -112,6 +112,26 @@ describe("Dashboard resource actions", () => {
     )
   })
 
+  it("clears the update policy with none", async () => {
+    const user = userEvent.setup()
+    render(<DashboardPage />)
+
+    await openActions(user)
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Change update policy" })
+    )
+    await user.click(screen.getByRole("button", { name: "none" }))
+    await user.click(screen.getByRole("button", { name: "Save policy" }))
+
+    await waitFor(() =>
+      expect(apiMock.setPolicy).toHaveBeenCalledWith({
+        identifier: resource.identifier,
+        provider: resource.provider,
+        policy: "",
+      })
+    )
+  })
+
   it("confirms pausing updates", async () => {
     const user = userEvent.setup()
     render(<DashboardPage />)

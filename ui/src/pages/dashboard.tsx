@@ -46,7 +46,12 @@ type ActionKind = "approvals" | "policy" | "pause"
 type ActionDialog = { resource: Resource; kind: ActionKind } | null
 
 const policyOptions = ["patch", "minor", "major", "all", "force"] as const
-const policyPickerOptions = [...policyOptions, "glob", "regexp"] as const
+const policyPickerOptions = [
+  ...policyOptions,
+  "glob",
+  "regexp",
+  "none",
+] as const
 const policyExamples: Record<string, string> = {
   patch: "Patch updates only. For example, 1.2.3 → 1.2.4.",
   minor: "Minor and patch updates. For example, 1.2.3 → 1.3.0.",
@@ -55,6 +60,7 @@ const policyExamples: Record<string, string> = {
   force: "Update even when tags are not semantic versions.",
   glob: "Match wildcard tag patterns, such as release-*.",
   regexp: String.raw`Match tags with RE2, such as ^v\d+\.\d+\.\d+$.`,
+  none: "Clear the policy so Keel no longer applies updates to this workload.",
 }
 const patternPresets = {
   glob: [
@@ -168,7 +174,9 @@ export function DashboardPage() {
           provider: resource.provider,
           policy,
         }),
-      `${resource.kind} ${resource.name} policy set to ${policy}`
+      policy
+        ? `${resource.kind} ${resource.name} policy set to ${policy}`
+        : `${resource.kind} ${resource.name} policy cleared`
     )
   }
   function setApproval(resource: Resource, votesRequired: number) {
@@ -190,13 +198,11 @@ export function DashboardPage() {
     }
     if (kind === "policy") {
       const [currentPolicy, ...pattern] = resource.policy.split(":")
-      const supported = [
-        ...policyOptions,
-        "glob",
-        "regexp",
-      ] as readonly string[]
+      const supported = policyPickerOptions as readonly string[]
+      const selectedPolicy =
+        currentPolicy === "nil policy" ? "none" : currentPolicy
       setPolicyChoice(
-        supported.includes(currentPolicy) ? currentPolicy : "patch"
+        supported.includes(selectedPolicy) ? selectedPolicy : "patch"
       )
       setPolicyInput(pattern.join(":"))
     }
@@ -411,9 +417,11 @@ export function DashboardPage() {
                   }
                   onClick={() => {
                     const nextPolicy =
-                      policyChoice === "glob" || policyChoice === "regexp"
-                        ? `${policyChoice}:${policyInput.trim()}`
-                        : policyChoice
+                      policyChoice === "none"
+                        ? ""
+                        : policyChoice === "glob" || policyChoice === "regexp"
+                          ? `${policyChoice}:${policyInput.trim()}`
+                          : policyChoice
                     void setPolicy(actionDialog.resource, nextPolicy)
                     closeAction()
                   }}
@@ -575,32 +583,95 @@ function PolicyButtons({
   value,
   onChange,
   options = policyOptions,
+  pattern,
+  onPatternChange,
 }: {
   value: string
   onChange: (value: string) => void
   options?: readonly string[]
+  pattern?: string
+  onPatternChange?: (value: string) => void
 }) {
   return (
     <div className="grid gap-2">
       {options.map((policy) => (
-        <div
-          key={policy}
-          className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-3"
-        >
-          <Button
-            type="button"
-            aria-label={policy}
-            variant={value === policy ? "default" : "outline"}
-            onClick={() => onChange(policy)}
-            className="w-full capitalize"
-          >
-            {policy}
-          </Button>
-          <p className="text-xs leading-5 text-muted-foreground">
-            {policyExamples[policy]}
-          </p>
+        <div key={policy} className="grid gap-2">
+          <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-3">
+            <Button
+              type="button"
+              aria-label={policy}
+              variant={value === policy ? "default" : "outline"}
+              onClick={() => onChange(policy)}
+              className="w-full capitalize"
+            >
+              {policy}
+            </Button>
+            <p className="text-xs leading-5 text-muted-foreground">
+              {policyExamples[policy]}
+            </p>
+          </div>
+          {(policy === "glob" || policy === "regexp") &&
+            value === policy &&
+            pattern !== undefined &&
+            onPatternChange && (
+              <PolicyPatternEditor
+                policy={policy}
+                pattern={pattern}
+                onPatternChange={onPatternChange}
+              />
+            )}
         </div>
       ))}
+    </div>
+  )
+}
+
+function PolicyPatternEditor({
+  policy,
+  pattern,
+  onPatternChange,
+}: {
+  policy: "glob" | "regexp"
+  pattern: string
+  onPatternChange: (value: string) => void
+}) {
+  return (
+    <div className="ml-[6.25rem] grid gap-2 border-l pl-3">
+      <Label htmlFor="policy-pattern">
+        {policy === "glob" ? "Wildcard pattern" : "RE2 expression"}
+      </Label>
+      <Input
+        id="policy-pattern"
+        autoFocus
+        placeholder={policy === "glob" ? "build-*" : "^([a-zA-Z]+)$"}
+        value={pattern}
+        onChange={(event) => onPatternChange(event.target.value)}
+      />
+      <p className="text-xs text-muted-foreground">
+        Choose an example or enter your own pattern.
+      </p>
+      <div className="grid gap-2">
+        {patternPresets[policy].map((preset) => (
+          <div
+            className="flex flex-wrap items-center gap-2"
+            key={preset.pattern}
+          >
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              aria-label={`Use ${preset.pattern}`}
+              className="font-mono"
+              onClick={() => onPatternChange(preset.pattern)}
+            >
+              {preset.pattern}
+            </Button>
+            <span className="min-w-48 flex-1 text-xs leading-5 text-muted-foreground">
+              {preset.description}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -623,46 +694,9 @@ function PolicyPicker({
         value={value}
         onChange={onChange}
         options={policyPickerOptions}
+        pattern={pattern}
+        onPatternChange={onPatternChange}
       />
-      {(value === "glob" || value === "regexp") && (
-        <div className="ml-[6.25rem] grid gap-2 border-l pl-3">
-          <Label htmlFor="policy-pattern">
-            {value === "glob" ? "Wildcard pattern" : "RE2 expression"}
-          </Label>
-          <Input
-            id="policy-pattern"
-            autoFocus
-            placeholder={value === "glob" ? "build-*" : "^([a-zA-Z]+)$"}
-            value={pattern}
-            onChange={(event) => onPatternChange(event.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            Choose an example or enter your own pattern.
-          </p>
-          <div className="grid gap-2">
-            {patternPresets[value].map((preset) => (
-              <div
-                className="flex flex-wrap items-center gap-2"
-                key={preset.pattern}
-              >
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="outline"
-                  aria-label={`Use ${preset.pattern}`}
-                  className="font-mono"
-                  onClick={() => onPatternChange(preset.pattern)}
-                >
-                  {preset.pattern}
-                </Button>
-                <span className="min-w-48 flex-1 text-xs leading-5 text-muted-foreground">
-                  {preset.description}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
