@@ -17,7 +17,6 @@ import {
   TableRow,
 } from "@/components/data-table"
 import { StatCard } from "@/components/stat-card"
-import { PageHeading } from "@/components/page-heading"
 
 export function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([])
@@ -37,11 +36,6 @@ export function AuditLogsPage() {
   }, [load])
   return (
     <div className="grid gap-6">
-      <PageHeading
-        title="Audit logs"
-        description="Trace policy changes, approvals, webhook activity, and automated updates across Keel."
-        eyebrow="Activity"
-      />
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           title="Last Event"

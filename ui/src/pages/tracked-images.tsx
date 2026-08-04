@@ -16,7 +16,6 @@ import {
   TableRow,
 } from "@/components/data-table"
 import { StatCard } from "@/components/stat-card"
-import { PageHeading } from "@/components/page-heading"
 
 export function TrackedImagesPage() {
   const [images, setImages] = useState<TrackedImage[]>([])
@@ -44,11 +43,6 @@ export function TrackedImagesPage() {
   )
   return (
     <div className="grid gap-6">
-      <PageHeading
-        title="Tracked images"
-        description="Review the container images Keel observes, their update policies, providers, and active triggers."
-        eyebrow="Inventory"
-      />
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           title="Namespaces"

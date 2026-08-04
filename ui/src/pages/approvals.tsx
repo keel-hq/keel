@@ -29,7 +29,6 @@ import {
   TableRow,
 } from "@/components/data-table"
 import { StatCard } from "@/components/stat-card"
-import { PageHeading } from "@/components/page-heading"
 
 type PendingAction = {
   approvals: Approval[]
@@ -95,11 +94,6 @@ export function ApprovalsPage() {
   )
   return (
     <div className="grid gap-6">
-      <PageHeading
-        title="Update approvals"
-        description="Review pending workload changes, cast votes, and manage completed approval requests."
-        eyebrow="Governance"
-      />
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           title="Pending"
