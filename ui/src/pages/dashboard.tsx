@@ -448,12 +448,20 @@ function ResourceRow({
         {resource.kind}/{resource.name}
       </TableCell>
       <TableCell>
-        <Badge variant={available === replicas ? "default" : "secondary"}>
+        <Badge
+          variant="outline"
+          className={
+            available === replicas ? undefined : "text-muted-foreground"
+          }
+        >
           {available}/{replicas}
         </Badge>
       </TableCell>
       <TableCell>
-        <Badge variant={managed ? "default" : "outline"}>
+        <Badge
+          variant="outline"
+          className={managed ? undefined : "text-muted-foreground"}
+        >
           {managed ? resource.policy : "none"}
         </Badge>
       </TableCell>
