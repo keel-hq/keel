@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -30,6 +31,8 @@ type Manager interface {
 	Create(r *types.Approval) error
 	// Update whole approval object
 	Update(r *types.Approval) error
+	// SetRequiredVotes updates pending approvals for a resource and reevaluates their status.
+	SetRequiredVotes(resourceIdentifier string, provider types.ProviderType, votesRequired int) error
 
 	// Increases Approval votes by 1
 	Approve(identifier, voter string) (*types.Approval, error)
@@ -221,12 +224,27 @@ func (m *DefaultManager) publishApproved(approval *types.Approval) error {
 
 // Update - update approval
 func (m *DefaultManager) Update(r *types.Approval) error {
-	_, err := m.Get(r.Identifier)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.update(r)
+}
+
+func (m *DefaultManager) update(r *types.Approval) error {
+	existing, err := m.Get(r.Identifier)
 	if err != nil {
 		return err
 	}
 
-	if r.Status() == types.ApprovalStatusApproved {
+	if r.ID == "" {
+		r.ID = existing.ID
+	}
+
+	becameApproved := existing.Status() != types.ApprovalStatusApproved && r.Status() == types.ApprovalStatusApproved
+	if err = m.store.UpdateApproval(r); err != nil {
+		return err
+	}
+
+	if becameApproved {
 		err = m.publishApproved(r)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -237,7 +255,34 @@ func (m *DefaultManager) Update(r *types.Approval) error {
 		}
 	}
 
-	return m.store.UpdateApproval(r)
+	return nil
+}
+
+// SetRequiredVotes synchronizes active pending approvals with a resource's current requirement.
+func (m *DefaultManager) SetRequiredVotes(resourceIdentifier string, provider types.ProviderType, votesRequired int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	activeApprovals, err := m.List()
+	if err != nil {
+		return err
+	}
+
+	prefix := resourceIdentifier + ":"
+	for _, approval := range activeApprovals {
+		if approval.Provider != provider ||
+			!strings.HasPrefix(approval.Identifier, prefix) ||
+			approval.Status() != types.ApprovalStatusPending {
+			continue
+		}
+
+		approval.VotesRequired = votesRequired
+		if err := m.update(approval); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Approve - increase VotesReceived by 1 and returns updated version
@@ -264,7 +309,7 @@ func (m *DefaultManager) Approve(identifier, voter string) (*types.Approval, err
 	existing.AddVoter(voter)
 	existing.VotesReceived++
 
-	err = m.Update(existing)
+	err = m.update(existing)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"identifier": identifier,
@@ -324,7 +369,7 @@ func (m *DefaultManager) Reject(identifier string) (*types.Approval, error) {
 
 	existing.Rejected = true
 
-	err = m.Update(existing)
+	err = m.update(existing)
 	if err != nil {
 		return nil, err
 	}

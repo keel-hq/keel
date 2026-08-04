@@ -104,9 +104,10 @@ func (s *TriggerServer) approvalSetHandler(resp http.ResponseWriter, req *http.R
 		return
 	}
 
+	providerType := types.ProviderTypeUnknown
 	switch approvalUpdateRequest.Provider {
 	case types.ProviderTypeKubernetes.String():
-		// ok
+		providerType = types.ProviderTypeKubernetes
 	default:
 		http.Error(resp, "unsupported provider", http.StatusBadRequest)
 		return
@@ -130,6 +131,13 @@ func (s *TriggerServer) approvalSetHandler(resp http.ResponseWriter, req *http.R
 			v.SetAnnotations(ann)
 
 			err := s.kubernetesClient.Update(v)
+			if err == nil {
+				err = s.approvalsManager.SetRequiredVotes(
+					approvalUpdateRequest.Identifier,
+					providerType,
+					approvalUpdateRequest.VotesRequired,
+				)
+			}
 
 			response(&APIResponse{Status: "updated"}, 200, err, resp, req)
 			return
