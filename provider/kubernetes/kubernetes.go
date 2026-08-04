@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"fmt"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -321,12 +322,34 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				Namespace:    gr.Namespace,
 				Secrets:      secrets,
 				Meta:         make(map[string]string),
+				Platform:     resourcePlatform(gr),
 				Policy:       plc,
 			})
 		}
 	}
 
 	return trackedImages, nil
+}
+
+func resourcePlatform(resource *k8s.GenericResource) types.Platform {
+	platform := types.Platform{OS: runtime.GOOS, Architecture: runtime.GOARCH}
+	selector := resource.GetNodeSelector()
+	if os := firstNonEmpty(selector["kubernetes.io/os"], selector["beta.kubernetes.io/os"]); os != "" {
+		platform.OS = os
+	}
+	if architecture := firstNonEmpty(selector["kubernetes.io/arch"], selector["beta.kubernetes.io/arch"]); architecture != "" {
+		platform.Architecture = architecture
+	}
+	return platform
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func (p *Provider) startInternal() error {

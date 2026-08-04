@@ -266,6 +266,21 @@ func (r *GenericResource) GetImagePullSecrets() (secrets []string) {
 	return
 }
 
+// GetNodeSelector returns the pod template's node selector.
+func (r *GenericResource) GetNodeSelector() map[string]string {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		return obj.Spec.Template.Spec.NodeSelector
+	case *apps_v1.StatefulSet:
+		return obj.Spec.Template.Spec.NodeSelector
+	case *apps_v1.DaemonSet:
+		return obj.Spec.Template.Spec.NodeSelector
+	case *batch_v1.CronJob:
+		return obj.Spec.JobTemplate.Spec.Template.Spec.NodeSelector
+	}
+	return nil
+}
+
 // GetImages - returns images used by this resource
 func (r *GenericResource) GetImages(filter ContainerFilter) (images []string) {
 	switch obj := r.obj.(type) {

@@ -1,6 +1,8 @@
 package poll
 
 import (
+	"runtime"
+
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
@@ -92,6 +94,8 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 
 	// This contains all tracked images that share the same imageIdentifier and thus, the same watcher
 	allRelatedTrackedImages := getRelatedTrackedImages(j.details.trackedImage, trackedImages)
+	platformCache := make(map[string][]types.Platform)
+	platformErrorCache := make(map[string]error)
 
 	for _, trackedImage := range allRelatedTrackedImages {
 
@@ -114,6 +118,33 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 			if trackedImage.Image.Tag() == tag {
 				break
 			}
+
+			platforms, resolved := platformCache[tag]
+			platformErr, failed := platformErrorCache[tag]
+			if !resolved && !failed {
+				platforms, platformErr = j.candidatePlatforms(trackedImage, tag)
+				if platformErr != nil {
+					platformErrorCache[tag] = platformErr
+				} else {
+					platformCache[tag] = platforms
+				}
+			}
+			if platformErr != nil {
+				log.WithFields(log.Fields{
+					"error": platformErr,
+					"image": trackedImage.Image.Repository(),
+					"tag":   tag,
+				}).Warn("trigger.poll.WatchRepositoryTagsJob: skipping candidate because its platform could not be established")
+				continue
+			}
+			if !supportsRelatedWorkloads(platforms, tag, allRelatedTrackedImages) {
+				log.WithFields(log.Fields{
+					"candidate_platforms": platforms,
+					"image":               trackedImage.Image.Repository(),
+					"tag":                 tag,
+				}).Warn("trigger.poll.WatchRepositoryTagsJob: skipping candidate because it is incompatible with a related workload platform")
+				continue
+			}
 			if !exists(tag, events) {
 				event := types.Event{
 					Repository: types.Repository{
@@ -134,6 +165,47 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 	}).Debug("trigger.poll.WatchRepositoryTagsJob: events: ", events)
 
 	return events, nil
+}
+
+func (j *WatchRepositoryTagsJob) candidatePlatforms(trackedImage *types.TrackedImage, tag string) ([]types.Platform, error) {
+	opts := registry.Opts{
+		Registry: trackedImage.Image.Scheme() + "://" + trackedImage.Image.Registry(),
+		Name:     trackedImage.Image.ShortName(),
+		Tag:      tag,
+	}
+	if creds, err := credentialshelper.GetCredentials(trackedImage); err == nil {
+		opts.Username = creds.Username
+		opts.Password = creds.Password
+	}
+	return j.registryClient.Platforms(opts)
+}
+
+func supportsRelatedWorkloads(candidatePlatforms []types.Platform, candidateTag string, trackedImages []*types.TrackedImage) bool {
+	for _, trackedImage := range trackedImages {
+		update, err := trackedImage.Policy.ShouldUpdate(trackedImage.Image.Tag(), candidateTag)
+		if err != nil || !update || trackedImage.Image.Tag() == candidateTag {
+			continue
+		}
+		target := trackedImage.Platform
+		if target.OS == "" {
+			target.OS = runtime.GOOS
+		}
+		if target.Architecture == "" {
+			target.Architecture = runtime.GOARCH
+		}
+
+		supported := false
+		for _, candidate := range candidatePlatforms {
+			if candidate.Supports(target) {
+				supported = true
+				break
+			}
+		}
+		if !supported {
+			return false
+		}
+	}
+	return true
 }
 
 func exists(tag string, events []types.Event) bool {

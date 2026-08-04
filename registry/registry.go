@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/keel-hq/keel/registry/docker"
+	"github.com/keel-hq/keel/types"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -30,6 +31,7 @@ type Repository struct {
 type Client interface {
 	Get(opts Opts) (*Repository, error)
 	Digest(opts Opts) (string, error)
+	Platforms(opts Opts) ([]types.Platform, error)
 }
 
 // New - new registry client
@@ -145,4 +147,27 @@ INIT_CLIENT:
 	}
 
 	return manifestDigest.String(), nil
+}
+
+// Platforms returns the platforms supported by a tagged image manifest.
+func (c *DefaultClient) Platforms(opts Opts) ([]types.Platform, error) {
+	if opts.Tag == "" {
+		return nil, ErrTagNotSupplied
+	}
+
+INIT_CLIENT:
+	hub, err := c.getRegistryClient(opts.Registry, opts.Username, opts.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	platforms, err := hub.ManifestPlatforms(opts.Name, opts.Tag)
+	if err != nil {
+		if strings.Contains(err.Error(), "server gave HTTP response to HTTPS client") && strings.HasPrefix(opts.Registry, "https://") && c.insecure {
+			opts.Registry = strings.Replace(opts.Registry, "https://", "http://", 1)
+			goto INIT_CLIENT
+		}
+		return nil, err
+	}
+	return platforms, nil
 }

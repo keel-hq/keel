@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	manifestlist "github.com/distribution/distribution/v3/manifest/manifestlist"
 	manifestv2 "github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/opencontainers/go-digest"
 	oci "github.com/opencontainers/image-spec/specs-go/v1"
@@ -49,7 +50,7 @@ func (r *Registry) request(method string, url string) (*http.Response, error) {
 		return nil, err
 	}
 
-	req.Header.Set("Accept", strings.Join([]string{manifestv2.MediaTypeManifest, oci.MediaTypeImageIndex, oci.MediaTypeImageManifest}, ","))
+	req.Header.Set("Accept", strings.Join([]string{manifestlist.MediaTypeManifestList, manifestv2.MediaTypeManifest, oci.MediaTypeImageIndex, oci.MediaTypeImageManifest}, ","))
 	resp, err := r.Client.Do(req)
 	if err != nil {
 		return nil, err

@@ -38,6 +38,9 @@ type fakeRegistryClient struct {
 	digestErrToReturn error
 
 	tagsToReturn []string
+
+	platformsToReturn map[string][]types.Platform
+	platformErr       error
 }
 
 func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, error) {
@@ -51,6 +54,17 @@ func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, erro
 func (c *fakeRegistryClient) Digest(opts registry.Opts) (digest string, err error) {
 	c.opts = opts
 	return c.digestToReturn, c.digestErrToReturn
+}
+
+func (c *fakeRegistryClient) Platforms(opts registry.Opts) ([]types.Platform, error) {
+	c.opts = opts
+	if c.platformErr != nil {
+		return nil, c.platformErr
+	}
+	if platforms, ok := c.platformsToReturn[opts.Tag]; ok {
+		return platforms, nil
+	}
+	return []types.Platform{{OS: "linux", Architecture: "amd64"}}, nil
 }
 
 // ======== fake provider for testing =======
@@ -393,6 +407,84 @@ func TestWatchMultipleTags(t *testing.T) {
 		if det.latest != "5.0.0" {
 			t.Errorf("expected to find a tag set for multiple tags watch job")
 		}
+	}
+}
+
+func TestReportedLatestMajorTagSetSkipsArmCandidate(t *testing.T) {
+	img, _ := image.Parse("jellyfin/jellyfin:latest")
+	fp := &fakeProvider{images: []*types.TrackedImage{{
+		Image:   img,
+		Trigger: types.TriggerTypePoll,
+		Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
+		Platform: types.Platform{
+			OS:           "linux",
+			Architecture: "amd64",
+		},
+	}}}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+	registryClient := &fakeRegistryClient{platformsToReturn: map[string][]types.Platform{
+		"20240303.2-unstable-armhf": {{OS: "linux", Architecture: "arm", Variant: "v7"}},
+		"10.10.7":                   {{OS: "linux", Architecture: "amd64"}},
+	}}
+	job := NewWatchRepositoryTagsJob(providers, registryClient, &watchDetails{trackedImage: fp.images[0]})
+
+	events, err := job.computeEvents([]string{"latest", "10.10.7", "20240303.2-unstable-armhf"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Repository.Tag != "10.10.7" {
+		t.Fatalf("expected compatible update after skipping ARM candidate, got %#v", events)
+	}
+}
+
+func TestCandidateSelectionAcceptsMultiArchManifest(t *testing.T) {
+	img, _ := image.Parse("example/image:1.0.0")
+	fp := &fakeProvider{images: []*types.TrackedImage{{
+		Image:    img,
+		Trigger:  types.TriggerTypePoll,
+		Policy:   policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
+		Platform: types.Platform{OS: "linux", Architecture: "amd64"},
+	}}}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+	registryClient := &fakeRegistryClient{platformsToReturn: map[string][]types.Platform{
+		"2.0.0": {
+			{OS: "linux", Architecture: "arm64"},
+			{OS: "linux", Architecture: "amd64"},
+		},
+	}}
+	job := NewWatchRepositoryTagsJob(providers, registryClient, &watchDetails{trackedImage: fp.images[0]})
+
+	events, err := job.computeEvents([]string{"2.0.0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Repository.Tag != "2.0.0" {
+		t.Fatalf("expected multi-architecture update, got %#v", events)
+	}
+}
+
+func TestCandidateSelectionFailsClosedWhenPlatformResolutionFails(t *testing.T) {
+	img, _ := image.Parse("example/image:1.0.0")
+	fp := &fakeProvider{images: []*types.TrackedImage{{
+		Image:   img,
+		Trigger: types.TriggerTypePoll,
+		Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
+	}}}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+	job := NewWatchRepositoryTagsJob(providers, &fakeRegistryClient{platformErr: errors.New("no manifest metadata")}, &watchDetails{trackedImage: fp.images[0]})
+
+	events, err := job.computeEvents([]string{"2.0.0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 0 {
+		t.Fatalf("expected no unsafe update, got %#v", events)
 	}
 }
 
