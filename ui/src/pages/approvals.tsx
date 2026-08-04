@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Archive, Check, RefreshCw, ThumbsDown, Trash2 } from "lucide-react"
+import {
+  Archive,
+  Check,
+  EllipsisVertical,
+  RefreshCw,
+  ThumbsDown,
+  Trash2,
+} from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { deadline, formatDate } from "@/lib/format"
@@ -17,6 +24,12 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -113,6 +126,7 @@ export function ApprovalsPage() {
             </Button>
             <Button
               variant="outline"
+              className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
               disabled={!selectedApprovals.length}
               onClick={() =>
                 setPendingAction({
@@ -217,6 +231,8 @@ export function ApprovalsPage() {
                       <div className="flex gap-1">
                         <Button
                           size="icon-sm"
+                          variant="outline"
+                          className="border-emerald-500/30 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
                           disabled={complete}
                           onClick={() =>
                             setPendingAction({
@@ -242,32 +258,45 @@ export function ApprovalsPage() {
                         >
                           <ThumbsDown />
                         </Button>
-                        <Button
-                          size="icon-sm"
-                          disabled={item.archived}
-                          onClick={() =>
-                            setPendingAction({
-                              approvals: [item],
-                              action: "archive",
-                            })
-                          }
-                          title="Archive"
-                        >
-                          <Archive />
-                        </Button>
-                        <Button
-                          size="icon-sm"
-                          variant="outline"
-                          onClick={() =>
-                            setPendingAction({
-                              approvals: [item],
-                              action: "delete",
-                            })
-                          }
-                          title="Delete"
-                        >
-                          <Trash2 />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                size="icon-sm"
+                                variant="ghost"
+                                aria-label={`More actions for ${item.identifier}`}
+                              />
+                            }
+                          >
+                            <EllipsisVertical />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-36">
+                            <DropdownMenuItem
+                              disabled={item.archived}
+                              onClick={() =>
+                                setPendingAction({
+                                  approvals: [item],
+                                  action: "archive",
+                                })
+                              }
+                            >
+                              <Archive />
+                              Archive
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() =>
+                                setPendingAction({
+                                  approvals: [item],
+                                  action: "delete",
+                                })
+                              }
+                            >
+                              <Trash2 />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
