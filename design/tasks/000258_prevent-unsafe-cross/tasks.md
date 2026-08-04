@@ -3,7 +3,7 @@
 - [x] Replace every `runtime.GOOS`/`runtime.GOARCH` workload fallback with a Kubernetes-backed platform resolver and typed unresolved results.
 - [x] Add Node access/cache support and the minimum chart RBAC needed to read node OS/architecture metadata.
 - [x] Extract pod-template scheduling metadata for Deployment, StatefulSet, DaemonSet, and CronJob generic resources.
-- [ ] Resolve a conservative eligible-node platform set from node name, node selectors, required node affinity, pod OS, and actual owned-pod/node evidence.
+- [~] Resolve a conservative eligible-node platform set from node name, node selectors, required node affinity, pod OS, and actual owned-pod/node evidence.
 - [ ] Treat mixed eligible platforms as a set that candidates must fully support; fail closed with structured diagnostics when the set cannot be established.
 - [ ] Share the resolver/resource index with the Helm provider and map Helm releases/images to their owned Kubernetes workloads without inferring platform from values or Keel's runtime.
 - [ ] Preserve Docker/OCI single-manifest config resolution, Docker manifest-list and OCI index resolution, and candidate-resolution fail-closed behavior.
