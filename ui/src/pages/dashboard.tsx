@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { ChevronDown, Minus, Pause, Plus, RefreshCw } from "lucide-react"
+import {
+  EllipsisVertical,
+  Pause,
+  Play,
+  Radar,
+  RefreshCw,
+  ShieldCheck,
+  SlidersHorizontal,
+} from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
 import type { Approval, Resource, Stats } from "@/types"
@@ -18,10 +26,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import {
   EmptyRow,
   Table,
@@ -34,15 +43,32 @@ import {
 import { StatCard } from "@/components/stat-card"
 import { PageHeading } from "@/components/page-heading"
 
-type PolicyDialog = { resource: Resource; kind: "glob" | "regexp" } | null
+type ActionKind = "approvals" | "policy" | "pause"
+type ActionDialog = { resource: Resource; kind: ActionKind } | null
+
+const policyOptions = ["patch", "minor", "major", "all", "force"] as const
+const policyDescriptions: Record<string, string> = {
+  patch: "Only apply patch version updates, such as 1.2.3 to 1.2.4.",
+  minor:
+    "Apply minor and patch updates while staying on the current major version.",
+  major: "Allow major, minor, and patch version updates.",
+  all: "Apply any newer semantic version, including prereleases.",
+  force: "Apply updates even when the image tag is not a semantic version.",
+  glob: "Only apply image tags matching a wildcard pattern.",
+  regexp: "Only apply image tags matching an RE2 regular expression.",
+}
+
 export function DashboardPage() {
   const [resources, setResources] = useState<Resource[]>([])
   const [approvals, setApprovals] = useState<Approval[]>([])
   const [stats, setStats] = useState<Stats[]>([])
   const [filter, setFilter] = useState("")
   const [loading, setLoading] = useState(true)
-  const [policyDialog, setPolicyDialog] = useState<PolicyDialog>(null)
+  const [actionDialog, setActionDialog] = useState<ActionDialog>(null)
+  const [approvalInput, setApprovalInput] = useState("0")
+  const [policyChoice, setPolicyChoice] = useState("patch")
   const [policyInput, setPolicyInput] = useState("")
+  const [resumePolicy, setResumePolicy] = useState("patch")
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -115,18 +141,55 @@ export function DashboardPage() {
       `${resource.kind} ${resource.name} policy set to ${policy}`
     )
   }
-  function setApproval(resource: Resource, increase: boolean) {
-    const current = Number(resource.annotations?.["keel.sh/approvals"] || 0)
+  function setApproval(resource: Resource, votesRequired: number) {
     return mutate(
       () =>
         api.setApprovalCount({
           identifier: resource.identifier,
           provider: resource.provider,
-          votesRequired: increase ? current + 1 : Math.max(0, current - 1),
+          votesRequired,
         }),
-      `${resource.kind} ${resource.name} approvals updated`
+      `${resource.kind} ${resource.name} now requires ${votesRequired} approval${votesRequired === 1 ? "" : "s"}`
     )
   }
+
+  function openAction(resource: Resource, kind: ActionKind) {
+    setActionDialog({ resource, kind })
+    if (kind === "approvals") {
+      setApprovalInput(resource.annotations?.["keel.sh/approvals"] || "0")
+    }
+    if (kind === "policy") {
+      const [currentPolicy, ...pattern] = resource.policy.split(":")
+      const supported = [
+        ...policyOptions,
+        "glob",
+        "regexp",
+      ] as readonly string[]
+      setPolicyChoice(
+        supported.includes(currentPolicy) ? currentPolicy : "patch"
+      )
+      setPolicyInput(pattern.join(":"))
+    }
+    if (kind === "pause") {
+      setResumePolicy(
+        resource.policy !== "never" &&
+          policyOptions.includes(
+            resource.policy as (typeof policyOptions)[number]
+          )
+          ? resource.policy
+          : "patch"
+      )
+    }
+  }
+
+  function closeAction() {
+    setActionDialog(null)
+    setPolicyInput("")
+  }
+
+  const requestedApprovals = Number(approvalInput)
+  const approvalsValid =
+    Number.isInteger(requestedApprovals) && requestedApprovals >= 0
   return (
     <div className="grid gap-6">
       <PageHeading
@@ -198,7 +261,7 @@ export function DashboardPage() {
                 <TableHead>Approvals</TableHead>
                 <TableHead>Images</TableHead>
                 <TableHead>Keel Labels & Annotations</TableHead>
-                <TableHead>Controls</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -206,10 +269,8 @@ export function DashboardPage() {
                 <ResourceRow
                   key={resource.identifier}
                   resource={resource}
-                  setPolicy={setPolicy}
-                  setApproval={setApproval}
                   mutate={mutate}
-                  openPolicy={setPolicyDialog}
+                  openAction={openAction}
                 />
               ))}
               {!shown.length && (
@@ -221,60 +282,139 @@ export function DashboardPage() {
           </Table>
         </CardContent>
       </Card>
-      <Dialog
-        open={Boolean(policyDialog)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPolicyDialog(null)
-            setPolicyInput("")
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Set policy for {policyDialog?.resource.identifier}
-            </DialogTitle>
-            <DialogDescription>
-              {policyDialog?.kind === "glob"
-                ? "Use wildcards to match tags, for example build-*."
-                : "Use RE2 regular expressions to match versions."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex">
-            <span className="rounded-l-md border border-r-0 bg-muted px-3 py-2 text-sm">
-              {policyDialog?.kind}:
-            </span>
-            <Input
-              autoFocus
-              className="rounded-l-none"
-              placeholder={
-                policyDialog?.kind === "glob" ? "build-*" : "^([a-zA-Z]+)$"
-              }
-              value={policyInput}
-              onChange={(event) => setPolicyInput(event.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPolicyDialog(null)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (policyDialog)
-                  void setPolicy(
-                    policyDialog.resource,
-                    `${policyDialog.kind}:${policyInput}`
-                  )
-                setPolicyDialog(null)
-                setPolicyInput("")
-              }}
-              disabled={!policyInput}
-            >
-              Set policy
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+      <Dialog open={Boolean(actionDialog)} onOpenChange={closeAction}>
+        {actionDialog && (
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {actionDialog.kind === "approvals" &&
+                  "Adjust required approvals"}
+                {actionDialog.kind === "policy" && "Change update policy"}
+                {actionDialog.kind === "pause" &&
+                  (actionDialog.resource.policy === "never"
+                    ? "Resume updates"
+                    : "Pause updates")}
+              </DialogTitle>
+              <DialogDescription>
+                {actionDialog.kind === "approvals" &&
+                  "Require a specific number of votes before Keel applies an available update. Set this to zero to disable approval gating."}
+                {actionDialog.kind === "policy" &&
+                  "Choose which image version changes Keel may apply to this workload."}
+                {actionDialog.kind === "pause" &&
+                  (actionDialog.resource.policy === "never"
+                    ? "Choose the update policy Keel should use when automation resumes."
+                    : "Keel will stop applying image updates until this workload is resumed.")}
+              </DialogDescription>
+            </DialogHeader>
+
+            <p className="truncate rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              {actionDialog.resource.identifier}
+            </p>
+
+            {actionDialog.kind === "approvals" && (
+              <div className="grid gap-2">
+                <Label htmlFor="required-approvals">Required approvals</Label>
+                <Input
+                  id="required-approvals"
+                  autoFocus
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={approvalInput}
+                  onChange={(event) => setApprovalInput(event.target.value)}
+                />
+                {!approvalsValid && (
+                  <p className="text-xs text-destructive">
+                    Enter a whole number of zero or greater.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {actionDialog.kind === "policy" && (
+              <PolicyPicker
+                value={policyChoice}
+                onChange={setPolicyChoice}
+                pattern={policyInput}
+                onPatternChange={setPolicyInput}
+              />
+            )}
+
+            {actionDialog.kind === "pause" &&
+              actionDialog.resource.policy === "never" && (
+                <div className="grid gap-2">
+                  <Label>Resume with policy</Label>
+                  <PolicyButtons
+                    value={resumePolicy}
+                    onChange={setResumePolicy}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    You can configure glob or regular-expression policies from
+                    Change update policy after resuming.
+                  </p>
+                </div>
+              )}
+
+            {actionDialog.kind === "pause" &&
+              actionDialog.resource.policy !== "never" && (
+                <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                  Current policy:{" "}
+                  <strong>{actionDialog.resource.policy}</strong>
+                </div>
+              )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={closeAction}>
+                Cancel
+              </Button>
+              {actionDialog.kind === "approvals" && (
+                <Button
+                  disabled={!approvalsValid}
+                  onClick={() => {
+                    void setApproval(actionDialog.resource, requestedApprovals)
+                    closeAction()
+                  }}
+                >
+                  Save approvals
+                </Button>
+              )}
+              {actionDialog.kind === "policy" && (
+                <Button
+                  disabled={
+                    (policyChoice === "glob" || policyChoice === "regexp") &&
+                    !policyInput.trim()
+                  }
+                  onClick={() => {
+                    const nextPolicy =
+                      policyChoice === "glob" || policyChoice === "regexp"
+                        ? `${policyChoice}:${policyInput.trim()}`
+                        : policyChoice
+                    void setPolicy(actionDialog.resource, nextPolicy)
+                    closeAction()
+                  }}
+                >
+                  Save policy
+                </Button>
+              )}
+              {actionDialog.kind === "pause" && (
+                <Button
+                  onClick={() => {
+                    const paused = actionDialog.resource.policy === "never"
+                    void setPolicy(
+                      actionDialog.resource,
+                      paused ? resumePolicy : "never"
+                    )
+                    closeAction()
+                  }}
+                >
+                  {actionDialog.resource.policy === "never"
+                    ? "Resume updates"
+                    : "Pause updates"}
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        )}
       </Dialog>
     </div>
   )
@@ -282,16 +422,12 @@ export function DashboardPage() {
 
 function ResourceRow({
   resource,
-  setPolicy,
-  setApproval,
   mutate,
-  openPolicy,
+  openAction,
 }: {
   resource: Resource
-  setPolicy: (resource: Resource, policy: string) => Promise<void>
-  setApproval: (resource: Resource, increase: boolean) => Promise<void>
   mutate: (action: () => Promise<unknown>, success: string) => Promise<void>
-  openPolicy: (value: PolicyDialog) => void
+  openAction: (resource: Resource, kind: ActionKind) => void
 }) {
   const managed = resource.policy !== "nil policy"
   const available = resource.status?.availableReplicas || 0
@@ -348,76 +484,129 @@ function ResourceRow({
           ))}
         </div>
       </TableCell>
-      <TableCell>
-        <div className="flex min-w-72 items-center gap-1">
-          <Button
-            size="sm"
-            disabled={!managed}
-            onClick={() => void setPolicy(resource, "never")}
-          >
-            <Pause />
-            Pause
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger render={<Button size="sm" />}>
-              <span>Policy</span>
-              <ChevronDown />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {["patch", "minor", "major", "all", "force"].map((policy) => (
-                <DropdownMenuItem
-                  key={policy}
-                  onClick={() => void setPolicy(resource, policy)}
-                >
-                  {policy}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuItem
-                onClick={() => openPolicy({ resource, kind: "glob" })}
-              >
-                glob
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => openPolicy({ resource, kind: "regexp" })}
-              >
-                regexp
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            size="icon-sm"
-            onClick={() => void setApproval(resource, true)}
-            title="Increase required approvals"
-          >
-            <Plus />
-            <span className="sr-only">Increase required approvals</span>
-          </Button>
-          <Button
-            size="icon-sm"
-            onClick={() => void setApproval(resource, false)}
-            title="Decrease required approvals"
-          >
-            <Minus />
-            <span className="sr-only">Decrease required approvals</span>
-          </Button>
-          <Switch
-            aria-label={`Polling for ${resource.name}`}
-            checked={polling}
-            disabled={!managed}
-            onCheckedChange={(checked) =>
-              void mutate(
-                () =>
-                  api.setTracking({
-                    identifier: resource.identifier,
-                    provider: resource.provider,
-                    trigger: checked ? "poll" : "default",
-                  }),
-                `${resource.kind} ${resource.name} tracking updated`
-              )
+      <TableCell className="text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Actions for ${resource.kind} ${resource.name}`}
+              />
             }
-          />
-        </div>
+          >
+            <EllipsisVertical />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => openAction(resource, "policy")}>
+              <SlidersHorizontal />
+              Change update policy
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openAction(resource, "approvals")}>
+              <ShieldCheck />
+              Adjust required approvals
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={!managed}
+              onClick={() => openAction(resource, "pause")}
+            >
+              {resource.policy === "never" ? <Play /> : <Pause />}
+              {resource.policy === "never" ? "Resume updates" : "Pause updates"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              disabled={!managed}
+              onClick={() =>
+                void mutate(
+                  () =>
+                    api.setTracking({
+                      identifier: resource.identifier,
+                      provider: resource.provider,
+                      trigger: polling ? "default" : "poll",
+                    }),
+                  `${resource.kind} ${resource.name} registry polling ${polling ? "disabled" : "enabled"}`
+                )
+              }
+            >
+              <Radar />
+              {polling ? "Disable registry polling" : "Enable registry polling"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </TableCell>
     </TableRow>
+  )
+}
+
+function PolicyButtons({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {policyOptions.map((policy) => (
+        <Button
+          key={policy}
+          type="button"
+          variant={value === policy ? "default" : "outline"}
+          onClick={() => onChange(policy)}
+          className="capitalize"
+        >
+          {policy}
+        </Button>
+      ))}
+    </div>
+  )
+}
+
+function PolicyPicker({
+  value,
+  onChange,
+  pattern,
+  onPatternChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+  pattern: string
+  onPatternChange: (value: string) => void
+}) {
+  return (
+    <div className="grid gap-3">
+      <Label>Policy</Label>
+      <PolicyButtons value={value} onChange={onChange} />
+      <div className="grid grid-cols-2 gap-2">
+        {(["glob", "regexp"] as const).map((policy) => (
+          <Button
+            key={policy}
+            type="button"
+            variant={value === policy ? "default" : "outline"}
+            onClick={() => onChange(policy)}
+            className="capitalize"
+          >
+            {policy}
+          </Button>
+        ))}
+      </div>
+      <p className="text-xs leading-5 text-muted-foreground">
+        {policyDescriptions[value]}
+      </p>
+      {(value === "glob" || value === "regexp") && (
+        <div className="grid gap-2">
+          <Label htmlFor="policy-pattern">
+            {value === "glob" ? "Wildcard pattern" : "RE2 expression"}
+          </Label>
+          <Input
+            id="policy-pattern"
+            autoFocus
+            placeholder={value === "glob" ? "build-*" : "^([a-zA-Z]+)$"}
+            value={pattern}
+            onChange={(event) => onPatternChange(event.target.value)}
+          />
+        </div>
+      )}
+    </div>
   )
 }
