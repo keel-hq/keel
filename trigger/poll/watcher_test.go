@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/keel-hq/keel/approvals"
 	// "github.com/keel-hq/keel/cache/memory"
@@ -51,6 +52,11 @@ func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, erro
 func (c *fakeRegistryClient) Digest(opts registry.Opts) (digest string, err error) {
 	c.opts = opts
 	return c.digestToReturn, c.digestErrToReturn
+}
+
+func (c *fakeRegistryClient) CreatedAt(opts registry.Opts) (time.Time, error) {
+	c.opts = opts
+	return time.Now(), nil
 }
 
 // ======== fake provider for testing =======

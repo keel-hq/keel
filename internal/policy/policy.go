@@ -73,6 +73,16 @@ func GetPolicy(policyName string, options *Options) Policy {
 			return &NilPolicy{}
 		}
 		return p
+	case strings.HasPrefix(policyName, "newest:"):
+		p, err := NewNewestPolicy(policyName)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":  err,
+				"policy": policyName,
+			}).Error("failed to parse newest policy, check your deployment configuration")
+			return &NilPolicy{}
+		}
+		return p
 	}
 
 	switch policyName {

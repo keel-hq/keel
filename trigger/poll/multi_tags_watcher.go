@@ -1,6 +1,9 @@
 package poll
 
 import (
+	"sort"
+	"time"
+
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
@@ -101,6 +104,11 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 		// to calculate the tags here for each image.
 		filteredTags = trackedImage.Policy.Filter(tags)
 
+		// For newest policy, sort by image creation date instead of string comparison
+		if trackedImage.Policy.Type() == types.PolicyTypeNewest && len(filteredTags) > 1 {
+			filteredTags = j.sortByCreationDate(trackedImage, filteredTags)
+		}
+
 		for _, tag := range filteredTags {
 
 			update, err := trackedImage.Policy.ShouldUpdate(trackedImage.Image.Tag(), tag)
@@ -143,6 +151,57 @@ func exists(tag string, events []types.Event) bool {
 		}
 	}
 	return false
+}
+
+type tagWithDate struct {
+	tag       string
+	createdAt time.Time
+}
+
+func (j *WatchRepositoryTagsJob) sortByCreationDate(trackedImage *types.TrackedImage, tags []string) []string {
+	reg := trackedImage.Image.Scheme() + "://" + trackedImage.Image.Registry()
+	registryOpts := registry.Opts{
+		Registry: reg,
+		Name:     trackedImage.Image.ShortName(),
+	}
+
+	creds, err := credentialshelper.GetCredentials(trackedImage)
+	if err == nil {
+		registryOpts.Username = creds.Username
+		registryOpts.Password = creds.Password
+	}
+
+	var tagsWithDates []tagWithDate
+	for _, tag := range tags {
+		opts := registryOpts
+		opts.Tag = tag
+		createdAt, err := j.registryClient.CreatedAt(opts)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+				"tag":   tag,
+				"image": trackedImage.Image.Repository(),
+			}).Warn("trigger.poll.WatchRepositoryTagsJob: failed to get creation date, skipping tag")
+			continue
+		}
+		tagsWithDates = append(tagsWithDates, tagWithDate{tag: tag, createdAt: createdAt})
+	}
+
+	sort.Slice(tagsWithDates, func(i, j int) bool {
+		return tagsWithDates[i].createdAt.After(tagsWithDates[j].createdAt)
+	})
+
+	sorted := make([]string, len(tagsWithDates))
+	for i, t := range tagsWithDates {
+		sorted[i] = t.tag
+	}
+
+	log.WithFields(log.Fields{
+		"image":       trackedImage.Image.Repository(),
+		"sorted_tags": sorted,
+	}).Debug("trigger.poll.WatchRepositoryTagsJob: tags sorted by creation date")
+
+	return sorted
 }
 
 func getRelatedTrackedImages(ours *types.TrackedImage, all []*types.TrackedImage) []*types.TrackedImage {
