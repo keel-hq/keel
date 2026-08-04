@@ -41,8 +41,7 @@ describe("Approval row actions", () => {
     const moreActions = screen.getByRole("button", {
       name: `More actions for ${approval.identifier}`,
     })
-    moreActions.focus()
-    await user.keyboard("{Enter}")
+    await user.click(moreActions)
     await user.click(await screen.findByRole("menuitem", { name: "Archive" }))
     await user.click(screen.getByRole("button", { name: "Confirm" }))
 
