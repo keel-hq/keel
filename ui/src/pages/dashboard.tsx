@@ -41,7 +41,6 @@ import {
   TableRow,
 } from "@/components/data-table"
 import { StatCard } from "@/components/stat-card"
-import { PageHeading } from "@/components/page-heading"
 
 type ActionKind = "approvals" | "policy" | "pause"
 type ActionDialog = { resource: Resource; kind: ActionKind } | null
@@ -192,11 +191,6 @@ export function DashboardPage() {
     Number.isInteger(requestedApprovals) && requestedApprovals >= 0
   return (
     <div className="grid gap-6">
-      <PageHeading
-        title="Cluster overview"
-        description="Monitor workload health, update activity, policies, and approvals across your Kubernetes cluster."
-        eyebrow="Dashboard"
-      />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Cluster Resources"
