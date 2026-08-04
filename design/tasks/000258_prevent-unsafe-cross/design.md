@@ -77,3 +77,8 @@ Known registry limitations remain explicit: schema-v1 manifests and registries t
 ## Verification
 
 Run `gofmt` on all changed Go files; focused registry, poll, platform-resolver, Kubernetes, and Helm tests; `go test ./...`; the repository binary build and OpenAPI contract check; and the native k3s e2e path when used by the regression. Run repository lint/UI checks only as verification, without unrelated UI changes. Record baseline failures separately and report pre-fix versus post-fix selected tags and platform evidence.
+
+## Implementation Notes
+
+- The first revision removed the `runtime.GOOS`/`runtime.GOARCH` fallback from both Kubernetes tracking and polling compatibility. `TrackedImage` now carries a platform set plus a typed unresolved reason; an empty or unresolved set is skipped with a warning.
+- This sandbox currently has `CGO_ENABLED=0` and no C compiler. SQLite-backed polling tests wait in the existing SQL connector rather than reaching assertions. Compile-only polling checks and pure Kubernetes tests work on the host; executed polling/full-suite verification must use the repository's cgo-capable container path or another environment with a compiler.

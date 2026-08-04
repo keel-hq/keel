@@ -1,6 +1,6 @@
 # Implementation Tasks: Prevent Unsafe Cross-Platform Image Updates
 
-- [~] Replace every `runtime.GOOS`/`runtime.GOARCH` workload fallback with a Kubernetes-backed platform resolver and typed unresolved results.
+- [x] Replace every `runtime.GOOS`/`runtime.GOARCH` workload fallback with a Kubernetes-backed platform resolver and typed unresolved results.
 - [ ] Add Node access/cache support and the minimum chart RBAC needed to read node OS/architecture metadata.
 - [ ] Extract pod-template scheduling metadata for Deployment, StatefulSet, DaemonSet, and CronJob generic resources.
 - [ ] Resolve a conservative eligible-node platform set from node name, node selectors, required node affinity, pod OS, and actual owned-pod/node evidence.
