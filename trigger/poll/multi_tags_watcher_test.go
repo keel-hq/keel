@@ -72,8 +72,9 @@ func testRunHelper(testCases []runTestCase, availableTags []string, t *testing.T
 	for _, testCase := range testCases {
 		reference, _ := image.Parse("foo/bar:" + testCase.currentTag)
 		testImages = append(testImages, &types.TrackedImage{
-			Image:  reference,
-			Policy: testCase.bumpPolicy,
+			Image:   reference,
+			Trigger: types.TriggerTypePoll,
+			Policy:  testCase.bumpPolicy,
 		})
 	}
 	fp := &fakeProvider{
