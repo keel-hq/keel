@@ -163,11 +163,12 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 
 		if s.uiDir != "" {
 			// Serve static assets directly.
-			mux.PathPrefix("/css/").Handler(http.FileServer(http.Dir(s.uiDir)))
-			mux.PathPrefix("/assets/").Handler(http.FileServer(http.Dir(s.uiDir)))
-			mux.PathPrefix("/js/").Handler(http.FileServer(http.Dir(s.uiDir)))
-			mux.PathPrefix("/img/").Handler(http.FileServer(http.Dir(s.uiDir)))
-			mux.PathPrefix("/loading/").Handler(http.FileServer(http.Dir(s.uiDir)))
+			assets := staticAssetHandler(s.uiDir)
+			mux.PathPrefix("/css/").Handler(assets)
+			mux.PathPrefix("/assets/").Handler(assets)
+			mux.PathPrefix("/js/").Handler(assets)
+			mux.PathPrefix("/img/").Handler(assets)
+			mux.PathPrefix("/loading/").Handler(assets)
 
 			mux.PathPrefix("/").HandlerFunc(indexHandler(s.uiDir))
 		}
@@ -368,8 +369,17 @@ type APIResponse struct {
 
 func indexHandler(uiDir string) func(w http.ResponseWriter, r *http.Request) {
 	fn := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, uiDir+"/index.html")
 	}
 
 	return http.HandlerFunc(fn)
+}
+
+func staticAssetHandler(uiDir string) http.Handler {
+	files := http.FileServer(http.Dir(uiDir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		files.ServeHTTP(w, r)
+	})
 }

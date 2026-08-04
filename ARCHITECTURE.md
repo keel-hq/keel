@@ -62,7 +62,7 @@ Keel is a **Kubernetes deployment automation tool** written in Go. It watches co
 | `bot/` | **Chat bots** - Slack/HipChat for approvals | `bot.go`, `slack/`, `hipchat/` |
 | `registry/` | **Registry client** - Docker registry API | `registry.go` |
 | `secrets/` | **K8s secrets** - Extract registry credentials | `secrets.go` |
-| `ui/` | **Web dashboard** - Vue.js frontend | `src/` |
+| `ui/` | **Web dashboard** - React + shadcn frontend | `src/` |
 | `pkg/store/` | **Persistence** - SQLite database | `sql/` |
 | `pkg/auth/` | **Authentication** - Basic auth, JWT | |
 | `internal/k8s/` | **K8s utilities** - Watchers, resource cache | |
@@ -302,13 +302,13 @@ Test files follow Go convention: `*_test.go` alongside source files.
 
 ## Frontend (UI)
 
-The web dashboard is a Vue.js application in `ui/`:
+The web dashboard is a React, TypeScript, Vite, and shadcn application in `ui/`:
 
 ```bash
 cd ui
-yarn install
-yarn run serve  # Development
-yarn run build  # Production build
+npm ci
+npm run dev    # Development server; proxies /v1 to localhost:9300
+npm run build  # Static production build
 ```
 
 Built assets go to `ui/dist/`, served by Keel's HTTP server.

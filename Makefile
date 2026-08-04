@@ -86,7 +86,7 @@ arm: build-arm fetch-certs armhf aarch64
 
 test:
 	go install github.com/mfridman/tparse@latest
-	go test -json -v `go list ./... | egrep -v /tests` -cover | tparse -all -smallscreen
+	go test -json -v `go list ./... | egrep -v '(/tests$$|/ui/node_modules/)'` -cover | tparse -all -smallscreen
 
 build:
 	@echo "++ Building keel"
@@ -120,11 +120,10 @@ run:
 	keel --no-incluster --ui-dir ui/dist
 
 lint-ui:
-	cd ui && yarn 
-	yarn run lint --no-fix && yarn run build
+	cd ui && npm ci && npm run typecheck && npm run lint && npm test && npm run build
 
 run-ui:
-	cd ui && yarn run serve
+	cd ui && npm run dev
 
 build-ui:
 	docker build -t keelhq/keel:ui -f Dockerfile .

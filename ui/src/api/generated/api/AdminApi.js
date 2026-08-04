@@ -360,7 +360,7 @@ export default class AdminApi {
 
     /**
      * Update resource policy
-     * Updates the policy annotation for a Kubernetes resource. This route exists only when the authenticator is enabled.
+     * Updates the policy annotation for a Kubernetes resource. An empty policy removes the policy configuration. This route exists only when the authenticator is enabled.
      * @param {module:model/PkgHttpResourcePolicyUpdateRequest} body Policy update
      * @return {Promise} a {@link https://www.promisejs.org/|Promise}, with an object containing data of type {@link module:model/PkgHttpAPIResponse} and HTTP response
      */
@@ -393,7 +393,7 @@ export default class AdminApi {
 
     /**
      * Update resource policy
-     * Updates the policy annotation for a Kubernetes resource. This route exists only when the authenticator is enabled.
+     * Updates the policy annotation for a Kubernetes resource. An empty policy removes the policy configuration. This route exists only when the authenticator is enabled.
      * @param {module:model/PkgHttpResourcePolicyUpdateRequest} body Policy update
      * @return {Promise} a {@link https://www.promisejs.org/|Promise}, with data of type {@link module:model/PkgHttpAPIResponse}
      */

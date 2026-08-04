@@ -3,12 +3,12 @@ COPY . /go/src/github.com/keel-hq/keel
 WORKDIR /go/src/github.com/keel-hq/keel
 RUN make install-debug
 
-FROM node:16.20.2-alpine
+FROM node:24.11.0-alpine
 WORKDIR /app
+COPY ui/package.json ui/package-lock.json /app/
+RUN npm ci
 COPY ui /app
-RUN yarn
-RUN yarn run lint --no-fix
-RUN yarn run build
+RUN npm run typecheck && npm run lint && npm test && npm run build
 
 FROM golang:1.26.5
 

@@ -17,7 +17,7 @@ type ResourcePolicyUpdateRequest struct {
 
 // policyUpdateHandler changes a resource update policy.
 // @Summary Update resource policy
-// @Description Updates the policy annotation for a Kubernetes resource. This route exists only when the authenticator is enabled.
+// @Description Updates the policy annotation for a Kubernetes resource. An empty policy removes the policy configuration. This route exists only when the authenticator is enabled.
 // @Tags Admin
 // @ID updateResourcePolicy
 // @Accept json
@@ -54,10 +54,15 @@ func (s *TriggerServer) policyUpdateHandler(resp http.ResponseWriter, req *http.
 
 			labels := v.GetLabels()
 			delete(labels, types.KeelPolicyLabel)
+			delete(labels, "keel.observer/policy")
 			v.SetLabels(labels)
 
 			ann := v.GetAnnotations()
-			ann[types.KeelPolicyLabel] = policyRequest.Policy
+			delete(ann, types.KeelPolicyLabel)
+			delete(ann, "keel.observer/policy")
+			if policyRequest.Policy != "" {
+				ann[types.KeelPolicyLabel] = policyRequest.Policy
+			}
 
 			v.SetAnnotations(ann)
 
