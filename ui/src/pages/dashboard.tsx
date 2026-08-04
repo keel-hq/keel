@@ -56,6 +56,13 @@ const policyDescriptions: Record<string, string> = {
   glob: "Only apply image tags matching a wildcard pattern.",
   regexp: "Only apply image tags matching an RE2 regular expression.",
 }
+const policyExamples: Partial<Record<string, string>> = {
+  patch: "1.2.3 → 1.2.4",
+  minor: "1.2.3 → 1.3.0",
+  major: "1.2.3 → 2.0.0",
+  glob: "build-*",
+  regexp: String.raw`^v\d+\.\d+\.\d+$`,
+}
 
 export function DashboardPage() {
   const [resources, setResources] = useState<Resource[]>([])
@@ -548,16 +555,22 @@ function PolicyButtons({
   onChange: (value: string) => void
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid gap-2">
       {policyOptions.map((policy) => (
         <Button
           key={policy}
           type="button"
+          aria-label={policy}
           variant={value === policy ? "default" : "outline"}
           onClick={() => onChange(policy)}
-          className="capitalize"
+          className="h-10 w-full justify-between px-3 capitalize"
         >
-          {policy}
+          <span>{policy}</span>
+          {policyExamples[policy] && (
+            <span className="font-mono text-xs font-normal normal-case opacity-60">
+              {policyExamples[policy]}
+            </span>
+          )}
         </Button>
       ))}
     </div>
@@ -579,16 +592,20 @@ function PolicyPicker({
     <div className="grid gap-3">
       <Label>Policy</Label>
       <PolicyButtons value={value} onChange={onChange} />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid gap-2">
         {(["glob", "regexp"] as const).map((policy) => (
           <Button
             key={policy}
             type="button"
+            aria-label={policy}
             variant={value === policy ? "default" : "outline"}
             onClick={() => onChange(policy)}
-            className="capitalize"
+            className="h-10 w-full justify-between px-3 capitalize"
           >
-            {policy}
+            <span>{policy}</span>
+            <span className="font-mono text-xs font-normal normal-case opacity-60">
+              {policyExamples[policy]}
+            </span>
           </Button>
         ))}
       </div>
