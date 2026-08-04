@@ -11,7 +11,7 @@
 - [x] Keep policy filtering, ordering, comparison, tag spelling, webhook semantics, approval behavior, and unrelated registry/provider behavior unchanged.
 - [x] Add focused resolver tests for stable/legacy selectors, required-affinity operators/term semantics, conservative supersets, pod evidence, mixed nodes, empty/unavailable node metadata, and diagnostic reasons.
 - [x] Add Helm tests for one owned workload, multiple/mixed owned workloads, multi-arch compatibility, missing ownership mapping, and unresolved child workload platforms.
-- [ ] Retain focused registry tests for amd64, arm/v7, arm64, Docker manifest lists, OCI indexes, single-manifest configs, malformed/missing metadata, and media-type negotiation.
+- [~] Retain focused registry tests for amd64, arm/v7, arm64, Docker manifest lists, OCI indexes, single-manifest configs, malformed/missing metadata, and media-type negotiation.
 - [ ] Add polling tests proving issue #834's ARM-only candidate is skipped for amd64, the compatible next tag is selected, related mixed-platform workloads require a complete multi-arch candidate, and a per-tag metadata failure does not stop fallback evaluation.
 - [ ] Add a deterministic integration/e2e regression from isolated registry metadata through the real poll watcher and Kubernetes workload update selection, with separate issue-shape and mixed/multi-arch scenarios.
 - [ ] Capture before/after selected tags and require observable warnings for incompatible candidate, unresolved manifest, and unresolved workload-platform branches.
