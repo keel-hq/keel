@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react"
 import { Navigate, useLocation, useNavigate } from "react-router-dom"
-import { Anchor, ArrowRight, GitFork, LockKeyhole, User } from "lucide-react"
+import { ArrowRight, GitFork, LockKeyhole, User } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/auth"
+import { BrandLogo } from "@/components/brand-logo"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -42,9 +43,7 @@ export function LoginPage() {
       <div className="pointer-events-none absolute top-0 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-white/[.045] blur-[120px]" />
       <header className="absolute inset-x-0 top-0 z-10 flex h-20 items-center justify-between px-6 lg:px-10">
         <a href="/" className="flex items-center gap-2.5 font-semibold">
-          <span className="grid size-7 place-items-center rounded-md bg-white text-black">
-            <Anchor className="size-4" />
-          </span>
+          <BrandLogo className="size-9" />
           Keel
         </a>
         <a

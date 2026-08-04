@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { Link, NavLink, Outlet } from "react-router-dom"
 import {
-  Anchor,
   CheckSquare,
   ChevronRight,
   GitBranch,
@@ -11,6 +10,7 @@ import {
   ScrollText,
 } from "lucide-react"
 import { useAuth } from "@/auth"
+import { BrandLogo } from "@/components/brand-logo"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -59,9 +59,7 @@ export function AppLayout() {
           to="/dashboard"
           className="flex h-16 items-center gap-3 border-b border-white/10 px-5"
         >
-          <span className="grid size-7 place-items-center rounded-md border border-white/15 bg-white text-black">
-            <Anchor className="size-4" />
-          </span>
+          <BrandLogo className="size-8" />
           <span className="font-semibold tracking-tight">Keel</span>
           <span className="ml-auto rounded-full border border-white/10 px-2 py-0.5 text-[10px] tracking-wider text-muted-foreground uppercase">
             Console
@@ -100,9 +98,7 @@ export function AppLayout() {
                 className="w-60 border-white/10 bg-black p-0"
               >
                 <SheetTitle className="flex items-center gap-3 border-b border-white/10 p-5 text-left">
-                  <span className="grid size-7 place-items-center rounded-md bg-white text-black">
-                    <Anchor className="size-4" />
-                  </span>
+                  <BrandLogo className="size-8" />
                   Keel
                 </SheetTitle>
                 <div className="py-4">
