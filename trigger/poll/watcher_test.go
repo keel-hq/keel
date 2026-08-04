@@ -40,6 +40,7 @@ type fakeRegistryClient struct {
 	tagsToReturn []string
 
 	platformsToReturn map[string][]types.Platform
+	platformErrors    map[string]error
 	platformErr       error
 }
 
@@ -58,6 +59,9 @@ func (c *fakeRegistryClient) Digest(opts registry.Opts) (digest string, err erro
 
 func (c *fakeRegistryClient) Platforms(opts registry.Opts) ([]types.Platform, error) {
 	c.opts = opts
+	if err, ok := c.platformErrors[opts.Tag]; ok {
+		return nil, err
+	}
 	if c.platformErr != nil {
 		return nil, c.platformErr
 	}
@@ -485,6 +489,73 @@ func TestCandidateSelectionFailsClosedWhenPlatformResolutionFails(t *testing.T) 
 	}
 	if len(events) != 0 {
 		t.Fatalf("expected no unsafe update, got %#v", events)
+	}
+}
+
+func TestCandidateSelectionSupportsEveryRelatedWorkload(t *testing.T) {
+	amd64Image, _ := image.Parse("example/image:1.0.0")
+	arm64Image, _ := image.Parse("example/image:1.0.0")
+	majorPolicy := policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true)
+	fp := &fakeProvider{images: []*types.TrackedImage{
+		{
+			Image:    amd64Image,
+			Trigger:  types.TriggerTypePoll,
+			Policy:   majorPolicy,
+			Platform: types.Platform{OS: "linux", Architecture: "amd64"},
+		},
+		{
+			Image:    arm64Image,
+			Trigger:  types.TriggerTypePoll,
+			Policy:   majorPolicy,
+			Platform: types.Platform{OS: "linux", Architecture: "arm64"},
+		},
+	}}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+	registryClient := &fakeRegistryClient{platformsToReturn: map[string][]types.Platform{
+		"3.0.0": {{OS: "linux", Architecture: "amd64"}},
+		"2.0.0": {
+			{OS: "linux", Architecture: "amd64"},
+			{OS: "linux", Architecture: "arm64"},
+		},
+	}}
+	job := NewWatchRepositoryTagsJob(providers, registryClient, &watchDetails{trackedImage: fp.images[0]})
+
+	events, err := job.computeEvents([]string{"2.0.0", "3.0.0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Repository.Tag != "2.0.0" {
+		t.Fatalf("expected multi-architecture candidate for related workloads, got %#v", events)
+	}
+}
+
+func TestCandidateSelectionContinuesAfterPlatformResolutionFailure(t *testing.T) {
+	img, _ := image.Parse("example/image:1.0.0")
+	fp := &fakeProvider{images: []*types.TrackedImage{{
+		Image:    img,
+		Trigger:  types.TriggerTypePoll,
+		Policy:   policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
+		Platform: types.Platform{OS: "linux", Architecture: "amd64"},
+	}}}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+	registryClient := &fakeRegistryClient{
+		platformErrors: map[string]error{"3.0.0": errors.New("manifest metadata unavailable")},
+		platformsToReturn: map[string][]types.Platform{
+			"2.0.0": {{OS: "linux", Architecture: "amd64"}},
+		},
+	}
+	job := NewWatchRepositoryTagsJob(providers, registryClient, &watchDetails{trackedImage: fp.images[0]})
+
+	events, err := job.computeEvents([]string{"2.0.0", "3.0.0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Repository.Tag != "2.0.0" {
+		t.Fatalf("expected compatible fallback candidate, got %#v", events)
 	}
 }
 
