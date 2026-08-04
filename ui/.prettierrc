@@ -1,5 +1,11 @@
 {
-  "printWidth": 120,
+  "endOfLine": "lf",
   "semi": false,
-  "singleQuote": true
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 80,
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "tailwindStylesheet": "src/index.css",
+  "tailwindFunctions": ["cn", "cva"]
 }

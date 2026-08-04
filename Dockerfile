@@ -19,12 +19,12 @@ RUN git config --global --add safe.directory /go/src/github.com/keel-hq/keel && 
     -o /go/bin/keel ./cmd/keel
 
 ARG BUILDPLATFORM
-FROM --platform=$BUILDPLATFORM node:16.20.2-alpine AS yarn-build
+FROM --platform=$BUILDPLATFORM node:24.11.0-alpine AS ui-build
 WORKDIR /app
+COPY ui/package.json ui/package-lock.json /app/
+RUN npm ci
 COPY ui /app
-RUN yarn
-RUN yarn run lint --no-fix
-RUN yarn run build
+RUN npm run typecheck && npm run lint && npm test && npm run build
 
 FROM alpine:3.20.3
 ARG USERNAME=keel
@@ -38,7 +38,7 @@ RUN addgroup --gid $GROUP_ID $USERNAME \
     && mkdir -p /data && chown $USERNAME:0 /data && chmod g=u /data
 
 COPY --from=go-build /go/bin/keel /bin/keel
-COPY --from=yarn-build /app/dist /www
+COPY --from=ui-build /app/dist /www
 
 USER $USER_ID
 

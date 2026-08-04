@@ -42,21 +42,17 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "16"
-          cache: yarn
-          cache-dependency-path: ui/yarn.lock
+          node-version: "24.11.0"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
 
       - name: Install dependencies
         working-directory: ui
-        run: yarn
+        run: npm ci
 
-      - name: Lint
+      - name: Typecheck, lint, test, and build
         working-directory: ui
-        run: yarn run lint --no-fix
-
-      - name: Test generated API client
-        working-directory: ui
-        run: yarn run test:generated-api
+        run: npm run typecheck && npm run lint && npm test && npm run build
 
       - name: Check generated API artifacts
         run: make api-check
