@@ -8,7 +8,7 @@ export function PageHeading({
   eyebrow?: string
 }) {
   return (
-    <div className="flex flex-col gap-1 border-b border-white/10 pb-6">
+    <div className="flex flex-col gap-1 border-b border-border pb-6">
       <span className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
         {eyebrow || "Overview"}
       </span>

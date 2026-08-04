@@ -49,6 +49,7 @@
 }
 
 :root {
+    color-scheme: light;
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -84,6 +85,7 @@
 }
 
 .dark {
+    color-scheme: dark;
     --background: oklch(0 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.09 0 0);
@@ -120,6 +122,8 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-color: color-mix(in oklch, var(--foreground) 32%, transparent) var(--background);
+    scrollbar-width: thin;
     }
   body {
     @apply bg-background text-foreground antialiased;
@@ -131,13 +135,34 @@
 }
 
 ::selection {
-  background: rgba(255, 255, 255, 0.22);
+  background: color-mix(in oklch, var(--foreground) 22%, transparent);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: var(--background);
+}
+
+*::-webkit-scrollbar-thumb {
+  min-width: 36px;
+  border: 2px solid var(--background);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--foreground) 32%, transparent);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--foreground) 48%, transparent);
 }
 
 .keel-grid {
   background-image:
-    linear-gradient(to right, rgba(255,255,255,.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,.04) 1px, transparent 1px);
+    linear-gradient(to right, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: linear-gradient(to bottom, black 20%, transparent 85%);
 }

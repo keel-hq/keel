@@ -109,7 +109,7 @@ export function ApprovalsPage() {
         <StatCard title="Approved" value={approved} footer="Approved updates" />
         <StatCard title="Rejected" value={rejected} footer="Rejected updates" />
       </div>
-      <Card className="border-white/10 bg-card/60 shadow-none">
+      <Card className="border-border bg-card/60 shadow-none">
         <CardHeader className="gap-4">
           <CardTitle>Approvals</CardTitle>
           <div className="flex flex-wrap gap-2">

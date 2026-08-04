@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 import { LoginPage } from "@/pages/login"
+import { ThemeProvider } from "@/components/theme-provider"
 
 vi.mock("@/auth", () => ({ useAuth: () => ({ user: null, login: vi.fn() }) }))
 
@@ -9,7 +10,9 @@ describe("LoginPage", () => {
   it("renders the existing username and password authentication flow", () => {
     render(
       <MemoryRouter>
-        <LoginPage />
+        <ThemeProvider defaultTheme="dark">
+          <LoginPage />
+        </ThemeProvider>
       </MemoryRouter>
     )
     expect(
@@ -21,5 +24,24 @@ describe("LoginPage", () => {
       "password"
     )
     expect(screen.getByRole("button", { name: /continue/i })).toBeEnabled()
+  })
+
+  it("persists light and dark mode changes", () => {
+    render(
+      <MemoryRouter>
+        <ThemeProvider defaultTheme="dark">
+          <LoginPage />
+        </ThemeProvider>
+      </MemoryRouter>
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Switch to light mode" })
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Switch to dark mode" })
+    ).toBeInTheDocument()
+    expect(localStorage.getItem("theme")).toBe("light")
   })
 })

@@ -66,7 +66,7 @@ export function TrackedImagesPage() {
           footer="Distinct registries"
         />
       </div>
-      <Card className="border-white/10 bg-card/60 shadow-none">
+      <Card className="border-border bg-card/60 shadow-none">
         <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Tracked Images</CardTitle>
           <div className="flex gap-2">

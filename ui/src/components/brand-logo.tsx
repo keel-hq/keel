@@ -5,7 +5,7 @@ export function BrandLogo({ className }: { className?: string }) {
     <img
       src="/keel-logo.png"
       alt="Keel"
-      className={cn("object-contain brightness-0 invert", className)}
+      className={cn("object-contain brightness-0 dark:invert", className)}
     />
   )
 }

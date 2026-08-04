@@ -59,7 +59,7 @@ export function AuditLogsPage() {
           footer="Registry summary unavailable"
         />
       </div>
-      <Card className="border-white/10 bg-card/60 shadow-none">
+      <Card className="border-border bg-card/60 shadow-none">
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Audit Logs</CardTitle>
           <Button variant="outline" onClick={() => void load()}>

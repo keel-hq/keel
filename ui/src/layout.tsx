@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/auth"
 import { BrandLogo } from "@/components/brand-logo"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -37,7 +38,8 @@ function Navigation({ close }: { close?: () => void }) {
           className={({ isActive }) =>
             cn(
               "group flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground",
-              isActive && "bg-white text-black hover:bg-white hover:text-black"
+              isActive &&
+                "bg-foreground text-background hover:bg-foreground hover:text-background"
             )
           }
         >
@@ -53,15 +55,15 @@ export function AppLayout() {
   const { user, logout } = useAuth()
   const [open, setOpen] = useState(false)
   return (
-    <div className="min-h-svh bg-black">
-      <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-white/10 bg-sidebar md:block">
+    <div className="min-h-svh bg-background">
+      <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-border bg-sidebar md:block">
         <Link
           to="/dashboard"
-          className="flex h-16 items-center gap-3 border-b border-white/10 px-5"
+          className="flex h-16 items-center gap-3 border-b border-border px-5"
         >
           <BrandLogo className="size-8" />
           <span className="font-semibold tracking-tight">Keel</span>
-          <span className="ml-auto rounded-full border border-white/10 px-2 py-0.5 text-[10px] tracking-wider text-muted-foreground uppercase">
+          <span className="ml-auto rounded-full border border-border px-2 py-0.5 text-[10px] tracking-wider text-muted-foreground uppercase">
             Console
           </span>
         </Link>
@@ -71,7 +73,7 @@ export function AppLayout() {
           </p>
           <Navigation />
         </div>
-        <div className="absolute inset-x-3 bottom-4 rounded-lg border border-white/10 bg-white/[.025] p-3">
+        <div className="absolute inset-x-3 bottom-4 rounded-lg border border-border bg-muted/20 p-3">
           <div className="flex items-center gap-2 text-xs">
             <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.8)]" />
             <span>Keel connected</span>
@@ -82,7 +84,7 @@ export function AppLayout() {
         </div>
       </aside>
       <div className="md:pl-60">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-black/80 px-4 backdrop-blur-xl md:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
           <div className="flex items-center gap-3">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger
@@ -95,9 +97,9 @@ export function AppLayout() {
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-60 border-white/10 bg-black p-0"
+                className="w-60 border-border bg-background p-0"
               >
-                <SheetTitle className="flex items-center gap-3 border-b border-white/10 p-5 text-left">
+                <SheetTitle className="flex items-center gap-3 border-b border-border p-5 text-left">
                   <BrandLogo className="size-8" />
                   Keel
                 </SheetTitle>
@@ -114,10 +116,11 @@ export function AppLayout() {
             </div>
           </div>
           <div className="flex items-center gap-3 text-sm">
+            <ThemeToggle />
             <span className="hidden text-muted-foreground sm:inline">
               {user?.name || "admin"}
             </span>
-            <span className="grid size-7 place-items-center rounded-full border border-white/15 bg-white/5 text-[11px] font-medium">
+            <span className="grid size-7 place-items-center rounded-full border border-border bg-muted/40 text-[11px] font-medium">
               {(user?.name || "A").slice(0, 1).toUpperCase()}
             </span>
             <Button
