@@ -5,7 +5,7 @@
 - [x] Extract pod-template scheduling metadata for Deployment, StatefulSet, DaemonSet, and CronJob generic resources.
 - [x] Resolve a conservative eligible-node platform set from node name, node selectors, required node affinity, pod OS, and actual owned-pod/node evidence.
 - [x] Treat mixed eligible platforms as a set that candidates must fully support; fail closed with structured diagnostics when the set cannot be established.
-- [ ] Share the resolver/resource index with the Helm provider and map Helm releases/images to their owned Kubernetes workloads without inferring platform from values or Keel's runtime.
+- [~] Share the resolver/resource index with the Helm provider and map Helm releases/images to their owned Kubernetes workloads without inferring platform from values or Keel's runtime.
 - [ ] Preserve Docker/OCI single-manifest config resolution, Docker manifest-list and OCI index resolution, and candidate-resolution fail-closed behavior.
 - [ ] Carry compatibility evidence far enough into Kubernetes and Helm update selection to prevent an incompatible or stale polling event from being applied.
 - [ ] Keep policy filtering, ordering, comparison, tag spelling, webhook semantics, approval behavior, and unrelated registry/provider behavior unchanged.
