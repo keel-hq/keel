@@ -12,3 +12,5 @@ readme.md
 serviceaccount/*
 chart/*
 Dockerfile*
+.test/.runs
+.test/artifacts
