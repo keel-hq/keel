@@ -146,9 +146,12 @@ func exists(tag string, events []types.Event) bool {
 }
 
 func getRelatedTrackedImages(ours *types.TrackedImage, all []*types.TrackedImage) []*types.TrackedImage {
-	b := all[:0]
+	b := make([]*types.TrackedImage, 0, len(all))
 	for _, x := range all {
-		if getImageIdentifier(x.Image, x.Policy.KeepTag()) == getImageIdentifier(ours.Image, ours.Policy.KeepTag()) {
+		// A repository watcher may be shared, but webhook consumers must not
+		// influence the tag selected by its polling job.
+		if x.Trigger == types.TriggerTypePoll &&
+			getImageIdentifier(x.Image, x.Policy.KeepTag()) == getImageIdentifier(ours.Image, ours.Policy.KeepTag()) {
 			b = append(b, x)
 		}
 	}

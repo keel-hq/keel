@@ -282,7 +282,10 @@ seed_fixture_repositories() {
   for destination in \
     "${RUN_ID}/webhook:1.0.0" "${RUN_ID}/webhook:1.0.1" \
     "${RUN_ID}/polling:1.0.0" "${RUN_ID}/polling:1.0.1" \
-    "${RUN_ID}/negative:1.0.0" "${RUN_ID}/negative:1.1.0"; do
+    "${RUN_ID}/negative:1.0.0" "${RUN_ID}/negative:1.1.0" \
+    "${RUN_ID}/webhook-regression:main_0000000000000000000000000000000000000000" \
+    "${RUN_ID}/webhook-regression:main_1111111111111111111111111111111111111111" \
+    "${RUN_ID}/webhook-regression:main_ffffffffffffffffffffffffffffffffffffffff"; do
     ctr images tag "${FIXTURE_IMAGE}" "${REGISTRY_ADDRESS}/${destination}"
     ctr images push --plain-http "${REGISTRY_ADDRESS}/${destination}"
   done
