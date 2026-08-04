@@ -12,7 +12,7 @@
 - [x] Add focused resolver tests for stable/legacy selectors, required-affinity operators/term semantics, conservative supersets, pod evidence, mixed nodes, empty/unavailable node metadata, and diagnostic reasons.
 - [x] Add Helm tests for one owned workload, multiple/mixed owned workloads, multi-arch compatibility, missing ownership mapping, and unresolved child workload platforms.
 - [x] Retain focused registry tests for amd64, arm/v7, arm64, Docker manifest lists, OCI indexes, single-manifest configs, malformed/missing metadata, and media-type negotiation.
-- [~] Add polling tests proving issue #834's ARM-only candidate is skipped for amd64, the compatible next tag is selected, related mixed-platform workloads require a complete multi-arch candidate, and a per-tag metadata failure does not stop fallback evaluation.
+- [x] Add polling tests proving issue #834's ARM-only candidate is skipped for amd64, the compatible next tag is selected, related mixed-platform workloads require a complete multi-arch candidate, and a per-tag metadata failure does not stop fallback evaluation.
 - [ ] Add a deterministic integration/e2e regression from isolated registry metadata through the real poll watcher and Kubernetes workload update selection, with separate issue-shape and mixed/multi-arch scenarios.
 - [ ] Capture before/after selected tags and require observable warnings for incompatible candidate, unresolved manifest, and unresolved workload-platform branches.
 - [ ] Run `gofmt`, focused registry/poll/Kubernetes/Helm/resolver tests, `go test ./...`, repository build/OpenAPI checks, and the applicable native-k3s e2e and lint checks.
