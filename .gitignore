@@ -13,6 +13,8 @@ envsettings.ps1
 serviceaccount/*
 cmd/keel/keel.exe
 test_results.xml
+.test/.runs/
+.test/artifacts/
 
 # Swagger output is YAML-only; prevent accidental redundant artifacts.
 docs/docs.go

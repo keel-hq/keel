@@ -35,7 +35,10 @@ ARG TARGETARCH
 RUN apk --no-cache add ca-certificates
 RUN addgroup --gid $GROUP_ID $USERNAME \
     && adduser --home /data --ingroup $USERNAME --disabled-password --uid $USER_ID $USERNAME \
-    && mkdir -p /data && chown $USERNAME:0 /data && chmod g=u /data
+    && mkdir -p /data /run/secrets/kubernetes.io \
+    && chown $USERNAME:0 /data \
+    && chmod g=u /data \
+    && chmod 0755 /run/secrets /run/secrets/kubernetes.io
 
 COPY --from=go-build /go/bin/keel /bin/keel
 COPY --from=ui-build /app/dist /www

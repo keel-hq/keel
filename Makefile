@@ -112,8 +112,8 @@ alpha: image
 	@echo "++ Pushing keel alpha"
 	docker push keelhq/keel:alpha
 
-e2e: install
-	cd tests && go test
+e2e:
+	./.test/e2e-k3s.sh
 
 run:
 	go install github.com/keel-hq/keel/cmd/keel
