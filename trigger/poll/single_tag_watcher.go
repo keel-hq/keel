@@ -53,17 +53,20 @@ func (j *WatchTagJob) Run() {
 		return
 	}
 
+	j.details.mu.Lock()
+	currentStoredDigest := j.details.digest
 	log.WithFields(log.Fields{
-		"current_digest": j.details.digest,
+		"current_digest": currentStoredDigest,
 		"new_digest":     currentDigest,
 		"registry_url":   reg,
 		"image":          j.details.trackedImage.Image.String(),
 	}).Debug("trigger.poll.WatchTagJob: checking digest")
 
 	// checking whether image digest has changed
-	if j.details.digest != currentDigest {
+	if currentStoredDigest != currentDigest {
 		// updating digest
 		j.details.digest = currentDigest
+		j.details.mu.Unlock()
 
 		event := types.Event{
 			Repository: types.Repository{
@@ -87,6 +90,7 @@ func (j *WatchTagJob) Run() {
 				"error":      err,
 			}).Error("trigger.poll.WatchRepositoryTagsJob: error while submitting an event")
 		}
-
+	} else {
+		j.details.mu.Unlock()
 	}
 }

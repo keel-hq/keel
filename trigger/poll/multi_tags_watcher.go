@@ -32,21 +32,23 @@ func NewWatchRepositoryTagsJob(providers provider.Providers, registryClient regi
 
 // Run - main function to check schedule
 func (j *WatchRepositoryTagsJob) Run() {
-	j.details.mu.RLock()
-	defer j.details.mu.RUnlock()
-
 	reg := j.details.trackedImage.Image.Scheme() + "://" + j.details.trackedImage.Image.Registry()
+
+	j.details.mu.Lock()
 	if j.details.latest == "" {
 		j.details.latest = j.details.trackedImage.Image.Tag()
 	}
+	latestTag := j.details.latest
+	trackedImage := j.details.trackedImage
+	j.details.mu.Unlock()
 
 	registryOpts := registry.Opts{
 		Registry: reg,
-		Name:     j.details.trackedImage.Image.ShortName(),
-		Tag:      j.details.latest,
+		Name:     trackedImage.Image.ShortName(),
+		Tag:      latestTag,
 	}
 
-	creds, err := credentialshelper.GetCredentials(j.details.trackedImage)
+	creds, err := credentialshelper.GetCredentials(trackedImage)
 	if err == nil {
 		registryOpts.Username = creds.Username
 		registryOpts.Password = creds.Password
@@ -58,31 +60,31 @@ func (j *WatchRepositoryTagsJob) Run() {
 		log.WithFields(log.Fields{
 			"error":        err,
 			"registry_url": reg,
-			"image":        j.details.trackedImage.Image.String(),
+			"image":        trackedImage.Image.String(),
 		}).Error("trigger.poll.WatchRepositoryTagsJob: failed to get repository")
 		return
 	}
 
-	registriesScannedCounter.With(prometheus.Labels{"registry": j.details.trackedImage.Image.Registry(), "image": j.details.trackedImage.Image.Repository()}).Inc()
+	registriesScannedCounter.With(prometheus.Labels{"registry": trackedImage.Image.Registry(), "image": trackedImage.Image.Repository()}).Inc()
 
 	log.WithFields(log.Fields{
-		"current_tag":     j.details.trackedImage.Image.Tag(),
+		"current_tag":     trackedImage.Image.Tag(),
 		"repository_tags": repository.Tags,
-		"image_name":      j.details.trackedImage.Image.Remote(),
+		"image_name":      trackedImage.Image.Remote(),
 	}).Debug("trigger.poll.WatchRepositoryTagsJob: checking tags")
 
-	err = j.processTags(repository.Tags)
+	err = j.processTags(repository.Tags, trackedImage)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error":           err,
 			"repository_tags": repository.Tags,
-			"image":           j.details.trackedImage.Image.String(),
+			"image":           trackedImage.Image.String(),
 		}).Error("trigger.poll.WatchRepositoryTagsJob: failed to process tags")
 		return
 	}
 }
 
-func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, error) {
+func (j *WatchRepositoryTagsJob) computeEvents(tags []string, trackedImage *types.TrackedImage) ([]types.Event, error) {
 	trackedImages, err := j.providers.TrackedImages()
 	if err != nil {
 		return nil, err
@@ -91,7 +93,7 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 	events := []types.Event{}
 
 	// This contains all tracked images that share the same imageIdentifier and thus, the same watcher
-	allRelatedTrackedImages := getRelatedTrackedImages(j.details.trackedImage, trackedImages)
+	allRelatedTrackedImages := getRelatedTrackedImages(trackedImage, trackedImages)
 
 	for _, trackedImage := range allRelatedTrackedImages {
 
@@ -129,8 +131,8 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 	}
 
 	log.WithFields(log.Fields{
-		"current_tag": j.details.trackedImage.Image.Tag(),
-		"image_name":  j.details.trackedImage.Image.Remote(),
+		"current_tag": trackedImage.Image.Tag(),
+		"image_name":  trackedImage.Image.Remote(),
 	}).Debug("trigger.poll.WatchRepositoryTagsJob: events: ", events)
 
 	return events, nil
@@ -155,9 +157,9 @@ func getRelatedTrackedImages(ours *types.TrackedImage, all []*types.TrackedImage
 	return b
 }
 
-func (j *WatchRepositoryTagsJob) processTags(tags []string) error {
+func (j *WatchRepositoryTagsJob) processTags(tags []string, trackedImage *types.TrackedImage) error {
 
-	events, err := j.computeEvents(tags)
+	events, err := j.computeEvents(tags, trackedImage)
 	if err != nil {
 		return err
 	}
@@ -165,7 +167,7 @@ func (j *WatchRepositoryTagsJob) processTags(tags []string) error {
 		err = j.providers.Submit(e)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"repository": j.details.trackedImage.Image.Repository(),
+				"repository": trackedImage.Image.Repository(),
 				"new_tag":    e.Repository.Tag,
 				"error":      err,
 			}).Error("trigger.poll.WatchRepositoryTagsJob: error while submitting an event")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/keel-hq/keel/approvals"
@@ -14,6 +15,7 @@ import (
 	"github.com/keel-hq/keel/registry"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
+	"github.com/rusenask/cron"
 )
 
 func mustParse(img string, schedule string) *types.TrackedImage {
@@ -627,5 +629,136 @@ func TestUnwatchAfterNotTrackedAnymore(t *testing.T) {
 
 	if len(watcher.watched) != 3 {
 		t.Errorf("expected to find watching 3 entries, found: %d", len(watcher.watched))
+	}
+}
+
+func TestConcurrentWatchTagJob(t *testing.T) {
+	fp := &fakeProvider{}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	frc := &fakeRegistryClient{
+		digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
+	}
+
+	reference, _ := image.Parse("foo/bar:1.1")
+
+	details := &watchDetails{
+		trackedImage: &types.TrackedImage{
+			Image: reference,
+		},
+		digest: "sha256:123123123",
+	}
+
+	job := NewWatchTagJob(providers, frc, details)
+
+	// Run multiple jobs concurrently to test for race conditions
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			job.Run()
+		}()
+	}
+	wg.Wait()
+
+	// Check that the digest was updated correctly (should be the same value)
+	if job.details.digest != frc.digestToReturn {
+		t.Errorf("expected digest %s, got %s", frc.digestToReturn, job.details.digest)
+	}
+}
+
+func TestPollScheduleSecondsSupport(t *testing.T) {
+	// Test various seconds-based schedules by directly testing the parsing
+	testCases := []struct {
+		name     string
+		schedule string
+		shouldPass bool
+	}{
+		{"30 seconds", "@every 30s", true},
+		{"10 seconds", "@every 10s", true},
+		{"5 seconds", "@every 5s", true},
+		{"1 second", "@every 1s", true},
+		{"2 minutes", "@every 2m", true},
+		{"1 minute", "@every 1m", true},
+		{"invalid format", "invalid", false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := cron.Parse(tc.schedule)
+			if tc.shouldPass && err != nil {
+				t.Errorf("Expected schedule '%s' to parse successfully, but got error: %v", tc.schedule, err)
+			} else if !tc.shouldPass && err == nil {
+				t.Errorf("Expected schedule '%s' to fail parsing, but it succeeded", tc.schedule)
+			}
+		})
+	}
+}
+
+func TestPollScheduleSecondsIntegration(t *testing.T) {
+	fp := &fakeProvider{}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	providers := provider.New([]provider.Provider{fp}, am)
+	watcher := NewRepositoryWatcher(providers, &fakeRegistryClient{})
+
+	// Test that seconds schedules work in the full watcher system
+	reference, _ := image.Parse("nginx:latest")
+	pol := policy.NewForcePolicy(false)
+
+	ti := &types.TrackedImage{
+		Image:        reference,
+		Trigger:      types.TriggerTypePoll,
+		PollSchedule: "@every 30s", // This should work
+		Policy:       pol,
+	}
+
+	// This should not return an error if seconds are supported
+	err := watcher.Watch(ti)
+	if err != nil {
+		t.Errorf("Failed to watch image with seconds schedule: %v", err)
+	}
+
+	// Clean up - remove the watcher
+	watcher.Unwatch(getImageIdentifier(reference, pol.KeepTag()))
+}
+
+func TestPollScheduleCronParsing(t *testing.T) {
+	// Test that cron parsing works for various formats
+	testCases := []struct {
+		name     string
+		schedule string
+		shouldPass bool
+	}{
+		{"30 seconds", "@every 30s", true},
+		{"10 seconds", "@every 10s", true},
+		{"5 seconds", "@every 5s", true},
+		{"1 second", "@every 1s", true},
+		{"2 minutes", "@every 2m", true},
+		{"1 minute", "@every 1m", true},
+		{"invalid format", "invalid", false},
+		{"standard cron", "0 * * * *", true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := cron.Parse(tc.schedule)
+			if tc.shouldPass && err != nil {
+				t.Errorf("Expected schedule '%s' to parse successfully, but got error: %v", tc.schedule, err)
+			} else if !tc.shouldPass && err == nil {
+				t.Errorf("Expected schedule '%s' to fail parsing, but it succeeded", tc.schedule)
+			}
+		})
 	}
 }
