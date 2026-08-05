@@ -8,6 +8,8 @@ import (
 	apps_v1 "k8s.io/api/apps/v1"
 	batch_v1 "k8s.io/api/batch/v1"
 	core_v1 "k8s.io/api/core/v1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // GenericResource - generic resource,
@@ -264,6 +266,62 @@ func (r *GenericResource) GetImagePullSecrets() (secrets []string) {
 		return getImagePullSecrets(obj.Spec.JobTemplate.Spec.Template.Spec.ImagePullSecrets)
 	}
 	return
+}
+
+// GetNodeSelector returns the pod template's node selector.
+func (r *GenericResource) GetNodeSelector() map[string]string {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		return obj.Spec.Template.Spec.NodeSelector
+	case *apps_v1.StatefulSet:
+		return obj.Spec.Template.Spec.NodeSelector
+	case *apps_v1.DaemonSet:
+		return obj.Spec.Template.Spec.NodeSelector
+	case *batch_v1.CronJob:
+		return obj.Spec.JobTemplate.Spec.Template.Spec.NodeSelector
+	}
+	return nil
+}
+
+// GetPodSpec returns the workload pod template spec.
+func (r *GenericResource) GetPodSpec() *core_v1.PodSpec {
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		return &obj.Spec.Template.Spec
+	case *apps_v1.StatefulSet:
+		return &obj.Spec.Template.Spec
+	case *apps_v1.DaemonSet:
+		return &obj.Spec.Template.Spec
+	case *batch_v1.CronJob:
+		return &obj.Spec.JobTemplate.Spec.Template.Spec
+	}
+	return nil
+}
+
+// GetPodSelector returns a selector for pods created from the workload template.
+func (r *GenericResource) GetPodSelector() (string, bool) {
+	var selector *meta_v1.LabelSelector
+	switch obj := r.obj.(type) {
+	case *apps_v1.Deployment:
+		selector = obj.Spec.Selector
+	case *apps_v1.StatefulSet:
+		selector = obj.Spec.Selector
+	case *apps_v1.DaemonSet:
+		selector = obj.Spec.Selector
+	case *batch_v1.CronJob:
+		if len(obj.Spec.JobTemplate.Spec.Template.Labels) == 0 {
+			return "", false
+		}
+		return labels.Set(obj.Spec.JobTemplate.Spec.Template.Labels).String(), true
+	}
+	if selector == nil {
+		return "", false
+	}
+	parsed, err := meta_v1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return "", false
+	}
+	return parsed.String(), true
 }
 
 // GetImages - returns images used by this resource

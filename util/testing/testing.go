@@ -16,6 +16,7 @@ import (
 // FakeK8sImplementer - fake implementer used for testing
 type FakeK8sImplementer struct {
 	NamespacesList   *v1.NamespaceList
+	NodesList        *v1.NodeList
 	DeploymentSingle *apps_v1.Deployment
 	DeploymentList   *apps_v1.DeploymentList
 
@@ -34,6 +35,11 @@ type FakeK8sImplementer struct {
 // Namespaces - available namespaces
 func (i *FakeK8sImplementer) Namespaces() (*v1.NamespaceList, error) {
 	return i.NamespacesList, nil
+}
+
+// Nodes - available nodes
+func (i *FakeK8sImplementer) Nodes() (*v1.NodeList, error) {
+	return i.NodesList, nil
 }
 
 // Deployment - available deployment, doesn't filter anything

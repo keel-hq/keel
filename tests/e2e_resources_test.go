@@ -73,6 +73,7 @@ func createKeelResources(ctx context.Context, client kubernetes.Interface, cfg e
 				ObjectMeta: metav1.ObjectMeta{Name: "keel-e2e-" + cfg.runID, Labels: labels},
 				Rules: []rbacv1.PolicyRule{
 					{APIGroups: []string{""}, Resources: []string{"namespaces"}, Verbs: []string{"list", "watch"}},
+					{APIGroups: []string{""}, Resources: []string{"nodes"}, Verbs: []string{"get", "list", "watch"}},
 					{APIGroups: []string{""}, Resources: []string{"secrets"}, Verbs: []string{"get", "list", "watch"}},
 					{APIGroups: []string{"", "apps", "batch"}, Resources: []string{"pods", "replicasets", "replicationcontrollers", "statefulsets", "deployments", "daemonsets", "jobs", "cronjobs"}, Verbs: []string{"get", "delete", "list", "update", "watch"}},
 				},

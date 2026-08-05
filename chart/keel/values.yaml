@@ -213,7 +213,9 @@ rbac:
         - ""
       resources:
         - namespaces
+        - nodes
       verbs:
+        - get
         - watch
         - list
     - apiGroups:
