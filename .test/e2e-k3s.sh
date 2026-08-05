@@ -660,7 +660,7 @@ delete_suite_resources() {
   env K3S_DATA_DIR="${K3S_CLIENT_DATA_DIR}" \
     "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG}" delete \
     namespaces,clusterroles,clusterrolebindings \
-    --selector "keel.sh/e2e-run=${RUN_ID}" --ignore-not-found --wait=true \
+    --selector "keel.sh/e2e-run=${RUN_ID}" --ignore-not-found --wait=true --timeout=60s \
     >/dev/null 2>&1 || true
 }
 
@@ -686,9 +686,13 @@ stop_oauth_port_forward() {
 }
 
 cleanup() {
+  local exit_status=$?
   ((CLEANUP_STARTED == 0)) || return 0
   CLEANUP_STARTED=1
-  collect_diagnostics
+  if ((exit_status != 0)); then
+    log "collecting diagnostics after exit status ${exit_status}"
+    collect_diagnostics
+  fi
   stop_release_port_forward
   delete_suite_resources
   stop_port_forward

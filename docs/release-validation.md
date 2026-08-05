@@ -61,7 +61,7 @@ CI runs the packaged release scenarios and the behavioral suite in parallel k3s 
 
 ## Diagnostics and failure recovery
 
-Failures retain `.test/artifacts/<run>/` locally and upload it in CI only on failure. The bundle includes Helm status/history/values/manifest, Kubernetes objects and events, Pod descriptions and current/previous logs, registry logs, k3s/containerd logs, rendered chart output, chart archive metadata/checksum, image inspection, and embedded version output. It deliberately excludes Secrets, kubeconfig contents, tokens, and environment dumps.
+Failures retain `.test/artifacts/<run>/` locally and upload it in CI only on failure. The bundle includes Helm status/history/values/manifest, Kubernetes objects and events, Pod descriptions and current/previous logs, registry logs, k3s/containerd logs, rendered chart output, chart archive metadata/checksum, image inspection, and embedded version output. Expensive live-cluster diagnostics are collected only after a failure; successful runs proceed directly to bounded resource teardown. It deliberately excludes Secrets, kubeconfig contents, tokens, and environment dumps.
 
 The public release paths are not transactionally atomic. Application architecture digests become public before their manifest tag; chart-releaser creates a GitHub release asset and updates the Pages index in separate remote operations. On failure, do not retag or overwrite. Inspect the workflow logs and public state, leave orphaned content-addressed blobs alone, correct the source, and use a new version. A successful Helm rollback is:
 
