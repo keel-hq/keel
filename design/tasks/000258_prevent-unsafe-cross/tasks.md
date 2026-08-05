@@ -19,4 +19,4 @@
 - [x] Review the final diff for runtime-platform assumptions, tag-name heuristics, overbroad RBAC, unsafe ambiguity handling, policy regressions, mutable external fixtures, and unrelated dependency/UI work.
 - [x] Commit and push the revised implementation branch; do not create a PR until all revision requirements and verification evidence are complete.
 - [x] Fix PR #873 API-generation CI failure by keeping polling platform evidence out of the public Swagger model, verify, and push.
-- [~] Enable the native k3s end-to-end job as a required CI dependency on pull requests and verify PR #873 runs it.
+- [x] Enable the native k3s end-to-end job as a required CI dependency on pull requests and verify PR #873 runs it.
