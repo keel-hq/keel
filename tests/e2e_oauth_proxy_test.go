@@ -109,7 +109,7 @@ func oauthKeelDeployment(cfg e2eConfig, labels map[string]string) *appsv1.Deploy
 				{Name: "oauth2-proxy", Image: oauthProxyImage, Args: []string{
 					"--http-address=0.0.0.0:4180", "--upstream=http://127.0.0.1:9300", "--provider=oidc", "--oidc-issuer-url=http://" + dexServiceIP + ":5556/dex",
 					"--client-id=keel-e2e", "--client-secret=keel-e2e-secret", "--redirect-url=" + oauthProxyURL + "/oauth2/callback", "--cookie-secret=0123456789abcdef0123456789abcdef",
-					"--cookie-secure=false", "--email-domain=*", "--scope=openid profile email", "--skip-provider-button=true", "--code-challenge-method=S256", "--reverse-proxy=true", "--set-xauthrequest=true", "--pass-user-headers=true",
+					"--cookie-secure=false", "--cookie-csrf-expire=8h", "--email-domain=*", "--scope=openid profile email", "--skip-provider-button=true", "--code-challenge-method=S256", "--reverse-proxy=true", "--set-xauthrequest=true", "--pass-user-headers=true",
 					"--prefer-email-to-user=true",
 				}, Ports: []corev1.ContainerPort{{Name: "oauth", ContainerPort: 4180}}, ReadinessProbe: &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/ready", Port: intstr.FromString("oauth")}}, PeriodSeconds: 1, FailureThreshold: 60}, Resources: resources},
 			}}},
