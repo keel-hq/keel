@@ -420,11 +420,18 @@ validate_packaged_release() {
   [[ -n "${KEEL_E2E_RELEASE_CHART:-}" ]] || return 0
   [[ -x "${KEEL_E2E_HELM_BIN:-}" ]] || fail "release validation requires a pinned Helm binary"
   [[ -s "${KEEL_E2E_RELEASE_CHART}" ]] || fail "packaged chart not found: ${KEEL_E2E_RELEASE_CHART}"
+  local release_scenario="${KEEL_E2E_RELEASE_SCENARIO:-all}"
   local candidate_repository="${REGISTRY_ADDRESS}/keel-under-test"
   local candidate_version="${KEEL_E2E_APP_VERSION}"
   local prior_archive="${RUN_DIR}/keel-v1.0.5.tgz"
   local pvc_uid
 
+  case "${release_scenario}" in
+    all|install|upgrade) ;;
+    *) fail "KEEL_E2E_RELEASE_SCENARIO must be all, install, or upgrade" ;;
+  esac
+
+  if [[ "${release_scenario}" != "upgrade" ]]; then
   log "installing packaged chart with backward-compatible defaults"
   release_helm install keel "${KEEL_E2E_RELEASE_CHART}" --namespace "${RELEASE_NAMESPACE}" --create-namespace \
     --set-string image.repository="${candidate_repository}" --set-string image.tag="${RUN_ID}" \
@@ -456,6 +463,12 @@ validate_packaged_release() {
   assert_oauth_candidate_objects
   smoke_oauth_release_service
   uninstall_release
+
+  if [[ "${release_scenario}" == "install" ]]; then
+    log "packaged default and OAuth-proxy chart installs succeeded"
+    return 0
+  fi
+  fi
 
   log "installing immutable published chart/image upgrade fixture"
   curl --fail --location --show-error --silent --output "${prior_archive}" "${PRIOR_CHART_URL}"

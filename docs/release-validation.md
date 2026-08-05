@@ -57,7 +57,7 @@ The release validator uses the packaged `.tgz`, not source templates. It perform
 5. Roll back to revision 1, require the prior version through the Service, verify the PVC is still preserved, uninstall, delete the namespace, and check for leaked global RBAC.
 6. Run meaningful Keel behavior checks against the same candidate image: registry webhook update, polling update, negative policy cases, the external OAuth-proxy Admin flow, and the existing regression scenarios.
 
-CI runs the packaged release scenarios and the behavioral suite in parallel k3s jobs so each stays within the bounded hosted-runner window. Both jobs must pass before any image publication job can start. Local `make release-validate` continues to run the complete sequence in one disposable cluster; `KEEL_E2E_RELEASE_ONLY=true` is reserved for the CI release-install shard.
+CI runs packaged default/OAuth installs, published-version upgrade/rollback, and the behavioral suite as parallel k3s shards so each stays within the bounded hosted-runner window. Every shard must pass before any image publication job can start. Local `make release-validate` continues to run the complete sequence in one disposable cluster; `KEEL_E2E_RELEASE_ONLY=true` and `KEEL_E2E_RELEASE_SCENARIO` are reserved for the CI release shards.
 
 ## Diagnostics and failure recovery
 

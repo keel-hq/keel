@@ -65,11 +65,15 @@ jobs:
         run: make api-check
 
   release-e2e:
-    name: Release Install and Upgrade (k3s)
+    name: Release ${{ matrix.scenario }} (k3s)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [install, upgrade]
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -82,13 +86,14 @@ jobs:
       - name: Validate release package in k3s
         env:
           KEEL_E2E_RELEASE_ONLY: "true"
+          KEEL_E2E_RELEASE_SCENARIO: ${{ matrix.scenario }}
         run: make release-validate
 
       - name: Upload release diagnostics
         if: failure() || cancelled()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: keel-release-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          name: keel-release-${{ matrix.scenario }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .test/artifacts/
           if-no-files-found: warn
           retention-days: 7
