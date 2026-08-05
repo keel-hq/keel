@@ -3,6 +3,10 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ApprovalsPage } from "@/pages/approvals"
 
+vi.mock("@/auth", () => ({
+  useAuth: () => ({ user: { name: "admin-web-ui" } }),
+}))
+
 const apiMock = vi.hoisted(() => ({
   approvals: vi.fn(),
   updateApproval: vi.fn(),

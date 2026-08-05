@@ -11,11 +11,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export function LoginPage() {
-  const { user, login } = useAuth()
+  const { user, loading, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
+  if (loading)
+    return (
+      <div className="grid min-h-svh place-items-center text-sm text-muted-foreground">
+        Loading Keel…
+      </div>
+    )
   if (user) return <Navigate to="/dashboard" replace />
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

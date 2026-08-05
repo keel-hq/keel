@@ -149,6 +149,33 @@ basicauth:
   user: ""
   password: ""
 
+# Administrator authentication mode. "legacy" preserves the historical behavior:
+# the Admin UI/API exist only when basicauth is enabled. "external-proxy" is an
+# explicit trust boundary and must be used with the oauth2-proxy sidecar below.
+auth:
+  mode: legacy
+  proxyUserHeader: X-Forwarded-User
+  proxyLogoutURL: /oauth2/sign_out?rd=/
+
+oauth2Proxy:
+  enabled: false
+  image:
+    repository: quay.io/oauth2-proxy/oauth2-proxy
+    # Pinned multi-architecture image index for v7.8.1.
+    digest: sha256:d62e2d81c6f5048f652f67c302083be1272c181b971fad80e5a30ebe2b8b75d8
+    pullPolicy: IfNotPresent
+  # Secret keys must use oauth2-proxy environment names, including
+  # OAUTH2_PROXY_CLIENT_ID, OAUTH2_PROXY_CLIENT_SECRET, and OAUTH2_PROXY_COOKIE_SECRET.
+  existingSecret: ""
+  extraArgs: []
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
 # Keel service
 # Enable to receive webhooks from Docker registries
 service:

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
+	"unicode"
 
 	request "github.com/golang-jwt/jwt/v4/request"
 	"github.com/keel-hq/keel/pkg/auth"
@@ -29,6 +31,18 @@ func (s *TriggerServer) requireAdminAuthorization(next http.HandlerFunc) http.Ha
 		//
 		if r.Method == "OPTIONS" {
 			rw.WriteHeader(200)
+			return
+		}
+
+		if s.authMode == auth.ModeExternalProxy {
+			username := strings.TrimSpace(r.Header.Get(s.authProxyUserHeader))
+			if !validProxyIdentity(username) {
+				log.WithField("header", s.authProxyUserHeader).Warn("external authentication proxy request is missing a valid identity header")
+				http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
+			r = auth.SetAuthenticationDetails(r, &auth.User{Username: username})
+			next(rw, r)
 			return
 		}
 
@@ -75,6 +89,18 @@ func (s *TriggerServer) requireAdminAuthorization(next http.HandlerFunc) http.Ha
 
 		next(rw, r)
 	}
+}
+
+func validProxyIdentity(username string) bool {
+	if username == "" || len(username) > 256 {
+		return false
+	}
+	for _, r := range username {
+		if unicode.IsControl(r) {
+			return false
+		}
+	}
+	return true
 }
 
 func extractToken(req *http.Request) string {

@@ -458,6 +458,8 @@ definitions:
     type: object
   pkg_http.UserInfo:
     properties:
+      auth_mode:
+        type: string
       avatar:
         type: string
       id:
@@ -466,6 +468,8 @@ definitions:
         type: string
       last_login_time:
         type: integer
+      logout_url:
+        type: string
       name:
         type: string
       role_id:

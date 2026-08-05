@@ -18,7 +18,7 @@ interface AuthValue {
 const AuthContext = createContext<AuthValue | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserInfo | null>(null)
-  const [loading, setLoading] = useState(Boolean(tokenStore.get()))
+  const [loading, setLoading] = useState(true)
   const clear = useCallback(() => {
     tokenStore.clear()
     setUser(null)
@@ -27,12 +27,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unauthorized = () => clear()
     window.addEventListener("keel:unauthorized", unauthorized)
-    if (tokenStore.get())
-      api
-        .user()
-        .then(setUser)
-        .catch(clear)
-        .finally(() => setLoading(false))
+    api
+      .user()
+      .then(setUser)
+      .catch(clear)
+      .finally(() => setLoading(false))
     return () => window.removeEventListener("keel:unauthorized", unauthorized)
   }, [clear])
   async function login(username: string, password: string) {
@@ -40,10 +39,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(await api.user())
   }
   async function logout() {
+    const logoutURL =
+      user?.auth_mode === "external-proxy" ? user.logout_url : undefined
     try {
       await api.logout()
     } finally {
       clear()
+      if (logoutURL) window.location.assign(logoutURL)
     }
   }
   return (
