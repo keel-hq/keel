@@ -732,7 +732,9 @@ main() {
   seed_fixture_repositories
   build_keel_image
   validate_packaged_release
-  run_tests
+  if [[ "${KEEL_E2E_RELEASE_ONLY:-false}" != "true" ]]; then
+    run_tests
+  fi
   hold_for_manual_inspection
 }
 

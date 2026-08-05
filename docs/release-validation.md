@@ -57,6 +57,8 @@ The release validator uses the packaged `.tgz`, not source templates. It perform
 5. Roll back to revision 1, require the prior version through the Service, verify the PVC is still preserved, uninstall, delete the namespace, and check for leaked global RBAC.
 6. Run meaningful Keel behavior checks against the same candidate image: registry webhook update, polling update, negative policy cases, the external OAuth-proxy Admin flow, and the existing regression scenarios.
 
+CI runs the packaged release scenarios and the behavioral suite in parallel k3s jobs so each stays within the bounded hosted-runner window. Both jobs must pass before any image publication job can start. Local `make release-validate` continues to run the complete sequence in one disposable cluster; `KEEL_E2E_RELEASE_ONLY=true` is reserved for the CI release-install shard.
+
 ## Diagnostics and failure recovery
 
 Failures retain `.test/artifacts/<run>/` locally and upload it in CI only on failure. The bundle includes Helm status/history/values/manifest, Kubernetes objects and events, Pod descriptions and current/previous logs, registry logs, k3s/containerd logs, rendered chart output, chart archive metadata/checksum, image inspection, and embedded version output. It deliberately excludes Secrets, kubeconfig contents, tokens, and environment dumps.
