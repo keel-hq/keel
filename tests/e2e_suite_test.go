@@ -41,6 +41,8 @@ func (s *E2ESuite) SetupSuite() {
 
 	restConfig, err := clientcmd.BuildConfigFromFlags("", s.cfg.kubeconfig)
 	require.NoError(s.T(), err)
+	restConfig.QPS = 50
+	restConfig.Burst = 100
 	s.client, err = kubernetes.NewForConfig(restConfig)
 	require.NoError(s.T(), err)
 	require.NoError(s.T(), createKeelResources(context.Background(), s.client, s.cfg))
