@@ -85,6 +85,11 @@ if [[ "${KEEL_RELEASE_SKIP_IMAGE:-false}" != "true" ]]; then
     </dev/null >"${ARTIFACT_DIR}/image/version.txt" 2>&1
   grep -Fxq "${APP_VERSION}" "${ARTIFACT_DIR}/image/version.txt" || \
     fail "container output does not contain the exact version ${APP_VERSION}; see ${ARTIFACT_DIR}/image/version.txt"
+  if [[ "${KEEL_RELEASE_EXPORT_IMAGE:-false}" == "true" ]]; then
+    log "exporting release-equivalent image for isolated validation jobs"
+    docker save --output "${ARTIFACT_DIR}/image/image.tar" "${IMAGE}"
+    sha256sum "${ARTIFACT_DIR}/image/image.tar" >"${ARTIFACT_DIR}/image/image.tar.sha256"
+  fi
 fi
 
 {
