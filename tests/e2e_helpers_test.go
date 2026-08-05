@@ -127,6 +127,7 @@ func ensureDeploymentImageUnchanged(ctx context.Context, client kubernetes.Inter
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	last := "<not observed>"
+	observedExpected := false
 	for {
 		deployment, err := client.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
@@ -140,10 +141,11 @@ func ensureDeploymentImageUnchanged(ctx context.Context, client kubernetes.Inter
 			if last != expected {
 				return fmt.Errorf("deployment %s/%s: expected image to remain %q; observed %q", namespace, name, expected, last)
 			}
+			observedExpected = true
 		}
 		select {
 		case <-ctx.Done():
-			if ctx.Err() == context.DeadlineExceeded && last == expected {
+			if ctx.Err() == context.DeadlineExceeded && observedExpected {
 				return nil
 			}
 			return fmt.Errorf("deployment %s/%s: could not verify unchanged image %q; last observed %q: %w", namespace, name, expected, last, ctx.Err())
@@ -178,6 +180,7 @@ func ensureStatefulSetInitImageUnchanged(ctx context.Context, client kubernetes.
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	last := "<not observed>"
+	observedExpected := false
 	for {
 		statefulSet, err := client.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
@@ -191,10 +194,11 @@ func ensureStatefulSetInitImageUnchanged(ctx context.Context, client kubernetes.
 			if last != expected {
 				return fmt.Errorf("statefulset %s/%s: expected init image to remain %q; observed %q", namespace, name, expected, last)
 			}
+			observedExpected = true
 		}
 		select {
 		case <-ctx.Done():
-			if ctx.Err() == context.DeadlineExceeded && last == expected {
+			if ctx.Err() == context.DeadlineExceeded && observedExpected {
 				return nil
 			}
 			return fmt.Errorf("statefulset %s/%s: could not verify unchanged init image %q; last observed %q: %w", namespace, name, expected, last, ctx.Err())
