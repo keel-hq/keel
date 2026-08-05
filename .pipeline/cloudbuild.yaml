@@ -10,6 +10,11 @@ steps:
   args: ['rsync', 'gs://charts.keel.sh', 'temp/']
   id: 'fetch_charts_index'
 
+# Stage repository metadata next to index.yaml for Artifact Hub.
+- name: 'ubuntu'
+  args: ['cp', 'artifacthub-repo.yml', 'temp/artifacthub-repo.yml']
+  id: 'stage_repository_metadata'
+
 # Index repository
 - name: 'ubuntu'
   env:

@@ -69,8 +69,9 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 
 	// Setup HTTP client.
 	s.client = &http.Client{
-		Transport: http.DefaultTransport,
-		Timeout:   timeout,
+		Transport:     http.DefaultTransport,
+		Timeout:       timeout,
+		CheckRedirect: rejectRedirect,
 	}
 
 	log.WithFields(log.Fields{
@@ -100,13 +101,21 @@ func (s *sender) Send(event types.EventNotification) error {
 
 	// Send notification via HTTP POST.
 	resp, err := s.client.Post(s.endpoint, "application/json", bytes.NewBuffer(jsonNotification))
-	if err != nil || resp == nil || (resp.StatusCode != 200 && resp.StatusCode != 201) {
-		if resp != nil {
-			return fmt.Errorf("got status %d, expected 200/201", resp.StatusCode)
-		}
-		return err
+	if err != nil {
+		return fmt.Errorf("could not send Mattermost notification: %w", err)
+	}
+	if resp == nil {
+		return fmt.Errorf("could not send Mattermost notification: empty HTTP response")
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("got HTTP status %s, expected 2xx", resp.Status)
+	}
+
 	return nil
+}
+
+func rejectRedirect(_ *http.Request, _ []*http.Request) error {
+	return http.ErrUseLastResponse
 }
