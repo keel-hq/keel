@@ -17,4 +17,4 @@
 - [x] Capture before/after selected tags and require observable warnings for incompatible candidate, unresolved manifest, and unresolved workload-platform branches.
 - [x] Run `gofmt`, focused registry/poll/Kubernetes/Helm/resolver tests, `go test ./...`, repository build/OpenAPI checks, and the applicable native-k3s e2e and lint checks.
 - [x] Review the final diff for runtime-platform assumptions, tag-name heuristics, overbroad RBAC, unsafe ambiguity handling, policy regressions, mutable external fixtures, and unrelated dependency/UI work.
-- [~] Commit and push the revised implementation branch; do not create a PR until all revision requirements and verification evidence are complete.
+- [x] Commit and push the revised implementation branch; do not create a PR until all revision requirements and verification evidence are complete.
