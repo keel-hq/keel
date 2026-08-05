@@ -43,6 +43,7 @@ func (p *fakeProvider) GetName() string {
 
 type fakeImplementer struct {
 	namespaces     *v1.NamespaceList
+	nodeList       *v1.NodeList
 	deployment     *apps_v1.Deployment
 	deploymentList *apps_v1.DeploymentList
 
@@ -57,6 +58,10 @@ type fakeImplementer struct {
 
 func (i *fakeImplementer) Namespaces() (*v1.NamespaceList, error) {
 	return i.namespaces, nil
+}
+
+func (i *fakeImplementer) Nodes() (*v1.NodeList, error) {
+	return i.nodeList, nil
 }
 
 func (i *fakeImplementer) Deployment(namespace, name string) (*apps_v1.Deployment, error) {
@@ -313,10 +318,10 @@ func TestGetImpactedInit(t *testing.T) {
 		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
-				Name:      "dep-1",
-				Namespace: "xxxx",
+				Name:        "dep-1",
+				Namespace:   "xxxx",
 				Annotations: map[string]string{types.KeelInitContainerAnnotation: "true"},
-				Labels:    map[string]string{types.KeelPolicyLabel: "all"},
+				Labels:      map[string]string{types.KeelPolicyLabel: "all"},
 			},
 			apps_v1.DeploymentSpec{
 				Template: v1.PodTemplateSpec{
@@ -334,10 +339,10 @@ func TestGetImpactedInit(t *testing.T) {
 		{
 			meta_v1.TypeMeta{},
 			meta_v1.ObjectMeta{
-				Name:      "dep-2",
-				Namespace: "xxxx",
+				Name:        "dep-2",
+				Namespace:   "xxxx",
 				Annotations: map[string]string{types.KeelInitContainerAnnotation: "false"},
-				Labels:    map[string]string{"whatever": "all"},
+				Labels:      map[string]string{"whatever": "all"},
 			},
 			apps_v1.DeploymentSpec{
 				Template: v1.PodTemplateSpec{

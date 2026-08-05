@@ -1,8 +1,6 @@
 package poll
 
 import (
-	"runtime"
-
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/provider"
 	"github.com/keel-hq/keel/registry"
@@ -96,8 +94,20 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 	allRelatedTrackedImages := getRelatedTrackedImages(j.details.trackedImage, trackedImages)
 	platformCache := make(map[string][]types.Platform)
 	platformErrorCache := make(map[string]error)
+	diagnosedCandidates := make(map[string]bool)
 
 	for _, trackedImage := range allRelatedTrackedImages {
+		if trackedImage.PlatformErr != types.PlatformErrorNone || len(trackedImage.Platforms) == 0 {
+			reason := trackedImage.PlatformErr
+			if reason == types.PlatformErrorNone {
+				reason = types.PlatformErrorWorkloadMetadata
+			}
+			log.WithFields(log.Fields{
+				"image":  trackedImage.Image.Repository(),
+				"reason": reason,
+			}).Warn("trigger.poll.WatchRepositoryTagsJob: skipping workload because its eligible platforms could not be established")
+			continue
+		}
 
 		filteredTags := tags
 
@@ -130,26 +140,35 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 				}
 			}
 			if platformErr != nil {
-				log.WithFields(log.Fields{
-					"error": platformErr,
-					"image": trackedImage.Image.Repository(),
-					"tag":   tag,
-				}).Warn("trigger.poll.WatchRepositoryTagsJob: skipping candidate because its platform could not be established")
+				if !diagnosedCandidates[tag] {
+					log.WithFields(log.Fields{
+						"error": platformErr,
+						"image": trackedImage.Image.Repository(),
+						"tag":   tag,
+					}).Warn("trigger.poll.WatchRepositoryTagsJob: skipping candidate because its platform could not be established")
+					diagnosedCandidates[tag] = true
+				}
 				continue
 			}
 			if !supportsRelatedWorkloads(platforms, tag, allRelatedTrackedImages) {
-				log.WithFields(log.Fields{
-					"candidate_platforms": platforms,
-					"image":               trackedImage.Image.Repository(),
-					"tag":                 tag,
-				}).Warn("trigger.poll.WatchRepositoryTagsJob: skipping candidate because it is incompatible with a related workload platform")
+				if !diagnosedCandidates[tag] {
+					log.WithFields(log.Fields{
+						"candidate_platforms": platforms,
+						"eligible_platforms":  relatedPlatforms(allRelatedTrackedImages),
+						"image":               trackedImage.Image.Repository(),
+						"tag":                 tag,
+					}).Warn("trigger.poll.WatchRepositoryTagsJob: skipping candidate because it is incompatible with a related workload platform")
+					diagnosedCandidates[tag] = true
+				}
 				continue
 			}
 			if !exists(tag, events) {
 				event := types.Event{
 					Repository: types.Repository{
-						Name: trackedImage.Image.Repository(),
-						Tag:  tag,
+						Name:             trackedImage.Image.Repository(),
+						Tag:              tag,
+						Platforms:        platforms,
+						PlatformVerified: true,
 					},
 					TriggerName: types.TriggerTypePoll.String(),
 				}
@@ -165,6 +184,21 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 	}).Debug("trigger.poll.WatchRepositoryTagsJob: events: ", events)
 
 	return events, nil
+}
+
+func relatedPlatforms(trackedImages []*types.TrackedImage) []types.Platform {
+	var result []types.Platform
+	seen := make(map[types.Platform]struct{})
+	for _, trackedImage := range trackedImages {
+		for _, platform := range trackedImage.Platforms {
+			if _, ok := seen[platform]; ok {
+				continue
+			}
+			seen[platform] = struct{}{}
+			result = append(result, platform)
+		}
+	}
+	return result
 }
 
 func (j *WatchRepositoryTagsJob) candidatePlatforms(trackedImage *types.TrackedImage, tag string) ([]types.Platform, error) {
@@ -186,22 +220,10 @@ func supportsRelatedWorkloads(candidatePlatforms []types.Platform, candidateTag 
 		if err != nil || !update || trackedImage.Image.Tag() == candidateTag {
 			continue
 		}
-		target := trackedImage.Platform
-		if target.OS == "" {
-			target.OS = runtime.GOOS
+		if trackedImage.PlatformErr != types.PlatformErrorNone || len(trackedImage.Platforms) == 0 {
+			return false
 		}
-		if target.Architecture == "" {
-			target.Architecture = runtime.GOARCH
-		}
-
-		supported := false
-		for _, candidate := range candidatePlatforms {
-			if candidate.Supports(target) {
-				supported = true
-				break
-			}
-		}
-		if !supported {
+		if !types.PlatformsSupportAll(candidatePlatforms, trackedImage.Platforms) {
 			return false
 		}
 	}

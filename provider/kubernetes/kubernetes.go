@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 	"time"
 
@@ -83,6 +82,7 @@ func (p *UpdatePlan) String() string {
 // Provider - kubernetes provider for auto update
 type Provider struct {
 	implementer Implementer
+	platforms   *k8s.PlatformResolver
 
 	sender notification.Sender
 
@@ -95,9 +95,14 @@ type Provider struct {
 }
 
 // NewProvider - create new kubernetes based provider
-func NewProvider(implementer Implementer, sender notification.Sender, approvalManager approvals.Manager, cache GenericResourceCache) (*Provider, error) {
+func NewProvider(implementer Implementer, sender notification.Sender, approvalManager approvals.Manager, cache GenericResourceCache, resolvers ...*k8s.PlatformResolver) (*Provider, error) {
+	platforms := k8s.NewPlatformResolver(implementer)
+	if len(resolvers) > 0 && resolvers[0] != nil {
+		platforms = resolvers[0]
+	}
 	return &Provider{
 		implementer:     implementer,
+		platforms:       platforms,
 		cache:           cache,
 		approvalManager: approvalManager,
 		events:          make(chan *types.Event, 100),
@@ -292,6 +297,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 			volumeFilter := GetMonitorVolumesFromMeta(annotations, labels)
 			images = append(images, gr.GetImageVolumeReferences(volumeFilter)...)
 		}
+		platforms, platformErr := p.platforms.Resolve(gr)
 
 		for _, img := range images {
 			ref, err := image.Parse(img)
@@ -322,34 +328,14 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				Namespace:    gr.Namespace,
 				Secrets:      secrets,
 				Meta:         make(map[string]string),
-				Platform:     resourcePlatform(gr),
+				Platforms:    platforms,
+				PlatformErr:  platformErr,
 				Policy:       plc,
 			})
 		}
 	}
 
 	return trackedImages, nil
-}
-
-func resourcePlatform(resource *k8s.GenericResource) types.Platform {
-	platform := types.Platform{OS: runtime.GOOS, Architecture: runtime.GOARCH}
-	selector := resource.GetNodeSelector()
-	if os := firstNonEmpty(selector["kubernetes.io/os"], selector["beta.kubernetes.io/os"]); os != "" {
-		platform.OS = os
-	}
-	if architecture := firstNonEmpty(selector["kubernetes.io/arch"], selector["beta.kubernetes.io/arch"]); architecture != "" {
-		platform.Architecture = architecture
-	}
-	return platform
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if value != "" {
-			return value
-		}
-	}
-	return ""
 }
 
 func (p *Provider) startInternal() error {
@@ -569,6 +555,20 @@ func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, err
 		}
 
 		if shouldUpdateDeployment {
+			if repo.PlatformVerified {
+				platforms, resolutionErr := p.platforms.Resolve(resource)
+				if resolutionErr != types.PlatformErrorNone || !types.PlatformsSupportAll(repo.Platforms, platforms) {
+					log.WithFields(log.Fields{
+						"candidate_platforms": repo.Platforms,
+						"eligible_platforms":  platforms,
+						"reason":              resolutionErr,
+						"deployment":          resource.Name,
+						"kind":                resource.Kind(),
+						"namespace":           resource.Namespace,
+					}).Warn("provider.kubernetes: skipping polling event that is not compatible with current workload platforms")
+					continue
+				}
+			}
 			impacted = append(impacted, updated)
 		}
 	}

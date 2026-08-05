@@ -21,6 +21,7 @@ import (
 // Implementer - thing wrapper around currently used k8s APIs
 type Implementer interface {
 	Namespaces() (*v1.NamespaceList, error)
+	Nodes() (*v1.NodeList, error)
 	Deployments(namespace string) (*apps_v1.DeploymentList, error)
 	Update(obj *k8s.GenericResource) error
 	Secret(namespace, name string) (*v1.Secret, error)
@@ -104,6 +105,11 @@ func (i *KubernetesImplementer) Config() *rest.Config {
 func (i *KubernetesImplementer) Namespaces() (*v1.NamespaceList, error) {
 	namespaces := i.client.CoreV1().Namespaces()
 	return namespaces.List(context.TODO(), meta_v1.ListOptions{})
+}
+
+// Nodes returns the cluster nodes used to resolve workload platform eligibility.
+func (i *KubernetesImplementer) Nodes() (*v1.NodeList, error) {
+	return i.client.CoreV1().Nodes().List(context.TODO(), meta_v1.ListOptions{})
 }
 
 // Deployment - get specific deployment for namespace/name

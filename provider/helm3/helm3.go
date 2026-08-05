@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
@@ -133,6 +134,8 @@ type ImageDetails struct {
 // Provider - helm3 provider, responsible for managing release updates
 type Provider struct {
 	implementer Implementer
+	platforms   *k8s.PlatformResolver
+	resources   ResourceCache
 
 	sender notification.Sender
 
@@ -142,15 +145,35 @@ type Provider struct {
 	stop   chan struct{}
 }
 
+// ResourceCache provides the Kubernetes workloads indexed by the shared cache.
+type ResourceCache interface {
+	Values() []*k8s.GenericResource
+}
+
+// ProviderOption configures optional Helm provider integrations.
+type ProviderOption func(*Provider)
+
+// WithWorkloadPlatforms enables Kubernetes-backed platform resolution for Helm images.
+func WithWorkloadPlatforms(platforms *k8s.PlatformResolver, resources ResourceCache) ProviderOption {
+	return func(provider *Provider) {
+		provider.platforms = platforms
+		provider.resources = resources
+	}
+}
+
 // NewProvider - create new Helm provider
-func NewProvider(implementer Implementer, sender notification.Sender, approvalManager approvals.Manager) *Provider {
-	return &Provider{
+func NewProvider(implementer Implementer, sender notification.Sender, approvalManager approvals.Manager, options ...ProviderOption) *Provider {
+	provider := &Provider{
 		implementer:     implementer,
 		approvalManager: approvalManager,
 		sender:          sender,
 		events:          make(chan *types.Event, 100),
 		stop:            make(chan struct{}),
 	}
+	for _, option := range options {
+		option(provider)
+	}
+	return provider
 }
 
 // GetName - get provider name
@@ -228,6 +251,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 			}
 			img.Namespace = release.Namespace
 			img.Provider = ProviderName
+			img.Platforms, img.PlatformErr = p.releaseImagePlatforms(release.Namespace, release.Name, img)
 			trackedImages = append(trackedImages, img)
 		}
 
@@ -287,6 +311,23 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 		}
 
 		if update {
+			if event.Repository.PlatformVerified {
+				ref, parseErr := image.Parse(event.Repository.String())
+				if parseErr != nil {
+					continue
+				}
+				platforms, resolutionErr := p.releaseImagePlatforms(release.Namespace, release.Name, &types.TrackedImage{Image: ref})
+				if resolutionErr != types.PlatformErrorNone || !types.PlatformsSupportAll(event.Repository.Platforms, platforms) {
+					log.WithFields(log.Fields{
+						"candidate_platforms": event.Repository.Platforms,
+						"eligible_platforms":  platforms,
+						"reason":              resolutionErr,
+						"name":                release.Name,
+						"namespace":           release.Namespace,
+					}).Warn("provider.helm3: skipping polling event that is not compatible with current workload platforms")
+					continue
+				}
+			}
 			helm3VersionedUpdatesCounter.With(prometheus.Labels{"chart": fmt.Sprintf("%s/%s", release.Namespace, release.Name)}).Inc()
 			plans = append(plans, plan)
 		}

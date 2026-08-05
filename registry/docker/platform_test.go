@@ -16,8 +16,9 @@ import (
 
 func TestManifestPlatformsRegistryFixture(t *testing.T) {
 	const (
-		amd64Digest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-		armDigest   = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+		amd64Digest   = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+		armDigest     = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+		missingDigest = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 	)
 
 	manifest := func(configDigest string) []byte {
@@ -58,10 +59,27 @@ func TestManifestPlatformsRegistryFixture(t *testing.T) {
 		case "/v2/example/image/manifests/multi":
 			w.Header().Set("Content-Type", manifestlist.MediaTypeManifestList)
 			_, _ = w.Write(indexBody)
+		case "/v2/example/image/manifests/oci-multi":
+			w.Header().Set("Content-Type", oci.MediaTypeImageIndex)
+			_, _ = w.Write(indexBody)
+		case "/v2/example/image/manifests/malformed":
+			w.Header().Set("Content-Type", oci.MediaTypeImageIndex)
+			_, _ = w.Write([]byte("{"))
+		case "/v2/example/image/manifests/no-platforms":
+			w.Header().Set("Content-Type", oci.MediaTypeImageIndex)
+			_, _ = w.Write([]byte(`{"schemaVersion":2,"manifests":[{}]}`))
+		case "/v2/example/image/manifests/missing-config-platform":
+			w.Header().Set("Content-Type", manifestv2.MediaTypeManifest)
+			_, _ = w.Write(manifest(missingDigest))
+		case "/v2/example/image/manifests/schema1":
+			w.Header().Set("Content-Type", "application/vnd.docker.distribution.manifest.v1+json")
+			_, _ = w.Write([]byte(`{"schemaVersion":1}`))
 		case "/v2/example/image/blobs/" + amd64Digest:
 			_ = json.NewEncoder(w).Encode(oci.Image{Platform: oci.Platform{OS: "linux", Architecture: "amd64"}})
 		case "/v2/example/image/blobs/" + armDigest:
 			_ = json.NewEncoder(w).Encode(oci.Image{Platform: oci.Platform{OS: "linux", Architecture: "arm", Variant: "v7"}})
+		case "/v2/example/image/blobs/" + missingDigest:
+			_ = json.NewEncoder(w).Encode(oci.Image{})
 		default:
 			http.NotFound(w, r)
 		}
@@ -79,6 +97,10 @@ func TestManifestPlatformsRegistryFixture(t *testing.T) {
 			{OS: "linux", Architecture: "amd64"},
 			{OS: "linux", Architecture: "arm64", Variant: "v8"},
 		}},
+		{tag: "oci-multi", want: []types.Platform{
+			{OS: "linux", Architecture: "amd64"},
+			{OS: "linux", Architecture: "arm64", Variant: "v8"},
+		}},
 	}
 	for _, test := range tests {
 		t.Run(test.tag, func(t *testing.T) {
@@ -93,6 +115,14 @@ func TestManifestPlatformsRegistryFixture(t *testing.T) {
 				if got[i] != test.want[i] {
 					t.Fatalf("got %v, want %v", got, test.want)
 				}
+			}
+		})
+	}
+
+	for _, tag := range []string{"malformed", "no-platforms", "missing-config-platform", "schema1"} {
+		t.Run(tag, func(t *testing.T) {
+			if _, err := registry.ManifestPlatforms("example/image", tag); err == nil {
+				t.Fatalf("expected platform resolution error for %s", tag)
 			}
 		})
 	}

@@ -324,8 +324,9 @@ type ProviderOpts struct {
 // provider map
 func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 	var enabledProviders []provider.Provider
+	platformResolver := k8s.NewPlatformResolver(opts.k8sImplementer)
 
-	k8sProvider, err := kubernetes.NewProvider(opts.k8sImplementer, opts.sender, opts.approvalsManager, opts.grc)
+	k8sProvider, err := kubernetes.NewProvider(opts.k8sImplementer, opts.sender, opts.approvalsManager, opts.grc, platformResolver)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -344,7 +345,7 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 
 	if os.Getenv(EnvHelm3Provider) == "1" || os.Getenv(EnvHelm3Provider) == "true" {
 		helm3Implementer := helm3.NewHelm3Implementer()
-		helm3Provider := helm3.NewProvider(helm3Implementer, opts.sender, opts.approvalsManager)
+		helm3Provider := helm3.NewProvider(helm3Implementer, opts.sender, opts.approvalsManager, helm3.WithWorkloadPlatforms(platformResolver, opts.grc))
 
 		go func() {
 			err := helm3Provider.Start()

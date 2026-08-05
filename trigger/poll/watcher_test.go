@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/keel-hq/keel/approvals"
@@ -14,6 +15,7 @@ import (
 	"github.com/keel-hq/keel/registry"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func mustParse(img string, schedule string) *types.TrackedImage {
@@ -42,6 +44,7 @@ type fakeRegistryClient struct {
 	platformsToReturn map[string][]types.Platform
 	platformErrors    map[string]error
 	platformErr       error
+	platformCalls     []string
 }
 
 func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, error) {
@@ -59,6 +62,7 @@ func (c *fakeRegistryClient) Digest(opts registry.Opts) (digest string, err erro
 
 func (c *fakeRegistryClient) Platforms(opts registry.Opts) ([]types.Platform, error) {
 	c.opts = opts
+	c.platformCalls = append(c.platformCalls, opts.Tag)
 	if err, ok := c.platformErrors[opts.Tag]; ok {
 		return nil, err
 	}
@@ -77,6 +81,21 @@ type fakeProvider struct {
 	images    []*types.TrackedImage
 }
 
+type fakeProviders struct {
+	provider *fakeProvider
+}
+
+func (p *fakeProviders) Submit(event types.Event) error {
+	return p.provider.Submit(event)
+}
+
+func (p *fakeProviders) TrackedImages() ([]*types.TrackedImage, error) {
+	return p.provider.TrackedImages()
+}
+
+func (p *fakeProviders) List() []string { return []string{p.provider.GetName()} }
+func (p *fakeProviders) Stop()          {}
+
 func (p *fakeProvider) Submit(event types.Event) error {
 	p.submitted = append(p.submitted, event)
 	return nil
@@ -89,6 +108,11 @@ func (p *fakeProvider) Stop() {
 	return
 }
 func (p *fakeProvider) TrackedImages() ([]*types.TrackedImage, error) {
+	for _, trackedImage := range p.images {
+		if len(trackedImage.Platforms) == 0 && trackedImage.PlatformErr == types.PlatformErrorNone {
+			trackedImage.Platforms = []types.Platform{{OS: "linux", Architecture: "amd64"}}
+		}
+	}
 	return p.images, nil
 }
 
@@ -316,7 +340,7 @@ func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
 	// checking whether new job was submitted
 
 	if len(fp.submitted) != 0 {
-		t.Errorf("expected 0 submitted events but got something: %s", fp.submitted[0].Repository)
+		t.Errorf("expected 0 submitted events but got something: %v", fp.submitted[0].Repository)
 	}
 
 }
@@ -415,19 +439,20 @@ func TestWatchMultipleTags(t *testing.T) {
 }
 
 func TestReportedLatestMajorTagSetSkipsArmCandidate(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	defer hook.Reset()
+
 	img, _ := image.Parse("jellyfin/jellyfin:latest")
 	fp := &fakeProvider{images: []*types.TrackedImage{{
 		Image:   img,
 		Trigger: types.TriggerTypePoll,
 		Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
-		Platform: types.Platform{
+		Platforms: []types.Platform{{
 			OS:           "linux",
 			Architecture: "amd64",
-		},
+		}},
 	}}}
-	store, teardown := newTestingUtils()
-	defer teardown()
-	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+	providers := &fakeProviders{provider: fp}
 	registryClient := &fakeRegistryClient{platformsToReturn: map[string][]types.Platform{
 		"20240303.2-unstable-armhf": {{OS: "linux", Architecture: "arm", Variant: "v7"}},
 		"10.10.7":                   {{OS: "linux", Architecture: "amd64"}},
@@ -441,19 +466,21 @@ func TestReportedLatestMajorTagSetSkipsArmCandidate(t *testing.T) {
 	if len(events) != 1 || events[0].Repository.Tag != "10.10.7" {
 		t.Fatalf("expected compatible update after skipping ARM candidate, got %#v", events)
 	}
+	if !events[0].Repository.PlatformVerified || !types.PlatformsSupportAll(events[0].Repository.Platforms, fp.images[0].Platforms) {
+		t.Fatalf("event did not carry verified platform evidence: %#v", events[0].Repository)
+	}
+	assertLogMessage(t, hook, "skipping candidate because it is incompatible with a related workload platform")
 }
 
 func TestCandidateSelectionAcceptsMultiArchManifest(t *testing.T) {
 	img, _ := image.Parse("example/image:1.0.0")
 	fp := &fakeProvider{images: []*types.TrackedImage{{
-		Image:    img,
-		Trigger:  types.TriggerTypePoll,
-		Policy:   policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
-		Platform: types.Platform{OS: "linux", Architecture: "amd64"},
+		Image:     img,
+		Trigger:   types.TriggerTypePoll,
+		Policy:    policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
+		Platforms: []types.Platform{{OS: "linux", Architecture: "amd64"}},
 	}}}
-	store, teardown := newTestingUtils()
-	defer teardown()
-	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+	providers := &fakeProviders{provider: fp}
 	registryClient := &fakeRegistryClient{platformsToReturn: map[string][]types.Platform{
 		"2.0.0": {
 			{OS: "linux", Architecture: "arm64"},
@@ -472,15 +499,16 @@ func TestCandidateSelectionAcceptsMultiArchManifest(t *testing.T) {
 }
 
 func TestCandidateSelectionFailsClosedWhenPlatformResolutionFails(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	defer hook.Reset()
+
 	img, _ := image.Parse("example/image:1.0.0")
 	fp := &fakeProvider{images: []*types.TrackedImage{{
 		Image:   img,
 		Trigger: types.TriggerTypePoll,
 		Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
 	}}}
-	store, teardown := newTestingUtils()
-	defer teardown()
-	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+	providers := &fakeProviders{provider: fp}
 	job := NewWatchRepositoryTagsJob(providers, &fakeRegistryClient{platformErr: errors.New("no manifest metadata")}, &watchDetails{trackedImage: fp.images[0]})
 
 	events, err := job.computeEvents([]string{"2.0.0"})
@@ -490,6 +518,7 @@ func TestCandidateSelectionFailsClosedWhenPlatformResolutionFails(t *testing.T) 
 	if len(events) != 0 {
 		t.Fatalf("expected no unsafe update, got %#v", events)
 	}
+	assertLogMessage(t, hook, "skipping candidate because its platform could not be established")
 }
 
 func TestCandidateSelectionSupportsEveryRelatedWorkload(t *testing.T) {
@@ -498,21 +527,19 @@ func TestCandidateSelectionSupportsEveryRelatedWorkload(t *testing.T) {
 	majorPolicy := policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true)
 	fp := &fakeProvider{images: []*types.TrackedImage{
 		{
-			Image:    amd64Image,
-			Trigger:  types.TriggerTypePoll,
-			Policy:   majorPolicy,
-			Platform: types.Platform{OS: "linux", Architecture: "amd64"},
+			Image:     amd64Image,
+			Trigger:   types.TriggerTypePoll,
+			Policy:    majorPolicy,
+			Platforms: []types.Platform{{OS: "linux", Architecture: "amd64"}},
 		},
 		{
-			Image:    arm64Image,
-			Trigger:  types.TriggerTypePoll,
-			Policy:   majorPolicy,
-			Platform: types.Platform{OS: "linux", Architecture: "arm64"},
+			Image:     arm64Image,
+			Trigger:   types.TriggerTypePoll,
+			Policy:    majorPolicy,
+			Platforms: []types.Platform{{OS: "linux", Architecture: "arm64"}},
 		},
 	}}
-	store, teardown := newTestingUtils()
-	defer teardown()
-	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+	providers := &fakeProviders{provider: fp}
 	registryClient := &fakeRegistryClient{platformsToReturn: map[string][]types.Platform{
 		"3.0.0": {{OS: "linux", Architecture: "amd64"}},
 		"2.0.0": {
@@ -534,14 +561,12 @@ func TestCandidateSelectionSupportsEveryRelatedWorkload(t *testing.T) {
 func TestCandidateSelectionContinuesAfterPlatformResolutionFailure(t *testing.T) {
 	img, _ := image.Parse("example/image:1.0.0")
 	fp := &fakeProvider{images: []*types.TrackedImage{{
-		Image:    img,
-		Trigger:  types.TriggerTypePoll,
-		Policy:   policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
-		Platform: types.Platform{OS: "linux", Architecture: "amd64"},
+		Image:     img,
+		Trigger:   types.TriggerTypePoll,
+		Policy:    policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
+		Platforms: []types.Platform{{OS: "linux", Architecture: "amd64"}},
 	}}}
-	store, teardown := newTestingUtils()
-	defer teardown()
-	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+	providers := &fakeProviders{provider: fp}
 	registryClient := &fakeRegistryClient{
 		platformErrors: map[string]error{"3.0.0": errors.New("manifest metadata unavailable")},
 		platformsToReturn: map[string][]types.Platform{
@@ -557,6 +582,69 @@ func TestCandidateSelectionContinuesAfterPlatformResolutionFailure(t *testing.T)
 	if len(events) != 1 || events[0].Repository.Tag != "2.0.0" {
 		t.Fatalf("expected compatible fallback candidate, got %#v", events)
 	}
+}
+
+func TestSupportsRelatedWorkloadsRequiresEveryEligiblePlatform(t *testing.T) {
+	img, _ := image.Parse("example/image:1.0.0")
+	tracked := []*types.TrackedImage{{
+		Image:  img,
+		Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
+		Platforms: []types.Platform{
+			{OS: "linux", Architecture: "amd64"},
+			{OS: "linux", Architecture: "arm64"},
+		},
+	}}
+	if supportsRelatedWorkloads([]types.Platform{{OS: "linux", Architecture: "amd64"}}, "2.0.0", tracked) {
+		t.Fatal("single-platform candidate unexpectedly supports a mixed workload")
+	}
+	if !supportsRelatedWorkloads([]types.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}, "2.0.0", tracked) {
+		t.Fatal("complete multi-platform candidate was rejected")
+	}
+	tracked[0].Platforms = nil
+	tracked[0].PlatformErr = types.PlatformErrorNodeMetadata
+	if supportsRelatedWorkloads([]types.Platform{{OS: "linux", Architecture: "amd64"}}, "2.0.0", tracked) {
+		t.Fatal("unresolved workload unexpectedly accepted a candidate")
+	}
+}
+
+func TestCandidateSelectionFailsClosedForUnresolvedWorkload(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	defer hook.Reset()
+
+	img, _ := image.Parse("example/image:1.0.0")
+	fp := &fakeProvider{images: []*types.TrackedImage{{
+		Image:       img,
+		Trigger:     types.TriggerTypePoll,
+		Policy:      policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true),
+		PlatformErr: types.PlatformErrorNodeMetadata,
+	}}}
+	providers := &fakeProviders{provider: fp}
+	registryClient := &fakeRegistryClient{}
+	job := NewWatchRepositoryTagsJob(providers, registryClient, &watchDetails{trackedImage: fp.images[0]})
+
+	events, err := job.computeEvents([]string{"2.0.0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 0 || len(registryClient.platformCalls) != 0 {
+		t.Fatalf("unresolved workload evaluated a candidate: events=%#v calls=%v", events, registryClient.platformCalls)
+	}
+	assertLogMessage(t, hook, "skipping workload because its eligible platforms could not be established")
+}
+
+func assertLogMessage(t *testing.T, hook *logrustest.Hook, message string) {
+	t.Helper()
+	messages := make([]string, 0, len(hook.AllEntries()))
+	for _, entry := range hook.AllEntries() {
+		messages = append(messages, entry.Message)
+		if strings.Contains(entry.Message, message) {
+			return
+		}
+	}
+	t.Fatalf("expected log message %q, got %q", message, messages)
 }
 
 type fakeCredentialsHelper struct {
