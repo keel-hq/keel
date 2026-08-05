@@ -20,4 +20,4 @@
 - [x] Commit and push the revised implementation branch; do not create a PR until all revision requirements and verification evidence are complete.
 - [x] Fix PR #873 API-generation CI failure by keeping polling platform evidence out of the public Swagger model, verify, and push.
 - [x] Enable the native k3s end-to-end job as a required CI dependency on pull requests and verify PR #873 runs it.
-- [~] Merge the latest master changes, including the faster ARM builder path, and push the feature branch.
+- [x] Merge the latest master changes, including the faster ARM builder path, and push the feature branch.
