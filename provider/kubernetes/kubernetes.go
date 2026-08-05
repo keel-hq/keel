@@ -358,7 +358,7 @@ func (p *Provider) startInternal() error {
 }
 
 func (p *Provider) processEvent(event *types.Event) (updated []*k8s.GenericResource, err error) {
-	plans, err := p.createUpdatePlans(&event.Repository)
+	plans, err := p.createUpdatePlansForEvent(event)
 	if err != nil {
 		return nil, err
 	}
@@ -531,12 +531,26 @@ func getDesiredImage(delta map[string]string, currentImage string) (string, erro
 
 // createUpdatePlans - impacted deployments by changed repository
 func (p *Provider) createUpdatePlans(repo *types.Repository) ([]*UpdatePlan, error) {
+	return p.createUpdatePlansForTrigger(repo, "")
+}
+
+func (p *Provider) createUpdatePlansForEvent(event *types.Event) ([]*UpdatePlan, error) {
+	return p.createUpdatePlansForTrigger(&event.Repository, event.TriggerName)
+}
+
+func (p *Provider) createUpdatePlansForTrigger(repo *types.Repository, triggerName string) ([]*UpdatePlan, error) {
 	impacted := []*UpdatePlan{}
 
 	for _, resource := range p.cache.Values() {
 
 		labels := resource.GetLabels()
 		annotations := resource.GetAnnotations()
+		// Poll events are broadcast by repository, so apply them only to the
+		// resources that explicitly opted into polling.
+		if triggerName == types.TriggerTypePoll.String() &&
+			policies.GetTriggerPolicy(labels, annotations) != types.TriggerTypePoll {
+			continue
+		}
 
 		plc := policy.GetPolicyFromLabelsOrAnnotations(labels, annotations)
 		if plc.Type() == types.PolicyTypeNone {

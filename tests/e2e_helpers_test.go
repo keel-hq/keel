@@ -148,6 +148,57 @@ func ensureDeploymentImageUnchanged(ctx context.Context, client kubernetes.Inter
 	}
 }
 
+func waitForStatefulSetInitImage(ctx context.Context, client kubernetes.Interface, namespace, name, desired string) error {
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	last := "<not observed>"
+	for {
+		statefulSet, err := client.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err == nil && len(statefulSet.Spec.Template.Spec.InitContainers) > 0 {
+			last = statefulSet.Spec.Template.Spec.InitContainers[0].Image
+			if last == desired {
+				return nil
+			}
+		} else if err != nil {
+			last = "get error: " + err.Error()
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("statefulset %s/%s: expected init image %q; last observed %q: %w", namespace, name, desired, last, ctx.Err())
+		case <-ticker.C:
+		}
+	}
+}
+
+func ensureStatefulSetInitImageUnchanged(ctx context.Context, client kubernetes.Interface, namespace, name, expected string) error {
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	last := "<not observed>"
+	for {
+		statefulSet, err := client.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			if ctx.Err() == nil {
+				last = "get error: " + err.Error()
+			}
+		} else if len(statefulSet.Spec.Template.Spec.InitContainers) == 0 {
+			last = "statefulset has no init containers"
+		} else {
+			last = statefulSet.Spec.Template.Spec.InitContainers[0].Image
+			if last != expected {
+				return fmt.Errorf("statefulset %s/%s: expected init image to remain %q; observed %q", namespace, name, expected, last)
+			}
+		}
+		select {
+		case <-ctx.Done():
+			if ctx.Err() == context.DeadlineExceeded && last == expected {
+				return nil
+			}
+			return fmt.Errorf("statefulset %s/%s: could not verify unchanged init image %q; last observed %q: %w", namespace, name, expected, last, ctx.Err())
+		case <-ticker.C:
+		}
+	}
+}
+
 func (s *E2ESuite) requireRegistryTags(repository string, expected ...string) {
 	response, err := (&http.Client{Timeout: 5 * time.Second}).Get("http://" + s.cfg.registry + "/v2/" + s.cfg.runID + "/" + repository + "/tags/list")
 	s.Require().NoError(err, "query tags for isolated repository %s", repository)

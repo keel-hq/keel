@@ -33,7 +33,9 @@ func mustParse(img string, schedule string) *types.TrackedImage {
 
 // ======== fake registry client for testing =======
 type fakeRegistryClient struct {
-	opts registry.Opts // opts set if anything called Digest(opts Opts)
+	opts        registry.Opts // opts set if anything called Digest(opts Opts)
+	digestCalls int
+	getCalls    int
 
 	digestToReturn string
 
@@ -48,6 +50,7 @@ type fakeRegistryClient struct {
 }
 
 func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, error) {
+	c.getCalls++
 	c.opts = opts
 	return &registry.Repository{
 		Name: opts.Name,
@@ -56,6 +59,7 @@ func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, erro
 }
 
 func (c *fakeRegistryClient) Digest(opts registry.Opts) (digest string, err error) {
+	c.digestCalls++
 	c.opts = opts
 	return c.digestToReturn, c.digestErrToReturn
 }
@@ -268,8 +272,9 @@ func TestWatchAllTagsJob(t *testing.T) {
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
 			{
-				Image:  reference,
-				Policy: policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
+				Image:   reference,
+				Trigger: types.TriggerTypePoll,
+				Policy:  policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
 			},
 		},
 	}
@@ -312,8 +317,9 @@ func TestWatchAllTagsJobCurrentLatest(t *testing.T) {
 	fp := &fakeProvider{
 		images: []*types.TrackedImage{
 			{
-				Image:  reference,
-				Policy: policy.NewForcePolicy(true),
+				Image:   reference,
+				Trigger: types.TriggerTypePoll,
+				Policy:  policy.NewForcePolicy(true),
 			},
 		},
 	}
