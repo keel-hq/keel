@@ -88,21 +88,28 @@ jobs:
           retention-days: 7
 
   docker:
-    name: Build Docker Image
+    name: Build Docker Image (${{ matrix.arch }})
     needs: [test, lint-ui, e2e]
     if: always() && needs.test.result == 'success' && needs.lint-ui.result == 'success' && (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -127,22 +134,134 @@ jobs:
 
       - name: Build and push
         if: github.event_name != 'pull_request'
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=keel-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=keel-${{ matrix.arch }}
+
+      - name: Export image digest
+        if: github.event_name != 'pull_request'
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Unexpected image digest: $IMAGE_DIGEST" >&2
+            exit 1
+          fi
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${IMAGE_DIGEST#sha256:}"
+
+      - name: Upload image digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Build for PR validation
         if: github.event_name == 'pull_request'
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=keel-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=keel-${{ matrix.arch }}
+
+  docker-manifest:
+    name: Publish Docker Manifest
+    needs: docker
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Download image digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: docker-digest-*
+
+      - name: Create multi-architecture manifest
+        env:
+          IMAGE_NAME: ghcr.io/${{ github.repository }}
+          METADATA_JSON: ${{ steps.meta.outputs.json }}
+        run: |
+          mapfile -t digest_files < <(find /tmp/digests -mindepth 2 -maxdepth 2 -type f | sort)
+          digests=()
+          for digest_file in "${digest_files[@]}"; do
+            digests+=("$(basename "$digest_file")")
+          done
+          if [[ "${#digests[@]}" -ne 2 ]]; then
+            echo "Expected exactly two architecture digests, found ${#digests[@]}" >&2
+            exit 1
+          fi
+
+          sources=()
+          for digest in "${digests[@]}"; do
+            if [[ ! "$digest" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "Unexpected digest artifact name: $digest" >&2
+              exit 1
+            fi
+            sources+=("$IMAGE_NAME@sha256:$digest")
+          done
+
+          tag_args=()
+          while IFS= read -r tag; do
+            tag_args+=(--tag "$tag")
+          done < <(jq -r '.tags[]' <<< "$METADATA_JSON")
+          if [[ "${#tag_args[@]}" -eq 0 ]]; then
+            echo "Docker metadata produced no tags" >&2
+            exit 1
+          fi
+
+          docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
+
+      - name: Verify published manifest
+        env:
+          METADATA_JSON: ${{ steps.meta.outputs.json }}
+        run: |
+          mapfile -t tags < <(jq -r '.tags[]' <<< "$METADATA_JSON")
+          expected_hash=""
+          for tag in "${tags[@]}"; do
+            manifest=$(docker buildx imagetools inspect "$tag" --raw)
+            jq -e '
+              any(.manifests[]; .platform.os == "linux" and .platform.architecture == "amd64") and
+              any(.manifests[]; .platform.os == "linux" and .platform.architecture == "arm64")
+            ' <<< "$manifest" >/dev/null
+
+            manifest_hash=$(sha256sum <<< "$manifest" | cut -d " " -f 1)
+            if [[ -n "$expected_hash" && "$manifest_hash" != "$expected_hash" ]]; then
+              echo "Published tags do not point to identical manifests" >&2
+              exit 1
+            fi
+            expected_hash="$manifest_hash"
+          done
