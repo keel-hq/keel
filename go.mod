@@ -3,32 +3,32 @@ module github.com/keel-hq/keel
 go 1.26.5
 
 replace (
-	k8s.io/api => k8s.io/api v0.31.3
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.31.3
-	k8s.io/apimachinery => k8s.io/apimachinery v0.31.3
-	k8s.io/apiserver => k8s.io/apiserver v0.31.3
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.31.3
-	k8s.io/client-go => k8s.io/client-go v0.31.3
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.31.3
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.31.3
-	k8s.io/code-generator => k8s.io/code-generator v0.31.3
-	k8s.io/component-base => k8s.io/component-base v0.31.3
-	k8s.io/cri-api => k8s.io/cri-api v0.31.3
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.31.3
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.31.3
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.31.3
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.31.3
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.31.3
-	k8s.io/kubectl => k8s.io/kubectl v0.31.3
-	k8s.io/kubelet => k8s.io/kubelet v0.31.3
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.31.3
-	k8s.io/metrics => k8s.io/metrics v0.31.3
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.31.3
+	k8s.io/api => k8s.io/api v0.32.0
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.32.0
+	k8s.io/apimachinery => k8s.io/apimachinery v0.32.0
+	k8s.io/apiserver => k8s.io/apiserver v0.32.0
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.32.0
+	k8s.io/client-go => k8s.io/client-go v0.32.0
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.32.0
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.32.0
+	k8s.io/code-generator => k8s.io/code-generator v0.32.0
+	k8s.io/component-base => k8s.io/component-base v0.32.0
+	k8s.io/cri-api => k8s.io/cri-api v0.32.0
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.32.0
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.32.0
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.32.0
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.32.0
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.32.0
+	k8s.io/kubectl => k8s.io/kubectl v0.32.0
+	k8s.io/kubelet => k8s.io/kubelet v0.32.0
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.32.0
+	k8s.io/metrics => k8s.io/metrics v0.32.0
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.32.0
 )
 
 replace helm.sh/helm/v3 => helm.sh/helm/v3 v3.13.1
 
-replace k8s.io/kubernetes => k8s.io/kubernetes v1.28.3
+replace k8s.io/kubernetes => k8s.io/kubernetes v1.32.0
 
 require (
 	cloud.google.com/go/pubsub v1.45.1
@@ -57,10 +57,10 @@ require (
 	golang.org/x/net v0.33.0
 	google.golang.org/api v0.209.0
 	google.golang.org/grpc v1.68.0
-	k8s.io/api v0.31.3
-	k8s.io/apimachinery v0.31.3
-	k8s.io/cli-runtime v0.31.3
-	k8s.io/client-go v1.5.2
+	k8s.io/api v0.32.0
+	k8s.io/apimachinery v0.32.0
+	k8s.io/cli-runtime v0.32.0
+	k8s.io/client-go v0.32.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -147,7 +147,6 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
-	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -215,14 +214,13 @@ require (
 	google.golang.org/protobuf v1.35.2 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.31.3 // indirect
-	k8s.io/apiserver v0.31.3 // indirect
-	k8s.io/component-base v0.31.3 // indirect
+	k8s.io/apiextensions-apiserver v0.32.0 // indirect
+	k8s.io/apiserver v0.32.0 // indirect
+	k8s.io/component-base v0.32.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241127205056-99599406b04f // indirect
-	k8s.io/kubectl v0.31.3 // indirect
+	k8s.io/kubectl v0.32.0 // indirect
 	k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078 // indirect
 	oras.land/oras-go v1.2.5 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
