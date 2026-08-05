@@ -20,7 +20,20 @@ ARMFLAGS		+= -X github.com/keel-hq/keel/version.Version=$(VERSION)
 ARMFLAGS		+= -X github.com/keel-hq/keel/version.Revision=$(GIT_REVISION)
 ARMFLAGS		+= -X github.com/keel-hq/keel/version.BuildDate=$(JOBDATE)
 
-.PHONY: release api-spec api-client api-generate api-validate api-check
+.PHONY: release release-lint release-package release-validate published-release-check api-spec api-client api-generate api-validate api-check
+
+release-lint:
+	bash -n .test/*.sh scripts/*.sh
+	go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+
+release-package:
+	KEEL_RELEASE_PACKAGE_ONLY=true ./scripts/release-validate.sh
+
+release-validate:
+	./scripts/release-validate.sh
+
+published-release-check:
+	./scripts/verify-published-release.sh
 
 api-spec:
 	$(SWAG) init -g cmd/keel/main.go -d . --parseInternal --parseDependency --outputTypes yaml -o docs
