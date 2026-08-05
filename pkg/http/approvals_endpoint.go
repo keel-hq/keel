@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/keel-hq/keel/pkg/auth"
 	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/types"
 )
@@ -181,6 +182,9 @@ func (s *TriggerServer) approvalApproveHandler(resp http.ResponseWriter, req *ht
 		http.Error(resp, "identifier cannot be empty", http.StatusNotFound)
 		return
 	}
+	if s.authMode == auth.ModeExternalProxy {
+		ar.Voter = s.approvalVoter(req, ar.Voter)
+	}
 
 	var approval *types.Approval
 
@@ -257,4 +261,13 @@ func (s *TriggerServer) approvalApproveHandler(resp http.ResponseWriter, req *ht
 	}
 
 	resp.Write(bts)
+}
+
+func (s *TriggerServer) approvalVoter(req *http.Request, requested string) string {
+	if s.authMode == auth.ModeExternalProxy {
+		if user := auth.GetAccountFromCtx(req.Context()); user != nil && user.Username != "" {
+			return user.Username
+		}
+	}
+	return requested
 }

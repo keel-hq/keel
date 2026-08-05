@@ -1,3 +1,4 @@
+{{ include "keel.validateAuth" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -70,6 +71,14 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: AUTH_MODE
+              value: {{ .Values.auth.mode | quote }}
+{{- if eq .Values.auth.mode "external-proxy" }}
+            - name: AUTH_PROXY_USER_HEADER
+              value: {{ .Values.auth.proxyUserHeader | quote }}
+            - name: AUTH_PROXY_LOGOUT_URL
+              value: {{ .Values.auth.proxyLogoutURL | quote }}
+{{- end }}
 {{- if .Values.googleApplicationCredentials }}
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /secret/google-application-credentials.json
@@ -209,18 +218,50 @@ spec:
             - containerPort: 9300
           livenessProbe:
             httpGet:
+{{- if eq .Values.auth.mode "external-proxy" }}
+              path: /ping
+              port: 4180
+{{- else }}
               path: /healthz
               port: 9300
+{{- end }}
             initialDelaySeconds: 5
             timeoutSeconds: 10
           readinessProbe:
             httpGet:
+{{- if eq .Values.auth.mode "external-proxy" }}
+              path: /ready
+              port: 4180
+{{- else }}
               path: /healthz
               port: 9300
+{{- end }}
             initialDelaySeconds: 5
             timeoutSeconds: 10
           resources:
 {{ toYaml .Values.resources | indent 12 }}
+{{- if .Values.oauth2Proxy.enabled }}
+        - name: oauth2-proxy
+          image: "{{ .Values.oauth2Proxy.image.repository }}@{{ .Values.oauth2Proxy.image.digest }}"
+          imagePullPolicy: {{ .Values.oauth2Proxy.image.pullPolicy }}
+          args:
+            - --http-address=0.0.0.0:4180
+            - --upstream=http://127.0.0.1:9300
+            - --reverse-proxy=true
+            - --set-xauthrequest=true
+            - --pass-user-headers=true
+{{- range .Values.oauth2Proxy.extraArgs }}
+            - {{ . | quote }}
+{{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.oauth2Proxy.existingSecret | quote }}
+          ports:
+            - name: oauth2-proxy
+              containerPort: 4180
+          resources:
+{{ toYaml .Values.oauth2Proxy.resources | indent 12 }}
+{{- end }}
 {{- if .Values.webhookRelay.enabled }}
         - name: webhookrelayd
           image: "{{ .Values.webhookRelay.image.repository }}:{{ .Values.webhookRelay.image.tag }}"

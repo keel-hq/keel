@@ -77,6 +77,7 @@ preflight() {
   port_is_listening 6443 && fail "Kubernetes API port 6443 is already in use"
   port_is_listening 5000 && fail "registry port 5000 is already in use"
   port_is_listening 19300 && fail "Keel port-forward port 19300 is already in use"
+  port_is_listening 19418 && fail "oauth2-proxy port-forward port 19418 is already in use"
   return 0
 }
 
@@ -376,6 +377,12 @@ collect_diagnostics() {
     >"${ARTIFACT_DIR}/keel.log" 2>&1 || true
   kubectl -n "keel-e2e-system-${RUN_ID}" logs deployment/keel --all-containers=true --previous \
     >"${ARTIFACT_DIR}/keel-previous.log" 2>&1 || true
+  kubectl -n "keel-e2e-system-${RUN_ID}" logs deployment/keel-oauth -c keel \
+    >"${ARTIFACT_DIR}/keel-oauth.log" 2>&1 || true
+  kubectl -n "keel-e2e-system-${RUN_ID}" logs deployment/keel-oauth -c oauth2-proxy \
+    >"${ARTIFACT_DIR}/oauth2-proxy.log" 2>&1 || true
+  kubectl -n "keel-e2e-system-${RUN_ID}" logs deployment/dex \
+    >"${ARTIFACT_DIR}/dex.log" 2>&1 || true
 }
 
 delete_suite_resources() {
@@ -397,12 +404,24 @@ stop_port_forward() {
   fi
 }
 
+stop_oauth_port_forward() {
+  local pid_file="${RUN_DIR}/oauth-port-forward.pid"
+  [[ -s "${pid_file}" ]] || return 0
+  local pid
+  pid="$(<"${pid_file}")"
+  if kill -0 "${pid}" 2>/dev/null; then
+    kill -TERM "${pid}" 2>/dev/null || true
+    wait "${pid}" 2>/dev/null || true
+  fi
+}
+
 cleanup() {
   ((CLEANUP_STARTED == 0)) || return 0
   CLEANUP_STARTED=1
   collect_diagnostics
   delete_suite_resources
   stop_port_forward
+  stop_oauth_port_forward
   stop_k3s
   stop_task_runtime
   unmount_task_runtime

@@ -47,6 +47,10 @@ type Opts struct {
 	UIDir string
 
 	AuthenticatedWebhooks bool
+
+	AuthMode            auth.Mode
+	AuthProxyUserHeader string
+	AuthProxyLogoutURL  string
 }
 
 // TriggerServer - webhook trigger & healthcheck server
@@ -66,6 +70,9 @@ type TriggerServer struct {
 	uiDir string
 
 	authenticatedWebhooks bool
+	authMode              auth.Mode
+	authProxyUserHeader   string
+	authProxyLogoutURL    string
 }
 
 // NewTriggerServer - create new HTTP trigger based server
@@ -81,6 +88,9 @@ func NewTriggerServer(opts *Opts) *TriggerServer {
 		store:                 opts.Store,
 		uiDir:                 opts.UIDir,
 		authenticatedWebhooks: opts.AuthenticatedWebhooks,
+		authMode:              opts.AuthMode,
+		authProxyUserHeader:   opts.AuthProxyUserHeader,
+		authProxyLogoutURL:    opts.AuthProxyLogoutURL,
 	}
 }
 
@@ -93,13 +103,17 @@ func (s *TriggerServer) Start() error {
 	n.Use(negroni.HandlerFunc(corsHeadersMiddleware))
 	n.UseHandler(s.router)
 
+	address := fmt.Sprintf(":%d", s.port)
+	if s.authMode == auth.ModeExternalProxy {
+		address = fmt.Sprintf("127.0.0.1:%d", s.port)
+	}
 	s.server = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.port),
+		Addr:    address,
 		Handler: n,
 	}
 
 	log.WithFields(log.Fields{
-		"port": s.port,
+		"address": address,
 	}).Info("webhook trigger server starting...")
 
 	return s.server.ListenAndServe()
@@ -131,15 +145,20 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 
 	mux.Handle("/metrics", promhttp.Handler())
 
-	if s.authenticator.Enabled() {
+	if s.adminEnabled() {
 		log.Info("authentication enabled, setting up admin HTTP handlers")
 		// auth
-		mux.HandleFunc("/v1/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
+		if s.authMode != auth.ModeExternalProxy {
+			mux.HandleFunc("/v1/auth/login", s.loginHandler).Methods("POST", "OPTIONS")
+			mux.HandleFunc("/v1/auth/refresh", s.requireAdminAuthorization(s.refreshHandler)).Methods("GET", "OPTIONS")
+		} else {
+			mux.HandleFunc("/v1/auth/login", localAuthDisabledHandler).Methods("POST", "OPTIONS")
+			mux.HandleFunc("/v1/auth/refresh", localAuthDisabledHandler).Methods("GET", "OPTIONS")
+		}
 		mux.HandleFunc("/v1/auth/info", s.requireAdminAuthorization(s.authInfoHandler)).Methods("GET", "OPTIONS")
 		mux.HandleFunc("/v1/auth/user", s.requireAdminAuthorization(s.authUserHandler)).Methods("GET", "OPTIONS")
 		mux.HandleFunc("/v1/auth/logout", s.requireAdminAuthorization(s.logoutGetHandler)).Methods("GET", "OPTIONS")
 		mux.HandleFunc("/v1/auth/logout", s.requireAdminAuthorization(s.logoutPostHandler)).Methods("POST", "OPTIONS")
-		mux.HandleFunc("/v1/auth/refresh", s.requireAdminAuthorization(s.refreshHandler)).Methods("GET", "OPTIONS")
 
 		// approvals
 		mux.HandleFunc("/v1/approvals", s.requireAdminAuthorization(s.approvalsHandler)).Methods("GET", "OPTIONS")
@@ -176,6 +195,14 @@ func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 		log.Info("authentication is not enabled, admin HTTP handlers are not initialized")
 	}
 
+}
+
+func (s *TriggerServer) adminEnabled() bool {
+	return s.authMode == auth.ModeExternalProxy || (s.authenticator != nil && s.authenticator.Enabled())
+}
+
+func localAuthDisabledHandler(resp http.ResponseWriter, _ *http.Request) {
+	http.Error(resp, "Keel local authentication is disabled in external-proxy mode", http.StatusNotFound)
 }
 
 func (s *TriggerServer) registerWebhookRoutes(mux *mux.Router) {
@@ -314,6 +341,8 @@ type UserInfo struct {
 	LastLoginIP   string `json:"last_login_ip"`
 	LastLoginTime int64  `json:"last_login_time"`
 	RoleID        string `json:"role_id"`
+	AuthMode      string `json:"auth_mode,omitempty"`
+	LogoutURL     string `json:"logout_url,omitempty"`
 }
 
 func (s *TriggerServer) userInfoHandler(resp http.ResponseWriter, req *http.Request) {
@@ -328,6 +357,8 @@ func (s *TriggerServer) userInfoHandler(resp http.ResponseWriter, req *http.Requ
 		LastLoginIP:   "",
 		LastLoginTime: time.Now().Unix(),
 		RoleID:        "admin",
+		AuthMode:      string(s.authMode),
+		LogoutURL:     s.authProxyLogoutURL,
 	}
 
 	response(&ui, 200, nil, resp, req)

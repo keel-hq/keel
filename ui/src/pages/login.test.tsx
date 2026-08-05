@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from "vitest"
 import { LoginPage } from "@/pages/login"
 import { ThemeProvider } from "@/components/theme-provider"
 
-vi.mock("@/auth", () => ({ useAuth: () => ({ user: null, login: vi.fn() }) }))
+vi.mock("@/auth", () => ({
+  useAuth: () => ({ user: null, loading: false, login: vi.fn() }),
+}))
 
 describe("LoginPage", () => {
   it("renders the existing username and password authentication flow", () => {

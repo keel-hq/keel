@@ -8,6 +8,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useAuth } from "@/auth"
 import { api } from "@/lib/api"
 import { deadline, formatDate } from "@/lib/format"
 import type { Approval } from "@/types"
@@ -48,6 +49,7 @@ type PendingAction = {
   action: "approve" | "reject" | "archive" | "delete"
 } | null
 export function ApprovalsPage() {
+  const { user } = useAuth()
   const [approvals, setApprovals] = useState<Approval[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [filter, setFilter] = useState("")
@@ -87,7 +89,7 @@ export function ApprovalsPage() {
             id: item.id,
             identifier: item.identifier,
             action: pendingAction.action,
-            voter: "admin-web-ui",
+            voter: user?.name || "admin-web-ui",
           })
         )
       )

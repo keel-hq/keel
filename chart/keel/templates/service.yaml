@@ -25,7 +25,7 @@ spec:
   ports:
     - port: {{ .Values.service.externalPort }}
   {{- if or (ne .Values.service.type "ClusterIP") (ne .Values.service.clusterIP "None") }}
-      targetPort: 9300
+      targetPort: {{ ternary 4180 9300 (eq .Values.auth.mode "external-proxy") }}
   {{- end }}
       protocol: TCP
       name: keel

@@ -3,6 +3,8 @@ export interface UserInfo {
   name: string
   username: string
   role_id: string
+  auth_mode?: "legacy" | "basic" | "external-proxy"
+  logout_url?: string
 }
 export interface Resource {
   provider: string

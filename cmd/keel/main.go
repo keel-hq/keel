@@ -127,6 +127,11 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	authConfig, err := auth.ConfigFromEnv(os.Getenv)
+	if err != nil {
+		log.WithError(err).Fatal("invalid administrator authentication configuration")
+	}
+
 	dataDir := "/data"
 	if os.Getenv(EnvDataDir) != "" {
 		dataDir = os.Getenv(EnvDataDir)
@@ -276,6 +281,7 @@ func main() {
 		k8sClient:        implementer,
 		store:            sqlStore,
 		uiDir:            *uiDir,
+		authConfig:       authConfig,
 	})
 
 	bot.Run(implementer, approvalsManager)
@@ -372,6 +378,7 @@ type TriggerOpts struct {
 	k8sClient        kubernetes.Implementer
 	store            store.Store
 	uiDir            string
+	authConfig       auth.Config
 }
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
@@ -380,8 +387,8 @@ type TriggerOpts struct {
 func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 
 	authenticator := auth.New(&auth.Opts{
-		Username: os.Getenv(constants.EnvBasicAuthUser),
-		Password: os.Getenv(constants.EnvBasicAuthPassword),
+		Username: opts.authConfig.Username,
+		Password: opts.authConfig.Password,
 		Secret:   []byte(os.Getenv(constants.EnvTokenSecret)),
 	})
 
@@ -396,7 +403,18 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 		Authenticator:         authenticator,
 		UIDir:                 opts.uiDir,
 		AuthenticatedWebhooks: os.Getenv(constants.EnvAuthenticatedWebhooks) == "true",
+		AuthMode:              opts.authConfig.Mode,
+		AuthProxyUserHeader:   opts.authConfig.ProxyUserHeader,
+		AuthProxyLogoutURL:    opts.authConfig.ProxyLogoutURL,
 	})
+
+	if opts.authConfig.Mode == auth.ModeExternalProxy {
+		log.WithFields(log.Fields{
+			"auth_mode":         opts.authConfig.Mode,
+			"listen_address":    "127.0.0.1",
+			"proxy_user_header": opts.authConfig.ProxyUserHeader,
+		}).Warn("external authentication proxy mode enabled; Keel trusts the configured identity header only because the HTTP listener is loopback-only")
+	}
 
 	go func() {
 		err := whs.Start()
