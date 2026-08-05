@@ -14,5 +14,4 @@ chart/*
 Dockerfile*
 ui/node_modules
 ui/dist
-.test/.runs
-.test/artifacts
+.test

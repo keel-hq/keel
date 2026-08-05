@@ -239,7 +239,9 @@ Prerequisites are Linux/amd64, Go 1.26.5, Make, Docker, `curl`, `sudo`, `setsid`
 
 k3s is pinned to `v1.35.6+k3s1` and verified with its official checksum. Registry and workload fixtures are digest-pinned and isolated by run/test repository. The expected runtime is 6–8 minutes, with a hard 10-minute target. Diagnostics are retained under `.test/artifacts/` and exclude Secrets, tokens, environment dumps, and kubeconfig contents.
 
-`make test` remains the fast unit-test path. Automatic PR/`master` e2e cadence is pending cost approval and is enabled with the `KEEL_E2E_PR_GATE=true` repository variable; `workflow_dispatch` runs the job directly.
+`make test` remains the fast unit-test path. CI runs the packaged-artifact k3s path for pull requests, `master`, application tags, and manual dispatches.
+
+Release candidates use the same harness with the packaged Helm chart and release Dockerfile. Run `make release-validate` for the complete non-publishing install/upgrade/rollback test, or see [Release process and validation](docs/release-validation.md) for package-only, published-artifact, diagnostics, and recovery commands.
 
 ### Debugging Keel on Windows
 

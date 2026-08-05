@@ -8,6 +8,9 @@ readonly K3S_VERSION="v1.35.6+k3s1"
 readonly K3S_RELEASE_URL="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}"
 readonly REGISTRY_IMAGE="registry@sha256:46faa9a1ae6813194b53921a370f2f4f8c5e1aae228a89bceafef5847a6a3278"
 readonly FIXTURE_IMAGE="docker.io/library/busybox@sha256:7a3ebe5bfd1a4a19797d20b0c0bb39d44393e9a03fd852c0865b0f540d868df0"
+readonly PRIOR_CHART_URL="https://github.com/keel-hq/keel/releases/download/keel-v1.0.5/keel-v1.0.5.tgz"
+readonly PRIOR_CHART_SHA256="8826a68c962d2641232897997f4fb2b547b6f1d252bffa8e9860113361cfb938"
+readonly PRIOR_IMAGE="docker.io/keelhq/keel@sha256:8c7492034b10f3cf718e8ab9f860501aeb5bf13812fa675695ea59c191295fa4"
 readonly REGISTRY_ADDRESS="10.53.0.50:5000"
 readonly K3S_RUNTIME_DIR="/run/k3s"
 readonly DEFAULT_K3S_DATA_DIR="/var/lib/rancher/k3s"
@@ -27,6 +30,9 @@ K3S_PID_FILE="${RUN_DIR}/k3s.pid"
 K3S_LOG="${ARTIFACT_DIR}/k3s.log"
 PORT_FORWARD_PID_FILE="${RUN_DIR}/port-forward.pid"
 E2E_ENV_FILE="${RUN_DIR}/e2e.env"
+RELEASE_NAMESPACE="keel-release-${RUN_ID}"
+RELEASE_PORT_FORWARD_PID_FILE="${RUN_DIR}/release-port-forward.pid"
+PERSISTENCE_CLASS="keel-e2e-${RUN_ID}"
 CLEANUP_STARTED=0
 
 log() {
@@ -45,7 +51,7 @@ port_is_listening() {
 
 preflight() {
   local command
-  for command in awk curl docker findmnt grep ip ps setsid sha256sum sort ss sudo; do
+  for command in awk curl docker findmnt grep ip jq ps setsid sha256sum sort ss sudo tar; do
     command -v "${command}" >/dev/null || fail "required command not found: ${command}"
   done
   sudo -n true 2>/dev/null || fail "passwordless sudo is required"
@@ -77,6 +83,7 @@ preflight() {
   port_is_listening 6443 && fail "Kubernetes API port 6443 is already in use"
   port_is_listening 5000 && fail "registry port 5000 is already in use"
   port_is_listening 19300 && fail "Keel port-forward port 19300 is already in use"
+  port_is_listening 19301 && fail "release-validation port-forward port 19301 is already in use"
   return 0
 }
 
@@ -244,13 +251,18 @@ EOF
 }
 
 build_keel_image() {
-  local local_image="keel-e2e:${RUN_ID}"
+  local local_image="${KEEL_E2E_PREBUILT_IMAGE:-keel-e2e:${RUN_ID}}"
   local registry_image="${REGISTRY_ADDRESS}/keel-under-test:${RUN_ID}"
   local image_archive="${RUN_DIR}/keel-image.tar"
   local digest
 
-  log "building Keel container from ${REPO_ROOT}/Dockerfile"
-  docker build --tag "${local_image}" --file "${REPO_ROOT}/Dockerfile" "${REPO_ROOT}"
+  if [[ -z "${KEEL_E2E_PREBUILT_IMAGE:-}" ]]; then
+    log "building Keel container from ${REPO_ROOT}/Dockerfile"
+    docker build --tag "${local_image}" --file "${REPO_ROOT}/Dockerfile" "${REPO_ROOT}"
+  else
+    docker image inspect "${local_image}" >/dev/null || fail "prebuilt image not found: ${local_image}"
+    log "using release-validated image ${local_image}"
+  fi
   docker save --output "${image_archive}" "${local_image}"
   ctr images import "${image_archive}"
   ctr images tag "docker.io/library/${local_image}" "${registry_image}"
@@ -273,6 +285,170 @@ build_keel_image() {
     printf 'KEEL_E2E_ARTIFACT_DIR=%q\n' "${ARTIFACT_DIR}"
   } >"${E2E_ENV_FILE}"
   log "Keel image: ${REGISTRY_ADDRESS}/keel-under-test@${digest}"
+}
+
+release_helm() {
+  env KUBECONFIG="${KUBECONFIG}" K3S_DATA_DIR="${K3S_CLIENT_DATA_DIR}" \
+    "${KEEL_E2E_HELM_BIN}" "$@"
+}
+
+wait_for_release() {
+  kubectl -n "${RELEASE_NAMESPACE}" rollout status deployment/keel --timeout=180s
+  kubectl -n "${RELEASE_NAMESPACE}" wait --for=condition=Ready pod \
+    --selector app=keel --timeout=120s
+  kubectl -n "${RELEASE_NAMESPACE}" get endpoints keel -o json | \
+    jq -e '.subsets | any(.addresses | length > 0)' >/dev/null || fail "Keel Service has no ready endpoints"
+}
+
+smoke_release_service() {
+  local expected_version="$1"
+  local diagnostic_name="${2:-${expected_version}}"
+  local log_file="${ARTIFACT_DIR}/release-port-forward.log"
+  stop_release_port_forward
+  kubectl -n "${RELEASE_NAMESPACE}" port-forward service/keel 19301:9300 >"${log_file}" 2>&1 &
+  printf '%s\n' "$!" >"${RELEASE_PORT_FORWARD_PID_FILE}"
+  for _ in $(seq 1 60); do
+    if curl --fail --show-error --silent http://127.0.0.1:19301/healthz >/dev/null 2>&1; then
+      curl --fail --show-error --silent http://127.0.0.1:19301/version \
+        >"${ARTIFACT_DIR}/release-version-${diagnostic_name//\//-}.json"
+      jq -e --arg expected "${expected_version}" '.version == $expected' \
+        "${ARTIFACT_DIR}/release-version-${diagnostic_name//\//-}.json" >/dev/null || \
+        fail "Service /version did not report the expected value for ${diagnostic_name}"
+      stop_release_port_forward
+      return 0
+    fi
+    sleep 1
+  done
+  fail "Keel Service did not become reachable; see ${log_file}"
+}
+
+stop_release_port_forward() {
+  [[ -s "${RELEASE_PORT_FORWARD_PID_FILE}" ]] || return 0
+  local pid
+  pid="$(<"${RELEASE_PORT_FORWARD_PID_FILE}")"
+  if kill -0 "${pid}" 2>/dev/null; then
+    kill -TERM "${pid}" 2>/dev/null || true
+    wait "${pid}" 2>/dev/null || true
+  fi
+  : >"${RELEASE_PORT_FORWARD_PID_FILE}"
+}
+
+assert_candidate_objects() {
+  local expected_image="${REGISTRY_ADDRESS}/keel-under-test:${RUN_ID}"
+  kubectl -n "${RELEASE_NAMESPACE}" get deployment keel -o json >"${ARTIFACT_DIR}/candidate-deployment.json"
+  jq -e --arg image "${expected_image}" '
+    .spec.template.spec.serviceAccountName == "keel" and
+    .spec.template.spec.containers[0].image == $image and
+    .spec.template.spec.containers[0].livenessProbe.httpGet.path == "/healthz" and
+    .spec.template.spec.containers[0].readinessProbe.httpGet.path == "/healthz"
+  ' "${ARTIFACT_DIR}/candidate-deployment.json" >/dev/null || fail "candidate Deployment wiring is invalid"
+  kubectl -n "${RELEASE_NAMESPACE}" get service/keel serviceaccount/keel secret/keel >/dev/null
+  kubectl get clusterrole/keel clusterrolebinding/keel >/dev/null
+}
+
+uninstall_release() {
+  release_helm uninstall keel --namespace "${RELEASE_NAMESPACE}" --wait --timeout 120s
+  kubectl delete namespace "${RELEASE_NAMESPACE}" --wait=true --timeout=120s
+  kubectl delete persistentvolume --selector "keel.sh/e2e-run=${RUN_ID}" \
+    --ignore-not-found --wait=true --timeout=120s
+  [[ -z "$(kubectl get clusterrole,clusterrolebinding -o name | grep -E '(^|/)keel$' || true)" ]] || \
+    fail "Helm uninstall leaked Keel cluster-scoped RBAC resources"
+  [[ -z "$(kubectl get persistentvolume --selector "keel.sh/e2e-run=${RUN_ID}" -o name)" ]] || \
+    fail "release validation leaked its persistence fixture"
+}
+
+create_persistence_fixture() {
+  kubectl apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: keel-release-${RUN_ID}
+  labels:
+    keel.sh/e2e-run: ${RUN_ID}
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ${PERSISTENCE_CLASS}
+  hostPath:
+    path: ${K3S_DATA_DIR}/release-persistence
+    type: DirectoryOrCreate
+EOF
+}
+
+validate_packaged_release() {
+  [[ -n "${KEEL_E2E_RELEASE_CHART:-}" ]] || return 0
+  [[ -x "${KEEL_E2E_HELM_BIN:-}" ]] || fail "release validation requires a pinned Helm binary"
+  [[ -s "${KEEL_E2E_RELEASE_CHART}" ]] || fail "packaged chart not found: ${KEEL_E2E_RELEASE_CHART}"
+  local candidate_repository="${REGISTRY_ADDRESS}/keel-under-test"
+  local candidate_version="${KEEL_E2E_APP_VERSION}"
+  local prior_archive="${RUN_DIR}/keel-v1.0.5.tgz"
+  local pvc_uid
+
+  log "installing packaged chart with backward-compatible defaults"
+  release_helm install keel "${KEEL_E2E_RELEASE_CHART}" --namespace "${RELEASE_NAMESPACE}" --create-namespace \
+    --set-string image.repository="${candidate_repository}" --set-string image.tag="${RUN_ID}" \
+    --set image.pullPolicy=IfNotPresent --set service.enabled=true --set service.type=ClusterIP \
+    --set helmProvider.enabled=false --wait --timeout 180s
+  wait_for_release
+  assert_candidate_objects
+  smoke_release_service "${candidate_version}"
+  [[ "$(kubectl -n "${RELEASE_NAMESPACE}" get pvc -o name)" == "" ]] || fail "default values unexpectedly created persistence"
+  uninstall_release
+
+  log "installing immutable published chart/image upgrade fixture"
+  curl --fail --location --show-error --silent --output "${prior_archive}" "${PRIOR_CHART_URL}"
+  printf '%s  %s\n' "${PRIOR_CHART_SHA256}" "${prior_archive}" | sha256sum --check --strict -
+  create_persistence_fixture
+  release_helm install keel "${prior_archive}" --namespace "${RELEASE_NAMESPACE}" --create-namespace \
+    --set-string image.repository="${PRIOR_IMAGE%:*}" --set-string image.tag="${PRIOR_IMAGE##*:}" \
+    --set image.pullPolicy=IfNotPresent --set service.enabled=true --set service.type=ClusterIP \
+    --set helmProvider.enabled=false --set persistence.enabled=true --set-string persistence.storageClass="${PERSISTENCE_CLASS}" \
+    --wait --timeout 180s
+  wait_for_release
+  # The immutable 0.20.0 image is known to have empty embedded Version/Revision fields.
+  smoke_release_service "" "published-0.20.0"
+  # Static hostPath volumes do not implement fsGroup ownership changes. Normalize this
+  # disposable fixture to the current image UID after proving the prior image wrote state.
+  kubectl -n "${RELEASE_NAMESPACE}" exec deployment/keel -- test -s /data/keel.db
+  kubectl -n "${RELEASE_NAMESPACE}" exec deployment/keel -- chown -R 666:666 /data
+  pvc_uid="$(kubectl -n "${RELEASE_NAMESPACE}" get pvc keel -o jsonpath='{.metadata.uid}')"
+  [[ -n "${pvc_uid}" ]] || fail "published release did not create its persistence claim"
+
+  log "upgrading published release to the packaged candidate with production-style values"
+  release_helm upgrade keel "${KEEL_E2E_RELEASE_CHART}" --namespace "${RELEASE_NAMESPACE}" \
+    --set-string image.repository="${candidate_repository}" --set-string image.tag="${RUN_ID}" \
+    --set image.pullPolicy=IfNotPresent --set service.enabled=true --set service.type=ClusterIP \
+    --set helmProvider.enabled=false --set persistence.enabled=true --set-string persistence.storageClass="${PERSISTENCE_CLASS}" \
+    --set debug=true --set basicauth.enabled=true --set basicauth.user=release-validator \
+    --set basicauth.password=not-a-production-secret \
+    --set podSecurityContext.fsGroup=666 \
+    --set containerSecurityContext.allowPrivilegeEscalation=false \
+    --wait --timeout 180s
+  wait_for_release
+  assert_candidate_objects
+  smoke_release_service "${candidate_version}"
+  [[ "$(kubectl -n "${RELEASE_NAMESPACE}" get pvc keel -o jsonpath='{.metadata.uid}')" == "${pvc_uid}" ]] || \
+    fail "upgrade replaced the persistence claim"
+  kubectl -n "${RELEASE_NAMESPACE}" get deployment keel -o json | jq -e '
+    any(.spec.template.spec.containers[0].env[]; .name == "DEBUG" and .value == "true") and
+    any(.spec.template.spec.containers[0].env[]; .name == "BASIC_AUTH_USER" and .value == "release-validator") and
+    .spec.template.spec.securityContext.fsGroup == 666 and
+    .spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation == false
+  ' >/dev/null || fail "production-style configuration was not preserved in the upgraded Deployment"
+  release_helm history keel --namespace "${RELEASE_NAMESPACE}" -o json | jq -e 'length == 2 and .[1].status == "deployed"' >/dev/null || \
+    fail "Helm did not record the expected upgrade revision"
+
+  log "rolling back to the supported published revision"
+  release_helm rollback keel 1 --namespace "${RELEASE_NAMESPACE}" --wait --timeout 180s
+  wait_for_release
+  smoke_release_service "" "rollback-0.20.0"
+  [[ "$(kubectl -n "${RELEASE_NAMESPACE}" get pvc keel -o jsonpath='{.metadata.uid}')" == "${pvc_uid}" ]] || \
+    fail "rollback replaced the persistence claim"
+  uninstall_release
+  log "packaged chart install, upgrade, rollback, and cleanup succeeded"
 }
 
 seed_fixture_repositories() {
@@ -376,6 +552,22 @@ collect_diagnostics() {
     >"${ARTIFACT_DIR}/keel.log" 2>&1 || true
   kubectl -n "keel-e2e-system-${RUN_ID}" logs deployment/keel --all-containers=true --previous \
     >"${ARTIFACT_DIR}/keel-previous.log" 2>&1 || true
+  if [[ -n "${KEEL_E2E_HELM_BIN:-}" && -x "${KEEL_E2E_HELM_BIN}" ]]; then
+    release_helm status keel --namespace "${RELEASE_NAMESPACE}" --show-resources \
+      >"${ARTIFACT_DIR}/release-helm-status.txt" 2>&1 || true
+    release_helm history keel --namespace "${RELEASE_NAMESPACE}" \
+      >"${ARTIFACT_DIR}/release-helm-history.txt" 2>&1 || true
+    release_helm get values keel --namespace "${RELEASE_NAMESPACE}" --all \
+      >"${ARTIFACT_DIR}/release-helm-values.yaml" 2>&1 || true
+    release_helm get manifest keel --namespace "${RELEASE_NAMESPACE}" \
+      >"${ARTIFACT_DIR}/release-helm-manifest.yaml" 2>&1 || true
+    kubectl -n "${RELEASE_NAMESPACE}" get all,pvc,serviceaccount,role,rolebinding -o wide \
+      >"${ARTIFACT_DIR}/release-resources.txt" 2>&1 || true
+    kubectl -n "${RELEASE_NAMESPACE}" describe pods \
+      >"${ARTIFACT_DIR}/release-describe-pods.txt" 2>&1 || true
+    kubectl -n "${RELEASE_NAMESPACE}" logs deployment/keel --all-containers=true \
+      >"${ARTIFACT_DIR}/release-keel.log" 2>&1 || true
+  fi
 }
 
 delete_suite_resources() {
@@ -401,6 +593,7 @@ cleanup() {
   ((CLEANUP_STARTED == 0)) || return 0
   CLEANUP_STARTED=1
   collect_diagnostics
+  stop_release_port_forward
   delete_suite_resources
   stop_port_forward
   stop_k3s
@@ -441,6 +634,7 @@ main() {
   deploy_registry
   seed_fixture_repositories
   build_keel_image
+  validate_packaged_release
   run_tests
 }
 

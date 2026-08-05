@@ -8,16 +8,23 @@ on:
     branches: [master]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.26.5"
 
@@ -32,15 +39,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.26.5"
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24.11.0"
           cache: npm
@@ -60,34 +67,74 @@ jobs:
   e2e:
     name: End-to-End Tests (k3s)
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.26.5"
 
-      - name: Run k3s end-to-end tests
-        run: make e2e
+      - name: Validate release package in k3s
+        run: make release-validate
 
       - name: Upload end-to-end diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: keel-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: .test/artifacts/
           if-no-files-found: warn
           retention-days: 7
 
-  docker:
-    name: Build Docker Image (${{ matrix.arch }})
+  docker-pr:
+    name: Validate Docker Image (${{ matrix.arch }})
     needs: [test, lint-ui, e2e]
-    if: always() && needs.test.result == 'success' && needs.lint-ui.result == 'success' && (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')
+    if: always() && github.event_name == 'pull_request' && needs.test.result == 'success' && needs.lint-ui.result == 'success' && needs.e2e.result == 'success'
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Extract validated application version
+        id: version
+        shell: bash
+        run: echo "app_version=$(awk '$1 == \"appVersion:\" {print $2; exit}' chart/keel/Chart.yaml)" >> "$GITHUB_OUTPUT"
+      - name: Build without publishing
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.app_version }}
+            REVISION=${{ github.sha }}
+          push: false
+          cache-from: type=gha,scope=keel-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=keel-${{ matrix.arch }}
+
+  docker-publish:
+    name: Build and Publish Docker Image (${{ matrix.arch }})
+    needs: [test, lint-ui, e2e]
+    if: always() && github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/chart-') && needs.test.result == 'success' && needs.lint-ui.result == 'success' && needs.e2e.result == 'success'
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -104,16 +151,15 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -121,7 +167,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -129,20 +175,43 @@ jobs:
             type=ref,event=tag
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
 
+      - name: Extract validated application version
+        id: version
+        shell: bash
+        run: echo "app_version=$(awk '$1 == \"appVersion:\" {print $2; exit}' chart/keel/Chart.yaml)" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse to overwrite an application release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          IMAGE_TAG: ${{ github.ref_name }}
+        run: |
+          token=$(curl --fail --show-error --silent \
+            'https://ghcr.io/token?scope=repository:keel-hq/keel:pull' | jq -er .token)
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --header "Authorization: Bearer $token" \
+            --header 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json' \
+            "https://ghcr.io/v2/keel-hq/keel/manifests/$IMAGE_TAG")
+          case "$status" in
+            404) ;;
+            200) echo "Refusing to overwrite published image tag ghcr.io/keel-hq/keel:$IMAGE_TAG" >&2; exit 1 ;;
+            *) echo "Could not establish whether image tag $IMAGE_TAG exists (HTTP $status)" >&2; exit 1 ;;
+          esac
+
       - name: Build and push
-        if: github.event_name != 'pull_request'
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.app_version }}
+            REVISION=${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=keel-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=keel-${{ matrix.arch }}
 
       - name: Export image digest
-        if: github.event_name != 'pull_request'
         env:
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
@@ -154,27 +223,16 @@ jobs:
           touch "/tmp/digests/${IMAGE_DIGEST#sha256:}"
 
       - name: Upload image digest
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: docker-digest-${{ matrix.arch }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
 
-      - name: Build for PR validation
-        if: github.event_name == 'pull_request'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: ${{ matrix.platform }}
-          push: false
-          cache-from: type=gha,scope=keel-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=keel-${{ matrix.arch }}
-
   docker-manifest:
     name: Publish Docker Manifest
-    needs: docker
+    needs: docker-publish
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -182,10 +240,10 @@ jobs:
       packages: write
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -193,7 +251,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -202,7 +260,7 @@ jobs:
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
 
       - name: Download image digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: /tmp/digests
           pattern: docker-digest-*

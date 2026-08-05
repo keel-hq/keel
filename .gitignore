@@ -15,6 +15,8 @@ cmd/keel/keel.exe
 test_results.xml
 .test/.runs/
 .test/artifacts/
+.test/release-artifacts/
+.test/published-artifacts/
 
 # Swagger output is YAML-only; prevent accidental redundant artifacts.
 docs/docs.go
