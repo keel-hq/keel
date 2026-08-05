@@ -95,8 +95,8 @@ type Repository struct {
 	Name             string     `json:"name"`
 	Tag              string     `json:"tag"`
 	Digest           string     `json:"digest"` // optional digest field
-	Platforms        []Platform `json:"platforms,omitempty"`
-	PlatformVerified bool       `json:"platformVerified,omitempty"`
+	Platforms        []Platform `json:"platforms,omitempty" swaggerignore:"true"`
+	PlatformVerified bool       `json:"platformVerified,omitempty" swaggerignore:"true"`
 }
 
 // String gives you [host/]team/repo[:tag] identifier
