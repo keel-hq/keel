@@ -87,6 +87,10 @@ func (s *E2ESuite) SetupSuite() {
 }
 
 func (s *E2ESuite) TearDownSuite() {
+	if os.Getenv("KEEL_E2E_KEEP_CLUSTER") == "true" {
+		s.T().Log("KEEL_E2E_KEEP_CLUSTER=true: preserving suite resources and port-forwards for manual inspection")
+		return
+	}
 	if s.portForward != nil && s.portForward.Process != nil {
 		_ = s.portForward.Process.Signal(os.Interrupt)
 		_, _ = s.portForward.Process.Wait()
