@@ -23,6 +23,11 @@ source "${ARTIFACT_DIR}/release.env"
 set +a
 KEEL_RELEASE_CHART="${ARTIFACT_DIR}/chart/$(basename "${KEEL_RELEASE_CHART}")"
 HELM_BIN="${ARTIFACT_DIR}/bin/helm"
+[[ -s "${HELM_BIN}" ]] || {
+  printf '[release-validation] ERROR: pinned Helm binary not found: %s\n' "${HELM_BIN}" >&2
+  exit 1
+}
+chmod 0755 "${HELM_BIN}"
 if ! docker image inspect "${KEEL_RELEASE_IMAGE}" >/dev/null 2>&1; then
   image_archive="${ARTIFACT_DIR}/image/image.tar"
   [[ -s "${image_archive}" && -s "${image_archive}.sha256" ]] || {
