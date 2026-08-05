@@ -15,3 +15,4 @@ Dockerfile*
 ui/node_modules
 ui/dist
 .test
+tests

@@ -47,6 +47,9 @@ class PkgHttpUserInfo {
         if (data) {
             obj = obj || new PkgHttpUserInfo();
 
+            if (data.hasOwnProperty('auth_mode')) {
+                obj['auth_mode'] = ApiClient.convertToType(data['auth_mode'], 'String');
+            }
             if (data.hasOwnProperty('avatar')) {
                 obj['avatar'] = ApiClient.convertToType(data['avatar'], 'String');
             }
@@ -58,6 +61,9 @@ class PkgHttpUserInfo {
             }
             if (data.hasOwnProperty('last_login_time')) {
                 obj['last_login_time'] = ApiClient.convertToType(data['last_login_time'], 'Number');
+            }
+            if (data.hasOwnProperty('logout_url')) {
+                obj['logout_url'] = ApiClient.convertToType(data['logout_url'], 'String');
             }
             if (data.hasOwnProperty('name')) {
                 obj['name'] = ApiClient.convertToType(data['name'], 'String');
@@ -82,6 +88,10 @@ class PkgHttpUserInfo {
      */
     static validateJSON(data) {
         // ensure the json data is a string
+        if (data['auth_mode'] && !(typeof data['auth_mode'] === 'string' || data['auth_mode'] instanceof String)) {
+            throw new Error("Expected the field `auth_mode` to be a primitive type in the JSON string but got " + data['auth_mode']);
+        }
+        // ensure the json data is a string
         if (data['avatar'] && !(typeof data['avatar'] === 'string' || data['avatar'] instanceof String)) {
             throw new Error("Expected the field `avatar` to be a primitive type in the JSON string but got " + data['avatar']);
         }
@@ -92,6 +102,10 @@ class PkgHttpUserInfo {
         // ensure the json data is a string
         if (data['last_login_ip'] && !(typeof data['last_login_ip'] === 'string' || data['last_login_ip'] instanceof String)) {
             throw new Error("Expected the field `last_login_ip` to be a primitive type in the JSON string but got " + data['last_login_ip']);
+        }
+        // ensure the json data is a string
+        if (data['logout_url'] && !(typeof data['logout_url'] === 'string' || data['logout_url'] instanceof String)) {
+            throw new Error("Expected the field `logout_url` to be a primitive type in the JSON string but got " + data['logout_url']);
         }
         // ensure the json data is a string
         if (data['name'] && !(typeof data['name'] === 'string' || data['name'] instanceof String)) {
@@ -115,6 +129,11 @@ class PkgHttpUserInfo {
 
 
 /**
+ * @member {String} auth_mode
+ */
+PkgHttpUserInfo.prototype['auth_mode'] = undefined;
+
+/**
  * @member {String} avatar
  */
 PkgHttpUserInfo.prototype['avatar'] = undefined;
@@ -133,6 +152,11 @@ PkgHttpUserInfo.prototype['last_login_ip'] = undefined;
  * @member {Number} last_login_time
  */
 PkgHttpUserInfo.prototype['last_login_time'] = undefined;
+
+/**
+ * @member {String} logout_url
+ */
+PkgHttpUserInfo.prototype['logout_url'] = undefined;
 
 /**
  * @member {String} name

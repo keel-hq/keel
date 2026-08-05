@@ -97,6 +97,10 @@ func waitForDeploymentAvailable(ctx context.Context, client kubernetes.Interface
 }
 
 func waitForHTTPReady(ctx context.Context, client *http.Client, url string) error {
+	return waitForHTTPStatus(ctx, client, url, http.StatusOK)
+}
+
+func waitForHTTPStatus(ctx context.Context, client *http.Client, url string, expected int) error {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 	last := "<not observed>"
@@ -107,7 +111,7 @@ func waitForHTTPReady(ctx context.Context, client *http.Client, url string) erro
 		} else {
 			_ = response.Body.Close()
 			last = fmt.Sprintf("HTTP %d", response.StatusCode)
-			if response.StatusCode == http.StatusOK {
+			if response.StatusCode == expected {
 				return nil
 			}
 		}

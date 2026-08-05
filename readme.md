@@ -48,6 +48,9 @@ Support Keel's development by:
 
 ### Helm quick start
 
+To put the Admin UI and API behind oauth2-proxy without Keel Basic Auth, use
+the explicit [`external-proxy` authentication mode](docs/external-auth-proxy.md).
+
 Prerequisites:
 
 * [Helm](https://docs.helm.sh/using_helm/#installing-helm)

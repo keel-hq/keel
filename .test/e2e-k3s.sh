@@ -84,6 +84,7 @@ preflight() {
   port_is_listening 5000 && fail "registry port 5000 is already in use"
   port_is_listening 19300 && fail "Keel port-forward port 19300 is already in use"
   port_is_listening 19301 && fail "release-validation port-forward port 19301 is already in use"
+  port_is_listening 19418 && fail "oauth2-proxy port-forward port 19418 is already in use"
   return 0
 }
 
@@ -322,6 +323,28 @@ smoke_release_service() {
   fail "Keel Service did not become reachable; see ${log_file}"
 }
 
+smoke_oauth_release_service() {
+  local log_file="${ARTIFACT_DIR}/release-oauth-port-forward.log"
+  local status
+  stop_release_port_forward
+  kubectl -n "${RELEASE_NAMESPACE}" port-forward service/keel 19301:9300 >"${log_file}" 2>&1 &
+  printf '%s\n' "$!" >"${RELEASE_PORT_FORWARD_PID_FILE}"
+  for _ in $(seq 1 60); do
+    if curl --fail --show-error --silent http://127.0.0.1:19301/ping >/dev/null 2>&1; then
+      status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+        --header 'X-Forwarded-User: spoofed@example.test' http://127.0.0.1:19301/version)"
+      case "${status}" in
+        302|401|403) ;;
+        *) fail "OAuth-proxy Service accepted or unexpectedly handled an unauthenticated spoofed identity (HTTP ${status})" ;;
+      esac
+      stop_release_port_forward
+      return 0
+    fi
+    sleep 1
+  done
+  fail "OAuth-proxy Service did not become reachable; see ${log_file}"
+}
+
 stop_release_port_forward() {
   [[ -s "${RELEASE_PORT_FORWARD_PID_FILE}" ]] || return 0
   local pid
@@ -344,6 +367,21 @@ assert_candidate_objects() {
   ' "${ARTIFACT_DIR}/candidate-deployment.json" >/dev/null || fail "candidate Deployment wiring is invalid"
   kubectl -n "${RELEASE_NAMESPACE}" get service/keel serviceaccount/keel secret/keel >/dev/null
   kubectl get clusterrole/keel clusterrolebinding/keel >/dev/null
+}
+
+assert_oauth_candidate_objects() {
+  kubectl -n "${RELEASE_NAMESPACE}" get deployment keel -o json >"${ARTIFACT_DIR}/candidate-oauth-deployment.json"
+  kubectl -n "${RELEASE_NAMESPACE}" get service keel -o json >"${ARTIFACT_DIR}/candidate-oauth-service.json"
+  jq -e '
+    any(.spec.template.spec.containers[]; .name == "oauth2-proxy" and
+      .image == "quay.io/oauth2-proxy/oauth2-proxy@sha256:d62e2d81c6f5048f652f67c302083be1272c181b971fad80e5a30ebe2b8b75d8") and
+    any(.spec.template.spec.containers[]; .name == "keel" and
+      any(.env[]; .name == "AUTH_MODE" and .value == "external-proxy") and
+      .livenessProbe.httpGet.path == "/ping" and .livenessProbe.httpGet.port == 4180 and
+      .readinessProbe.httpGet.path == "/ready" and .readinessProbe.httpGet.port == 4180)
+  ' "${ARTIFACT_DIR}/candidate-oauth-deployment.json" >/dev/null || fail "OAuth-proxy candidate Deployment wiring is invalid"
+  jq -e '.spec.ports[0].targetPort == 4180' "${ARTIFACT_DIR}/candidate-oauth-service.json" >/dev/null || \
+    fail "OAuth-proxy Service does not target the sidecar"
 }
 
 uninstall_release() {
@@ -396,6 +434,27 @@ validate_packaged_release() {
   assert_candidate_objects
   smoke_release_service "${candidate_version}"
   [[ "$(kubectl -n "${RELEASE_NAMESPACE}" get pvc -o name)" == "" ]] || fail "default values unexpectedly created persistence"
+  uninstall_release
+
+  log "installing packaged chart with OAuth-proxy topology"
+  kubectl create namespace "${RELEASE_NAMESPACE}"
+  kubectl -n "${RELEASE_NAMESPACE}" create secret generic keel-oauth2-proxy \
+    --from-literal=OAUTH2_PROXY_CLIENT_ID=release-validator \
+    --from-literal=OAUTH2_PROXY_CLIENT_SECRET=not-a-production-secret \
+    --from-literal=OAUTH2_PROXY_COOKIE_SECRET=0123456789abcdef0123456789abcdef
+  release_helm install keel "${KEEL_E2E_RELEASE_CHART}" --namespace "${RELEASE_NAMESPACE}" \
+    --set-string image.repository="${candidate_repository}" --set-string image.tag="${RUN_ID}" \
+    --set image.pullPolicy=IfNotPresent --set service.enabled=true --set service.type=ClusterIP \
+    --set helmProvider.enabled=false --set auth.mode=external-proxy \
+    --set oauth2Proxy.enabled=true --set oauth2Proxy.existingSecret=keel-oauth2-proxy \
+    --set-string 'oauth2Proxy.extraArgs[0]=--provider=github' \
+    --set-string 'oauth2Proxy.extraArgs[1]=--email-domain=*' \
+    --set-string 'oauth2Proxy.extraArgs[2]=--cookie-secure=false' \
+    --set-string 'oauth2Proxy.extraArgs[3]=--redirect-url=http://127.0.0.1:19301/oauth2/callback' \
+    --wait --timeout 180s
+  wait_for_release
+  assert_oauth_candidate_objects
+  smoke_oauth_release_service
   uninstall_release
 
   log "installing immutable published chart/image upgrade fixture"
@@ -473,7 +532,27 @@ run_tests() {
   # shellcheck disable=SC1090
   source "${E2E_ENV_FILE}"
   set +a
+  if [[ "${KEEL_E2E_MANUAL:-false}" == "true" ]]; then
+    go test -count=1 -v ./tests \
+      -run '^TestE2ESuite/TestExternalOAuthProxyAdminFlow$' 2>&1 | \
+      tee "${ARTIFACT_DIR}/go-test.log"
+    return
+  fi
   go test -count=1 -v ./tests 2>&1 | tee "${ARTIFACT_DIR}/go-test.log"
+}
+
+hold_for_manual_inspection() {
+  [[ "${KEEL_E2E_KEEP_CLUSTER:-false}" == "true" ]] || return 0
+  printf '%s\n' "$$" >"${RUN_DIR}/harness.pid"
+  log "manual inspection stack is ready"
+  log "Admin UI: http://127.0.0.1:19418/"
+  log "Dex credentials: alice@example.test / password"
+  log "KUBECONFIG: ${KUBECONFIG}"
+  log "Artifacts: ${ARTIFACT_DIR}"
+  log "Cleanup: kill -INT \"\$(cat '${RUN_DIR}/harness.pid')\""
+  while true; do
+    sleep 30
+  done
 }
 
 stop_k3s() {
@@ -568,6 +647,12 @@ collect_diagnostics() {
     kubectl -n "${RELEASE_NAMESPACE}" logs deployment/keel --all-containers=true \
       >"${ARTIFACT_DIR}/release-keel.log" 2>&1 || true
   fi
+  kubectl -n "keel-e2e-system-${RUN_ID}" logs deployment/keel-oauth -c keel \
+    >"${ARTIFACT_DIR}/keel-oauth.log" 2>&1 || true
+  kubectl -n "keel-e2e-system-${RUN_ID}" logs deployment/keel-oauth -c oauth2-proxy \
+    >"${ARTIFACT_DIR}/oauth2-proxy.log" 2>&1 || true
+  kubectl -n "keel-e2e-system-${RUN_ID}" logs deployment/dex \
+    >"${ARTIFACT_DIR}/dex.log" 2>&1 || true
 }
 
 delete_suite_resources() {
@@ -589,6 +674,17 @@ stop_port_forward() {
   fi
 }
 
+stop_oauth_port_forward() {
+  local pid_file="${RUN_DIR}/oauth-port-forward.pid"
+  [[ -s "${pid_file}" ]] || return 0
+  local pid
+  pid="$(<"${pid_file}")"
+  if kill -0 "${pid}" 2>/dev/null; then
+    kill -TERM "${pid}" 2>/dev/null || true
+    wait "${pid}" 2>/dev/null || true
+  fi
+}
+
 cleanup() {
   ((CLEANUP_STARTED == 0)) || return 0
   CLEANUP_STARTED=1
@@ -596,6 +692,7 @@ cleanup() {
   stop_release_port_forward
   delete_suite_resources
   stop_port_forward
+  stop_oauth_port_forward
   stop_k3s
   stop_task_runtime
   unmount_task_runtime
@@ -636,6 +733,7 @@ main() {
   build_keel_image
   validate_packaged_release
   run_tests
+  hold_for_manual_inspection
 }
 
 main "$@"

@@ -140,6 +140,12 @@ The following table lists has the main configurable parameters (polling, trigger
 | `basicauth.enabled`                         | Enable/disable Basic Auth on approvals | `false`                                                   |
 | `basicauth.user`                            | Basic Auth username                    |                                                           |
 | `basicauth.password`                        | Basic Auth password                    |                                                           |
+| `auth.mode`                                 | Admin auth mode: `legacy`, `basic`, or `external-proxy` | `legacy`                                      |
+| `auth.proxyUserHeader`                      | Trusted attribution header in external-proxy mode | `X-Forwarded-User`                          |
+| `auth.proxyLogoutURL`                       | Same-origin oauth2-proxy logout path   | `/oauth2/sign_out?rd=/`                                  |
+| `oauth2Proxy.enabled`                       | Run the required oauth2-proxy sidecar  | `false`                                                   |
+| `oauth2Proxy.existingSecret`                | Secret containing oauth2-proxy environment variables |                                             |
+| `oauth2Proxy.extraArgs`                     | Provider-specific oauth2-proxy arguments | `[]`                                                    |
 | `dockerRegistry.enabled`                    | Docker registry secret enabled.        | `false`                                                   |
 | `dockerRegistry.name`                       | Docker registry secret name            |                                                           |
 | `dockerRegistry.key`                        | Docker registry secret key             |                                                           |
