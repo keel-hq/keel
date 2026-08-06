@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -9,7 +10,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestWaitForDeploymentImageReportsLastObservation(t *testing.T) {
@@ -28,6 +31,33 @@ func TestEnsureDeploymentImageUnchangedObservesWholeWindow(t *testing.T) {
 	defer cancel()
 	if err := ensureDeploymentImageUnchanged(ctx, client, "ns", "app", "registry/app:1.0.0"); err != nil {
 		t.Fatalf("expected unchanged image: %v", err)
+	}
+}
+
+func TestEnsureStatefulSetInitImageUnchangedPreservesSuccessfulObservation(t *testing.T) {
+	const expected = "registry/app:1.0.0"
+	client := fake.NewSimpleClientset(&appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "app"},
+		Spec: appsv1.StatefulSetSpec{Template: corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{InitContainers: []corev1.Container{{Name: "init", Image: expected}}},
+		}},
+	})
+	requests := 0
+	client.Fake.PrependReactor("get", "statefulsets", func(k8stesting.Action) (bool, runtime.Object, error) {
+		requests++
+		if requests > 1 {
+			return true, nil, errors.New("client rate limiter Wait returned an error: rate: Wait(n=1) would exceed context deadline")
+		}
+		return false, nil, nil
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	if err := ensureStatefulSetInitImageUnchanged(ctx, client, "ns", "app", expected); err != nil {
+		t.Fatalf("expected final client error not to replace successful observation: %v", err)
+	}
+	if requests < 2 {
+		t.Fatalf("expected a successful observation followed by a client error, got %d request(s)", requests)
 	}
 }
 
