@@ -1,10 +1,10 @@
 package pubsub
 
 import (
+	"context"
 	"encoding/json"
 
-	"cloud.google.com/go/pubsub"
-	"golang.org/x/net/context"
+	"cloud.google.com/go/pubsub/v2"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/provider"
