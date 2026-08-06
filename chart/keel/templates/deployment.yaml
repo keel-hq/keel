@@ -189,6 +189,11 @@ spec:
             - name: MAIL_FROM
               value: "{{ .Values.mail.from }}"
 {{- end }}
+{{- if and .Values.shoutrrr.enabled .Values.shoutrrr.timeout }}
+            # Shoutrrr per-service send timeout (URLs are supplied via the secret)
+            - name: SHOUTRRR_TIMEOUT
+              value: "{{ .Values.shoutrrr.timeout }}"
+{{- end }}
             - name: NOTIFICATION_LEVEL
               value: "{{ .Values.notificationLevel }}"
 {{- if .Values.debug }}

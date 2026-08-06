@@ -128,6 +128,9 @@ The following table lists has the main configurable parameters (polling, trigger
 | `mail.smtp.pass`                            | Mail SMTP server password (optional)   |                                                           |
 | `mattermost.enabled`                        | Enable/disable Mattermost integration  | `false`                                                   |
 | `mattermost.endpoint`                       | Mattermost API endpoint                |                                                           |
+| `shoutrrr.enabled`                          | Enable/disable Shoutrrr notifications  | `false`                                                   |
+| `shoutrrr.urls`                             | Shoutrrr service URLs, one per entry   | `[]`                                                      |
+| `shoutrrr.timeout`                          | Shoutrrr send timeout per service      | `10s`                                                     |
 | `googleApplicationCredentials`              | GCP Service account key configurable   |                                                           |
 | `hipchat.password`                          | Hipchat password for approvals user    |                                                           |
 | `gcloud.managedCertificates.enabled`        | Enable/Disable managed ssl on Gcloud   | `false`                                                   |

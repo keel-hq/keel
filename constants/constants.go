@@ -38,6 +38,14 @@ const (
 	// Discord webhook url, see https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
 	EnvDiscordWebhookUrl = "DISCORD_WEBHOOK_URL"
 
+	// Shoutrrr service URLs, see https://github.com/nicholas-fedor/shoutrrr for the
+	// supported services and their URL formats. Multiple URLs are separated by
+	// whitespace (spaces or newlines) rather than commas, because shoutrrr encodes
+	// list properties inside the URL query using commas.
+	EnvShoutrrrURLs = "SHOUTRRR_URLS"
+	// Optional per-service send timeout, as a Go duration (defaults to 10s)
+	EnvShoutrrrTimeout = "SHOUTRRR_TIMEOUT"
+
 	// Mail notification settings
 	EnvMailTo         = "MAIL_TO"
 	EnvMailFrom       = "MAIL_FROM"
