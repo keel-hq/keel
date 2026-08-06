@@ -132,6 +132,20 @@ discord:
   enabled: false
   webhookUrl: ""
 
+# Shoutrrr notifications
+# Delivers notifications to any service supported by shoutrrr (ntfy, Gotify,
+# Telegram, Matrix, Pushover, OpsGenie, PagerDuty, Signal and more) using one URL
+# per destination. See docs/shoutrrr-notifications.md in the Keel repository, and
+# https://github.com/nicholas-fedor/shoutrrr for the URL format of each service.
+# Service URLs embed credentials, so they are stored in the Keel secret.
+shoutrrr:
+  enabled: false
+  urls: []
+  # - "ntfy://ntfy.sh/keel"
+  # - "telegram://token@telegram?chats=123456"
+  # Optional per-service send timeout, as a Go duration. Defaults to 10s.
+  timeout: ""
+
 # Mail notifications
 mail:
   enabled: false
