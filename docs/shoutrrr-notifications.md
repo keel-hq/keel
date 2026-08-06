@@ -9,7 +9,7 @@ Supported services include ntfy, Gotify, Telegram, Matrix, Pushover, Pushbullet,
 Bark, Join, OpsGenie, PagerDuty, Signal, Twilio, Rocket.Chat, Zulip, Lark,
 WeCom, Notifiarr, Google Chat, MQTT, IFTTT, SMTP and a `generic` webhook, as
 well as Slack, Discord, Teams and Mattermost. See the
-[shoutrrr services documentation](https://nicholas-fedor.github.io/shoutrrr/services/overview)
+[shoutrrr services documentation](https://shoutrrr.nickfedor.com/latest/services/overview/)
 for the URL format of each one.
 
 Keel's dedicated Slack, Discord, Teams, Mattermost and mail senders are
