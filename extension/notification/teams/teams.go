@@ -37,8 +37,8 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Get configuration
 	var httpConfig Config
 
-	if os.Getenv(constants.EnvTeamsWebhookUrl) != "" {
-		httpConfig.Endpoint = os.Getenv(constants.EnvTeamsWebhookUrl)
+	if os.Getenv("TEAMS_WEBHOOK_URL") != "" {
+		httpConfig.Endpoint = os.Getenv("TEAMS_WEBHOOK_URL")
 	} else {
 		return false, nil
 	}
@@ -59,7 +59,7 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	}
 
 	log.WithFields(log.Fields{
-		"name":     "teams",
+		"name":    "teams",
 		"webhook": s.endpoint,
 	}).Info("extension.notification.teams: sender configured")
 
@@ -67,20 +67,20 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 }
 
 type SimpleTeamsMessageCard struct {
-	AtContext string `json:"@context"`
-	AtType    string `json:"@type"`
-	Sections []TeamsMessageSection `json:"sections"`
-	Summary    string `json:"summary"`
-	ThemeColor string `json:"themeColor"`
+	AtContext  string                `json:"@context"`
+	AtType     string                `json:"@type"`
+	Sections   []TeamsMessageSection `json:"sections"`
+	Summary    string                `json:"summary"`
+	ThemeColor string                `json:"themeColor"`
 }
 
 type TeamsMessageSection struct {
-	ActivityImage    string `json:"activityImage"`
-	ActivitySubtitle string `json:"activitySubtitle"`
-	ActivityText     string `json:"activityText"`
-	ActivityTitle    string `json:"activityTitle"`
-	Facts    []TeamsFact `json:"facts"`
-	Markdown bool `json:"markdown"`
+	ActivityImage    string      `json:"activityImage"`
+	ActivitySubtitle string      `json:"activitySubtitle"`
+	ActivityText     string      `json:"activityText"`
+	ActivityTitle    string      `json:"activityTitle"`
+	Facts            []TeamsFact `json:"facts"`
+	Markdown         bool        `json:"markdown"`
 }
 
 type TeamsFact struct {
@@ -91,32 +91,32 @@ type TeamsFact struct {
 // Microsoft Teams expects the hexidecimal formatted color to not have a "#" at the front
 // Source: https://stackoverflow.com/a/48798875/2199949
 func TrimFirstChar(s string) string {
-    for i := range s {
-        if i > 0 {
-            // The value i is the index in s of the second 
-            // character.  Slice to remove the first character.
-            return s[i:]
-        }
-    }
-    // There are 0 or 1 characters in the string. 
-    return ""
+	for i := range s {
+		if i > 0 {
+			// The value i is the index in s of the second
+			// character.  Slice to remove the first character.
+			return s[i:]
+		}
+	}
+	// There are 0 or 1 characters in the string.
+	return ""
 }
 
 func (s *sender) Send(event types.EventNotification) error {
 	// Marshal notification.
 	jsonNotification, err := json.Marshal(SimpleTeamsMessageCard{
-		AtType: "MessageCard",
-		AtContext: "http://schema.org/extensions",
+		AtType:     "MessageCard",
+		AtContext:  "http://schema.org/extensions",
 		ThemeColor: TrimFirstChar(event.Level.Color()),
-		Summary: event.Type.String(),
+		Summary:    event.Type.String(),
 		Sections: []TeamsMessageSection{
 			{
 				ActivityImage: constants.KeelLogoURL,
-				ActivityText: fmt.Sprintf("*%s*: %s", event.Name, event.Message),
-				ActivityTitle: fmt.Sprintf("**%s**",event.Type.String()),
+				ActivityText:  fmt.Sprintf("*%s*: %s", event.Name, event.Message),
+				ActivityTitle: fmt.Sprintf("**%s**", event.Type.String()),
 				Facts: []TeamsFact{
 					{
-						Name: "Version",
+						Name:  "Version",
 						Value: fmt.Sprintf("[https://keel.sh](https://keel.sh) %s", version.GetKeelVersion().Version),
 					},
 				},

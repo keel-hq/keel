@@ -33,19 +33,19 @@ func init() {
 func (s *sender) Configure(config *notification.Config) (bool, error) {
 	var token string
 	// Get configuration
-	if os.Getenv(constants.EnvSlackBotToken) != "" {
-		token = os.Getenv(constants.EnvSlackBotToken)
+	if os.Getenv("SLACK_BOT_TOKEN") != "" {
+		token = os.Getenv("SLACK_BOT_TOKEN")
 	} else {
 		return false, nil
 	}
-	if os.Getenv(constants.EnvSlackBotName) != "" {
-		s.botName = os.Getenv(constants.EnvSlackBotName)
+	if os.Getenv("SLACK_BOT_NAME") != "" {
+		s.botName = os.Getenv("SLACK_BOT_NAME")
 	} else {
 		s.botName = "keel"
 	}
 
-	if os.Getenv(constants.EnvSlackChannels) != "" {
-		channels := os.Getenv(constants.EnvSlackChannels)
+	if os.Getenv("SLACK_CHANNELS") != "" {
+		channels := os.Getenv("SLACK_CHANNELS")
 		s.channels = strings.Split(channels, ",")
 	} else {
 		s.channels = []string{"general"}

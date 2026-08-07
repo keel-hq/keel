@@ -9,7 +9,6 @@ import (
 
 	"github.com/tbruyelle/hipchat-go/hipchat"
 
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
 
@@ -29,19 +28,19 @@ func init() {
 func (s *sender) Configure(config *notification.Config) (bool, error) {
 	var token string
 
-	if os.Getenv(constants.EnvHipchatToken) != "" {
-		token = os.Getenv(constants.EnvHipchatToken)
+	if os.Getenv("HIPCHAT_TOKEN") != "" {
+		token = os.Getenv("HIPCHAT_TOKEN")
 	} else {
 		return false, nil
 	}
-	if os.Getenv(constants.EnvHipchatBotName) != "" {
-		s.botName = os.Getenv(constants.EnvHipchatBotName)
+	if os.Getenv("HIPCHAT_BOT_NAME") != "" {
+		s.botName = os.Getenv("HIPCHAT_BOT_NAME")
 	} else {
 		s.botName = "keel"
 	}
 
-	if os.Getenv(constants.EnvHipchatChannels) != "" {
-		channels := os.Getenv(constants.EnvHipchatChannels)
+	if os.Getenv("HIPCHAT_CHANNELS") != "" {
+		channels := os.Getenv("HIPCHAT_CHANNELS")
 		s.channels = strings.Split(channels, ",")
 	} else {
 		s.channels = []string{"general"}

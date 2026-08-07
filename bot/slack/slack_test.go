@@ -17,7 +17,6 @@ import (
 	b "github.com/keel-hq/keel/bot"
 
 	// "github.com/keel-hq/keel/cache/memory"
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/types"
 
 	"testing"
@@ -107,12 +106,12 @@ func newTestingUtils() (*sql.SQLStore, func()) {
 
 func TestBotRequest(t *testing.T) {
 
-	os.Setenv(constants.EnvSlackBotToken, "")
+	os.Setenv("SLACK_BOT_TOKEN", "")
 
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
 
-	token := os.Getenv(constants.EnvSlackBotToken)
+	token := os.Getenv("SLACK_BOT_TOKEN")
 	if token == "" {
 		t.Skip()
 	}
@@ -154,12 +153,12 @@ func TestBotRequest(t *testing.T) {
 
 func TestProcessApprovedResponse(t *testing.T) {
 
-	os.Setenv(constants.EnvSlackBotToken, "")
+	os.Setenv("SLACK_BOT_TOKEN", "")
 
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
 
-	token := os.Getenv(constants.EnvSlackBotToken)
+	token := os.Getenv("SLACK_BOT_TOKEN")
 	if token == "" {
 		t.Skip()
 	}
@@ -201,12 +200,12 @@ func TestProcessApprovedResponse(t *testing.T) {
 
 func TestProcessApprovalReply(t *testing.T) {
 
-	os.Setenv(constants.EnvSlackBotToken, "")
+	os.Setenv("SLACK_BOT_TOKEN", "")
 
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
 
-	token := os.Getenv(constants.EnvSlackBotToken)
+	token := os.Getenv("SLACK_BOT_TOKEN")
 	if token == "" {
 		t.Skip()
 	}
@@ -272,12 +271,12 @@ func TestProcessApprovalReply(t *testing.T) {
 
 func TestProcessRejectedReply(t *testing.T) {
 
-	os.Setenv(constants.EnvSlackBotToken, "")
+	os.Setenv("SLACK_BOT_TOKEN", "")
 
 	f8s := &testutil.FakeK8sImplementer{}
 	fi := &fakeSlackImplementer{}
 
-	token := os.Getenv(constants.EnvSlackBotToken)
+	token := os.Getenv("SLACK_BOT_TOKEN")
 	if token == "" {
 		t.Skip()
 	}

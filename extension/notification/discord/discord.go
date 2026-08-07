@@ -9,7 +9,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
 
@@ -36,8 +35,8 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Get configuration
 	var httpConfig Config
 
-	if os.Getenv(constants.EnvDiscordWebhookUrl) != "" {
-		httpConfig.Endpoint = os.Getenv(constants.EnvDiscordWebhookUrl)
+	if os.Getenv("DISCORD_WEBHOOK_URL") != "" {
+		httpConfig.Endpoint = os.Getenv("DISCORD_WEBHOOK_URL")
 	} else {
 		return false, nil
 	}

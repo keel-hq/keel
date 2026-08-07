@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
 
@@ -58,7 +57,7 @@ func TestSendDeliversNotification(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	t.Setenv(constants.EnvShoutrrrURLs, genericURL(ts.URL))
+	t.Setenv("SHOUTRRR_URLS", genericURL(ts.URL))
 
 	s := &sender{}
 
@@ -112,8 +111,8 @@ func TestSendPartialFailure(t *testing.T) {
 
 	// Port 1 is not listening, so this target fails at send time rather than at
 	// configuration time.
-	t.Setenv(constants.EnvShoutrrrURLs, genericURL(ts.URL)+"\ngeneric://127.0.0.1:1/hook?disabletls=yes")
-	t.Setenv(constants.EnvShoutrrrTimeout, "2s")
+	t.Setenv("SHOUTRRR_URLS", genericURL(ts.URL)+"\ngeneric://127.0.0.1:1/hook?disabletls=yes")
+	t.Setenv("SHOUTRRR_TIMEOUT", "2s")
 
 	s := &sender{}
 	if _, err := s.Configure(&notification.Config{}); err != nil {
@@ -137,8 +136,8 @@ func TestSendPartialFailure(t *testing.T) {
 
 // TestSendTotalFailure is the inverse: when nothing gets through, Keel should retry.
 func TestSendTotalFailure(t *testing.T) {
-	t.Setenv(constants.EnvShoutrrrURLs, "generic://127.0.0.1:1/hook?disabletls=yes")
-	t.Setenv(constants.EnvShoutrrrTimeout, "2s")
+	t.Setenv("SHOUTRRR_URLS", "generic://127.0.0.1:1/hook?disabletls=yes")
+	t.Setenv("SHOUTRRR_TIMEOUT", "2s")
 
 	s := &sender{}
 	if _, err := s.Configure(&notification.Config{}); err != nil {
@@ -151,7 +150,7 @@ func TestSendTotalFailure(t *testing.T) {
 }
 
 func TestConfigureDisabledWhenUnset(t *testing.T) {
-	t.Setenv(constants.EnvShoutrrrURLs, "")
+	t.Setenv("SHOUTRRR_URLS", "")
 
 	s := &sender{}
 
@@ -166,7 +165,7 @@ func TestConfigureDisabledWhenUnset(t *testing.T) {
 
 // A single bad URL must not disable the working ones.
 func TestConfigureSkipsInvalidURL(t *testing.T) {
-	t.Setenv(constants.EnvShoutrrrURLs, "notaservice://nope discord://token@channel")
+	t.Setenv("SHOUTRRR_URLS", "notaservice://nope discord://token@channel")
 
 	s := &sender{}
 
@@ -184,7 +183,7 @@ func TestConfigureSkipsInvalidURL(t *testing.T) {
 }
 
 func TestConfigureFailsWhenNoURLUsable(t *testing.T) {
-	t.Setenv(constants.EnvShoutrrrURLs, "notaservice://nope")
+	t.Setenv("SHOUTRRR_URLS", "notaservice://nope")
 
 	s := &sender{}
 
@@ -198,8 +197,8 @@ func TestConfigureFailsWhenNoURLUsable(t *testing.T) {
 }
 
 func TestConfigureRejectsBadTimeout(t *testing.T) {
-	t.Setenv(constants.EnvShoutrrrURLs, "discord://token@channel")
-	t.Setenv(constants.EnvShoutrrrTimeout, "soon")
+	t.Setenv("SHOUTRRR_URLS", "discord://token@channel")
+	t.Setenv("SHOUTRRR_TIMEOUT", "soon")
 
 	s := &sender{}
 

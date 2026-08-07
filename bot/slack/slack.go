@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/keel-hq/keel/bot"
-	"github.com/keel-hq/keel/constants"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"github.com/slack-go/slack/socketmode"
@@ -43,26 +42,26 @@ func init() {
 }
 
 func (b *Bot) Configure(approvalsRespCh chan *bot.ApprovalResponse, botMessagesChannel chan *bot.BotMessage) bool {
-	botToken := os.Getenv(constants.EnvSlackBotToken)
+	botToken := os.Getenv("SLACK_BOT_TOKEN")
 
 	if !strings.HasPrefix(botToken, "xoxb-") {
-		log.Infof("bot.slack.Configure(): %s must have the prefix \"xoxb-\", skip bot configuration.", constants.EnvSlackBotToken)
+		log.Infof("bot.slack.Configure(): %s must have the prefix \"xoxb-\", skip bot configuration.", "SLACK_BOT_TOKEN")
 		return false
 	}
 
-	appToken := os.Getenv(constants.EnvSlackAppToken)
+	appToken := os.Getenv("SLACK_APP_TOKEN")
 	if !strings.HasPrefix(appToken, "xapp-") {
-		log.Infof("bot.slack.Configure(): %s must have the previf \"xapp-\".", constants.EnvSlackAppToken)
+		log.Infof("bot.slack.Configure(): %s must have the previf \"xapp-\".", "SLACK_APP_TOKEN")
 		return false
 	}
 
-	botName, botNameConfigured := os.LookupEnv(constants.EnvSlackBotName)
+	botName, botNameConfigured := os.LookupEnv("SLACK_BOT_NAME")
 	if !botNameConfigured {
 		botName = "keel"
 	}
 	b.name = botName
 
-	channel, channelConfigured := os.LookupEnv(constants.EnvSlackApprovalsChannel)
+	channel, channelConfigured := os.LookupEnv("SLACK_APPROVALS_CHANNEL")
 	if !channelConfigured {
 		channel = "general"
 	}

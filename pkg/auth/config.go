@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	"github.com/keel-hq/keel/constants"
 )
 
 type Mode string
@@ -32,17 +30,17 @@ type Config struct {
 }
 
 func ConfigFromEnv(getenv func(string) string) (Config, error) {
-	modeValue := strings.TrimSpace(getenv(constants.EnvAuthMode))
+	modeValue := strings.TrimSpace(getenv("AUTH_MODE"))
 	if modeValue == "" {
 		modeValue = string(ModeLegacy)
 	}
 
 	cfg := Config{
 		Mode:            Mode(strings.ToLower(modeValue)),
-		Username:        getenv(constants.EnvBasicAuthUser),
-		Password:        getenv(constants.EnvBasicAuthPassword),
-		ProxyUserHeader: strings.TrimSpace(getenv(constants.EnvAuthProxyUserHeader)),
-		ProxyLogoutURL:  strings.TrimSpace(getenv(constants.EnvAuthProxyLogoutURL)),
+		Username:        getenv("BASIC_AUTH_USER"),
+		Password:        getenv("BASIC_AUTH_PASSWORD"),
+		ProxyUserHeader: strings.TrimSpace(getenv("AUTH_PROXY_USER_HEADER")),
+		ProxyLogoutURL:  strings.TrimSpace(getenv("AUTH_PROXY_LOGOUT_URL")),
 	}
 
 	if (cfg.Username == "") != (cfg.Password == "") {

@@ -5,7 +5,6 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
 
@@ -27,24 +26,24 @@ func init() {
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Server, from and to are mandatory
-	if os.Getenv(constants.EnvMailSmtpServer) != "" {
-		s.smtpServer = os.Getenv(constants.EnvMailSmtpServer)
+	if os.Getenv("MAIL_SMTP_SERVER") != "" {
+		s.smtpServer = os.Getenv("MAIL_SMTP_SERVER")
 	} else {
 		return false, nil
 	}
-	if os.Getenv(constants.EnvMailFrom) != "" {
-		s.from = os.Getenv(constants.EnvMailFrom)
+	if os.Getenv("MAIL_FROM") != "" {
+		s.from = os.Getenv("MAIL_FROM")
 	} else {
 		return false, nil
 	}
-	if os.Getenv(constants.EnvMailTo) != "" {
-		s.to = os.Getenv(constants.EnvMailTo)
+	if os.Getenv("MAIL_TO") != "" {
+		s.to = os.Getenv("MAIL_TO")
 	} else {
 		return false, nil
 	}
 	// Port, user and pass are optional
-	if os.Getenv(constants.EnvMailSmtpPort) != "" {
-		port, err := strconv.Atoi(os.Getenv(constants.EnvMailSmtpPort))
+	if os.Getenv("MAIL_SMTP_PORT") != "" {
+		port, err := strconv.Atoi(os.Getenv("MAIL_SMTP_PORT"))
 		if err != nil {
 			log.WithFields(log.Fields{
 				"name": "mail",
@@ -55,11 +54,11 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	} else {
 		s.smtpPort = 25
 	}
-	if os.Getenv(constants.EnvMailSmtpUser) != "" {
-		s.smtpUser = os.Getenv(constants.EnvMailSmtpUser)
+	if os.Getenv("MAIL_SMTP_USER") != "" {
+		s.smtpUser = os.Getenv("MAIL_SMTP_USER")
 	}
-	if os.Getenv(constants.EnvMailSmtpPass) != "" {
-		s.smtpPass = os.Getenv(constants.EnvMailSmtpPass)
+	if os.Getenv("MAIL_SMTP_PASS") != "" {
+		s.smtpPass = os.Getenv("MAIL_SMTP_PASS")
 	}
 
 	log.WithFields(log.Fields{

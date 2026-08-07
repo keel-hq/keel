@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/internal/workgroup"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -81,12 +80,12 @@ func watch(g *workgroup.Group, c cache.Getter, log logrus.FieldLogger, resource 
 	// If equal to keel or empty, the scan will be over all the cluster
 	// If RESTRICTED_NAMESPACE is different than keel or empty, keel will scan in the defined namespace
 	namespaceScan := "keel"
-	if os.Getenv(constants.EnvRestrictedNamespace) == "keel" {
+	if os.Getenv("RESTRICTED_NAMESPACE") == "keel" {
 		namespaceScan = v1.NamespaceAll
-	} else if os.Getenv(constants.EnvRestrictedNamespace) == "" {
+	} else if os.Getenv("RESTRICTED_NAMESPACE") == "" {
 		namespaceScan = v1.NamespaceAll
 	} else {
-		namespaceScan = os.Getenv(constants.EnvRestrictedNamespace)
+		namespaceScan = os.Getenv("RESTRICTED_NAMESPACE")
 	}
 
 	lw := cache.NewListWatchFromClient(c, resource, namespaceScan, fields.Everything())

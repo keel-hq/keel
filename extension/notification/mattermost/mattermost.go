@@ -40,14 +40,14 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Get configuration
 	var httpConfig Config
 
-	if os.Getenv(constants.EnvMattermostEndpoint) != "" {
-		httpConfig.Endpoint = os.Getenv(constants.EnvMattermostEndpoint)
+	if os.Getenv("MATTERMOST_ENDPOINT") != "" {
+		httpConfig.Endpoint = os.Getenv("MATTERMOST_ENDPOINT")
 	} else {
 		return false, nil
 	}
 
-	if os.Getenv(constants.EnvMattermostName) != "" {
-		httpConfig.Name = os.Getenv(constants.EnvMattermostName)
+	if os.Getenv("MATTERMOST_USERNAME") != "" {
+		httpConfig.Name = os.Getenv("MATTERMOST_USERNAME")
 	}
 
 	// Validate endpoint URL.

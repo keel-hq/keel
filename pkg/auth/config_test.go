@@ -2,8 +2,6 @@ package auth
 
 import (
 	"testing"
-
-	"github.com/keel-hq/keel/constants"
 )
 
 func TestConfigFromEnv(t *testing.T) {
@@ -16,19 +14,19 @@ func TestConfigFromEnv(t *testing.T) {
 		wantErr     bool
 	}{
 		{name: "empty environment preserves disabled legacy behavior", wantMode: ModeLegacy},
-		{name: "legacy credentials preserve basic auth", env: map[string]string{constants.EnvBasicAuthUser: "admin", constants.EnvBasicAuthPassword: "secret"}, wantMode: ModeLegacy, wantEnabled: true},
-		{name: "explicit basic", env: map[string]string{constants.EnvAuthMode: "basic", constants.EnvBasicAuthUser: "admin", constants.EnvBasicAuthPassword: "secret"}, wantMode: ModeBasic, wantEnabled: true},
-		{name: "external proxy has safe defaults", env: map[string]string{constants.EnvAuthMode: "external-proxy"}, wantMode: ModeExternalProxy, wantEnabled: true, wantHeader: DefaultProxyUserHeader},
-		{name: "external proxy custom canonical header", env: map[string]string{constants.EnvAuthMode: "external-proxy", constants.EnvAuthProxyUserHeader: "x-auth-request-user"}, wantMode: ModeExternalProxy, wantEnabled: true, wantHeader: "X-Auth-Request-User"},
-		{name: "unknown mode", env: map[string]string{constants.EnvAuthMode: "oidc"}, wantErr: true},
-		{name: "partial basic credentials", env: map[string]string{constants.EnvBasicAuthUser: "admin"}, wantErr: true},
-		{name: "basic without credentials", env: map[string]string{constants.EnvAuthMode: "basic"}, wantErr: true},
-		{name: "proxy conflicts with basic", env: map[string]string{constants.EnvAuthMode: "external-proxy", constants.EnvBasicAuthUser: "admin", constants.EnvBasicAuthPassword: "secret"}, wantErr: true},
-		{name: "proxy options in legacy", env: map[string]string{constants.EnvAuthProxyUserHeader: "X-User"}, wantErr: true},
-		{name: "invalid proxy header", env: map[string]string{constants.EnvAuthMode: "external-proxy", constants.EnvAuthProxyUserHeader: "Bad Header"}, wantErr: true},
-		{name: "external logout URL", env: map[string]string{constants.EnvAuthMode: "external-proxy", constants.EnvAuthProxyLogoutURL: "/oauth2/sign_out?rd=/goodbye"}, wantMode: ModeExternalProxy, wantEnabled: true, wantHeader: DefaultProxyUserHeader},
-		{name: "external absolute logout URL rejected", env: map[string]string{constants.EnvAuthMode: "external-proxy", constants.EnvAuthProxyLogoutURL: "https://example.com/logout"}, wantErr: true},
-		{name: "protocol relative logout URL rejected", env: map[string]string{constants.EnvAuthMode: "external-proxy", constants.EnvAuthProxyLogoutURL: "//example.com/logout"}, wantErr: true},
+		{name: "legacy credentials preserve basic auth", env: map[string]string{"BASIC_AUTH_USER": "admin", "BASIC_AUTH_PASSWORD": "secret"}, wantMode: ModeLegacy, wantEnabled: true},
+		{name: "explicit basic", env: map[string]string{"AUTH_MODE": "basic", "BASIC_AUTH_USER": "admin", "BASIC_AUTH_PASSWORD": "secret"}, wantMode: ModeBasic, wantEnabled: true},
+		{name: "external proxy has safe defaults", env: map[string]string{"AUTH_MODE": "external-proxy"}, wantMode: ModeExternalProxy, wantEnabled: true, wantHeader: DefaultProxyUserHeader},
+		{name: "external proxy custom canonical header", env: map[string]string{"AUTH_MODE": "external-proxy", "AUTH_PROXY_USER_HEADER": "x-auth-request-user"}, wantMode: ModeExternalProxy, wantEnabled: true, wantHeader: "X-Auth-Request-User"},
+		{name: "unknown mode", env: map[string]string{"AUTH_MODE": "oidc"}, wantErr: true},
+		{name: "partial basic credentials", env: map[string]string{"BASIC_AUTH_USER": "admin"}, wantErr: true},
+		{name: "basic without credentials", env: map[string]string{"AUTH_MODE": "basic"}, wantErr: true},
+		{name: "proxy conflicts with basic", env: map[string]string{"AUTH_MODE": "external-proxy", "BASIC_AUTH_USER": "admin", "BASIC_AUTH_PASSWORD": "secret"}, wantErr: true},
+		{name: "proxy options in legacy", env: map[string]string{"AUTH_PROXY_USER_HEADER": "X-User"}, wantErr: true},
+		{name: "invalid proxy header", env: map[string]string{"AUTH_MODE": "external-proxy", "AUTH_PROXY_USER_HEADER": "Bad Header"}, wantErr: true},
+		{name: "external logout URL", env: map[string]string{"AUTH_MODE": "external-proxy", "AUTH_PROXY_LOGOUT_URL": "/oauth2/sign_out?rd=/goodbye"}, wantMode: ModeExternalProxy, wantEnabled: true, wantHeader: DefaultProxyUserHeader},
+		{name: "external absolute logout URL rejected", env: map[string]string{"AUTH_MODE": "external-proxy", "AUTH_PROXY_LOGOUT_URL": "https://example.com/logout"}, wantErr: true},
+		{name: "protocol relative logout URL rejected", env: map[string]string{"AUTH_MODE": "external-proxy", "AUTH_PROXY_LOGOUT_URL": "//example.com/logout"}, wantErr: true},
 	}
 
 	for _, tt := range tests {
