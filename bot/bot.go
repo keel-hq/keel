@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/keel-hq/keel/approvals"
+	"github.com/keel-hq/keel/pkg/config"
 	"github.com/keel-hq/keel/provider/kubernetes"
 	"github.com/keel-hq/keel/types"
 
@@ -45,7 +46,7 @@ var (
 )
 
 type Bot interface {
-	Configure(approvalsRespCh chan *ApprovalResponse, botMessagesChannel chan *BotMessage) bool
+	Configure(config config.Config, approvalsRespCh chan *ApprovalResponse, botMessagesChannel chan *BotMessage) bool
 	Start(ctx context.Context) error
 	Respond(text string, channel string)
 	RequestApproval(req *types.Approval) error
@@ -110,7 +111,7 @@ func RegisterBot(name string, b Bot) {
 }
 
 // Run all implemented bots
-func Run(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) {
+func Run(appConfig config.Config, k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manager) {
 	bm := &BotManager{
 		approvalsManager:   approvalsManager,
 		k8sImplementer:     k8sImplementer,
@@ -118,7 +119,7 @@ func Run(k8sImplementer kubernetes.Implementer, approvalsManager approvals.Manag
 		botMessagesChannel: make(chan *BotMessage),
 	}
 	for botName, bot := range bots {
-		configured := bot.Configure(bm.approvalsRespCh, bm.botMessagesChannel)
+		configured := bot.Configure(appConfig, bm.approvalsRespCh, bm.botMessagesChannel)
 		if configured {
 			bm.SetupBot(botName, bot)
 		} else {

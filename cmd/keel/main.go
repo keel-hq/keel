@@ -76,9 +76,6 @@ const (
 	EnvKubernetesContext   = "KUBERNETES_CONTEXT"
 )
 
-// EnvDebug - set to 1 or anything else to enable debug logging
-const EnvDebug = "DEBUG"
-
 // @title Keel HTTP API
 // @version 1.0
 // @description HTTP API exposed by Keel. Admin routes are registered only when an authenticator is enabled. Provider webhooks require Basic or Bearer authorization only when authenticated webhooks are enabled; the registry webhook is always unauthenticated.
@@ -123,11 +120,11 @@ func main() {
 		"arch":       ver.Arch,
 	}).Info("keel starting...")
 
-	if os.Getenv(EnvDebug) == "true" {
+	if cfg.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	authConfig, err := auth.ConfigFromEnv(os.Getenv)
+	authConfig, err := auth.Validate(cfg.Auth)
 	if err != nil {
 		log.WithError(err).Fatal("invalid administrator authentication configuration")
 	}
@@ -166,8 +163,9 @@ func main() {
 	}
 
 	notifCfg := &notification.Config{
-		Attempts: 10,
-		Level:    notificationLevel,
+		Attempts:    10,
+		Level:       notificationLevel,
+		Application: cfg,
 	}
 	sender := notification.New(ctx)
 
@@ -213,10 +211,10 @@ func main() {
 
 	buf := k8s.NewBuffer(&g, t, log.StandardLogger(), 128)
 	wl := log.WithField("context", "watch")
-	k8s.WatchDeployments(&g, implementer.Client(), wl, buf)
-	k8s.WatchStatefulSets(&g, implementer.Client(), wl, buf)
-	k8s.WatchDaemonSets(&g, implementer.Client(), wl, buf)
-	k8s.WatchCronJobs(&g, implementer.Client(), wl, buf)
+	k8s.WatchDeployments(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
+	k8s.WatchStatefulSets(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
+	k8s.WatchDaemonSets(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
+	k8s.WatchCronJobs(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
 
 	// approvalsCache := memory.NewMemoryCache()
 	approvalsManager := approvals.New(&approvals.Opts{
@@ -279,7 +277,7 @@ func main() {
 		appConfig:        cfg,
 	})
 
-	bot.Run(implementer, approvalsManager)
+	bot.Run(cfg, implementer, approvalsManager)
 
 	signalChan := make(chan os.Signal, 1)
 	cleanupDone := make(chan bool)

@@ -3,7 +3,6 @@ package slack
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -31,58 +30,18 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	var token string
-	// Get configuration
-	if os.Getenv("SLACK_BOT_TOKEN") != "" {
-		token = os.Getenv("SLACK_BOT_TOKEN")
-	} else {
+	cfg := config.Application.Notifications.Slack
+	if cfg.BotToken == "" {
 		return false, nil
 	}
-	if os.Getenv("SLACK_BOT_NAME") != "" {
-		s.botName = os.Getenv("SLACK_BOT_NAME")
-	} else {
-		s.botName = "keel"
-	}
-
-	if os.Getenv("SLACK_CHANNELS") != "" {
-		channels := os.Getenv("SLACK_CHANNELS")
-		s.channels = strings.Split(channels, ",")
-	} else {
+	s.botName = cfg.BotName
+	if cfg.Channels == "" {
 		s.channels = []string{"general"}
+	} else {
+		s.channels = strings.Split(cfg.Channels, ",")
 	}
-
-	s.slackClient = slack.New(token)
-
-	log.WithFields(log.Fields{
-		"name":     "slack",
-		"channels": s.channels,
-	}).Info("extension.notification.slack: sender configured")
-
-	if os.Getenv("DEBUG") == "true" {
-		var msg string
-		if version.GetKeelVersion().Version != "" {
-			msg = fmt.Sprintf("Keel has started. Version: '%s'. Revision: %s", version.GetKeelVersion().Version, version.GetKeelVersion().Revision)
-		} else {
-			msg = fmt.Sprintf("Keel has started. Revision: %s", version.GetKeelVersion().Revision)
-		}
-
-		err := s.Send(types.EventNotification{
-			Message:   msg,
-			CreatedAt: time.Now(),
-			Type:      types.NotificationSystemEvent,
-			Level:     types.LevelInfo,
-			Channels:  s.channels,
-		})
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":    err,
-				"name":     "slack",
-				"channels": s.channels,
-			}).Error("extension.notification.slack: failed to set greeting message")
-		}
-
-	}
-
+	s.slackClient = slack.New(cfg.BotToken)
+	log.WithField("channels", s.channels).Info("extension.notification.slack: sender configured")
 	return true, nil
 }
 

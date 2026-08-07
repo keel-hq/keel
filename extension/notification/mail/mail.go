@@ -2,7 +2,6 @@ package mail
 
 import (
 	"net/smtp"
-	"os"
 	"strconv"
 
 	"github.com/keel-hq/keel/extension/notification"
@@ -25,46 +24,13 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	// Server, from and to are mandatory
-	if os.Getenv("MAIL_SMTP_SERVER") != "" {
-		s.smtpServer = os.Getenv("MAIL_SMTP_SERVER")
-	} else {
+	cfg := config.Application.Notifications.Mail
+	if cfg.SMTPServer == "" || cfg.From == "" || cfg.To == "" {
 		return false, nil
 	}
-	if os.Getenv("MAIL_FROM") != "" {
-		s.from = os.Getenv("MAIL_FROM")
-	} else {
-		return false, nil
-	}
-	if os.Getenv("MAIL_TO") != "" {
-		s.to = os.Getenv("MAIL_TO")
-	} else {
-		return false, nil
-	}
-	// Port, user and pass are optional
-	if os.Getenv("MAIL_SMTP_PORT") != "" {
-		port, err := strconv.Atoi(os.Getenv("MAIL_SMTP_PORT"))
-		if err != nil {
-			log.WithFields(log.Fields{
-				"name": "mail",
-			}).Warn("extension.notification.mail: invalid SMTP port number")
-			return false, nil
-		}
-		s.smtpPort = port
-	} else {
-		s.smtpPort = 25
-	}
-	if os.Getenv("MAIL_SMTP_USER") != "" {
-		s.smtpUser = os.Getenv("MAIL_SMTP_USER")
-	}
-	if os.Getenv("MAIL_SMTP_PASS") != "" {
-		s.smtpPass = os.Getenv("MAIL_SMTP_PASS")
-	}
-
-	log.WithFields(log.Fields{
-		"name": "mail",
-	}).Info("extension.notification.mail: sender configured")
-
+	s.smtpServer, s.from, s.to, s.smtpPort = cfg.SMTPServer, cfg.From, cfg.To, cfg.SMTPPort
+	s.smtpUser, s.smtpPass = cfg.SMTPUser, cfg.SMTPPass
+	log.WithField("name", "mail").Info("extension.notification.mail: sender configured")
 	return true, nil
 }
 

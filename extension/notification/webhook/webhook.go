@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/keel-hq/keel/extension/notification"
@@ -35,11 +34,7 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Get configuration
 	var httpConfig Config
 
-	if os.Getenv("WEBHOOK_ENDPOINT") != "" {
-		httpConfig.Endpoint = os.Getenv("WEBHOOK_ENDPOINT")
-	} else {
-		return false, nil
-	}
+	httpConfig.Endpoint = config.Application.Notifications.Webhook.Endpoint
 
 	// Validate endpoint URL.
 	if httpConfig.Endpoint == "" {

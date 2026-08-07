@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/keel-hq/keel/extension/notification"
@@ -35,11 +34,7 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Get configuration
 	var httpConfig Config
 
-	if os.Getenv("DISCORD_WEBHOOK_URL") != "" {
-		httpConfig.Endpoint = os.Getenv("DISCORD_WEBHOOK_URL")
-	} else {
-		return false, nil
-	}
+	httpConfig.Endpoint = config.Application.Notifications.Discord.WebhookURL
 	// Validate endpoint URL.
 	if httpConfig.Endpoint == "" {
 		return false, nil

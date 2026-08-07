@@ -6,7 +6,6 @@ import (
 	"io"
 	stdlog "log"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -43,12 +42,12 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	urls := splitURLs(os.Getenv("SHOUTRRR_URLS"))
+	urls := splitURLs(config.Application.Notifications.Shoutrrr.URLs)
 	if len(urls) == 0 {
 		return false, nil
 	}
 
-	timeout, err := parseTimeout(os.Getenv("SHOUTRRR_TIMEOUT"))
+	timeout, err := parseTimeout(config.Application.Notifications.Shoutrrr.Timeout)
 	if err != nil {
 		return false, err
 	}

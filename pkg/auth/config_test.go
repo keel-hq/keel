@@ -2,9 +2,11 @@ package auth
 
 import (
 	"testing"
+
+	"github.com/keel-hq/keel/pkg/config"
 )
 
-func TestConfigFromEnv(t *testing.T) {
+func TestValidate(t *testing.T) {
 	tests := []struct {
 		name        string
 		env         map[string]string
@@ -31,7 +33,7 @@ func TestConfigFromEnv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := ConfigFromEnv(func(key string) string { return tt.env[key] })
+			cfg, err := Validate(config.AuthConfig{Mode: tt.env["AUTH_MODE"], BasicUser: tt.env["BASIC_AUTH_USER"], BasicPassword: tt.env["BASIC_AUTH_PASSWORD"], ProxyUserHeader: tt.env["AUTH_PROXY_USER_HEADER"], ProxyLogoutURL: tt.env["AUTH_PROXY_LOGOUT_URL"]})
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected configuration error")

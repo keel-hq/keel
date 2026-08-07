@@ -3,13 +3,13 @@ package k8s
 import (
 	"container/list"
 	"fmt"
-	"os"
 	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/keel-hq/keel/internal/workgroup"
+	appconfig "github.com/keel-hq/keel/pkg/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
@@ -56,36 +56,29 @@ func init() {
 }
 
 // WatchDeployments creates a SharedInformer for apps/v1.Deployments and registers it with g.
-func WatchDeployments(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, rs ...cache.ResourceEventHandler) {
-	watch(g, client.AppsV1().RESTClient(), log, "deployments", new(apps_v1.Deployment), rs...)
+func WatchDeployments(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, config appconfig.KubernetesConfig, rs ...cache.ResourceEventHandler) {
+	watch(g, client.AppsV1().RESTClient(), log, config, "deployments", new(apps_v1.Deployment), rs...)
 }
 
 // WatchStatefulSets creates a SharedInformer for apps/v1.StatefulSet and registers it with g.
-func WatchStatefulSets(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, rs ...cache.ResourceEventHandler) {
-	watch(g, client.AppsV1().RESTClient(), log, "statefulsets", new(apps_v1.StatefulSet), rs...)
+func WatchStatefulSets(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, config appconfig.KubernetesConfig, rs ...cache.ResourceEventHandler) {
+	watch(g, client.AppsV1().RESTClient(), log, config, "statefulsets", new(apps_v1.StatefulSet), rs...)
 }
 
 // WatchDaemonSets creates a SharedInformer for apps/v1.DaemonSet and registers it with g.
-func WatchDaemonSets(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, rs ...cache.ResourceEventHandler) {
-	watch(g, client.AppsV1().RESTClient(), log, "daemonsets", new(apps_v1.DaemonSet), rs...)
+func WatchDaemonSets(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, config appconfig.KubernetesConfig, rs ...cache.ResourceEventHandler) {
+	watch(g, client.AppsV1().RESTClient(), log, config, "daemonsets", new(apps_v1.DaemonSet), rs...)
 }
 
 // WatchCronJobs creates a SharedInformer for batch_v1.CronJob and registers it with g.
-func WatchCronJobs(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, rs ...cache.ResourceEventHandler) {
-	watch(g, client.BatchV1().RESTClient(), log, "cronjobs", new(batch_v1.CronJob), rs...)
+func WatchCronJobs(g *workgroup.Group, client *kubernetes.Clientset, log logrus.FieldLogger, config appconfig.KubernetesConfig, rs ...cache.ResourceEventHandler) {
+	watch(g, client.BatchV1().RESTClient(), log, config, "cronjobs", new(batch_v1.CronJob), rs...)
 }
 
-func watch(g *workgroup.Group, c cache.Getter, log logrus.FieldLogger, resource string, objType runtime.Object, rs ...cache.ResourceEventHandler) {
-	//Check if the env var RESTRICTED_NAMESPACE is empty or equal to keel
-	// If equal to keel or empty, the scan will be over all the cluster
-	// If RESTRICTED_NAMESPACE is different than keel or empty, keel will scan in the defined namespace
-	namespaceScan := "keel"
-	if os.Getenv("RESTRICTED_NAMESPACE") == "keel" {
-		namespaceScan = v1.NamespaceAll
-	} else if os.Getenv("RESTRICTED_NAMESPACE") == "" {
-		namespaceScan = v1.NamespaceAll
-	} else {
-		namespaceScan = os.Getenv("RESTRICTED_NAMESPACE")
+func watch(g *workgroup.Group, c cache.Getter, log logrus.FieldLogger, config appconfig.KubernetesConfig, resource string, objType runtime.Object, rs ...cache.ResourceEventHandler) {
+	namespaceScan := v1.NamespaceAll
+	if config.RestrictedNamespace != "" && config.RestrictedNamespace != "keel" {
+		namespaceScan = config.RestrictedNamespace
 	}
 
 	lw := cache.NewListWatchFromClient(c, resource, namespaceScan, fields.Everything())

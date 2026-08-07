@@ -4,6 +4,7 @@ import "github.com/kelseyhightower/envconfig"
 
 // Config contains Keel's application configuration loaded from environment variables.
 type Config struct {
+	Debug         bool `envconfig:"DEBUG" default:"false"`
 	Trigger       TriggerConfig
 	Storage       StorageConfig
 	Providers     ProviderConfig
@@ -64,6 +65,7 @@ type SlackNotificationConfig struct {
 
 // HipchatNotificationConfig configures outbound update notifications sent through HipChat.
 type HipchatNotificationConfig struct {
+	Server   string `envconfig:"HIPCHAT_SERVER"`
 	Token    string `envconfig:"HIPCHAT_TOKEN"`
 	BotName  string `envconfig:"HIPCHAT_BOT_NAME" default:"keel"`
 	Channels string `envconfig:"HIPCHAT_CHANNELS"`

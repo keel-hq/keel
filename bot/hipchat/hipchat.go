@@ -3,12 +3,11 @@ package hipchat
 import (
 	"context"
 	"errors"
-	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/keel-hq/keel/bot"
+	"github.com/keel-hq/keel/pkg/config"
 
 	h "github.com/daneharrigan/hipchat"
 	log "github.com/sirupsen/logrus"
@@ -33,39 +32,25 @@ type Bot struct {
 }
 
 func init() {
-	if isHipchatConfigured() {
-		bot.RegisterBot("hipchat", &Bot{})
-	}
+	bot.RegisterBot("hipchat", &Bot{})
 }
 
-func (b *Bot) Configure(approvalsRespCh chan *bot.ApprovalResponse, botMessagesChannel chan *bot.BotMessage) bool {
-	if isHipchatConfigured() {
-		b.name = "keel"
-		if os.Getenv("HIPCHAT_APPROVALS_BOT_NAME") != "" {
-			b.name = os.Getenv("HIPCHAT_APPROVALS_BOT_NAME")
-		}
-
-		b.userName = os.Getenv("HIPCHAT_APPROVALS_USER_NAME")
-		b.password = os.Getenv("HIPCHAT_APPROVALS_PASSWORT")
-		connAttempts := getConnectionAttempts()
-
-		cli := connect(b.userName, b.password, connAttempts)
-		if cli != nil {
-			b.hipchatClient = cli
-		}
-		b.botMessagesChannel = botMessagesChannel
-		b.approvalsRespCh = approvalsRespCh
-
-		b.approvalsChannel = "general"
-		if os.Getenv("HIPCHAT_APPROVALS_CHANNEL") != "" {
-			b.approvalsChannel = os.Getenv("HIPCHAT_APPROVALS_CHANNEL")
-		}
-
-		return true
+func (b *Bot) Configure(appConfig config.Config, approvalsRespCh chan *bot.ApprovalResponse, botMessagesChannel chan *bot.BotMessage) bool {
+	cfg := appConfig.Bots.Hipchat
+	if cfg.ApprovalsPassword == "" || cfg.ApprovalsUserName == "" {
+		log.Info("bot.hipchat.Configure(): HipChat approval bot is not configured")
+		return false
 	}
-
-	log.Info("bot.hipchat.Configure(): HipChat approval bot is not configured")
-	return false
+	b.name = cfg.ApprovalsBotName
+	b.userName = cfg.ApprovalsUserName
+	b.password = cfg.ApprovalsPassword
+	if cli := connect(b.userName, b.password, cfg.ConnectionAttempts); cli != nil {
+		b.hipchatClient = cli
+	}
+	b.botMessagesChannel = botMessagesChannel
+	b.approvalsRespCh = approvalsRespCh
+	b.approvalsChannel = cfg.ApprovalsChannel
+	return true
 }
 
 // Start the bot
@@ -170,23 +155,4 @@ func (b *Bot) isBotMessage(message *h.Message) bool {
 		return true
 	}
 	return false
-}
-
-func isHipchatConfigured() bool {
-	if os.Getenv("HIPCHAT_APPROVALS_PASSWORT") != "" &&
-		os.Getenv("HIPCHAT_APPROVALS_USER_NAME") != "" {
-		return true
-	}
-	return false
-}
-
-func getConnectionAttempts() int {
-	if os.Getenv("HIPCHAT_CONNECTION_ATTEMPTS") != "" {
-		i, err := strconv.Atoi(os.Getenv("HIPCHAT_CONNECTION_ATTEMPTS"))
-		if err == nil {
-			return i
-		}
-		return connectionAttemptsDefault
-	}
-	return connectionAttemptsDefault
 }

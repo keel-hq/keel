@@ -15,6 +15,7 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	b "github.com/keel-hq/keel/bot"
+	"github.com/keel-hq/keel/pkg/config"
 
 	// "github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/types"
@@ -36,7 +37,7 @@ func New(name, token, channel string,
 
 	slack := &Bot{}
 	b.RegisterBot(name, slack)
-	b.Run(k8sImplementer, approvalsManager)
+	b.Run(config.Config{}, k8sImplementer, approvalsManager)
 	return slack
 }
 

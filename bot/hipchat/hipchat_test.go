@@ -12,6 +12,7 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	b "github.com/keel-hq/keel/bot"
+	"github.com/keel-hq/keel/pkg/config"
 	"github.com/keel-hq/keel/pkg/store/sql"
 
 	"github.com/keel-hq/keel/provider/kubernetes"
@@ -88,8 +89,7 @@ func NewBot(k8sImplementer kubernetes.Implementer,
 
 	approvalsRespCh = make(chan *b.ApprovalResponse)
 	botMessagesChannel = make(chan *b.BotMessage)
-	fakeBot := &Bot{}
-	fakeBot.hipchatClient = fi
+	fakeBot := &Bot{hipchatClient: fi, name: "keel", approvalsChannel: "111111_approvals@conf.hipchat.com"}
 
 	os.Setenv("HIPCHAT_APPROVALS_CHANNEL", "111111_approvals@conf.hipchat.com")
 	os.Setenv("HIPCHAT_APPROVALS_BOT_NAME", "keel")
@@ -97,8 +97,9 @@ func NewBot(k8sImplementer kubernetes.Implementer,
 	os.Setenv("HIPCHAT_APPROVALS_PASSWORT", "pass")
 	os.Setenv("HIPCHAT_CONNECTION_ATTEMPTS", "0")
 
+	b.UnregisterBot("hipchat")
 	b.RegisterBot("fakechat", fakeBot)
-	b.Run(k8sImplementer, approvalsManager)
+	b.Run(config.Config{Bots: config.BotConfig{Hipchat: config.HipchatBotConfig{ApprovalsChannel: "111111_approvals@conf.hipchat.com", ApprovalsBotName: "keel", ApprovalsUserName: "111111_222222", ApprovalsPassword: "pass", ConnectionAttempts: 0}}}, k8sImplementer, approvalsManager)
 	return fakeBot
 }
 

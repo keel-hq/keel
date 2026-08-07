@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/keel-hq/keel/extension/notification"
+	appconfig "github.com/keel-hq/keel/pkg/config"
 	"github.com/keel-hq/keel/types"
 
 	shoutrrrtypes "github.com/nicholas-fedor/shoutrrr/pkg/types"
@@ -57,11 +58,12 @@ func TestSendDeliversNotification(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	t.Setenv("SHOUTRRR_URLS", genericURL(ts.URL))
+	testURLs := genericURL(ts.URL)
 
 	s := &sender{}
 
-	configured, err := s.Configure(&notification.Config{})
+	testTimeout := "10s"
+	configured, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}})
 	if err != nil {
 		t.Fatalf("unexpected configure error: %s", err)
 	}
@@ -111,11 +113,11 @@ func TestSendPartialFailure(t *testing.T) {
 
 	// Port 1 is not listening, so this target fails at send time rather than at
 	// configuration time.
-	t.Setenv("SHOUTRRR_URLS", genericURL(ts.URL)+"\ngeneric://127.0.0.1:1/hook?disabletls=yes")
-	t.Setenv("SHOUTRRR_TIMEOUT", "2s")
+	testURLs := genericURL(ts.URL) + "\ngeneric://127.0.0.1:1/hook?disabletls=yes"
+	testTimeout := "2s"
 
 	s := &sender{}
-	if _, err := s.Configure(&notification.Config{}); err != nil {
+	if _, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}}); err != nil {
 		t.Fatalf("unexpected configure error: %s", err)
 	}
 
@@ -136,11 +138,11 @@ func TestSendPartialFailure(t *testing.T) {
 
 // TestSendTotalFailure is the inverse: when nothing gets through, Keel should retry.
 func TestSendTotalFailure(t *testing.T) {
-	t.Setenv("SHOUTRRR_URLS", "generic://127.0.0.1:1/hook?disabletls=yes")
-	t.Setenv("SHOUTRRR_TIMEOUT", "2s")
+	testURLs := "generic://127.0.0.1:1/hook?disabletls=yes"
+	testTimeout := "2s"
 
 	s := &sender{}
-	if _, err := s.Configure(&notification.Config{}); err != nil {
+	if _, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}}); err != nil {
 		t.Fatalf("unexpected configure error: %s", err)
 	}
 
@@ -150,11 +152,12 @@ func TestSendTotalFailure(t *testing.T) {
 }
 
 func TestConfigureDisabledWhenUnset(t *testing.T) {
-	t.Setenv("SHOUTRRR_URLS", "")
+	testURLs := ""
 
 	s := &sender{}
 
-	configured, err := s.Configure(&notification.Config{})
+	testTimeout := "10s"
+	configured, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}})
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
@@ -165,11 +168,12 @@ func TestConfigureDisabledWhenUnset(t *testing.T) {
 
 // A single bad URL must not disable the working ones.
 func TestConfigureSkipsInvalidURL(t *testing.T) {
-	t.Setenv("SHOUTRRR_URLS", "notaservice://nope discord://token@channel")
+	testURLs := "notaservice://nope discord://token@channel"
 
 	s := &sender{}
 
-	configured, err := s.Configure(&notification.Config{})
+	testTimeout := "10s"
+	configured, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -183,11 +187,12 @@ func TestConfigureSkipsInvalidURL(t *testing.T) {
 }
 
 func TestConfigureFailsWhenNoURLUsable(t *testing.T) {
-	t.Setenv("SHOUTRRR_URLS", "notaservice://nope")
+	testURLs := "notaservice://nope"
 
 	s := &sender{}
 
-	configured, err := s.Configure(&notification.Config{})
+	testTimeout := "10s"
+	configured, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}})
 	if configured {
 		t.Error("expected sender to be disabled")
 	}
@@ -197,12 +202,12 @@ func TestConfigureFailsWhenNoURLUsable(t *testing.T) {
 }
 
 func TestConfigureRejectsBadTimeout(t *testing.T) {
-	t.Setenv("SHOUTRRR_URLS", "discord://token@channel")
-	t.Setenv("SHOUTRRR_TIMEOUT", "soon")
+	testURLs := "discord://token@channel"
+	testTimeout := "soon"
 
 	s := &sender{}
 
-	if configured, err := s.Configure(&notification.Config{}); configured || err == nil {
+	if configured, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}}); configured || err == nil {
 		t.Errorf("expected configure to fail, got configured=%v err=%v", configured, err)
 	}
 }

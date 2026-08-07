@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/keel-hq/keel/constants"
@@ -37,11 +36,7 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Get configuration
 	var httpConfig Config
 
-	if os.Getenv("TEAMS_WEBHOOK_URL") != "" {
-		httpConfig.Endpoint = os.Getenv("TEAMS_WEBHOOK_URL")
-	} else {
-		return false, nil
-	}
+	httpConfig.Endpoint = config.Application.Notifications.Teams.WebhookURL
 
 	// Validate endpoint URL.
 	if httpConfig.Endpoint == "" {

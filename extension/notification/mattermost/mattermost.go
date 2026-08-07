@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/keel-hq/keel/constants"
@@ -40,15 +39,8 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Get configuration
 	var httpConfig Config
 
-	if os.Getenv("MATTERMOST_ENDPOINT") != "" {
-		httpConfig.Endpoint = os.Getenv("MATTERMOST_ENDPOINT")
-	} else {
-		return false, nil
-	}
-
-	if os.Getenv("MATTERMOST_USERNAME") != "" {
-		httpConfig.Name = os.Getenv("MATTERMOST_USERNAME")
-	}
+	httpConfig.Endpoint = config.Application.Notifications.Mattermost.Endpoint
+	httpConfig.Name = config.Application.Notifications.Mattermost.Username
 
 	// Validate endpoint URL.
 	if httpConfig.Endpoint == "" {

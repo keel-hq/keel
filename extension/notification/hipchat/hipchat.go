@@ -2,7 +2,6 @@ package hipchat
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"net/url"
@@ -26,38 +25,25 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	var token string
-
-	if os.Getenv("HIPCHAT_TOKEN") != "" {
-		token = os.Getenv("HIPCHAT_TOKEN")
-	} else {
+	cfg := config.Application.Notifications.Hipchat
+	if cfg.Token == "" {
 		return false, nil
 	}
-	if os.Getenv("HIPCHAT_BOT_NAME") != "" {
-		s.botName = os.Getenv("HIPCHAT_BOT_NAME")
-	} else {
-		s.botName = "keel"
-	}
-
-	if os.Getenv("HIPCHAT_CHANNELS") != "" {
-		channels := os.Getenv("HIPCHAT_CHANNELS")
-		s.channels = strings.Split(channels, ",")
-	} else {
+	s.botName = cfg.BotName
+	if cfg.Channels == "" {
 		s.channels = []string{"general"}
+	} else {
+		s.channels = strings.Split(cfg.Channels, ",")
 	}
-
-	s.hipchatClient = hipchat.NewClient(token)
-
-	if os.Getenv("HIPCHAT_SERVER") != "" {
-		server, _ := url.Parse(os.Getenv("HIPCHAT_SERVER"))
+	s.hipchatClient = hipchat.NewClient(cfg.Token)
+	if cfg.Server != "" {
+		server, err := url.Parse(cfg.Server)
+		if err != nil {
+			return false, err
+		}
 		s.hipchatClient.BaseURL = server
 	}
-
-	log.WithFields(log.Fields{
-		"name":     "hipchat",
-		"channels": s.channels,
-	}).Info("extension.notification.hipchat: sender configured")
-
+	log.WithField("channels", s.channels).Info("extension.notification.hipchat: sender configured")
 	return true, nil
 }
 
