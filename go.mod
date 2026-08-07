@@ -54,7 +54,7 @@ require (
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/net v0.57.0
 	google.golang.org/api v0.285.0
-	google.golang.org/grpc v1.81.1
+	google.golang.org/grpc v1.82.1
 	k8s.io/api v0.31.3
 	k8s.io/apimachinery v0.31.3
 	k8s.io/cli-runtime v0.31.3
@@ -87,7 +87,7 @@ require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.31.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.32.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.53.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.53.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
@@ -211,7 +211,7 @@ require (
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/detectors/gcp v1.42.0 // indirect
+	go.opentelemetry.io/contrib/detectors/gcp v1.43.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.67.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect
 	go.opentelemetry.io/otel v1.44.0 // indirect
