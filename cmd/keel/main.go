@@ -19,6 +19,7 @@ import (
 
 	// "github.com/keel-hq/keel/cache/memory"
 	"github.com/keel-hq/keel/pkg/auth"
+	"github.com/keel-hq/keel/pkg/config"
 	"github.com/keel-hq/keel/pkg/http"
 	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/pkg/store/sql"
@@ -63,16 +64,7 @@ import (
 	_ "helm.sh/helm/v3/pkg/action"
 )
 
-// gcloud pubsub related config
 const (
-	EnvTriggerPubSub = "PUBSUB" // set to 1 or something to enable pub/sub trigger
-	EnvTriggerPoll   = "POLL"   // set to 0 to disable poll trigger
-	EnvProjectID     = "PROJECT_ID"
-	EnvClusterName   = "CLUSTER_NAME"
-	EnvDataDir       = "XDG_DATA_HOME"
-	EnvHelm3Provider = "HELM3_PROVIDER" // helm3 provider
-	EnvUIDir         = "UI_DIR"
-
 	// EnvDefaultDockerRegistryCfg - default registry configuration that can be passed into
 	// keel for polling trigger
 	EnvDefaultDockerRegistryCfg = "DOCKER_REGISTRY_CFG"
@@ -109,11 +101,19 @@ func main() {
 
 	inCluster := kingpin.Flag("incluster", "use in cluster configuration (defaults to 'true'), use '--no-incluster' if running outside of the cluster").Default("true").Bool()
 	kubeconfig := kingpin.Flag("kubeconfig", "path to kubeconfig (if not in running inside a cluster)").Default(filepath.Join(os.Getenv("HOME"), ".kube", "config")).String()
-	uiDir := kingpin.Flag("ui-dir", "path to web UI static files").Default("www").Envar(EnvUIDir).String()
+	uiDir := kingpin.Flag("ui-dir", "path to web UI static files").String()
 
 	kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version(ver.Version)
 	kingpin.CommandLine.Help = "Automated Kubernetes deployment updates. Learn more on https://keel.sh."
 	kingpin.Parse()
+
+	cfg, err := config.Load()
+	if err != nil {
+		log.WithError(err).Fatal("invalid application configuration")
+	}
+	if *uiDir != "" {
+		cfg.UIDir = *uiDir
+	}
 
 	log.WithFields(log.Fields{
 		"os":         ver.OS,
@@ -133,14 +133,9 @@ func main() {
 		log.WithError(err).Fatal("invalid administrator authentication configuration")
 	}
 
-	dataDir := "/data"
-	if os.Getenv(EnvDataDir) != "" {
-		dataDir = os.Getenv(EnvDataDir)
-	}
-
 	sqlStore, err := sql.New(sql.Opts{
 		DatabaseType: "sqlite3",
-		URI:          filepath.Join(dataDir, "keel.db"),
+		URI:          filepath.Join(cfg.DataDir, "keel.db"),
 	})
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -149,7 +144,7 @@ func main() {
 		os.Exit(1)
 	}
 	log.WithFields(log.Fields{
-		"database_path": filepath.Join(dataDir, "keel.db"),
+		"database_path": filepath.Join(cfg.DataDir, "keel.db"),
 		"type":          "sqlite3",
 	}).Info("initializing database")
 
@@ -255,6 +250,7 @@ func main() {
 		store:            sqlStore,
 		k8sClient:        implementer.Client(),
 		config:           implementer.Config(),
+		appConfig:        cfg,
 	})
 
 	// registering secrets based credentials helper
@@ -281,8 +277,9 @@ func main() {
 		grc:              &t.GenericResourceCache,
 		k8sClient:        implementer,
 		store:            sqlStore,
-		uiDir:            *uiDir,
+		uiDir:            cfg.UIDir,
 		authConfig:       authConfig,
+		appConfig:        cfg,
 	})
 
 	bot.Run(implementer, approvalsManager)
@@ -325,6 +322,7 @@ type ProviderOpts struct {
 
 	k8sClient kube.Interface
 	config    *rest.Config
+	appConfig config.Config
 }
 
 // setupProviders - setting up available providers. New providers should be initialised here and added to
@@ -350,7 +348,7 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 
 	enabledProviders = append(enabledProviders, k8sProvider)
 
-	if os.Getenv(EnvHelm3Provider) == "1" || os.Getenv(EnvHelm3Provider) == "true" {
+	if opts.appConfig.Helm3Provider {
 		helm3Implementer := helm3.NewHelm3Implementer()
 		helm3Provider := helm3.NewProvider(helm3Implementer, opts.sender, opts.approvalsManager, helm3.WithWorkloadPlatforms(platformResolver, opts.grc))
 
@@ -380,6 +378,7 @@ type TriggerOpts struct {
 	store            store.Store
 	uiDir            string
 	authConfig       auth.Config
+	appConfig        config.Config
 }
 
 // setupTriggers - setting up triggers. New triggers should be added to this function. Each trigger
@@ -428,8 +427,8 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 	}()
 
 	// checking whether pubsub (GCR) trigger is enabled
-	if os.Getenv(EnvTriggerPubSub) != "" {
-		projectID := os.Getenv(EnvProjectID)
+	if opts.appConfig.TriggerPubSub {
+		projectID := opts.appConfig.ProjectID
 		if projectID == "" {
 			log.Fatalf("main.setupTriggers: project ID env variable not set")
 			return
@@ -446,11 +445,11 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 			return
 		}
 
-		subManager := pubsub.NewDefaultManager(os.Getenv(EnvClusterName), projectID, opts.providers, ps)
+		subManager := pubsub.NewDefaultManager(opts.appConfig.ClusterName, projectID, opts.providers, ps)
 		go subManager.Start(ctx)
 	}
 
-	if os.Getenv(EnvTriggerPoll) != "0" || os.Getenv(EnvTriggerPoll) != "false" {
+	if opts.appConfig.TriggerPoll {
 
 		registryClient := registry.New()
 		watcher := poll.NewRepositoryWatcher(opts.providers, registryClient)
