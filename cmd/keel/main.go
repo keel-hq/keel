@@ -24,7 +24,6 @@ import (
 	"github.com/keel-hq/keel/pkg/store"
 	"github.com/keel-hq/keel/pkg/store/sql"
 
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/internal/k8s"
@@ -112,7 +111,7 @@ func main() {
 		log.WithError(err).Fatal("invalid application configuration")
 	}
 	if *uiDir != "" {
-		cfg.UIDir = *uiDir
+		cfg.UI.Dir = *uiDir
 	}
 
 	log.WithFields(log.Fields{
@@ -135,7 +134,7 @@ func main() {
 
 	sqlStore, err := sql.New(sql.Opts{
 		DatabaseType: "sqlite3",
-		URI:          filepath.Join(cfg.DataDir, "keel.db"),
+		URI:          filepath.Join(cfg.Storage.DataDir, "keel.db"),
 	})
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -144,7 +143,7 @@ func main() {
 		os.Exit(1)
 	}
 	log.WithFields(log.Fields{
-		"database_path": filepath.Join(cfg.DataDir, "keel.db"),
+		"database_path": filepath.Join(cfg.Storage.DataDir, "keel.db"),
 		"type":          "sqlite3",
 	}).Info("initializing database")
 
@@ -157,15 +156,13 @@ func main() {
 	defer cancel()
 
 	notificationLevel := types.LevelInfo
-	if os.Getenv(constants.EnvNotificationLevel) != "" {
-		parsedLevel, err := types.ParseLevel(os.Getenv(constants.EnvNotificationLevel))
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Errorf("main: got error while parsing notification level, defaulting to: %s", notificationLevel)
-		} else {
-			notificationLevel = parsedLevel
-		}
+	parsedLevel, err := types.ParseLevel(cfg.Notifications.Level)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Errorf("main: got error while parsing notification level, defaulting to: %s", notificationLevel)
+	} else {
+		notificationLevel = parsedLevel
 	}
 
 	notifCfg := &notification.Config{
@@ -277,7 +274,7 @@ func main() {
 		grc:              &t.GenericResourceCache,
 		k8sClient:        implementer,
 		store:            sqlStore,
-		uiDir:            cfg.UIDir,
+		uiDir:            cfg.UI.Dir,
 		authConfig:       authConfig,
 		appConfig:        cfg,
 	})
@@ -348,7 +345,7 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 
 	enabledProviders = append(enabledProviders, k8sProvider)
 
-	if opts.appConfig.Helm3Provider {
+	if opts.appConfig.Providers.Helm3 {
 		helm3Implementer := helm3.NewHelm3Implementer()
 		helm3Provider := helm3.NewProvider(helm3Implementer, opts.sender, opts.approvalsManager, helm3.WithWorkloadPlatforms(platformResolver, opts.grc))
 
@@ -389,7 +386,7 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 	authenticator := auth.New(&auth.Opts{
 		Username: opts.authConfig.Username,
 		Password: opts.authConfig.Password,
-		Secret:   []byte(os.Getenv(constants.EnvTokenSecret)),
+		Secret:   []byte(opts.appConfig.Auth.TokenSecret),
 	})
 
 	// setting up generic http webhook server
@@ -402,7 +399,7 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 		Store:                 opts.store,
 		Authenticator:         authenticator,
 		UIDir:                 opts.uiDir,
-		AuthenticatedWebhooks: os.Getenv(constants.EnvAuthenticatedWebhooks) == "true",
+		AuthenticatedWebhooks: opts.appConfig.Auth.AuthenticatedWebhooks,
 		AuthMode:              opts.authConfig.Mode,
 		AuthProxyUserHeader:   opts.authConfig.ProxyUserHeader,
 		AuthProxyLogoutURL:    opts.authConfig.ProxyLogoutURL,
@@ -427,8 +424,8 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 	}()
 
 	// checking whether pubsub (GCR) trigger is enabled
-	if opts.appConfig.TriggerPubSub {
-		projectID := opts.appConfig.ProjectID
+	if opts.appConfig.Trigger.PubSub {
+		projectID := opts.appConfig.Trigger.ProjectID
 		if projectID == "" {
 			log.Fatalf("main.setupTriggers: project ID env variable not set")
 			return
@@ -445,11 +442,11 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 			return
 		}
 
-		subManager := pubsub.NewDefaultManager(opts.appConfig.ClusterName, projectID, opts.providers, ps)
+		subManager := pubsub.NewDefaultManager(opts.appConfig.Trigger.ClusterName, projectID, opts.providers, ps)
 		go subManager.Start(ctx)
 	}
 
-	if opts.appConfig.TriggerPoll {
+	if opts.appConfig.Trigger.Poll {
 
 		registryClient := registry.New()
 		watcher := poll.NewRepositoryWatcher(opts.providers, registryClient)
