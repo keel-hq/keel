@@ -40,9 +40,9 @@ type Opts struct {
 // WithKeepAliveDialer - required so connections aren't dropped
 // https://github.com/GoogleCloudPlatform/google-cloud-go/issues/500
 func WithKeepAliveDialer() grpc.DialOption {
-	return grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
-		d := net.Dialer{Timeout: timeout, KeepAlive: time.Duration(10 * time.Second)}
-		return d.Dial("tcp", addr)
+	return grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+		d := net.Dialer{KeepAlive: 10 * time.Second}
+		return d.DialContext(ctx, "tcp", addr)
 	})
 }
 

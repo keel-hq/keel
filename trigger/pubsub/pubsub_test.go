@@ -3,13 +3,17 @@ package pubsub
 import (
 	"context"
 	"encoding/json"
+	"net"
+	"testing"
+	"time"
 
 	"cloud.google.com/go/pubsub/v2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/provider"
-
-	"testing"
 )
 
 type fakeClient struct {
@@ -17,6 +21,50 @@ type fakeClient struct {
 
 func fakeDoneFunc(id string, done bool) {
 	return
+}
+
+// TestWithKeepAliveDialer verifies that the dial option used by
+// NewPubsubSubscriber still establishes the TCP transport Pub/Sub requires.
+func TestWithKeepAliveDialer(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+
+	connected := make(chan struct{})
+	go func() {
+		conn, acceptErr := listener.Accept()
+		if acceptErr != nil {
+			return
+		}
+		close(connected)
+		defer conn.Close()
+		<-time.After(time.Second)
+	}()
+
+	client, err := grpc.NewClient(
+		listener.Addr().String(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		WithKeepAliveDialer(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	client.Connect()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if !client.WaitForStateChange(ctx, connectivity.Idle) {
+		t.Fatalf("dialer did not establish a connection: %v", ctx.Err())
+	}
+
+	select {
+	case <-connected:
+	case <-ctx.Done():
+		t.Fatalf("dialer did not reach the test listener: %v", ctx.Err())
+	}
 }
 
 func TestCallback(t *testing.T) {
