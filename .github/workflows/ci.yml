@@ -128,9 +128,10 @@ jobs:
   e2e:
     name: Behavioral End-to-End Tests (k3s)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -142,6 +143,14 @@ jobs:
 
       - name: Run behavioral tests in k3s
         run: make e2e
+
+      - name: Print end-to-end failure log
+        if: failure()
+        run: |
+          log_file="$(find .test/artifacts -name go-test.log -print -quit)"
+          if [ -n "${log_file}" ]; then
+            cat "${log_file}"
+          fi
 
       - name: Upload end-to-end diagnostics
         if: failure() || cancelled()

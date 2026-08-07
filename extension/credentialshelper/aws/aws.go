@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net/url"
@@ -8,11 +9,8 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ecr"
 
 	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/types"
@@ -72,40 +70,28 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 		return nil, err
 	}
 
-	// set region
-	sess := newAwsSession(region)
-	svc := ecr.New(sess)
-
 	cached, err := h.cache.Get(registry)
 	if err == nil {
 		return cached, nil
 	}
 
-	input := &ecr.GetAuthorizationTokenInput{}
-
-	result, err := svc.GetAuthorizationToken(input)
+	ctx := context.Background()
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case ecr.ErrCodeServerException:
-				fmt.Println(ecr.ErrCodeServerException, aerr.Error())
-			case ecr.ErrCodeInvalidParameterException:
-				fmt.Println(ecr.ErrCodeInvalidParameterException, aerr.Error())
-			default:
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Error("credentialshelper.aws: failed to get authorization token")
-		}
+		return nil, fmt.Errorf("failed to load AWS configuration: %w", err)
+	}
+
+	result, err := ecr.NewFromConfig(cfg).GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
+	if err != nil {
+		log.WithError(err).Error("credentialshelper.aws: failed to get authorization token")
 		return nil, err
 	}
 
 	for _, ad := range result.AuthorizationData {
 
+		if ad.ProxyEndpoint == nil || ad.AuthorizationToken == nil {
+			continue
+		}
 		u, err := url.Parse(*ad.ProxyEndpoint)
 		if err != nil {
 			log.WithError(err).Errorf("credentialshelper.aws: failed to parse registry endpoint: %s", *ad.ProxyEndpoint)
@@ -114,13 +100,14 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 
 		log.WithFields(log.Fields{
 			"current_registry": u.Host,
-			"token":            *ad.AuthorizationToken,
 			"registry":         registry,
 		}).Debug("checking registry")
-		if strings.SplitN(u.Host,".",2)[1] == strings.SplitN(registry,".",2)[1] {
+		endpointParts := strings.SplitN(u.Host, ".", 2)
+		registryParts := strings.SplitN(registry, ".", 2)
+		if len(endpointParts) == 2 && len(registryParts) == 2 && endpointParts[1] == registryParts[1] {
 			username, password, err := decodeBase64Secret(*ad.AuthorizationToken)
 			if err != nil {
-				return nil, fmt.Errorf("failed to decode authentication token: %s, error: %s", *ad.AuthorizationToken, err)
+				return nil, fmt.Errorf("failed to decode authentication token: %w", err)
 			}
 
 			creds := &types.Credentials{
@@ -135,14 +122,6 @@ func (h *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Cr
 	}
 
 	return nil, fmt.Errorf("not found")
-}
-
-func newAwsSession(region string) *session.Session {
-	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(region),
-	}))
-
-	return sess
 }
 
 func decodeBase64Secret(authSecret string) (username, password string, err error) {
