@@ -1,8 +1,7 @@
 package teams
 
 import (
-	"fmt"
-	"io"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,70 +9,68 @@ import (
 
 	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/types"
-	"github.com/keel-hq/keel/version"
 )
 
-func TestTrimLeftChar(t *testing.T) {
-	fmt.Printf("%q\n", "Hello, 世界")
-	fmt.Printf("%q\n", TrimFirstChar(""))
-	fmt.Printf("%q\n", TrimFirstChar("H"))
-	fmt.Printf("%q\n", TrimFirstChar("世"))
-	fmt.Printf("%q\n", TrimFirstChar("Hello"))
-	fmt.Printf("%q\n", TrimFirstChar("世界"))
+func TestTrimFirstChar(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{{"", ""}, {"H", ""}, {"#123456", "123456"}, {"世界", "界"}} {
+		if got := TrimFirstChar(tc.input); got != tc.want {
+			t.Errorf("TrimFirstChar(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
 }
 
 func TestTeamsRequest(t *testing.T) {
-	handler := func(resp http.ResponseWriter, req *http.Request) {
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			t.Errorf("failed to parse body: %s", err)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %s, want POST", r.Method)
 		}
-
-		bodyStr := string(body)
-
-		if !strings.Contains(bodyStr, "MessageCard") {
-			t.Errorf("missing MessageCard indicator")
+		if r.URL.Path != "/workflow/hook" {
+			t.Errorf("path = %s", r.URL.Path)
 		}
-
-		if !strings.Contains(bodyStr, "themeColor") {
-			t.Errorf("missing themeColor")
+		if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+			t.Errorf("content-type = %q", r.Header.Get("Content-Type"))
 		}
-
-		if !strings.Contains(bodyStr, constants.KeelLogoURL) {
-			t.Errorf("missing logo url")
+		var payload SimpleTeamsMessageCard
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode payload: %v", err)
 		}
-
-		if !strings.Contains(bodyStr, "**"+types.NotificationPreDeploymentUpdate.String()+"**") {
-			t.Errorf("missing deployment type")
+		if payload.AtType != "MessageCard" || payload.AtContext != "http://schema.org/extensions" || payload.Summary != types.NotificationPreDeploymentUpdate.String() {
+			t.Errorf("invalid card envelope: %#v", payload)
 		}
-
-		if !strings.Contains(bodyStr, version.GetKeelVersion().Version) {
-			t.Errorf("missing version")
+		if len(payload.Sections) != 1 {
+			t.Fatalf("sections = %#v", payload.Sections)
 		}
-
-		if !strings.Contains(bodyStr, "update deployment") {
-			t.Errorf("missing name")
+		section := payload.Sections[0]
+		if section.ActivityImage != constants.KeelLogoURL || section.ActivityText != "*update deployment*: message here" || !section.Markdown || len(section.Facts) != 1 {
+			t.Errorf("invalid section: %#v", section)
 		}
-		if !strings.Contains(bodyStr, "message here") {
-			t.Errorf("missing message")
-		}
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer server.Close()
 
-		t.Log(bodyStr)
-
+	s := &sender{endpoint: server.URL + "/workflow/hook", client: server.Client()}
+	if err := s.Send(types.EventNotification{
+		Name: "update deployment", Message: "message here",
+		Type: types.NotificationPreDeploymentUpdate, Level: types.LevelDebug,
+	}); err != nil {
+		t.Fatalf("Send() error = %v", err)
 	}
+}
 
-	// create test server with handler
-	ts := httptest.NewServer(http.HandlerFunc(handler))
-	defer ts.Close()
-
-	s := &sender{
-		endpoint: ts.URL,
-		client:   &http.Client{},
+func TestTeamsStatusHandling(t *testing.T) {
+	for _, tc := range []struct {
+		status  int
+		wantErr bool
+	}{{http.StatusOK, false}, {http.StatusCreated, false}, {http.StatusAccepted, false}, {http.StatusNoContent, false}, {http.StatusMultipleChoices, true}, {http.StatusBadRequest, true}} {
+		t.Run(http.StatusText(tc.status), func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.status)
+			}))
+			defer server.Close()
+			err := (&sender{endpoint: server.URL, client: server.Client()}).Send(types.EventNotification{Message: "message"})
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("Send() error = %v, wantErr %v", err, tc.wantErr)
+			}
+		})
 	}
-
-	s.Send(types.EventNotification{
-		Name:    "update deployment",
-		Message: "message here",
-		Type:    types.NotificationPreDeploymentUpdate,
-	})
 }

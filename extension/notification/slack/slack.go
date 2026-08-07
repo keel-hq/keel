@@ -2,6 +2,7 @@ package slack
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -19,8 +20,12 @@ import (
 
 const timeout = 5 * time.Second
 
+type slackMessageClient interface {
+	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
+}
+
 type sender struct {
-	slackClient *slack.Client
+	slackClient slackMessageClient
 	channels    []string
 	botName     string
 }
@@ -50,7 +55,9 @@ func (s *sender) Send(event types.EventNotification) error {
 	params.Username = s.botName
 	params.IconURL = constants.KeelLogoURL
 
-	attachements := []slack.Attachment{
+	// Slack chat.postMessage API: https://docs.slack.dev/reference/methods/chat.postMessage
+	// Attachments are legacy, so include top-level text as an accessible notification fallback.
+	attachments := []slack.Attachment{
 		{
 			Fallback: event.Message,
 			Color:    event.Level.Color(),
@@ -71,19 +78,22 @@ func (s *sender) Send(event types.EventNotification) error {
 		chans = event.Channels
 	}
 
-	var mgsOpts []slack.MsgOption
+	msgOpts := []slack.MsgOption{
+		slack.MsgOptionText(event.Message, false),
+		slack.MsgOptionPostMessageParameters(params),
+		slack.MsgOptionAttachments(attachments...),
+	}
 
-	mgsOpts = append(mgsOpts, slack.MsgOptionPostMessageParameters(params))
-	mgsOpts = append(mgsOpts, slack.MsgOptionAttachments(attachements...))
-
+	var sendErrors []error
 	for _, channel := range chans {
-		_, _, err := s.slackClient.PostMessage(channel, mgsOpts...)
+		_, _, err := s.slackClient.PostMessage(channel, msgOpts...)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":   err,
 				"channel": channel,
 			}).Error("extension.notification.slack: failed to send notification")
+			sendErrors = append(sendErrors, fmt.Errorf("channel %q: %w", channel, err))
 		}
 	}
-	return nil
+	return errors.Join(sendErrors...)
 }

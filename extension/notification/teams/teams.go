@@ -61,6 +61,9 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	return true, nil
 }
 
+// Teams incoming-webhook and Workflows payload documentation:
+// https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook
+// Microsoft 365 connectors are nearing deprecation; Teams Workflows are recommended and accept Message Cards.
 type SimpleTeamsMessageCard struct {
 	AtContext  string                `json:"@context"`
 	AtType     string                `json:"@type"`
@@ -125,13 +128,16 @@ func (s *sender) Send(event types.EventNotification) error {
 
 	// Send notification via HTTP POST.
 	resp, err := s.client.Post(s.endpoint, "application/json", bytes.NewBuffer(jsonNotification))
-	if err != nil || resp == nil || (resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 202) {
-		if resp != nil {
-			return fmt.Errorf("got status %d, expected 200/201/202", resp.StatusCode)
-		}
+	if err != nil {
 		return err
 	}
+	if resp == nil {
+		return fmt.Errorf("teams webhook returned no response")
+	}
 	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("got status %d, expected 2xx", resp.StatusCode)
+	}
 
 	return nil
 }

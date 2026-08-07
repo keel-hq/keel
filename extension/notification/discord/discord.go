@@ -57,6 +57,8 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	return true, nil
 }
 
+// Discord execute-webhook API: https://discord.com/developers/docs/resources/webhook#execute-webhook
+// At least one of content, embeds, components, file, or poll is required; this payload uses embeds.
 type DiscordMessage struct {
 	Username string  `json:"username"`
 	Content  string  `json:"content"`
@@ -91,13 +93,16 @@ func (s *sender) Send(event types.EventNotification) error {
 	}
 
 	resp, err := s.client.Post(s.endpoint, "application/json", bytes.NewBuffer(jsonMessage))
-	if err != nil || resp == nil || (resp.StatusCode != 200 && resp.StatusCode != 204) {
-		if resp != nil {
-			return fmt.Errorf("got status %d, expected 200/204", resp.StatusCode)
-		}
+	if err != nil {
 		return err
 	}
+	if resp == nil {
+		return fmt.Errorf("discord webhook returned no response")
+	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("got status %d, expected 200/204", resp.StatusCode)
+	}
 
 	return nil
 }
