@@ -294,9 +294,9 @@ deletes only resources/processes labeled or recorded for its run. The expected r
 is 6–8 minutes (hard target: 10 minutes); failure evidence is written to
 `.test/artifacts/` before cleanup.
 
-Keel uses client-go `v0.31.3` against Kubernetes 1.35 intentionally to validate the
-stable APIs Keel ships against. This does not claim newer API feature parity and does
-not involve the image-volume feature; dependency upgrades are outside the e2e task.
+Keel uses client-go `v0.35.7` against Kubernetes 1.35 to validate the stable APIs
+Keel ships against. This does not claim support for APIs outside Keel's current
+resource set and does not involve the image-volume feature.
 
 Test files follow Go convention: `*_test.go` alongside source files.
 
