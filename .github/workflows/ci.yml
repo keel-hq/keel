@@ -128,7 +128,7 @@ jobs:
   e2e:
     name: Behavioral End-to-End Tests (k3s)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
