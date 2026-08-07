@@ -44,8 +44,10 @@ func (b *Bot) Configure(appConfig config.Config, approvalsRespCh chan *bot.Appro
 	b.name = cfg.ApprovalsBotName
 	b.userName = cfg.ApprovalsUserName
 	b.password = cfg.ApprovalsPassword
-	if cli := connect(b.userName, b.password, cfg.ConnectionAttempts); cli != nil {
-		b.hipchatClient = cli
+	if cfg.ConnectionAttempts > 0 {
+		if cli := connect(b.userName, b.password, cfg.ConnectionAttempts); cli != nil {
+			b.hipchatClient = cli
+		}
 	}
 	b.botMessagesChannel = botMessagesChannel
 	b.approvalsRespCh = approvalsRespCh

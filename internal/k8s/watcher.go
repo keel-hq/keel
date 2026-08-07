@@ -76,12 +76,7 @@ func WatchCronJobs(g *workgroup.Group, client *kubernetes.Clientset, log logrus.
 }
 
 func watch(g *workgroup.Group, c cache.Getter, log logrus.FieldLogger, config appconfig.KubernetesConfig, resource string, objType runtime.Object, rs ...cache.ResourceEventHandler) {
-	namespaceScan := v1.NamespaceAll
-	if config.RestrictedNamespace != "" && config.RestrictedNamespace != "keel" {
-		namespaceScan = config.RestrictedNamespace
-	}
-
-	lw := cache.NewListWatchFromClient(c, resource, namespaceScan, fields.Everything())
+	lw := cache.NewListWatchFromClient(c, resource, namespaceFor(config), fields.Everything())
 	sw := cache.NewSharedInformer(lw, objType, 30*time.Minute)
 	for _, r := range rs {
 		sw.AddEventHandler(r)
@@ -92,6 +87,13 @@ func watch(g *workgroup.Group, c cache.Getter, log logrus.FieldLogger, config ap
 		defer log.Println("stopped")
 		sw.Run(stop)
 	})
+}
+
+func namespaceFor(config appconfig.KubernetesConfig) string {
+	if config.RestrictedNamespace == "" || config.RestrictedNamespace == "keel" {
+		return v1.NamespaceAll
+	}
+	return config.RestrictedNamespace
 }
 
 type buffer struct {
