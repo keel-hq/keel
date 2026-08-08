@@ -15,6 +15,7 @@ readonly REGISTRY_ADDRESS="10.53.0.50:5000"
 readonly K3S_RUNTIME_DIR="/run/k3s"
 readonly DEFAULT_K3S_DATA_DIR="/var/lib/rancher/k3s"
 readonly DEFAULT_KUBELET_DIR="/var/lib/kubelet"
+readonly E2E_GO_TEST_TIMEOUT="15m"
 
 RUN_ID="${KEEL_E2E_RUN_ID:-$(date -u +%Y%m%d%H%M%S)-$$}"
 RUN_DIR="${KEEL_E2E_RUN_DIR:-${REPO_ROOT}/.test/.runs/${RUN_ID}}"
@@ -546,12 +547,12 @@ run_tests() {
   source "${E2E_ENV_FILE}"
   set +a
   if [[ "${KEEL_E2E_MANUAL:-false}" == "true" ]]; then
-    go test -count=1 -v ./tests \
+    go test -count=1 -timeout="${E2E_GO_TEST_TIMEOUT}" -v ./tests \
       -run '^TestE2ESuite/TestExternalOAuthProxyAdminFlow$' 2>&1 | \
       tee "${ARTIFACT_DIR}/go-test.log"
     return
   fi
-  go test -count=1 -v ./tests 2>&1 | tee "${ARTIFACT_DIR}/go-test.log"
+  go test -count=1 -timeout="${E2E_GO_TEST_TIMEOUT}" -v ./tests 2>&1 | tee "${ARTIFACT_DIR}/go-test.log"
 }
 
 hold_for_manual_inspection() {
@@ -700,8 +701,12 @@ stop_oauth_port_forward() {
 
 cleanup() {
   local exit_status=$?
-  ((CLEANUP_STARTED == 0)) || return 0
+  ((CLEANUP_STARTED == 0)) || return "${exit_status}"
   CLEANUP_STARTED=1
+  # Teardown is best-effort and must not turn a successful test run into a
+  # failure. In particular, k3s may remove runtime paths concurrently while
+  # the EXIT trap is deleting them.
+  set +e
   if ((exit_status != 0)); then
     log "collecting diagnostics after exit status ${exit_status}"
     collect_diagnostics
@@ -734,6 +739,7 @@ cleanup() {
   if [[ -d "${RUN_DIR}" ]]; then
     sudo find "${RUN_DIR}" -depth -delete
   fi
+  return "${exit_status}"
 }
 
 main() {
