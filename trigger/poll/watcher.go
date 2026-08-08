@@ -227,15 +227,23 @@ func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string) erro
 		registryOpts.Password = creds.Password
 	}
 
-	digest, err := w.registryClient.Digest(registryOpts)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error":    err,
-			"image":    ti.Image.String(),
-			"username": registryOpts.Username,
-			"password": strings.Repeat("*", len(registryOpts.Password)),
-		}).Error("trigger.poll.RepositoryWatcher.addJob: failed to get image digest")
-		return err
+	// Prefer the digest of the live pod as the baseline so that any drift
+	// that already exists between the cluster and the registry is detected
+	// immediately on the first poll cycle (issue #845).
+	// Fall back to the registry digest when no pod imageID is available
+	// (e.g. the pod has not been scheduled yet, or this is the first deploy).
+	digest := ti.PodDigest
+	if digest == "" {
+		digest, err = w.registryClient.Digest(registryOpts)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":    err,
+				"image":    ti.Image.String(),
+				"username": registryOpts.Username,
+				"password": strings.Repeat("*", len(registryOpts.Password)),
+			}).Error("trigger.poll.RepositoryWatcher.addJob: failed to get image digest")
+			return err
+		}
 	}
 
 	key := getImageIdentifier(ti.Image, ti.Policy.KeepTag())

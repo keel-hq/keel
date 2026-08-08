@@ -249,6 +249,10 @@ func GetMonitorVolumesFromMeta(labels map[string]string, annotations map[string]
 func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 	var trackedImages []*types.TrackedImage
 
+	// podsByNamespace lazily caches pod lists so we make at most one API call
+	// per namespace rather than one per tracked image.
+	podsByNamespace := make(map[string][]v1.Pod)
+
 	for _, gr := range p.cache.Values() {
 
 		labels := gr.GetLabels()
@@ -320,6 +324,21 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				}
 			}
 
+			// Resolve the running pod's digest for this namespace (cached per namespace).
+			pods, ok := podsByNamespace[gr.Namespace]
+			if !ok {
+				podList, listErr := p.implementer.Pods(gr.Namespace, "")
+				if listErr != nil {
+					log.WithFields(log.Fields{
+						"error":     listErr,
+						"namespace": gr.Namespace,
+					}).Warn("provider.kubernetes: failed to list pods for digest baseline, will fall back to registry")
+				} else if podList != nil {
+					pods = podList.Items
+				}
+				podsByNamespace[gr.Namespace] = pods
+			}
+
 			trackedImages = append(trackedImages, &types.TrackedImage{
 				Image:        ref,
 				PollSchedule: schedule,
@@ -331,6 +350,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				Platforms:    platforms,
 				PlatformErr:  platformErr,
 				Policy:       plc,
+				PodDigest:    k8s.FindPodImageDigest(pods, ref.Repository()),
 			})
 		}
 	}
