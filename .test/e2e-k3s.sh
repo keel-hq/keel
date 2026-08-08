@@ -15,6 +15,7 @@ readonly REGISTRY_ADDRESS="10.53.0.50:5000"
 readonly K3S_RUNTIME_DIR="/run/k3s"
 readonly DEFAULT_K3S_DATA_DIR="/var/lib/rancher/k3s"
 readonly DEFAULT_KUBELET_DIR="/var/lib/kubelet"
+# Keep this below the workflow's 20-minute deadline so cleanup and diagnostics can run.
 readonly E2E_GO_TEST_TIMEOUT="15m"
 
 RUN_ID="${KEEL_E2E_RUN_ID:-$(date -u +%Y%m%d%H%M%S)-$$}"
