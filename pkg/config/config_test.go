@@ -7,23 +7,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var unsetenv = os.Unsetenv
-
-var configurationEnvironment = []string{
-	"DEBUG", "PUBSUB", "POLL", "PROJECT_ID", "CLUSTER_NAME", "XDG_DATA_HOME", "HELM3_PROVIDER", "UI_DIR",
-	"NOTIFICATION_LEVEL", "WEBHOOK_ENDPOINT", "SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_BOT_NAME", "SLACK_CHANNELS", "SLACK_APPROVALS_CHANNEL",
-	"HIPCHAT_SERVER", "HIPCHAT_TOKEN", "HIPCHAT_BOT_NAME", "HIPCHAT_CHANNELS", "HIPCHAT_APPROVALS_CHANNEL", "HIPCHAT_APPROVALS_USER_NAME",
-	"HIPCHAT_APPROVALS_BOT_NAME", "HIPCHAT_APPROVALS_PASSWORT", "HIPCHAT_CONNECTION_ATTEMPTS", "MATTERMOST_ENDPOINT", "MATTERMOST_USERNAME",
-	"TEAMS_WEBHOOK_URL", "DISCORD_WEBHOOK_URL", "SHOUTRRR_URLS", "SHOUTRRR_TIMEOUT", "MAIL_TO", "MAIL_FROM", "MAIL_SMTP_SERVER",
-	"MAIL_SMTP_PORT", "MAIL_SMTP_USER", "MAIL_SMTP_PASS", "BASIC_AUTH_USER", "BASIC_AUTH_PASSWORD", "AUTHENTICATED_WEBHOOKS",
-	"TOKEN_SECRET", "AUTH_MODE", "AUTH_PROXY_USER_HEADER", "AUTH_PROXY_LOGOUT_URL", "RESTRICTED_NAMESPACE",
-}
-
 func clearConfigurationEnvironment(t *testing.T) {
 	t.Helper()
-	for _, name := range configurationEnvironment {
+	for _, name := range environmentVariables {
+		// t.Setenv records the original value so the direct unset below remains
+		// isolated to this test.
 		t.Setenv(name, "")
-		require.NoError(t, unsetenv(name))
+		require.NoError(t, os.Unsetenv(name))
 	}
 }
 
@@ -37,8 +27,69 @@ func TestLoadDefaults(t *testing.T) {
 			Level: "info", Slack: SlackNotificationConfig{BotName: "keel"}, Hipchat: HipchatNotificationConfig{BotName: "keel"},
 			Mattermost: MattermostConfig{Username: "keel"}, Shoutrrr: ShoutrrrConfig{Timeout: "10s"}, Mail: MailConfig{SMTPPort: 25},
 		},
-		Bots: BotConfig{Slack: SlackBotConfig{BotName: "keel", ApprovalsChannel: "general"}, Hipchat: HipchatBotConfig{ApprovalsChannel: "general", ApprovalsBotName: "keel", ConnectionAttempts: 10}},
+		Bots: BotConfig{Slack: SlackBotConfig{BotName: "keel", ApprovalsChannel: "general"}, Hipchat: HipchatBotConfig{ApprovalsChannel: "general", ApprovalsBotName: "keel", ConnectionAttempts: 5}},
 	}, cfg)
+}
+
+func TestLoadTreatsExplicitlyEmptyValuesAsUnset(t *testing.T) {
+	clearConfigurationEnvironment(t)
+	for _, name := range []string{"POLL", "PUBSUB", "DEBUG", "HELM3_PROVIDER", "AUTHENTICATED_WEBHOOKS", "MAIL_SMTP_PORT", "HIPCHAT_CONNECTION_ATTEMPTS"} {
+		t.Setenv(name, "")
+	}
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.True(t, cfg.Trigger.Poll)
+	require.False(t, cfg.Trigger.PubSub)
+	require.False(t, cfg.Debug)
+	require.False(t, cfg.Providers.Helm3)
+	require.False(t, cfg.Auth.AuthenticatedWebhooks)
+	require.Equal(t, 25, cfg.Notifications.Mail.SMTPPort)
+	require.Equal(t, 5, cfg.Bots.Hipchat.ConnectionAttempts)
+
+	for _, name := range []string{"POLL", "PUBSUB", "DEBUG", "HELM3_PROVIDER", "AUTHENTICATED_WEBHOOKS", "MAIL_SMTP_PORT", "HIPCHAT_CONNECTION_ATTEMPTS"} {
+		value, ok := os.LookupEnv(name)
+		require.True(t, ok, "%s should remain set", name)
+		require.Empty(t, value, "%s should remain empty", name)
+	}
+}
+
+func TestLoadPreservesLegacyPubSubValues(t *testing.T) {
+	for _, tt := range []struct {
+		value   string
+		enabled bool
+	}{
+		{value: "1", enabled: true},
+		{value: "true", enabled: true},
+		{value: "yes", enabled: true},
+		{value: "on", enabled: true},
+		{value: "enabled", enabled: true},
+		{value: "0", enabled: false},
+		{value: "false", enabled: false},
+	} {
+		t.Run(tt.value, func(t *testing.T) {
+			clearConfigurationEnvironment(t)
+			t.Setenv("PUBSUB", tt.value)
+			cfg, err := Load()
+			require.NoError(t, err)
+			require.Equal(t, tt.enabled, cfg.Trigger.PubSub)
+		})
+	}
+}
+
+func TestLoadIgnoresNestedAliasNames(t *testing.T) {
+	clearConfigurationEnvironment(t)
+	t.Setenv("TRIGGER_POLL", "false")
+	t.Setenv("STORAGE_XDG_DATA_HOME", "/shadow")
+	t.Setenv("AUTH_AUTHENTICATED_WEBHOOKS", "true")
+	t.Setenv("BOTS_SLACK_SLACK_BOT_TOKEN", "shadow-token")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.True(t, cfg.Trigger.Poll)
+	require.Equal(t, "/data", cfg.Storage.DataDir)
+	require.False(t, cfg.Auth.AuthenticatedWebhooks)
+	require.Empty(t, cfg.Bots.Slack.BotToken)
 }
 
 func TestLoadMapsEveryTypedPath(t *testing.T) {
@@ -73,4 +124,13 @@ func TestLoadRejectsInvalidTypedValues(t *testing.T) {
 			require.Error(t, err)
 		})
 	}
+}
+
+func TestLoadReportsDocumentedVariableName(t *testing.T) {
+	clearConfigurationEnvironment(t)
+	t.Setenv("POLL", "sometimes")
+	_, err := Load()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "POLL")
+	require.NotContains(t, err.Error(), "TRIGGER_POLL")
 }

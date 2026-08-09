@@ -35,7 +35,7 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	cfg := config.Application.Notifications.Slack
+	cfg := config.Notifications.Slack
 	if cfg.BotToken == "" {
 		return false, nil
 	}
@@ -79,7 +79,6 @@ func (s *sender) Send(event types.EventNotification) error {
 	}
 
 	msgOpts := []slack.MsgOption{
-		slack.MsgOptionText(event.Message, false),
 		slack.MsgOptionPostMessageParameters(params),
 		slack.MsgOptionAttachments(attachments...),
 	}
@@ -95,5 +94,12 @@ func (s *sender) Send(event types.EventNotification) error {
 			sendErrors = append(sendErrors, fmt.Errorf("channel %q: %w", channel, err))
 		}
 	}
-	return errors.Join(sendErrors...)
+	// The notification manager retries the whole event when Send returns an
+	// error. Report failure only when every destination failed so a single bad
+	// channel cannot cause duplicate messages in channels that already received
+	// the event.
+	if len(chans) > 0 && len(sendErrors) == len(chans) {
+		return errors.Join(sendErrors...)
+	}
+	return nil
 }

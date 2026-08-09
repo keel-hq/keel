@@ -31,7 +31,8 @@ type Config struct {
 	ProxyLogoutURL  string
 }
 
-func Validate(raw appconfig.AuthConfig) (Config, error) {
+// FromConfig maps application authentication settings to the validated runtime form.
+func FromConfig(raw appconfig.AuthConfig) (Config, error) {
 	modeValue := strings.TrimSpace(raw.Mode)
 	if modeValue == "" {
 		modeValue = string(ModeLegacy)

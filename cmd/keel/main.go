@@ -124,7 +124,7 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	authConfig, err := auth.Validate(cfg.Auth)
+	authConfig, err := auth.FromConfig(cfg.Auth)
 	if err != nil {
 		log.WithError(err).Fatal("invalid administrator authentication configuration")
 	}
@@ -163,9 +163,9 @@ func main() {
 	}
 
 	notifCfg := &notification.Config{
-		Attempts:    10,
-		Level:       notificationLevel,
-		Application: cfg,
+		Attempts:      10,
+		Level:         notificationLevel,
+		Notifications: cfg.Notifications,
 	}
 	sender := notification.New(ctx)
 
@@ -397,6 +397,7 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 		Store:                 opts.store,
 		Authenticator:         authenticator,
 		UIDir:                 opts.uiDir,
+		Debug:                 opts.appConfig.Debug,
 		AuthenticatedWebhooks: opts.appConfig.Auth.AuthenticatedWebhooks,
 		AuthMode:              opts.authConfig.Mode,
 		AuthProxyUserHeader:   opts.authConfig.ProxyUserHeader,

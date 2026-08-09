@@ -39,8 +39,8 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Get configuration
 	var httpConfig Config
 
-	httpConfig.Endpoint = config.Application.Notifications.Mattermost.Endpoint
-	httpConfig.Name = config.Application.Notifications.Mattermost.Username
+	httpConfig.Endpoint = config.Notifications.Mattermost.Endpoint
+	httpConfig.Name = config.Notifications.Mattermost.Username
 
 	// Validate endpoint URL.
 	if httpConfig.Endpoint == "" {

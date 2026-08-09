@@ -2,6 +2,7 @@ package slack
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,7 +29,7 @@ func TestSlackChatPostMessageRequest(t *testing.T) {
 		if r.Form.Get("token") != "xoxb-test" {
 			t.Errorf("token auth = %q", r.Form.Get("token"))
 		}
-		if r.Form.Get("channel") != "deployments" || r.Form.Get("text") != "message here" {
+		if r.Form.Get("channel") != "deployments" || r.Form.Get("text") != "" {
 			t.Errorf("unexpected form payload: %#v", r.Form)
 		}
 		if r.Form.Get("username") != "Keel" || r.Form.Get("icon_url") == "" {
@@ -53,6 +54,40 @@ func TestSlackChatPostMessageRequest(t *testing.T) {
 	}
 	if err := s.Send(types.EventNotification{Message: "message here", Type: types.NotificationPreDeploymentUpdate}); err != nil {
 		t.Fatalf("Send() error = %v", err)
+	}
+}
+
+type recordingSlackClient struct {
+	channels []string
+	errors   map[string]error
+}
+
+func (c *recordingSlackClient) PostMessage(channel string, _ ...slackapi.MsgOption) (string, string, error) {
+	c.channels = append(c.channels, channel)
+	return channel, "", c.errors[channel]
+}
+
+func TestSlackSendDoesNotRetrySuccessfulChannelsAfterPartialFailure(t *testing.T) {
+	client := &recordingSlackClient{errors: map[string]error{"broken": errors.New("channel not found")}}
+	s := &sender{slackClient: client, channels: []string{"working", "broken"}}
+
+	if err := s.Send(types.EventNotification{Message: "message"}); err != nil {
+		t.Fatalf("Send() returned partial failure and would retry successful channels: %v", err)
+	}
+	if strings.Join(client.channels, ",") != "working,broken" {
+		t.Fatalf("channels called = %v", client.channels)
+	}
+}
+
+func TestSlackSendReturnsErrorWhenEveryChannelFails(t *testing.T) {
+	client := &recordingSlackClient{errors: map[string]error{
+		"one": errors.New("first failure"),
+		"two": errors.New("second failure"),
+	}}
+	s := &sender{slackClient: client, channels: []string{"one", "two"}}
+
+	if err := s.Send(types.EventNotification{Message: "message"}); err == nil {
+		t.Fatal("Send() returned nil when every Slack channel failed")
 	}
 }
 

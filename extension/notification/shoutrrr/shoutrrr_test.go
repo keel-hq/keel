@@ -63,7 +63,7 @@ func TestSendDeliversNotification(t *testing.T) {
 	s := &sender{}
 
 	testTimeout := "10s"
-	configured, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}})
+	configured, err := s.Configure(&notification.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}})
 	if err != nil {
 		t.Fatalf("unexpected configure error: %s", err)
 	}
@@ -117,7 +117,7 @@ func TestSendPartialFailure(t *testing.T) {
 	testTimeout := "2s"
 
 	s := &sender{}
-	if _, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}}); err != nil {
+	if _, err := s.Configure(&notification.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}); err != nil {
 		t.Fatalf("unexpected configure error: %s", err)
 	}
 
@@ -142,7 +142,7 @@ func TestSendTotalFailure(t *testing.T) {
 	testTimeout := "2s"
 
 	s := &sender{}
-	if _, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}}); err != nil {
+	if _, err := s.Configure(&notification.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}); err != nil {
 		t.Fatalf("unexpected configure error: %s", err)
 	}
 
@@ -157,7 +157,7 @@ func TestConfigureDisabledWhenUnset(t *testing.T) {
 	s := &sender{}
 
 	testTimeout := "10s"
-	configured, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}})
+	configured, err := s.Configure(&notification.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}})
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
@@ -173,7 +173,7 @@ func TestConfigureSkipsInvalidURL(t *testing.T) {
 	s := &sender{}
 
 	testTimeout := "10s"
-	configured, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}})
+	configured, err := s.Configure(&notification.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -192,7 +192,7 @@ func TestConfigureFailsWhenNoURLUsable(t *testing.T) {
 	s := &sender{}
 
 	testTimeout := "10s"
-	configured, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}})
+	configured, err := s.Configure(&notification.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}})
 	if configured {
 		t.Error("expected sender to be disabled")
 	}
@@ -207,7 +207,7 @@ func TestConfigureRejectsBadTimeout(t *testing.T) {
 
 	s := &sender{}
 
-	if configured, err := s.Configure(&notification.Config{Application: appconfig.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}}); configured || err == nil {
+	if configured, err := s.Configure(&notification.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: testURLs, Timeout: testTimeout}}}); configured || err == nil {
 		t.Errorf("expected configure to fail, got configured=%v err=%v", configured, err)
 	}
 }

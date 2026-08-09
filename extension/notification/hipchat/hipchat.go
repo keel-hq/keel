@@ -25,7 +25,7 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	cfg := config.Application.Notifications.Hipchat
+	cfg := config.Notifications.Hipchat
 	if cfg.Token == "" {
 		return false, nil
 	}

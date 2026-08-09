@@ -34,7 +34,7 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Get configuration
 	var httpConfig Config
 
-	httpConfig.Endpoint = config.Application.Notifications.Webhook.Endpoint
+	httpConfig.Endpoint = config.Notifications.Webhook.Endpoint
 
 	// Validate endpoint URL.
 	if httpConfig.Endpoint == "" {

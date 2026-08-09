@@ -1,6 +1,25 @@
 package config
 
-import "github.com/kelseyhightower/envconfig"
+import (
+	"fmt"
+	"os"
+	"strconv"
+	"sync"
+
+	"github.com/kelseyhightower/envconfig"
+)
+
+var loadMutex sync.Mutex
+
+var environmentVariables = []string{
+	"DEBUG", "PUBSUB", "POLL", "PROJECT_ID", "CLUSTER_NAME", "XDG_DATA_HOME", "HELM3_PROVIDER", "UI_DIR",
+	"NOTIFICATION_LEVEL", "WEBHOOK_ENDPOINT", "SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_BOT_NAME", "SLACK_CHANNELS", "SLACK_APPROVALS_CHANNEL",
+	"HIPCHAT_SERVER", "HIPCHAT_TOKEN", "HIPCHAT_BOT_NAME", "HIPCHAT_CHANNELS", "HIPCHAT_APPROVALS_CHANNEL", "HIPCHAT_APPROVALS_USER_NAME",
+	"HIPCHAT_APPROVALS_BOT_NAME", "HIPCHAT_APPROVALS_PASSWORT", "HIPCHAT_CONNECTION_ATTEMPTS", "MATTERMOST_ENDPOINT", "MATTERMOST_USERNAME",
+	"TEAMS_WEBHOOK_URL", "DISCORD_WEBHOOK_URL", "SHOUTRRR_URLS", "SHOUTRRR_TIMEOUT", "MAIL_TO", "MAIL_FROM", "MAIL_SMTP_SERVER",
+	"MAIL_SMTP_PORT", "MAIL_SMTP_USER", "MAIL_SMTP_PASS", "BASIC_AUTH_USER", "BASIC_AUTH_PASSWORD", "AUTHENTICATED_WEBHOOKS",
+	"TOKEN_SECRET", "AUTH_MODE", "AUTH_PROXY_USER_HEADER", "AUTH_PROXY_LOGOUT_URL", "RESTRICTED_NAMESPACE",
+}
 
 // Config contains Keel's application configuration loaded from environment variables.
 type Config struct {
@@ -17,7 +36,7 @@ type Config struct {
 
 // TriggerConfig controls the event sources that detect and initiate image updates.
 type TriggerConfig struct {
-	PubSub      bool   `envconfig:"PUBSUB" default:"false"`
+	PubSub      bool   `ignored:"true"`
 	Poll        bool   `envconfig:"POLL" default:"true"`
 	ProjectID   string `envconfig:"PROJECT_ID"`
 	ClusterName string `envconfig:"CLUSTER_NAME"`
@@ -58,6 +77,8 @@ type WebhookConfig struct {
 
 // SlackNotificationConfig configures outbound update notifications sent through Slack.
 type SlackNotificationConfig struct {
+	// BotToken and BotName intentionally share environment variables with the
+	// Slack approvals bot to preserve the existing combined configuration.
 	BotToken string `envconfig:"SLACK_BOT_TOKEN"`
 	BotName  string `envconfig:"SLACK_BOT_NAME" default:"keel"`
 	Channels string `envconfig:"SLACK_CHANNELS"`
@@ -111,6 +132,8 @@ type BotConfig struct {
 
 // SlackBotConfig configures the Slack approvals bot and its target channel.
 type SlackBotConfig struct {
+	// BotToken and BotName intentionally share environment variables with the
+	// Slack notification sender to preserve the existing combined configuration.
 	BotToken         string `envconfig:"SLACK_BOT_TOKEN"`
 	AppToken         string `envconfig:"SLACK_APP_TOKEN"`
 	BotName          string `envconfig:"SLACK_BOT_NAME" default:"keel"`
@@ -123,7 +146,7 @@ type HipchatBotConfig struct {
 	ApprovalsUserName  string `envconfig:"HIPCHAT_APPROVALS_USER_NAME"`
 	ApprovalsBotName   string `envconfig:"HIPCHAT_APPROVALS_BOT_NAME" default:"keel"`
 	ApprovalsPassword  string `envconfig:"HIPCHAT_APPROVALS_PASSWORT"`
-	ConnectionAttempts int    `envconfig:"HIPCHAT_CONNECTION_ATTEMPTS" default:"10"`
+	ConnectionAttempts int    `envconfig:"HIPCHAT_CONNECTION_ATTEMPTS" default:"5"`
 }
 
 // AuthConfig controls administrator authentication, webhook authentication, and external proxy integration.
@@ -144,9 +167,87 @@ type KubernetesConfig struct {
 
 // Load reads configuration from environment variables.
 func Load() (Config, error) {
-	var cfg Config
-	if err := envconfig.Process("", &cfg); err != nil {
+	loadMutex.Lock()
+	defer loadMutex.Unlock()
+
+	restore, err := normalizeEmptyEnvironment()
+	if err != nil {
 		return Config{}, err
 	}
+	defer restore()
+
+	var cfg Config
+	root := struct {
+		Debug bool `envconfig:"DEBUG" default:"false"`
+	}{}
+	notifications := struct {
+		Level string `envconfig:"NOTIFICATION_LEVEL" default:"info"`
+	}{}
+
+	sections := []interface{}{
+		&root,
+		&cfg.Trigger,
+		&cfg.Storage,
+		&cfg.Providers,
+		&cfg.UI,
+		&notifications,
+		&cfg.Notifications.Webhook,
+		&cfg.Notifications.Slack,
+		&cfg.Notifications.Hipchat,
+		&cfg.Notifications.Mattermost,
+		&cfg.Notifications.Teams,
+		&cfg.Notifications.Discord,
+		&cfg.Notifications.Shoutrrr,
+		&cfg.Notifications.Mail,
+		&cfg.Bots.Slack,
+		&cfg.Bots.Hipchat,
+		&cfg.Auth,
+		&cfg.Kubernetes,
+	}
+	for _, section := range sections {
+		if err := envconfig.Process("", section); err != nil {
+			return Config{}, err
+		}
+	}
+
+	cfg.Debug = root.Debug
+	cfg.Notifications.Level = notifications.Level
+	if value, ok := os.LookupEnv("PUBSUB"); ok {
+		cfg.Trigger.PubSub = legacyFeatureFlag(value)
+	}
 	return cfg, nil
+}
+
+// normalizeEmptyEnvironment preserves the historical behavior of treating an
+// explicitly empty manifest value as unconfigured. envconfig otherwise tries
+// to parse empty booleans and integers and turns a safe upgrade into a fatal
+// startup error.
+func normalizeEmptyEnvironment() (func(), error) {
+	var empty []string
+	for _, name := range environmentVariables {
+		if value, ok := os.LookupEnv(name); ok && value == "" {
+			if err := os.Unsetenv(name); err != nil {
+				restoreEmptyEnvironment(empty)
+				return nil, fmt.Errorf("temporarily unset empty configuration variable %s: %w", name, err)
+			}
+			empty = append(empty, name)
+		}
+	}
+	return func() { restoreEmptyEnvironment(empty) }, nil
+}
+
+func restoreEmptyEnvironment(names []string) {
+	for _, name := range names {
+		_ = os.Setenv(name, "")
+	}
+}
+
+// legacyFeatureFlag retains PUBSUB's historical any-non-empty behavior while
+// honoring explicit false values introduced by typed configuration.
+func legacyFeatureFlag(value string) bool {
+	parsed, err := strconv.ParseBool(value)
+	if err == nil {
+		return parsed
+	}
+	return value != ""
 }

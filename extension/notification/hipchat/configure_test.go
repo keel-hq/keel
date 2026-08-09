@@ -12,7 +12,7 @@ func TestConfigureUsesTypedConfig(t *testing.T) {
 	t.Setenv("HIPCHAT_TOKEN", "environment")
 	s := &sender{}
 	cfg := config.HipchatNotificationConfig{Server: "https://typed.example/api/", Token: "typed-token", BotName: "typed-bot", Channels: "ops,deployments"}
-	enabled, err := s.Configure(&notification.Config{Application: config.Config{Notifications: config.NotificationConfig{Hipchat: cfg}}})
+	enabled, err := s.Configure(&notification.Config{Notifications: config.NotificationConfig{Hipchat: cfg}})
 	if err != nil || !enabled {
 		t.Fatalf("Configure() = %v, %v", enabled, err)
 	}
@@ -26,11 +26,11 @@ func TestConfigureDisabledDefaultAndInvalidServer(t *testing.T) {
 		t.Fatalf("empty config = %v, %v", enabled, err)
 	}
 	s := &sender{}
-	enabled, err := s.Configure(&notification.Config{Application: config.Config{Notifications: config.NotificationConfig{Hipchat: config.HipchatNotificationConfig{Token: "typed", BotName: "keel"}}}})
+	enabled, err := s.Configure(&notification.Config{Notifications: config.NotificationConfig{Hipchat: config.HipchatNotificationConfig{Token: "typed", BotName: "keel"}}})
 	if err != nil || !enabled || !reflect.DeepEqual(s.channels, []string{"general"}) {
 		t.Fatalf("default channel not applied: %#v, %v", s, err)
 	}
-	enabled, err = (&sender{}).Configure(&notification.Config{Application: config.Config{Notifications: config.NotificationConfig{Hipchat: config.HipchatNotificationConfig{Token: "typed", Server: "://bad"}}}})
+	enabled, err = (&sender{}).Configure(&notification.Config{Notifications: config.NotificationConfig{Hipchat: config.HipchatNotificationConfig{Token: "typed", Server: "://bad"}}})
 	if err == nil || enabled {
 		t.Fatalf("invalid server = %v, %v", enabled, err)
 	}

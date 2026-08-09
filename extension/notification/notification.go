@@ -32,10 +32,10 @@ var (
 // Config is the configuration for the Notifier service and its registered
 // notifiers.
 type Config struct {
-	Attempts    int
-	Level       types.Level
-	Params      map[string]interface{} `yaml:",inline"`
-	Application appconfig.Config
+	Attempts      int
+	Level         types.Level
+	Params        map[string]interface{}       `yaml:",inline"`
+	Notifications appconfig.NotificationConfig `yaml:"-" json:"-"`
 }
 
 // Sender represents anything that can transmit notifications.

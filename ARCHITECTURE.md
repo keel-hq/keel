@@ -195,8 +195,8 @@ Set via `keel.sh/approvals: "2"` annotation to require N approvals.
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `PUBSUB` | Enable GCR Pub/Sub trigger | (disabled) |
-| `POLL` | Enable/disable poll trigger | `1` (enabled) |
+| `PUBSUB` | Enable GCR Pub/Sub trigger | `false` (disabled) |
+| `POLL` | Enable/disable poll trigger | `true` (enabled) |
 | `PROJECT_ID` | GCP project for Pub/Sub | |
 | `HELM3_PROVIDER` | Enable Helm3 provider | `false` |
 | `DEBUG` | Enable debug logging | `false` |
@@ -209,6 +209,18 @@ Set via `keel.sh/approvals: "2"` annotation to require N approvals.
 | `UI_DIR` | Web UI static files | `www` |
 | `KUBERNETES_CONFIG` | Kubeconfig path | `~/.kube/config` |
 | `POLL_DEFAULTSCHEDULE` | Default poll interval | `@every 1m` |
+
+Empty environment values are treated as unset so manifests that render
+`value: ""` continue to receive the documented defaults. Boolean settings use
+Go boolean forms such as `true`, `false`, `1`, and `0`. `PUBSUB` additionally
+preserves the legacy behavior where any other non-empty value enables Pub/Sub;
+explicit `false` or `0` disables it. Only the documented variable names above
+are read; nested envconfig aliases such as `TRIGGER_POLL` are not supported.
+
+When upgrading from a release before typed configuration, note that
+`POLL=false` now correctly disables polling and `PUBSUB=false` no longer enables
+Pub/Sub. Debug mode no longer sends a Slack "Keel has started" message during
+sender configuration, avoiding external network I/O during application startup.
 
 ## Extension Points
 

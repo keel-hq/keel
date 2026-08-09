@@ -11,7 +11,7 @@ import (
 func TestConfigureUsesTypedConfig(t *testing.T) {
 	t.Setenv("SLACK_BOT_TOKEN", "environment")
 	s := &sender{}
-	enabled, err := s.Configure(&notification.Config{Application: config.Config{Notifications: config.NotificationConfig{Slack: config.SlackNotificationConfig{BotToken: "typed", BotName: "typed-bot", Channels: "ops,deployments"}}}})
+	enabled, err := s.Configure(&notification.Config{Notifications: config.NotificationConfig{Slack: config.SlackNotificationConfig{BotToken: "typed", BotName: "typed-bot", Channels: "ops,deployments"}}})
 	if err != nil || !enabled {
 		t.Fatalf("Configure() = %v, %v", enabled, err)
 	}
@@ -25,7 +25,7 @@ func TestConfigureDisabledAndDefaultChannel(t *testing.T) {
 		t.Fatalf("empty config = %v, %v", enabled, err)
 	}
 	s := &sender{}
-	enabled, err := s.Configure(&notification.Config{Application: config.Config{Notifications: config.NotificationConfig{Slack: config.SlackNotificationConfig{BotToken: "typed", BotName: "keel"}}}})
+	enabled, err := s.Configure(&notification.Config{Notifications: config.NotificationConfig{Slack: config.SlackNotificationConfig{BotToken: "typed", BotName: "keel"}}})
 	if err != nil || !enabled || !reflect.DeepEqual(s.channels, []string{"general"}) {
 		t.Fatalf("default channel not applied: %#v, %v", s, err)
 	}

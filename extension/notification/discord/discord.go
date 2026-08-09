@@ -34,7 +34,7 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// Get configuration
 	var httpConfig Config
 
-	httpConfig.Endpoint = config.Application.Notifications.Discord.WebhookURL
+	httpConfig.Endpoint = config.Notifications.Discord.WebhookURL
 	// Validate endpoint URL.
 	if httpConfig.Endpoint == "" {
 		return false, nil

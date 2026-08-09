@@ -42,12 +42,12 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	urls := splitURLs(config.Application.Notifications.Shoutrrr.URLs)
+	urls := splitURLs(config.Notifications.Shoutrrr.URLs)
 	if len(urls) == 0 {
 		return false, nil
 	}
 
-	timeout, err := parseTimeout(config.Application.Notifications.Shoutrrr.Timeout)
+	timeout, err := parseTimeout(config.Notifications.Shoutrrr.Timeout)
 	if err != nil {
 		return false, err
 	}

@@ -70,6 +70,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.60.4
 	github.com/distribution/distribution/v3 v3.0.0-20230722181636-7b502560cad4
 	github.com/golang-jwt/jwt/v4 v4.5.1
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nicholas-fedor/shoutrrr v0.17.0
 	golang.org/x/oauth2 v0.36.0
 	helm.sh/helm/v3 v3.16.3
@@ -167,7 +168,6 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect

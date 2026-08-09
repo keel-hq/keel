@@ -24,7 +24,7 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	cfg := config.Application.Notifications.Mail
+	cfg := config.Notifications.Mail
 	if cfg.SMTPServer == "" || cfg.From == "" || cfg.To == "" {
 		return false, nil
 	}

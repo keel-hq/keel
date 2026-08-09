@@ -13,8 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const connectionAttemptsDefault = 5
-
 // Bot - main hipchat bot container
 type Bot struct {
 	id   string // bot id

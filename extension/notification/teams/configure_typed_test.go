@@ -11,7 +11,7 @@ func TestConfigureTypedConfigEnabledDisabled(t *testing.T) {
 	t.Setenv("TEAMS_WEBHOOK_URL", "https://environment.invalid")
 	s := &sender{}
 	endpoint := "https://typed.example/hook"
-	enabled, err := s.Configure(&notification.Config{Application: config.Config{Notifications: config.NotificationConfig{Teams: config.TeamsConfig{WebhookURL: endpoint}}}})
+	enabled, err := s.Configure(&notification.Config{Notifications: config.NotificationConfig{Teams: config.TeamsConfig{WebhookURL: endpoint}}})
 	if err != nil || !enabled || s.endpoint != endpoint || s.client == nil {
 		t.Fatalf("typed config not used: enabled=%v err=%v sender=%#v", enabled, err, s)
 	}
@@ -19,7 +19,7 @@ func TestConfigureTypedConfigEnabledDisabled(t *testing.T) {
 	if err != nil || enabled {
 		t.Fatalf("empty typed config enabled sender: %v, %v", enabled, err)
 	}
-	enabled, err = (&sender{}).Configure(&notification.Config{Application: config.Config{Notifications: config.NotificationConfig{Teams: config.TeamsConfig{WebhookURL: "://bad"}}}})
+	enabled, err = (&sender{}).Configure(&notification.Config{Notifications: config.NotificationConfig{Teams: config.TeamsConfig{WebhookURL: "://bad"}}})
 	if err == nil || enabled {
 		t.Fatalf("invalid typed config = %v, %v", enabled, err)
 	}
