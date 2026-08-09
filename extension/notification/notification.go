@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	appconfig "github.com/keel-hq/keel/pkg/config"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/timeutil"
 
@@ -31,9 +32,10 @@ var (
 // Config is the configuration for the Notifier service and its registered
 // notifiers.
 type Config struct {
-	Attempts int
-	Level    types.Level
-	Params   map[string]interface{} `yaml:",inline"`
+	Attempts      int
+	Level         types.Level
+	Params        map[string]interface{}       `yaml:",inline"`
+	Notifications appconfig.NotificationConfig `yaml:"-" json:"-"`
 }
 
 // Sender represents anything that can transmit notifications.

@@ -70,6 +70,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.60.4
 	github.com/distribution/distribution/v3 v3.0.0-20230722181636-7b502560cad4
 	github.com/golang-jwt/jwt/v4 v4.5.1
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nicholas-fedor/shoutrrr v0.17.0
 	golang.org/x/oauth2 v0.36.0
 	helm.sh/helm/v3 v3.16.3

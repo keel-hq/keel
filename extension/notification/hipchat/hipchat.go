@@ -2,14 +2,12 @@ package hipchat
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"net/url"
 
 	"github.com/tbruyelle/hipchat-go/hipchat"
 
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
 
@@ -27,38 +25,25 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	var token string
-
-	if os.Getenv(constants.EnvHipchatToken) != "" {
-		token = os.Getenv(constants.EnvHipchatToken)
-	} else {
+	cfg := config.Notifications.Hipchat
+	if cfg.Token == "" {
 		return false, nil
 	}
-	if os.Getenv(constants.EnvHipchatBotName) != "" {
-		s.botName = os.Getenv(constants.EnvHipchatBotName)
-	} else {
-		s.botName = "keel"
-	}
-
-	if os.Getenv(constants.EnvHipchatChannels) != "" {
-		channels := os.Getenv(constants.EnvHipchatChannels)
-		s.channels = strings.Split(channels, ",")
-	} else {
+	s.botName = cfg.BotName
+	if cfg.Channels == "" {
 		s.channels = []string{"general"}
+	} else {
+		s.channels = strings.Split(cfg.Channels, ",")
 	}
-
-	s.hipchatClient = hipchat.NewClient(token)
-
-	if os.Getenv("HIPCHAT_SERVER") != "" {
-		server, _ := url.Parse(os.Getenv("HIPCHAT_SERVER"))
+	s.hipchatClient = hipchat.NewClient(cfg.Token)
+	if cfg.Server != "" {
+		server, err := url.Parse(cfg.Server)
+		if err != nil {
+			return false, err
+		}
 		s.hipchatClient.BaseURL = server
 	}
-
-	log.WithFields(log.Fields{
-		"name":     "hipchat",
-		"channels": s.channels,
-	}).Info("extension.notification.hipchat: sender configured")
-
+	log.WithField("channels", s.channels).Info("extension.notification.hipchat: sender configured")
 	return true, nil
 }
 

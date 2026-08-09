@@ -7,7 +7,6 @@ import (
 	"io"
 
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -45,6 +44,7 @@ type Opts struct {
 	Store store.Store
 
 	UIDir string
+	Debug bool
 
 	AuthenticatedWebhooks bool
 
@@ -68,6 +68,7 @@ type TriggerServer struct {
 	authenticator auth.Authenticator
 
 	uiDir string
+	debug bool
 
 	authenticatedWebhooks bool
 	authMode              auth.Mode
@@ -87,6 +88,7 @@ func NewTriggerServer(opts *Opts) *TriggerServer {
 		authenticator:         opts.Authenticator,
 		store:                 opts.Store,
 		uiDir:                 opts.UIDir,
+		debug:                 opts.Debug,
 		authenticatedWebhooks: opts.AuthenticatedWebhooks,
 		authMode:              opts.AuthMode,
 		authProxyUserHeader:   opts.AuthProxyUserHeader,
@@ -132,7 +134,7 @@ func getID(req *http.Request) string {
 
 func (s *TriggerServer) registerRoutes(mux *mux.Router) {
 
-	if os.Getenv("DEBUG") == "true" {
+	if s.debug {
 		DebugHandler{}.AddRoutes(mux)
 	}
 

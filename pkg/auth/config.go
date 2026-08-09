@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/keel-hq/keel/constants"
+	appconfig "github.com/keel-hq/keel/pkg/config"
 )
 
 type Mode string
@@ -31,18 +31,19 @@ type Config struct {
 	ProxyLogoutURL  string
 }
 
-func ConfigFromEnv(getenv func(string) string) (Config, error) {
-	modeValue := strings.TrimSpace(getenv(constants.EnvAuthMode))
+// FromConfig maps application authentication settings to the validated runtime form.
+func FromConfig(raw appconfig.AuthConfig) (Config, error) {
+	modeValue := strings.TrimSpace(raw.Mode)
 	if modeValue == "" {
 		modeValue = string(ModeLegacy)
 	}
 
 	cfg := Config{
 		Mode:            Mode(strings.ToLower(modeValue)),
-		Username:        getenv(constants.EnvBasicAuthUser),
-		Password:        getenv(constants.EnvBasicAuthPassword),
-		ProxyUserHeader: strings.TrimSpace(getenv(constants.EnvAuthProxyUserHeader)),
-		ProxyLogoutURL:  strings.TrimSpace(getenv(constants.EnvAuthProxyLogoutURL)),
+		Username:        raw.BasicUser,
+		Password:        raw.BasicPassword,
+		ProxyUserHeader: strings.TrimSpace(raw.ProxyUserHeader),
+		ProxyLogoutURL:  strings.TrimSpace(raw.ProxyLogoutURL),
 	}
 
 	if (cfg.Username == "") != (cfg.Password == "") {

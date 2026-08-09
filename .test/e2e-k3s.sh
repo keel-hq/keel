@@ -15,6 +15,8 @@ readonly REGISTRY_ADDRESS="10.53.0.50:5000"
 readonly K3S_RUNTIME_DIR="/run/k3s"
 readonly DEFAULT_K3S_DATA_DIR="/var/lib/rancher/k3s"
 readonly DEFAULT_KUBELET_DIR="/var/lib/kubelet"
+# Keep this below the workflow's 20-minute deadline so cleanup and diagnostics can run.
+readonly E2E_GO_TEST_TIMEOUT="15m"
 
 RUN_ID="${KEEL_E2E_RUN_ID:-$(date -u +%Y%m%d%H%M%S)-$$}"
 RUN_DIR="${KEEL_E2E_RUN_DIR:-${REPO_ROOT}/.test/.runs/${RUN_ID}}"
@@ -295,8 +297,15 @@ release_helm() {
 
 wait_for_release() {
   kubectl -n "${RELEASE_NAMESPACE}" rollout status deployment/keel --timeout=180s
-  kubectl -n "${RELEASE_NAMESPACE}" wait --for=condition=Ready pod \
-    --selector app=keel --timeout=120s
+  # rollout status already waits for the current revision to become available.
+  # Do not wait on every pod with app=keel: during an upgrade that selector can
+  # include an old, terminating revision which will never become Ready again.
+  kubectl -n "${RELEASE_NAMESPACE}" get deployment keel -o json | jq -e '
+    (.spec.replicas // 1) > 0 and
+    (.status.observedGeneration // 0) >= .metadata.generation and
+    (.status.updatedReplicas // 0) == (.spec.replicas // 1) and
+    (.status.availableReplicas // 0) == (.spec.replicas // 1)
+  ' >/dev/null || fail "Keel Deployment did not converge on the current revision"
   kubectl -n "${RELEASE_NAMESPACE}" get endpoints keel -o json | \
     jq -e '.subsets | any(.addresses | length > 0)' >/dev/null || fail "Keel Service has no ready endpoints"
 }
@@ -546,12 +555,12 @@ run_tests() {
   source "${E2E_ENV_FILE}"
   set +a
   if [[ "${KEEL_E2E_MANUAL:-false}" == "true" ]]; then
-    go test -count=1 -v ./tests \
+    go test -count=1 -timeout="${E2E_GO_TEST_TIMEOUT}" -v ./tests \
       -run '^TestE2ESuite/TestExternalOAuthProxyAdminFlow$' 2>&1 | \
       tee "${ARTIFACT_DIR}/go-test.log"
     return
   fi
-  go test -count=1 -v ./tests 2>&1 | tee "${ARTIFACT_DIR}/go-test.log"
+  go test -count=1 -timeout="${E2E_GO_TEST_TIMEOUT}" -v ./tests 2>&1 | tee "${ARTIFACT_DIR}/go-test.log"
 }
 
 hold_for_manual_inspection() {
@@ -700,8 +709,12 @@ stop_oauth_port_forward() {
 
 cleanup() {
   local exit_status=$?
-  ((CLEANUP_STARTED == 0)) || return 0
+  ((CLEANUP_STARTED == 0)) || return "${exit_status}"
   CLEANUP_STARTED=1
+  # Teardown is best-effort and must not turn a successful test run into a
+  # failure. In particular, k3s may remove runtime paths concurrently while
+  # the EXIT trap is deleting them.
+  set +e
   if ((exit_status != 0)); then
     log "collecting diagnostics after exit status ${exit_status}"
     collect_diagnostics
@@ -734,6 +747,7 @@ cleanup() {
   if [[ -d "${RUN_DIR}" ]]; then
     sudo find "${RUN_DIR}" -depth -delete
   fi
+  return "${exit_status}"
 }
 
 main() {

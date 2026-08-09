@@ -2,10 +2,8 @@ package mail
 
 import (
 	"net/smtp"
-	"os"
 	"strconv"
 
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
 
@@ -26,46 +24,13 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	// Server, from and to are mandatory
-	if os.Getenv(constants.EnvMailSmtpServer) != "" {
-		s.smtpServer = os.Getenv(constants.EnvMailSmtpServer)
-	} else {
+	cfg := config.Notifications.Mail
+	if cfg.SMTPServer == "" || cfg.From == "" || cfg.To == "" {
 		return false, nil
 	}
-	if os.Getenv(constants.EnvMailFrom) != "" {
-		s.from = os.Getenv(constants.EnvMailFrom)
-	} else {
-		return false, nil
-	}
-	if os.Getenv(constants.EnvMailTo) != "" {
-		s.to = os.Getenv(constants.EnvMailTo)
-	} else {
-		return false, nil
-	}
-	// Port, user and pass are optional
-	if os.Getenv(constants.EnvMailSmtpPort) != "" {
-		port, err := strconv.Atoi(os.Getenv(constants.EnvMailSmtpPort))
-		if err != nil {
-			log.WithFields(log.Fields{
-				"name": "mail",
-			}).Warn("extension.notification.mail: invalid SMTP port number")
-			return false, nil
-		}
-		s.smtpPort = port
-	} else {
-		s.smtpPort = 25
-	}
-	if os.Getenv(constants.EnvMailSmtpUser) != "" {
-		s.smtpUser = os.Getenv(constants.EnvMailSmtpUser)
-	}
-	if os.Getenv(constants.EnvMailSmtpPass) != "" {
-		s.smtpPass = os.Getenv(constants.EnvMailSmtpPass)
-	}
-
-	log.WithFields(log.Fields{
-		"name": "mail",
-	}).Info("extension.notification.mail: sender configured")
-
+	s.smtpServer, s.from, s.to, s.smtpPort = cfg.SMTPServer, cfg.From, cfg.To, cfg.SMTPPort
+	s.smtpUser, s.smtpPass = cfg.SMTPUser, cfg.SMTPPass
+	log.WithField("name", "mail").Info("extension.notification.mail: sender configured")
 	return true, nil
 }
 

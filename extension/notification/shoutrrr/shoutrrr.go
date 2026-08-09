@@ -6,12 +6,10 @@ import (
 	"io"
 	stdlog "log"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/keel-hq/keel/constants"
 	"github.com/keel-hq/keel/extension/notification"
 	"github.com/keel-hq/keel/types"
 
@@ -44,12 +42,12 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	urls := splitURLs(os.Getenv(constants.EnvShoutrrrURLs))
+	urls := splitURLs(config.Notifications.Shoutrrr.URLs)
 	if len(urls) == 0 {
 		return false, nil
 	}
 
-	timeout, err := parseTimeout(os.Getenv(constants.EnvShoutrrrTimeout))
+	timeout, err := parseTimeout(config.Notifications.Shoutrrr.Timeout)
 	if err != nil {
 		return false, err
 	}
@@ -83,7 +81,7 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	}
 
 	if len(accepted) == 0 {
-		return false, fmt.Errorf("no usable service URLs in %s", constants.EnvShoutrrrURLs)
+		return false, fmt.Errorf("no usable service URLs in %s", "SHOUTRRR_URLS")
 	}
 
 	s.router = r
@@ -156,11 +154,11 @@ func parseTimeout(raw string) (time.Duration, error) {
 
 	timeout, err := time.ParseDuration(raw)
 	if err != nil {
-		return 0, fmt.Errorf("invalid %s value %q: %s", constants.EnvShoutrrrTimeout, raw, err)
+		return 0, fmt.Errorf("invalid %s value %q: %s", "SHOUTRRR_TIMEOUT", raw, err)
 	}
 
 	if timeout <= 0 {
-		return 0, fmt.Errorf("%s must be a positive duration, got %q", constants.EnvShoutrrrTimeout, raw)
+		return 0, fmt.Errorf("%s must be a positive duration, got %q", "SHOUTRRR_TIMEOUT", raw)
 	}
 
 	return timeout, nil

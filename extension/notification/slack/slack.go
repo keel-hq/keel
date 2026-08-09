@@ -2,8 +2,8 @@ package slack
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -20,8 +20,12 @@ import (
 
 const timeout = 5 * time.Second
 
+type slackMessageClient interface {
+	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
+}
+
 type sender struct {
-	slackClient *slack.Client
+	slackClient slackMessageClient
 	channels    []string
 	botName     string
 }
@@ -31,58 +35,18 @@ func init() {
 }
 
 func (s *sender) Configure(config *notification.Config) (bool, error) {
-	var token string
-	// Get configuration
-	if os.Getenv(constants.EnvSlackBotToken) != "" {
-		token = os.Getenv(constants.EnvSlackBotToken)
-	} else {
+	cfg := config.Notifications.Slack
+	if cfg.BotToken == "" {
 		return false, nil
 	}
-	if os.Getenv(constants.EnvSlackBotName) != "" {
-		s.botName = os.Getenv(constants.EnvSlackBotName)
-	} else {
-		s.botName = "keel"
-	}
-
-	if os.Getenv(constants.EnvSlackChannels) != "" {
-		channels := os.Getenv(constants.EnvSlackChannels)
-		s.channels = strings.Split(channels, ",")
-	} else {
+	s.botName = cfg.BotName
+	if cfg.Channels == "" {
 		s.channels = []string{"general"}
+	} else {
+		s.channels = strings.Split(cfg.Channels, ",")
 	}
-
-	s.slackClient = slack.New(token)
-
-	log.WithFields(log.Fields{
-		"name":     "slack",
-		"channels": s.channels,
-	}).Info("extension.notification.slack: sender configured")
-
-	if os.Getenv("DEBUG") == "true" {
-		var msg string
-		if version.GetKeelVersion().Version != "" {
-			msg = fmt.Sprintf("Keel has started. Version: '%s'. Revision: %s", version.GetKeelVersion().Version, version.GetKeelVersion().Revision)
-		} else {
-			msg = fmt.Sprintf("Keel has started. Revision: %s", version.GetKeelVersion().Revision)
-		}
-
-		err := s.Send(types.EventNotification{
-			Message:   msg,
-			CreatedAt: time.Now(),
-			Type:      types.NotificationSystemEvent,
-			Level:     types.LevelInfo,
-			Channels:  s.channels,
-		})
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":    err,
-				"name":     "slack",
-				"channels": s.channels,
-			}).Error("extension.notification.slack: failed to set greeting message")
-		}
-
-	}
-
+	s.slackClient = slack.New(cfg.BotToken)
+	log.WithField("channels", s.channels).Info("extension.notification.slack: sender configured")
 	return true, nil
 }
 
@@ -91,7 +55,9 @@ func (s *sender) Send(event types.EventNotification) error {
 	params.Username = s.botName
 	params.IconURL = constants.KeelLogoURL
 
-	attachements := []slack.Attachment{
+	// Slack chat.postMessage API: https://docs.slack.dev/reference/methods/chat.postMessage
+	// Attachments are legacy, so include top-level text as an accessible notification fallback.
+	attachments := []slack.Attachment{
 		{
 			Fallback: event.Message,
 			Color:    event.Level.Color(),
@@ -112,19 +78,28 @@ func (s *sender) Send(event types.EventNotification) error {
 		chans = event.Channels
 	}
 
-	var mgsOpts []slack.MsgOption
+	msgOpts := []slack.MsgOption{
+		slack.MsgOptionPostMessageParameters(params),
+		slack.MsgOptionAttachments(attachments...),
+	}
 
-	mgsOpts = append(mgsOpts, slack.MsgOptionPostMessageParameters(params))
-	mgsOpts = append(mgsOpts, slack.MsgOptionAttachments(attachements...))
-
+	var sendErrors []error
 	for _, channel := range chans {
-		_, _, err := s.slackClient.PostMessage(channel, mgsOpts...)
+		_, _, err := s.slackClient.PostMessage(channel, msgOpts...)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":   err,
 				"channel": channel,
 			}).Error("extension.notification.slack: failed to send notification")
+			sendErrors = append(sendErrors, fmt.Errorf("channel %q: %w", channel, err))
 		}
+	}
+	// The notification manager retries the whole event when Send returns an
+	// error. Report failure only when every destination failed so a single bad
+	// channel cannot cause duplicate messages in channels that already received
+	// the event.
+	if len(chans) > 0 && len(sendErrors) == len(chans) {
+		return errors.Join(sendErrors...)
 	}
 	return nil
 }
