@@ -162,13 +162,11 @@ spec:
               value: {{ .password }}
             - name: AUTHENTICATED_WEBHOOKS
               value: "{{ .authenticated_webhooks | default "false" }}"
-            # Helm configuration
-            {{ if.tiller_namespace }} 
-            - name: HELM_PROVIDER
-              value: "1"
-            - name: TILLER_NAMESPACE
-              value: "{{ .tiller_namespace }}"
-            {{ end}}
+            # Helm provider (Helm v3)
+            {{ if .helm_provider }}
+            - name: HELM3_PROVIDER
+              value: "true"
+            {{ end }}
             # Enable AWS ECR
             - name: AWS_ACCESS_KEY_ID
               value: ""
