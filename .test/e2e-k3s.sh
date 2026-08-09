@@ -297,8 +297,15 @@ release_helm() {
 
 wait_for_release() {
   kubectl -n "${RELEASE_NAMESPACE}" rollout status deployment/keel --timeout=180s
-  kubectl -n "${RELEASE_NAMESPACE}" wait --for=condition=Ready pod \
-    --selector app=keel --timeout=120s
+  # rollout status already waits for the current revision to become available.
+  # Do not wait on every pod with app=keel: during an upgrade that selector can
+  # include an old, terminating revision which will never become Ready again.
+  kubectl -n "${RELEASE_NAMESPACE}" get deployment keel -o json | jq -e '
+    (.spec.replicas // 1) > 0 and
+    (.status.observedGeneration // 0) >= .metadata.generation and
+    (.status.updatedReplicas // 0) == (.spec.replicas // 1) and
+    (.status.availableReplicas // 0) == (.spec.replicas // 1)
+  ' >/dev/null || fail "Keel Deployment did not converge on the current revision"
   kubectl -n "${RELEASE_NAMESPACE}" get endpoints keel -o json | \
     jq -e '.subsets | any(.addresses | length > 0)' >/dev/null || fail "Keel Service has no ready endpoints"
 }
