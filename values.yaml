@@ -11,9 +11,8 @@ insecureRegistry: false
 polling:
   enabled: true
 
-# Helm provider support
+# Helm provider support (Helm v3)
 helmProvider:
-  version: "v3"
   enabled: true
 
 basicauth:

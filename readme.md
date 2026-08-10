@@ -75,11 +75,7 @@ If you work mostly with regular Kubernetes manifests, you can install Keel witho
 helm upgrade --install keel --namespace=keel keel/keel --set helmProvider.enabled="false" 
 ```
 
-To install for Helm v3, set helmProvider.version="v3" (default is "v2"):
-
-```bash
-helm install keel keel/keel --set helmProvider.version="v3" 
-```
+The Helm provider targets Helm v3 and is enabled by default. Helm v2 (Tiller) is no longer supported.
 
 To install using terraform:
 

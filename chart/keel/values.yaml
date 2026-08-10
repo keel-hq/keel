@@ -56,16 +56,9 @@ polling:
 #     mountPath: /etc/certs
 #     readOnly: true
 
-# Helm provider support
+# Helm provider support (Helm v3)
 helmProvider:
   enabled: true
-  # set to version "v3" for Helm v3
-  version: "v2"
-  tillerNamespace: "kube-system"
-  # optional Tiller address (if portforwarder tunnel doesn't work),
-  # if you are using default configuration, setting it to
-  # 'tiller-deploy:44134' is usually fine
-  tillerAddress: 'tiller-deploy:44134'
 #  helmDriver: ''
 #  helmDriverSqlConnectionString: ''
 
