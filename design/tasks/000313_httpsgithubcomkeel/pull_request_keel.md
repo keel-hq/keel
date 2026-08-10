@@ -31,3 +31,5 @@ No Go code changed, so this is a chart/templating change only. `helm` is not ins
 All four rendered without a template error, confirming the re-indented `{{- if }}` nesting is balanced. Passing a now-removed value such as `helmProvider.version` is ignored by Helm rather than being an error, so existing user values files will not break on upgrade.
 
 Verified by grep that no Go source reads `HELM_PROVIDER`, `TILLER_NAMESPACE`, or `TILLER_ADDRESS`, and that no file in `keel` or `keel.sh` consumes `deployment/deployment-template.yaml`.
+
+CI is green on this PR. Note that CI cannot exercise the upgrade-path behavior change described above — no automated check covers a user whose existing values file pins `helmProvider.version="v2"`, so that case is called out for reviewer judgement rather than being test-covered.
