@@ -81,8 +81,9 @@ func (p *UpdatePlan) String() string {
 
 // Provider - kubernetes provider for auto update
 type Provider struct {
-	implementer Implementer
-	platforms   *k8s.PlatformResolver
+	implementer    Implementer
+	platforms      *k8s.PlatformResolver
+	runningDigests *k8s.RunningDigestResolver
 
 	sender notification.Sender
 
@@ -103,6 +104,7 @@ func NewProvider(implementer Implementer, sender notification.Sender, approvalMa
 	return &Provider{
 		implementer:     implementer,
 		platforms:       platforms,
+		runningDigests:  k8s.NewRunningDigestResolver(implementer),
 		cache:           cache,
 		approvalManager: approvalManager,
 		events:          make(chan *types.Event, 100),
@@ -298,6 +300,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 			images = append(images, gr.GetImageVolumeReferences(volumeFilter)...)
 		}
 		platforms, platformErr := p.platforms.Resolve(gr)
+		runningDigests := p.runningDigests.Resolve(gr)
 
 		for _, img := range images {
 			ref, err := image.Parse(img)
@@ -321,16 +324,17 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 			}
 
 			trackedImages = append(trackedImages, &types.TrackedImage{
-				Image:        ref,
-				PollSchedule: schedule,
-				Trigger:      trigger,
-				Provider:     ProviderName,
-				Namespace:    gr.Namespace,
-				Secrets:      secrets,
-				Meta:         make(map[string]string),
-				Platforms:    platforms,
-				PlatformErr:  platformErr,
-				Policy:       plc,
+				Image:          ref,
+				RunningDigests: runningDigests[img],
+				PollSchedule:   schedule,
+				Trigger:        trigger,
+				Provider:       ProviderName,
+				Namespace:      gr.Namespace,
+				Secrets:        secrets,
+				Meta:           make(map[string]string),
+				Platforms:      platforms,
+				PlatformErr:    platformErr,
+				Policy:         plc,
 			})
 		}
 	}
