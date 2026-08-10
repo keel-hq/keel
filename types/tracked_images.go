@@ -21,6 +21,9 @@ type TrackedImage struct {
 	Meta         map[string]string `json:"meta"` // metadata supplied by providers
 	Platforms    []Platform        `json:"-"`
 	PlatformErr  PlatformError     `json:"-"`
+	// RunningDigests are the image digests reported by the workload runtime for
+	// this image reference. Empty when the provider cannot observe them.
+	RunningDigests []string `json:"-"`
 	// a list of pre-release tags, ie: 1.0.0-dev, 1.5.0-prod get translated into
 	// dev, prod
 	// combined semver tags

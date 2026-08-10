@@ -1,7 +1,10 @@
 package docker
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"strings"
 
@@ -41,6 +44,60 @@ func (r *Registry) ManifestDigest(repository, reference string) (digest.Digest, 
 		return "", err
 	}
 	return digest.FromBytes(body), nil
+}
+
+// ManifestDigests - get every digest that identifies a reference. For an image
+// index that is the digest of the index itself plus the digests of the
+// per-platform manifests it points at, since a node runs one of the children
+// while the registry reports the index. Single-platform manifests return one
+// digest.
+func (r *Registry) ManifestDigests(repository, reference string) ([]string, error) {
+	url := r.url("/v2/%s/manifests/%s", repository, reference)
+	r.Logf("registry.manifest.digests url=%s repository=%s reference=%s", url, repository, reference)
+
+	resp, err := r.request("GET", url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("manifest request returned %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	top := resp.Header.Get("Docker-Content-Digest")
+	if top == "" {
+		top = digest.FromBytes(body).String()
+	} else if parsed, err := digest.Parse(top); err == nil {
+		top = parsed.String()
+	} else {
+		return nil, err
+	}
+	digests := []string{top}
+
+	mediaType := resp.Header.Get("Content-Type")
+	if parsed, _, err := mime.ParseMediaType(mediaType); err == nil {
+		mediaType = parsed
+	}
+	switch mediaType {
+	case manifestlist.MediaTypeManifestList, oci.MediaTypeImageIndex:
+		var index oci.Index
+		if err := json.Unmarshal(body, &index); err != nil {
+			return nil, fmt.Errorf("decode image index: %w", err)
+		}
+		for _, descriptor := range index.Manifests {
+			if descriptor.Digest == "" {
+				continue
+			}
+			digests = append(digests, descriptor.Digest.String())
+		}
+	}
+
+	return digests, nil
 }
 
 // request performs a request against a url

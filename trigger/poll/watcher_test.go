@@ -41,6 +41,11 @@ type fakeRegistryClient struct {
 
 	digestErrToReturn error
 
+	// digests returned by Digests(), defaults to digestToReturn
+	tagDigestsToReturn    []string
+	tagDigestsErrToReturn error
+	tagDigestsCalls       int
+
 	tagsToReturn []string
 
 	platformsToReturn map[string][]types.Platform
@@ -62,6 +67,18 @@ func (c *fakeRegistryClient) Digest(opts registry.Opts) (digest string, err erro
 	c.digestCalls++
 	c.opts = opts
 	return c.digestToReturn, c.digestErrToReturn
+}
+
+func (c *fakeRegistryClient) Digests(opts registry.Opts) ([]string, error) {
+	c.tagDigestsCalls++
+	c.opts = opts
+	if c.tagDigestsErrToReturn != nil {
+		return nil, c.tagDigestsErrToReturn
+	}
+	if c.tagDigestsToReturn != nil {
+		return c.tagDigestsToReturn, nil
+	}
+	return []string{c.digestToReturn}, nil
 }
 
 func (c *fakeRegistryClient) Platforms(opts registry.Opts) ([]types.Platform, error) {

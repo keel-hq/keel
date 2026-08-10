@@ -133,9 +133,10 @@ type ImageDetails struct {
 
 // Provider - helm3 provider, responsible for managing release updates
 type Provider struct {
-	implementer Implementer
-	platforms   *k8s.PlatformResolver
-	resources   ResourceCache
+	implementer    Implementer
+	platforms      *k8s.PlatformResolver
+	runningDigests *k8s.RunningDigestResolver
+	resources      ResourceCache
 
 	sender notification.Sender
 
@@ -158,6 +159,14 @@ func WithWorkloadPlatforms(platforms *k8s.PlatformResolver, resources ResourceCa
 	return func(provider *Provider) {
 		provider.platforms = platforms
 		provider.resources = resources
+	}
+}
+
+// WithRunningDigests enables reporting of the image digests that the release
+// workloads are actually running.
+func WithRunningDigests(runningDigests *k8s.RunningDigestResolver) ProviderOption {
+	return func(provider *Provider) {
+		provider.runningDigests = runningDigests
 	}
 }
 
@@ -252,6 +261,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 			img.Namespace = release.Namespace
 			img.Provider = ProviderName
 			img.Platforms, img.PlatformErr = p.releaseImagePlatforms(release.Namespace, release.Name, img)
+			img.RunningDigests = p.releaseImageRunningDigests(release.Namespace, release.Name, img)
 			trackedImages = append(trackedImages, img)
 		}
 

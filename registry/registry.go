@@ -31,6 +31,7 @@ type Repository struct {
 type Client interface {
 	Get(opts Opts) (*Repository, error)
 	Digest(opts Opts) (string, error)
+	Digests(opts Opts) ([]string, error)
 	Platforms(opts Opts) ([]types.Platform, error)
 }
 
@@ -147,6 +148,33 @@ INIT_CLIENT:
 	}
 
 	return manifestDigest.String(), nil
+}
+
+// Digests returns every digest that identifies a tag: the digest reported for
+// the tag plus, for a multi-platform image, the digests of the per-platform
+// manifests a node can actually be running.
+func (c *DefaultClient) Digests(opts Opts) ([]string, error) {
+	if opts.Tag == "" {
+		return nil, ErrTagNotSupplied
+	}
+
+	// fallback to HTTP if the registry doesn't speak HTTPS https://github.com/keel-hq/keel/issues/331
+INIT_CLIENT:
+	hub, err := c.getRegistryClient(opts.Registry, opts.Username, opts.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	digests, err := hub.ManifestDigests(opts.Name, opts.Tag)
+	if err != nil {
+		if strings.Contains(err.Error(), "server gave HTTP response to HTTPS client") && strings.HasPrefix(opts.Registry, "https://") && c.insecure {
+			opts.Registry = strings.Replace(opts.Registry, "https://", "http://", 1)
+			goto INIT_CLIENT
+		}
+		return nil, err
+	}
+
+	return digests, nil
 }
 
 // Platforms returns the platforms supported by a tagged image manifest.
