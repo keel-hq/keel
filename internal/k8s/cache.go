@@ -11,7 +11,7 @@ type genericResourceCache struct {
 }
 
 // GenericResourceCache - storage for generic resources with a rendezvous point for goroutines
-// waiting for or announcing the occurence of a cache events.
+// waiting for or announcing the occurrence of a cache events.
 type GenericResourceCache struct {
 	genericResourceCache
 	Cond
@@ -82,7 +82,7 @@ func (cc *genericResourceCache) remove(identifier string) {
 }
 
 // Cond implements a condition variable, a rendezvous point for goroutines
-// waiting for or announcing the occurence of an event.
+// waiting for or announcing the occurrence of an event.
 type Cond struct {
 	mu      sync.Mutex
 	waiters []chan int
@@ -102,7 +102,7 @@ func (c *Cond) Register(ch chan int, last int) {
 	c.waiters = append(c.waiters, ch)
 }
 
-// Notify notifies all registered waiters that an event has occured.
+// Notify notifies all registered waiters that an event has occurred.
 func (c *Cond) Notify() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
