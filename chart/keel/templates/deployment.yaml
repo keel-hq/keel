@@ -219,6 +219,21 @@ spec:
 {{- end }}
           ports:
             - containerPort: 9300
+{{- if .Values.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+{{- if eq .Values.auth.mode "external-proxy" }}
+              path: /ping
+              port: 4180
+{{- else }}
+              path: /healthz
+              port: 9300
+{{- end }}
+            initialDelaySeconds: {{ .Values.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+{{- end }}
           livenessProbe:
             httpGet:
 {{- if eq .Values.auth.mode "external-proxy" }}

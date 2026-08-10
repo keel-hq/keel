@@ -107,6 +107,11 @@ The following table lists has the main configurable parameters (polling, trigger
 | `service.externalIP`                        | Keel static IP                         |                                                           |
 | `service.externalPort`                      | Keel service port                      | `9300`                                                    |
 | `service.clusterIP`                         | Keel service clusterIP                 |                                                           |
+| `startupProbe.enabled`                      | Protect startup from premature liveness restarts | `true`                                           |
+| `startupProbe.initialDelaySeconds`          | Delay before the first startup check   | `0`                                                       |
+| `startupProbe.periodSeconds`                | Interval between startup checks        | `5`                                                       |
+| `startupProbe.timeoutSeconds`               | Startup check timeout                  | `5`                                                       |
+| `startupProbe.failureThreshold`             | Failed startup checks allowed          | `30`                                                      |
 | `webhookRelay.enabled`                      | Enable/disable WebhookRelay integration| `false`                                                   |
 | `webhookRelay.key`                          | WebhookRelay key                       |                                                           |
 | `webhookRelay.secret`                       | WebhookRelay secret                    |                                                           |

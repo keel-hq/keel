@@ -371,6 +371,10 @@ assert_candidate_objects() {
   jq -e --arg image "${expected_image}" '
     .spec.template.spec.serviceAccountName == "keel" and
     .spec.template.spec.containers[0].image == $image and
+    .spec.template.spec.containers[0].startupProbe.httpGet.path == "/healthz" and
+    .spec.template.spec.containers[0].startupProbe.httpGet.port == 9300 and
+    .spec.template.spec.containers[0].startupProbe.periodSeconds == 5 and
+    .spec.template.spec.containers[0].startupProbe.failureThreshold == 30 and
     .spec.template.spec.containers[0].livenessProbe.httpGet.path == "/healthz" and
     .spec.template.spec.containers[0].readinessProbe.httpGet.path == "/healthz"
   ' "${ARTIFACT_DIR}/candidate-deployment.json" >/dev/null || fail "candidate Deployment wiring is invalid"
@@ -386,6 +390,7 @@ assert_oauth_candidate_objects() {
       .image == "quay.io/oauth2-proxy/oauth2-proxy@sha256:d62e2d81c6f5048f652f67c302083be1272c181b971fad80e5a30ebe2b8b75d8") and
     any(.spec.template.spec.containers[]; .name == "keel" and
       any(.env[]; .name == "AUTH_MODE" and .value == "external-proxy") and
+      .startupProbe.httpGet.path == "/ping" and .startupProbe.httpGet.port == 4180 and
       .livenessProbe.httpGet.path == "/ping" and .livenessProbe.httpGet.port == 4180 and
       .readinessProbe.httpGet.path == "/ready" and .readinessProbe.httpGet.port == 4180)
   ' "${ARTIFACT_DIR}/candidate-oauth-deployment.json" >/dev/null || fail "OAuth-proxy candidate Deployment wiring is invalid"

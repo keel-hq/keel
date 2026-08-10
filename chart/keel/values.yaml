@@ -191,6 +191,15 @@ service:
   externalPort: 9300
   clusterIP: ""
 
+# Give Keel time to initialize before liveness checks can restart it. Kubernetes
+# does not run liveness or readiness probes until this startup probe succeeds.
+startupProbe:
+  enabled: true
+  initialDelaySeconds: 0
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 30
+
 # Webhook Relay service
 # If you don’t want to expose your Keel service, you can use https://webhookrelay.com/
 # which can deliver webhooks to your internal Keel service through Keel sidecar container.
