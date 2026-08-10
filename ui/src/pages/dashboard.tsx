@@ -265,9 +265,9 @@ export function DashboardPage() {
         />
       </div>
       <Card className="border-border bg-card/60 shadow-none">
-        <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader className="gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
           <CardTitle>Kubernetes Cluster Resources</CardTitle>
-          <div className="flex gap-2">
+          <div className="grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:flex xl:w-auto">
             <Button variant="outline" onClick={() => void load()}>
               <RefreshCw />
               Refresh
@@ -277,25 +277,33 @@ export function DashboardPage() {
               placeholder="Search resources"
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
-              className="max-w-64"
+              className="min-w-0 sm:max-w-64"
             />
           </div>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+        <CardContent>
+          <Table className="md:table-fixed 2xl:table-auto">
+            <TableHeader className="hidden md:table-header-group">
               <TableRow>
-                <TableHead>Namespace</TableHead>
+                <TableHead className="hidden lg:table-cell lg:w-28 xl:w-auto">
+                  Namespace
+                </TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Pods</TableHead>
-                <TableHead>Policy</TableHead>
-                <TableHead>Approvals</TableHead>
-                <TableHead>Images</TableHead>
-                <TableHead>Keel Labels & Annotations</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="w-16">Pods</TableHead>
+                <TableHead className="w-20">Policy</TableHead>
+                <TableHead className="hidden xl:table-cell xl:w-24 2xl:w-auto">
+                  Approvals
+                </TableHead>
+                <TableHead className="hidden xl:table-cell xl:w-72 2xl:w-auto">
+                  Images
+                </TableHead>
+                <TableHead className="hidden 2xl:table-cell">
+                  Keel metadata
+                </TableHead>
+                <TableHead className="w-14 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="grid gap-3 md:table-row-group">
               {shown.map((resource) => (
                 <ResourceRow
                   key={resource.identifier}
@@ -481,12 +489,22 @@ function ResourceRow({
     (resource.annotations?.["keel.sh/trigger"] ||
       resource.labels?.["keel.sh/trigger"]) === "poll"
   return (
-    <TableRow>
-      <TableCell>{resource.namespace}</TableCell>
-      <TableCell className="font-medium">
-        {resource.kind}/{resource.name}
+    <TableRow className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-lg border p-3 md:table-row md:rounded-none md:border-x-0 md:p-0">
+      <TableCell className="hidden lg:table-cell">
+        {resource.namespace}
       </TableCell>
-      <TableCell>
+      <TableCell className="min-w-0 overflow-hidden p-0 font-medium md:p-2">
+        <span className="block truncate">
+          {resource.kind}/{resource.name}
+        </span>
+        <span className="block truncate text-xs font-normal text-muted-foreground md:hidden">
+          {resource.namespace}
+        </span>
+      </TableCell>
+      <TableCell className="col-start-1 flex items-center gap-2 p-0 md:table-cell md:p-2">
+        <span className="w-12 text-xs text-muted-foreground md:hidden">
+          Pods
+        </span>
         <Badge
           variant="outline"
           className={
@@ -496,7 +514,10 @@ function ResourceRow({
           {available}/{replicas}
         </Badge>
       </TableCell>
-      <TableCell>
+      <TableCell className="col-start-1 flex items-center gap-2 p-0 md:table-cell md:p-2">
+        <span className="w-12 text-xs text-muted-foreground md:hidden">
+          Policy
+        </span>
         <Badge
           variant="outline"
           className={managed ? undefined : "text-muted-foreground"}
@@ -504,10 +525,10 @@ function ResourceRow({
           {managed ? resource.policy : "none"}
         </Badge>
       </TableCell>
-      <TableCell>
+      <TableCell className="hidden xl:table-cell">
         {resource.annotations?.["keel.sh/approvals"] || "-"}
       </TableCell>
-      <TableCell>
+      <TableCell className="hidden xl:table-cell">
         <div className="flex max-w-64 flex-wrap gap-1">
           {(resource.images || []).map((image) => (
             <Badge variant="outline" key={image}>
@@ -516,7 +537,7 @@ function ResourceRow({
           ))}
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell className="hidden 2xl:table-cell">
         <div className="flex max-w-72 flex-wrap gap-1">
           {Object.entries(opts).map(([key, value]) => (
             <Badge variant="secondary" key={key}>
@@ -525,7 +546,7 @@ function ResourceRow({
           ))}
         </div>
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="col-start-2 row-span-3 row-start-1 p-0 text-right md:table-cell md:p-2">
         <DropdownMenu>
           <DropdownMenuTrigger
             render={

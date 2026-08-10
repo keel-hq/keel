@@ -64,6 +64,34 @@ describe("Dashboard resource actions", () => {
     )
   })
 
+  it("prioritizes resource details for small screens", async () => {
+    render(<DashboardPage />)
+
+    await screen.findByText("deployment/storefront")
+
+    expect(
+      screen.getByRole("columnheader", { name: "Namespace", hidden: true })
+    ).toHaveClass("hidden", "lg:table-cell")
+    expect(
+      screen.getByRole("columnheader", { name: "Approvals", hidden: true })
+    ).toHaveClass("hidden", "xl:table-cell")
+    expect(
+      screen.getByRole("columnheader", { name: "Images", hidden: true })
+    ).toHaveClass("hidden", "xl:table-cell")
+    expect(
+      screen.getByRole("columnheader", { name: "Keel metadata", hidden: true })
+    ).toHaveClass("hidden", "2xl:table-cell")
+    expect(screen.getByText("keel-demo", { selector: "span" })).toHaveClass(
+      "md:hidden"
+    )
+    expect(screen.getByText("Pods", { selector: "span" })).toHaveClass(
+      "md:hidden"
+    )
+    expect(screen.getByText("Policy", { selector: "span" })).toHaveClass(
+      "md:hidden"
+    )
+  })
+
   it("changes the update policy from a dialog", async () => {
     const user = userEvent.setup()
     render(<DashboardPage />)
