@@ -3,7 +3,6 @@ import {
   Archive,
   Check,
   EllipsisVertical,
-  RefreshCw,
   ThumbsDown,
   Trash2,
 } from "lucide-react"
@@ -122,10 +121,6 @@ export function ApprovalsPage() {
         <CardHeader className="gap-4">
           <CardTitle>Approvals</CardTitle>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => void load()}>
-              <RefreshCw />
-              Refresh
-            </Button>
             <Button
               variant="outline"
               className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"

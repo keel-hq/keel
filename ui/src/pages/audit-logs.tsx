@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
-import { RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { formatDate } from "@/lib/format"
 import type { AuditLog } from "@/types"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   EmptyRow,
@@ -56,10 +54,6 @@ export function AuditLogsPage() {
       <Card className="border-border bg-card/60 shadow-none">
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Audit Logs</CardTitle>
-          <Button variant="outline" onClick={() => void load()}>
-            <RefreshCw />
-            Refresh
-          </Button>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>

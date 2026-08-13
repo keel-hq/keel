@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
 import type { TrackedImage } from "@/types"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
@@ -64,10 +62,6 @@ export function TrackedImagesPage() {
         <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Tracked Images</CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => void load()}>
-              <RefreshCw />
-              Refresh
-            </Button>
             <Input
               aria-label="Search tracked images"
               placeholder="Search tracked images"

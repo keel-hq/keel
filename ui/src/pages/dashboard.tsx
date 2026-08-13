@@ -4,7 +4,6 @@ import {
   Pause,
   Play,
   Radar,
-  RefreshCw,
   ShieldCheck,
   SlidersHorizontal,
 } from "lucide-react"
@@ -268,10 +267,6 @@ export function DashboardPage() {
         <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Kubernetes Cluster Resources</CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => void load()}>
-              <RefreshCw />
-              Refresh
-            </Button>
             <Input
               aria-label="Search resources"
               placeholder="Search resources"
