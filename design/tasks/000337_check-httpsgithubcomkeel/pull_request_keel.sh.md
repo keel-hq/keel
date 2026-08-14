@@ -1,7 +1,7 @@
-# Confirm no keel.sh changes are required for Harbor support
+# Document Harbor registry polling and webhooks
 
 ## Summary
-No keel.sh code changes were required. The Harbor compatibility guidance was added alongside Keel's implementation and tests in the Keel repository.
+Add an end-to-end Harbor guide covering Registry V2 project paths, semantic-version and mutable-tag polling, private project credentials, native `PUSH_ARTIFACT` webhook setup, and TLS considerations. Correct the native Harbor webhook target from the generic registry endpoint to `/v1/webhooks/harbor`.
 
 ## Testing
-Not applicable; the keel.sh working tree remains unchanged.
+`npm ci` completed with an isolated cache, and `NODE_OPTIONS=--openssl-legacy-provider npm run build` generated the VuePress site successfully.
