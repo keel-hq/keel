@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Keel"
+  short_description: "Safely validate and publish Keel releases"
+  default_prompt: "Use $release-keel to prepare, validate, publish, and verify a Keel application or Helm chart release."
