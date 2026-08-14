@@ -30,7 +30,7 @@ Keel provides several key features:
 
 * __Automatic [Google Container Registry](https://cloud.google.com/container-registry/) configuration__ - Keel automatically sets up topic and subscriptions for your deployment images by periodically scanning your environment.
 
-* __[Native, DockerHub, Quay and Azure container registry webhooks](https://keel.sh/docs/#triggers) support__ -  once webhook is received impacted deployments will be identified and updated.
+* __[Native, DockerHub, Harbor, Quay and Azure container registry webhooks](https://keel.sh/docs/#triggers) support__ -  once webhook is received impacted deployments will be identified and updated.
 
 *  __[Polling](https://keel.sh/docs/#polling)__ - when webhooks and pubsub aren't available - Keel can still be useful by checking Docker Registry for new tags (if current tag is semver) or same tag SHA digest change (ie: `latest`).
 
@@ -159,6 +159,44 @@ spec:
 ```
 
 No additional configuration is required. Enabling continuous delivery for your workloads has never been this easy!
+
+#### Harbor registries
+
+Harbor is supported through both polling and its native webhook. Harbor project
+names remain part of the repository path, so an image such as
+`harbor.example.com/library/ai-rag:latest` is polled at
+`/v2/library/ai-rag/...`. Public projects need no registry-specific
+configuration. For private projects, reference a Docker registry pull secret
+from the workload in the usual Kubernetes `imagePullSecrets` field or with the
+`keel.sh/imagePullSecret` annotation.
+
+Use a semantic-version policy such as `all`, `major`, `minor`, or `patch` when
+the image tag is versioned. A mutable tag such as `latest` must use the `force`
+policy with tag matching so polling compares its manifest digest:
+
+```yaml
+metadata:
+  annotations:
+    keel.sh/policy: force
+    keel.sh/trigger: poll
+    keel.sh/matchTag: "true"
+spec:
+  template:
+    spec:
+      containers:
+        - name: ai-rag
+          image: harbor.example.com/library/ai-rag:latest
+          imagePullPolicy: Always
+```
+
+`imagePullPolicy: Always` tells the kubelet how to pull after a rollout; it does
+not make Keel treat `latest` as a semantic version. With `keel.sh/policy: all`
+and a Harbor repository whose only tag is `latest`, an empty event list is
+expected because there is no newer semantic-version tag.
+
+For push-based updates, configure a Harbor project webhook with the default
+payload format and the `PUSH_ARTIFACT` event, targeting
+`POST /v1/webhooks/harbor` on the Keel service.
 
 #### Tracking OCI image volumes (Kubernetes 1.31+)
 

@@ -125,6 +125,7 @@ func (s *TriggerServer) harborHandler(resp http.ResponseWriter, req *http.Reques
 			event.TriggerName = "harbor"
 			event.Repository.Name = imageRepo.Repository()
 			event.Repository.Tag = imageRepo.Tag()
+			event.Repository.Digest = e.Digest
 
 			log.WithFields(log.Fields{
 				"action":     hn.Type,
