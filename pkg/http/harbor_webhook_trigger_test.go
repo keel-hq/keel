@@ -17,15 +17,15 @@ var fakeHarborWebhook = ` {
             {
                 "digest": "sha256:b4758aaed11c155a476b9857e1178f157759c99cb04c907a04993f5481eff848",
                 "tag": "1.2.3",
-                "resource_url": "quay.io/mynamespace/repository:1.2.3"
+                "resource_url": "harbor.mydomain.com/library/ai-rag:1.2.3"
             }
         ],
         "repository": {
             "date_created": 1582634337,
-            "name": "repository",
-            "namespace": "mynamespace",
-            "repo_full_name": "mynamespace/repository",
-            "repo_type": "private"
+            "name": "ai-rag",
+            "namespace": "library",
+            "repo_full_name": "library/ai-rag",
+            "repo_type": "public"
         }
     }
 }
@@ -80,12 +80,16 @@ func TestHarborWebhookHandler(t *testing.T) {
 		t.Fatalf("unexpected number of events submitted: %d", len(fp.submitted))
 	}
 
-	if fp.submitted[0].Repository.Name != "quay.io/mynamespace/repository" {
-		t.Errorf("expected quay.io/mynamespace/repository but got %s", fp.submitted[0].Repository.Name)
+	if fp.submitted[0].Repository.Name != "harbor.mydomain.com/library/ai-rag" {
+		t.Errorf("expected harbor.mydomain.com/library/ai-rag but got %s", fp.submitted[0].Repository.Name)
 	}
 
 	if fp.submitted[0].Repository.Tag != "1.2.3" {
 		t.Errorf("expected 1.2.3 but got %s", fp.submitted[0].Repository.Tag)
+	}
+
+	if fp.submitted[0].Repository.Digest != "sha256:b4758aaed11c155a476b9857e1178f157759c99cb04c907a04993f5481eff848" {
+		t.Errorf("unexpected digest %s", fp.submitted[0].Repository.Digest)
 	}
 }
 

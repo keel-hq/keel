@@ -774,6 +774,40 @@ func TestWatchWithAuthenticationError(t *testing.T) {
 	}
 }
 
+func TestWatchTagJobSupportsHarborProjectPath(t *testing.T) {
+	fp := &fakeProvider{}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+
+	ref, err := image.Parse("harbor.mydomain.com/library/ai-rag:latest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	registryClient := &fakeRegistryClient{digestToReturn: "sha256:new"}
+	job := NewWatchTagJob(providers, registryClient, &watchDetails{
+		trackedImage: &types.TrackedImage{
+			Image:   ref,
+			Trigger: types.TriggerTypePoll,
+			Policy:  policy.NewForcePolicy(true),
+		},
+		digest: "sha256:old",
+	})
+
+	job.Run()
+
+	if registryClient.opts.Registry != "https://harbor.mydomain.com" || registryClient.opts.Name != "library/ai-rag" || registryClient.opts.Tag != "latest" {
+		t.Fatalf("unexpected Harbor registry options: %+v", registryClient.opts)
+	}
+	if len(fp.submitted) != 1 {
+		t.Fatalf("expected one digest update, got %d", len(fp.submitted))
+	}
+	event := fp.submitted[0]
+	if event.Repository.Name != "harbor.mydomain.com/library/ai-rag" || event.Repository.Tag != "latest" || event.Repository.Digest != "sha256:new" {
+		t.Fatalf("unexpected Harbor update event: %+v", event.Repository)
+	}
+}
+
 func TestWatchTagJobLatestECR(t *testing.T) {
 	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
 		t.Skip()
