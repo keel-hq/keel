@@ -7,12 +7,19 @@ readonly REPO_ROOT
 ARTIFACT_DIR="${KEEL_RELEASE_ARTIFACT_DIR:-${REPO_ROOT}/.test/release-artifacts}"
 HELM_BIN="${HELM_BIN:-${ARTIFACT_DIR}/bin/helm}"
 CHART_DIR="${REPO_ROOT}/chart/keel"
-APP_VERSION="${KEEL_APP_VERSION:-$(awk '$1 == "appVersion:" {print $2; exit}' "${CHART_DIR}/Chart.yaml")}"
+APP_VERSION="$("${REPO_ROOT}/scripts/resolve-application-version.sh")"
 CHART_VERSION="${KEEL_CHART_VERSION:-$(awk '$1 == "version:" {print $2; exit}' "${CHART_DIR}/Chart.yaml")}"
 PACKAGED_CHART_VERSION="v${CHART_VERSION#v}"
 REVISION="${KEEL_BUILD_REVISION:-$(git -C "${REPO_ROOT}" rev-parse --short=12 HEAD)}"
 BUILD_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "${REPO_ROOT}" show -s --format=%ct HEAD)}"
-BUILD_DATE="$(date -u -d "@${BUILD_EPOCH}" +%Y-%m-%dT%H%M%SZ)"
+if BUILD_DATE="$(date -u -d "@${BUILD_EPOCH}" +%Y-%m-%dT%H%M%SZ 2>/dev/null)"; then
+  :
+elif BUILD_DATE="$(date -u -r "${BUILD_EPOCH}" +%Y-%m-%dT%H%M%SZ 2>/dev/null)"; then
+  :
+else
+  printf '[release-package] ERROR: could not convert build epoch: %s\n' "${BUILD_EPOCH}" >&2
+  exit 1
+fi
 IMAGE="${KEEL_RELEASE_IMAGE:-keel-release-validation:${APP_VERSION}-${REVISION}}"
 
 fail() { printf '[release-package] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -49,7 +56,7 @@ if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
   fi
 fi
 
-if [[ ! -x "${HELM_BIN}" ]]; then
+if [[ ! -x "${HELM_BIN}" ]] || ! "${HELM_BIN}" version --short >/dev/null 2>&1; then
   "${REPO_ROOT}/.test/install-helm.sh" "${HELM_BIN}"
 fi
 

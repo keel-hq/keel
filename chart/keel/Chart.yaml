@@ -1,11 +1,10 @@
 apiVersion: v1
 name: keel
 description: Open source tool for automating Kubernetes deployment updates.
-# The chart version number here is just a template. The actual version number is
-# replaced during the chart build, see .github/workflows/releasechart.yaml
-# The way to trigger a chart release is using a tag "chart-{CHART_VERSION}"
+# Bump this version for each chart release, then push tag "chart-v{version}".
+# See .github/workflows/releasecharts.yaml and the release-keel agent skill.
 version: 1.2.0
-appVersion: 0.21.1
+appVersion: 0.22.1
 keywords:
 - kubernetes deployment
 - helm release
