@@ -1,0 +1,278 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Build even when master has no new commits since the last nightly
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check for New Commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should_build: ${{ steps.decide.outputs.should_build }}
+      head_sha: ${{ steps.decide.outputs.head_sha }}
+      nightly_date: ${{ steps.decide.outputs.nightly_date }}
+      dated_tag: ${{ steps.decide.outputs.dated_tag }}
+      app_version: ${{ steps.decide.outputs.app_version }}
+      build_date: ${{ steps.decide.outputs.build_date }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Decide whether a nightly build is needed
+        id: decide
+        env:
+          FORCE_BUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
+        run: |
+          head_sha=$(git rev-parse HEAD)
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+
+          nightly_date=$(date -u +%Y%m%d)
+          echo "nightly_date=$nightly_date" >> "$GITHUB_OUTPUT"
+          echo "dated_tag=nightly-$nightly_date" >> "$GITHUB_OUTPUT"
+
+          epoch=$(git show -s --format=%ct "$head_sha")
+          echo "build_date=$(date -u -d "@$epoch" +%Y-%m-%dT%H%M%SZ)" >> "$GITHUB_OUTPUT"
+
+          chart_version=$(./scripts/resolve-application-version.sh)
+          app_version="$chart_version-nightly.$nightly_date"
+          KEEL_APP_VERSION="$app_version" ./scripts/resolve-application-version.sh >/dev/null
+          echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
+
+          previous_sha=$(git rev-parse --verify --quiet refs/tags/nightly^{commit} || true)
+          if [[ "$FORCE_BUILD" == "true" ]]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "Forced nightly build of $head_sha" >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -z "$previous_sha" ]]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "No previous nightly tag; building $head_sha" >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$previous_sha" == "$head_sha" ]]; then
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            echo "No new commits since nightly ($previous_sha); skipping build" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "New commits since $previous_sha; building $head_sha" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  test:
+    name: Unit Tests
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.check.outputs.head_sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.26.5"
+
+      - name: Run tests
+        run: make test
+
+      - name: Check documented API operations
+        run: go test -v ./pkg/http -run TestOpenAPIContract
+
+  build:
+    name: Build and Publish Nightly Image (${{ matrix.arch }})
+    needs: [check, test]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.check.outputs.head_sha }}
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            VERSION=${{ needs.check.outputs.app_version }}
+            REVISION=${{ needs.check.outputs.head_sha }}
+            BUILD_DATE=${{ needs.check.outputs.build_date }}
+          outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: |
+            type=gha,scope=keel-nightly-${{ matrix.arch }}
+            type=gha,scope=keel-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=keel-nightly-${{ matrix.arch }}
+
+      - name: Export image digest
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Unexpected image digest: $IMAGE_DIGEST" >&2
+            exit 1
+          fi
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${IMAGE_DIGEST#sha256:}"
+
+      - name: Upload image digest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nightly-digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  manifest:
+    name: Publish Nightly Manifest
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download image digests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: /tmp/digests
+          pattern: nightly-digest-*
+
+      - name: Create multi-architecture manifest
+        env:
+          IMAGE_NAME: ghcr.io/${{ github.repository }}
+          DATED_TAG: ${{ needs.check.outputs.dated_tag }}
+        run: |
+          mapfile -t digest_files < <(find /tmp/digests -mindepth 2 -maxdepth 2 -type f | sort)
+          digests=()
+          for digest_file in "${digest_files[@]}"; do
+            digests+=("$(basename "$digest_file")")
+          done
+          if [[ "${#digests[@]}" -ne 2 ]]; then
+            echo "Expected exactly two architecture digests, found ${#digests[@]}" >&2
+            exit 1
+          fi
+
+          sources=()
+          for digest in "${digests[@]}"; do
+            if [[ ! "$digest" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "Unexpected digest artifact name: $digest" >&2
+              exit 1
+            fi
+            sources+=("$IMAGE_NAME@sha256:$digest")
+          done
+
+          docker buildx imagetools create \
+            --tag "$IMAGE_NAME:nightly" \
+            --tag "$IMAGE_NAME:$DATED_TAG" \
+            "${sources[@]}"
+
+      - name: Verify published manifest
+        env:
+          IMAGE_NAME: ghcr.io/${{ github.repository }}
+          DATED_TAG: ${{ needs.check.outputs.dated_tag }}
+        run: |
+          expected_hash=""
+          for tag in "nightly" "$DATED_TAG"; do
+            manifest=$(docker buildx imagetools inspect "$IMAGE_NAME:$tag" --raw)
+            jq -e '
+              any(.manifests[]; .platform.os == "linux" and .platform.architecture == "amd64") and
+              any(.manifests[]; .platform.os == "linux" and .platform.architecture == "arm64")
+            ' <<< "$manifest" >/dev/null
+
+            manifest_hash=$(sha256sum <<< "$manifest" | cut -d " " -f 1)
+            if [[ -n "$expected_hash" && "$manifest_hash" != "$expected_hash" ]]; then
+              echo "Published nightly tags do not point to identical manifests" >&2
+              exit 1
+            fi
+            expected_hash="$manifest_hash"
+          done
+
+      - name: Move nightly git tags to the published commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ needs.check.outputs.head_sha }}
+          DATED_TAG: ${{ needs.check.outputs.dated_tag }}
+        run: |
+          update_tag() {
+            local tag="$1"
+            local current
+            current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq .object.sha 2>/dev/null || true)
+            if [[ "$current" == "$HEAD_SHA" ]]; then
+              echo "Tag $tag already points at $HEAD_SHA"
+            elif [[ -z "$current" ]]; then
+              gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+                -f "ref=refs/tags/$tag" -f "sha=$HEAD_SHA" >/dev/null
+              echo "Created tag $tag at $HEAD_SHA"
+            else
+              gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" \
+                -f "sha=$HEAD_SHA" -F force=true >/dev/null
+              echo "Moved tag $tag from $current to $HEAD_SHA"
+            fi
+          }
+
+          update_tag nightly
+          update_tag "$DATED_TAG"
+
+      - name: Summarise published nightly
+        env:
+          IMAGE_NAME: ghcr.io/${{ github.repository }}
+          DATED_TAG: ${{ needs.check.outputs.dated_tag }}
+          HEAD_SHA: ${{ needs.check.outputs.head_sha }}
+        run: |
+          {
+            echo "Published \`$IMAGE_NAME:nightly\` and \`$IMAGE_NAME:$DATED_TAG\`"
+            echo ""
+            echo "Commit: \`$HEAD_SHA\`"
+          } >> "$GITHUB_STEP_SUMMARY"

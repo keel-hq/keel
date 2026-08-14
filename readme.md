@@ -117,6 +117,23 @@ resource "helm_release" "keel" {
 
 That's it, see [Configuration](https://github.com/keel-hq/keel#configuration) section now.
 
+### Nightly pre-release images
+
+To try out changes on `master` before they are part of a tagged release, use the
+nightly images. They are built every night from `master` (only when there are new
+commits), after the unit test suite passes, for both `linux/amd64` and
+`linux/arm64`:
+
+```bash
+helm upgrade --install keel --namespace=keel keel/keel \
+  --set image.repository="ghcr.io/keel-hq/keel" \
+  --set image.tag="nightly"
+```
+
+Two tags are published: the rolling `nightly` tag and a date-stamped
+`nightly-YYYYMMDD` tag if you want to pin a specific night's build. Nightly
+images are pre-releases — they are not supported for production use.
+
 ### Quick Start
 
 <p align="center">
