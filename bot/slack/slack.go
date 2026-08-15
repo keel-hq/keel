@@ -42,12 +42,16 @@ func init() {
 
 func (b *Bot) Configure(appConfig config.Config, approvalsRespCh chan *bot.ApprovalResponse, botMessagesChannel chan *bot.BotMessage) bool {
 	cfg := appConfig.Bots.Slack
+	if cfg.BotToken == "" && cfg.AppToken == "" {
+		log.Debug("bot.slack.Configure(): Slack tokens are not provided, skipping bot configuration")
+		return false
+	}
 	if !strings.HasPrefix(cfg.BotToken, "xoxb-") {
-		log.Info("bot.slack.Configure(): SLACK_BOT_TOKEN must have the prefix \"xoxb-\", skip bot configuration.")
+		log.Warn("bot.slack.Configure(): SLACK_BOT_TOKEN must have the prefix \"xoxb-\", skipping bot configuration.")
 		return false
 	}
 	if !strings.HasPrefix(cfg.AppToken, "xapp-") {
-		log.Info("bot.slack.Configure(): SLACK_APP_TOKEN must have the prefix \"xapp-\".")
+		log.Warn("bot.slack.Configure(): SLACK_APP_TOKEN must have the prefix \"xapp-\", skipping bot configuration.")
 		return false
 	}
 	b.name = cfg.BotName

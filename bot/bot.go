@@ -123,7 +123,7 @@ func Run(appConfig config.Config, k8sImplementer kubernetes.Implementer, approva
 		if configured {
 			bm.SetupBot(botName, bot)
 		} else {
-			log.Errorf("bot.Run(): can not get configuration for bot [%s]", botName)
+			log.Infof("bot.Run(): bot [%s] is not configured, skipping", botName)
 		}
 	}
 }
