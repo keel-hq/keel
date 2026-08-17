@@ -96,6 +96,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 
 			updatePlan.CurrentVersion = volumeImageRef.Tag()
 			updatePlan.NewVersion = repo.Tag
+			updatePlan.NewDigest = repo.Digest
 			updatePlan.Resource = resource
 		}
 	}
@@ -162,6 +163,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 
 			updatePlan.CurrentVersion = containerImageRef.Tag()
 			updatePlan.NewVersion = repo.Tag
+			updatePlan.NewDigest = repo.Digest
 			updatePlan.Resource = resource
 		}
 	}
@@ -226,6 +228,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 
 		updatePlan.CurrentVersion = containerImageRef.Tag()
 		updatePlan.NewVersion = repo.Tag
+		updatePlan.NewDigest = repo.Digest
 		updatePlan.Resource = resource
 	}
 

@@ -107,6 +107,7 @@ func checkRelease(repo *types.Repository, namespace, name string, chart *hapi_ch
 		plan.Values[path] = value
 		plan.NewVersion = repo.Tag
 		plan.CurrentVersion = imageRef.Tag()
+		plan.NewDigest = repo.Digest
 		plan.Config = keelCfg
 		shouldUpdateRelease = true
 		if imageDetails.ReleaseNotes != "" {
