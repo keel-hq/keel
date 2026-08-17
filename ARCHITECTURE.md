@@ -185,7 +185,7 @@ Set via `keel.sh/approvals: "2"` annotation to require N approvals.
 | `keel.sh/notify` | Override notification channel | `#deployments` |
 | `keel.sh/matchTag` | Force tag matching | `true` |
 | `keel.sh/matchPreRelease` | Match pre-release versions | `true` |
-| `keel.sh/digest` | Track by digest (internal) | SHA256 digest |
+| `keel.sh/digest` | Track by digest (internal) | SHA256 digest of the image keel deployed last to the resource; update notifications report previous/new digests (visible e.g. as `latest (sha256:…) -> latest (sha256:…)`), preferring digests observed on running pods |
 | `keel.sh/imagePullSecret` | Registry credentials secret | `my-registry-secret` |
 | `keel.sh/releaseNotes` | Release notes URL | `https://...` |
 | `keel.sh/initContainers` | Track init containers | `true` |
