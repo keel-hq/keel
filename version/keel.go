@@ -1,3 +1,4 @@
+// Package version holds compile-time version information for Keel.
 package version
 
 import (
