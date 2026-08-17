@@ -83,6 +83,12 @@ type UpdatePlan struct {
 	CurrentVersion string
 	// New version that's already in the deployment
 	NewVersion string
+	// Current digest of the image being replaced, known when the release
+	// workloads report one, empty otherwise
+	CurrentDigest string
+	// New digest taken from the event repository, empty when the trigger
+	// did not provide one
+	NewDigest string
 
 	// ReleaseNotes is a slice of combined release notes.
 	ReleaseNotes []string
@@ -321,6 +327,11 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 		}
 
 		if update {
+			// report the digest the release workloads are currently running
+			// so notifications can show the full image transition
+			if eventRepoRef, parseErr := image.Parse(event.Repository.String()); parseErr == nil {
+				plan.CurrentDigest = p.currentReleaseImageDigest(release.Namespace, release.Name, eventRepoRef.Repository(), plan.CurrentVersion)
+			}
 			if event.Repository.PlatformVerified {
 				ref, parseErr := image.Parse(event.Repository.String())
 				if parseErr != nil {
@@ -349,20 +360,19 @@ func (p *Provider) createUpdatePlans(event *types.Event) ([]*UpdatePlan, error) 
 func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 	for _, plan := range plans {
 
+		currentVersion := formatVersionWithDigest(plan.CurrentVersion, plan.CurrentDigest)
+		newVersion := formatVersionWithDigest(plan.NewVersion, plan.NewDigest)
+
 		p.sender.Send(types.EventNotification{
 			ResourceKind: "chart",
 			Identifier:   fmt.Sprintf("%s/%s/%s", "chart", plan.Namespace, plan.Name),
 			Name:         "update release",
-			Message:      fmt.Sprintf("Preparing to update release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", ")),
+			Message:      fmt.Sprintf("Preparing to update release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, currentVersion, newVersion, strings.Join(mapToSlice(plan.Values), ", ")),
 			CreatedAt:    time.Now(),
 			Type:         types.NotificationPreReleaseUpdate,
 			Level:        types.LevelDebug,
 			Channels:     plan.Config.NotificationChannels,
-			Metadata: map[string]string{
-				"provider":  p.GetName(),
-				"namespace": plan.Namespace,
-				"name":      plan.Name,
-			},
+			Metadata:     releaseMetadata(plan, p.GetName()),
 		})
 
 		// err := updateHelmRelease(p.implementer, plan.Name, plan.Chart, plan.Values)
@@ -378,16 +388,12 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 				ResourceKind: "chart",
 				Identifier:   fmt.Sprintf("%s/%s/%s", "chart", plan.Namespace, plan.Name),
 				Name:         "update release",
-				Message:      fmt.Sprintf("Release update failed %s/%s %s->%s (%s), error: %s", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "), err),
+				Message:      fmt.Sprintf("Release update failed %s/%s %s->%s (%s), error: %s", plan.Namespace, plan.Name, currentVersion, newVersion, strings.Join(mapToSlice(plan.Values), ", "), err),
 				CreatedAt:    time.Now(),
 				Type:         types.NotificationReleaseUpdate,
 				Level:        types.LevelError,
 				Channels:     plan.Config.NotificationChannels,
-				Metadata: map[string]string{
-					"provider":  p.GetName(),
-					"namespace": plan.Namespace,
-					"name":      plan.Name,
-				},
+				Metadata:     releaseMetadata(plan, p.GetName()),
 			})
 			continue
 		}
@@ -403,9 +409,9 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 
 		var msg string
 		if len(plan.ReleaseNotes) == 0 {
-			msg = fmt.Sprintf("Successfully updated release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "))
+			msg = fmt.Sprintf("Successfully updated release %s/%s %s->%s (%s)", plan.Namespace, plan.Name, currentVersion, newVersion, strings.Join(mapToSlice(plan.Values), ", "))
 		} else {
-			msg = fmt.Sprintf("Successfully updated release %s/%s %s->%s (%s). Release notes: %s", plan.Namespace, plan.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(mapToSlice(plan.Values), ", "), strings.Join(plan.ReleaseNotes, ", "))
+			msg = fmt.Sprintf("Successfully updated release %s/%s %s->%s (%s). Release notes: %s", plan.Namespace, plan.Name, currentVersion, newVersion, strings.Join(mapToSlice(plan.Values), ", "), strings.Join(plan.ReleaseNotes, ", "))
 		}
 
 		p.sender.Send(types.EventNotification{
@@ -417,11 +423,7 @@ func (p *Provider) applyPlans(plans []*UpdatePlan) error {
 			Type:         types.NotificationReleaseUpdate,
 			Level:        types.LevelSuccess,
 			Channels:     plan.Config.NotificationChannels,
-			Metadata: map[string]string{
-				"provider":  p.GetName(),
-				"namespace": plan.Namespace,
-				"name":      plan.Name,
-			},
+			Metadata:     releaseMetadata(plan, p.GetName()),
 		})
 
 	}
@@ -457,6 +459,33 @@ func mapToSlice(values map[string]string) []string {
 		converted = append(converted, concat)
 	}
 	return converted
+}
+
+// formatVersionWithDigest renders a version for notification messages,
+// appending the image digest when known. It makes tag updates that keep the
+// same tag (e.g. latest -> latest) identifiable by the image hash they move.
+func formatVersionWithDigest(version, digest string) string {
+	if digest == "" {
+		return version
+	}
+	return fmt.Sprintf("%s (%s)", version, digest)
+}
+
+// releaseMetadata builds notification metadata for a release update, carrying
+// the image digests alongside the identity fields when known.
+func releaseMetadata(plan *UpdatePlan, providerName string) map[string]string {
+	metadata := map[string]string{
+		"provider":  providerName,
+		"namespace": plan.Namespace,
+		"name":      plan.Name,
+	}
+	if plan.CurrentDigest != "" {
+		metadata["previousDigest"] = plan.CurrentDigest
+	}
+	if plan.NewDigest != "" {
+		metadata["newDigest"] = plan.NewDigest
+	}
+	return metadata
 }
 
 // parse
