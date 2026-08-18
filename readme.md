@@ -253,6 +253,33 @@ See the official Kubernetes [feature-gate table](https://kubernetes.io/docs/refe
 and [image-volume documentation](https://kubernetes.io/docs/tasks/configure-pod-container/image-volumes/)
 for cluster configuration details.
 
+#### Slack bot
+
+The Slack integration (approvals and notifications) connects through Socket Mode and
+needs two tokens: a bot token in `SLACK_BOT_TOKEN` (prefix `xoxb-`) and an
+app-level token in `SLACK_APP_TOKEN` (prefix `xapp-`).
+
+The bot token must have the following scopes:
+
+| Scope | Used for |
+| --- | --- |
+| `app_mentions:read` | receiving messages that mention the bot |
+| `channels:history` | reading and updating the approval message |
+| `channels:read` | resolving the approval channel name to a channel ID |
+| `chat:write` | posting and updating approval messages |
+| `files:write` | sending long responses as file attachments |
+| `users:read` | resolving the bot name to a bot user ID |
+
+For a private approval channel, also add the `groups:` equivalents of the
+`channels:` scopes (`groups:read`, `groups:history`).
+
+The app-level token must have the `connections:write` scope for Socket Mode.
+
+The full setup guide, including a ready-to-import Slack app manifest, is on the
+[Configuring Slack](https://keel.sh/docs/#configuring-slack) page of the Keel
+website. If Keel exits at startup with a `missing_scope` or `invalid_auth` Slack
+error, the log message lists the concrete scopes that are missing.
+
 ### Documentation
 
 Documentation is viewable on the Keel Website:

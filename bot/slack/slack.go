@@ -14,6 +14,26 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// slackDocsURL is where the required Slack scopes and the full setup guide are documented.
+const slackDocsURL = "https://keel.sh/docs/#configuring-slack"
+
+// requiredBotScopes is the list of bot token (SLACK_BOT_TOKEN, xoxb-) scopes that
+// Keel's Slack integration requires. Keep in sync with the "Slack bot" section of the readme.
+var requiredBotScopes = []string{
+	"app_mentions:read",
+	"channels:history",
+	"channels:read",
+	"chat:write",
+	"files:write",
+	"users:read",
+}
+
+// requiredAppScopes is the list of app-level token (SLACK_APP_TOKEN, xapp-) scopes that
+// Keel's Slack integration requires for Socket Mode.
+var requiredAppScopes = []string{
+	"connections:write",
+}
+
 // Bot - main slack bot container
 type Bot struct {
 	id   string // bot id
@@ -70,7 +90,7 @@ func (b *Bot) Start(ctx context.Context) error {
 
 	users, err := b.slackSocket.GetUsers()
 	if err != nil {
-		return err
+		return augmentSlackAuthError(err, "users.list", []string{"users:read"})
 	}
 
 	b.users = map[string]string{}
@@ -97,12 +117,41 @@ func (b *Bot) Start(ctx context.Context) error {
 	// -- retrieve the channel identifier from the approval channel name
 	b.approvalChannelId, err = b.findChannelId(b.approvalsChannel)
 	if err != nil {
-		return err
+		return augmentSlackAuthError(err, "conversations.list", []string{"channels:read", "groups:read", "im:read", "mpim:read"})
 	}
 
 	go b.listenForSocketEvents()
 
 	return nil
+}
+
+// augmentSlackAuthError returns a more actionable error when the Slack API rejects
+// a Keel call because of authentication. For a missing_scope error it lists the
+// concrete scopes the failing call requires together with the full set of scopes
+// Keel's Slack integration needs, and for invalid_auth it points at the token
+// configuration. Any other error is returned unchanged.
+func augmentSlackAuthError(err error, method string, requiredScopes []string) error {
+	if err == nil {
+		return nil
+	}
+
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "missing_scope"):
+		return fmt.Errorf(
+			"slack api error \"missing_scope\" from %q: the token is missing the required scope(s) [%s]. "+
+				"Keel requires the bot token (SLACK_BOT_TOKEN) to have scopes [%s] and the app-level token (SLACK_APP_TOKEN) to have scopes [%s]; "+
+				"for a private approval channel the channels: scopes become groups: scopes. See %s",
+			method, strings.Join(requiredScopes, ", "), strings.Join(requiredBotScopes, ", "), strings.Join(requiredAppScopes, ", "), slackDocsURL,
+		)
+	case strings.Contains(msg, "invalid_auth"):
+		return fmt.Errorf(
+			"slack api error \"invalid_auth\" from %q: the token was rejected by Slack, check that SLACK_BOT_TOKEN is a bot token (xoxb-) and SLACK_APP_TOKEN an app-level token (xapp-). See %s",
+			method, slackDocsURL,
+		)
+	}
+
+	return err
 }
 
 func (b *Bot) findChannelId(channelName string) (string, error) {
