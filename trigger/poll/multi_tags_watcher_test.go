@@ -115,15 +115,15 @@ func testRunHelper(testCases []runTestCase, availableTags []string, t *testing.T
 		}
 		t.Errorf("expected "+strconv.Itoa(nbEvents)+" events, got: %d [%s]", len(fp.submitted), strings.Join(tags, ", "))
 	} else {
-		for i, testCase := range testCases {
+		for i := 0; i < len(fp.submitted); i++ {
 			submitted := fp.submitted[i]
 
 			if submitted.Repository.Name != "index.docker.io/foo/bar" {
 				t.Errorf("unexpected event repository name: %s", submitted.Repository.Name)
 			}
 
-			if submitted.Repository.Tag != testCase.expectedTag {
-				t.Errorf("expected event repository tag "+testCase.expectedTag+", but got: %s", submitted.Repository.Tag)
+			if submitted.Repository.Tag != testCases[i].expectedTag {
+				t.Errorf("expected event repository tag "+testCases[i].expectedTag+", but got: %s", submitted.Repository.Tag)
 			}
 		}
 	}
@@ -217,6 +217,27 @@ func TestWatchAllTagsMixedPolicyAll(t *testing.T) {
 		{"1.0.0", "1.5.0", policy.NewSemverPolicy(policy.SemverPolicyTypeMajor, true)},
 		{"1.6.0-alpha", "1.8.0-alpha", policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true)}}
 	testRunHelper(testCases, availableTags, t)
+}
+
+// Regression test for https://github.com/keel-hq/keel/issues/823: with the
+// force policy, the tag list returned by the registry is in creation order
+// (oldest first), not version order. The oldest tag in the repository must
+// not win: keel has to pick the newest tag that is newer than the current
+// one, and must not downgrade when no newer tag exists.
+func TestWatchAllTagsJobWithForcePolicy(t *testing.T) {
+	availableTags := []string{"3.0.0", "3.0.1", "5.0.0", "7.9.1-1-ubi8", "8.0.0", "8.3.1", "latest"}
+
+	// cp-kafka style: current 7.9.1-1-ubi8 must update to 8.3.1, not 3.0.0
+	testRunHelper([]runTestCase{{"7.9.1-1-ubi8", "8.3.1", policy.NewForcePolicy(false)}}, availableTags, t)
+
+	// already at the newest tag: no event
+	testRunHelper([]runTestCase{{"8.3.1", "8.3.1", policy.NewForcePolicy(false)}}, availableTags, t)
+
+	// 8.1.0 -> 8.0.0 style downgrade must not happen
+	testRunHelper([]runTestCase{{"8.1.0", "8.2.0", policy.NewForcePolicy(false)}}, []string{"8.0.0", "8.1.0", "8.2.0"}, t)
+
+	// no newer tag available: no event, even though older tags exist
+	testRunHelper([]runTestCase{{"7.9.1-1-ubi8", "7.9.1-1-ubi8", policy.NewForcePolicy(false)}}, []string{"3.0.0", "5.0.0"}, t)
 }
 
 type testingCredsHelper struct {
