@@ -37,7 +37,7 @@ type Implementer interface {
 // https://github.com/kubernetes/client-go v3.0.0-beta.0
 type KubernetesImplementer struct {
 	cfg    *rest.Config
-	client *kubernetes.Clientset
+	client kubernetes.Interface
 }
 
 // Opts - implementer options, usually for k8s deployments
@@ -95,8 +95,9 @@ func NewKubernetesImplementer(opts *Opts) (*KubernetesImplementer, error) {
 	return &KubernetesImplementer{client: client, cfg: cfg}, nil
 }
 
+// Client returns the underlying kubernetes clientset.
 func (i *KubernetesImplementer) Client() *kubernetes.Clientset {
-	return i.client
+	return i.client.(*kubernetes.Clientset)
 }
 
 func (i *KubernetesImplementer) Config() *rest.Config {
