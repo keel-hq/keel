@@ -547,7 +547,10 @@ seed_fixture_repositories() {
     "${RUN_ID}/negative:1.0.0" "${RUN_ID}/negative:1.1.0" \
     "${RUN_ID}/webhook-regression:main_0000000000000000000000000000000000000000" \
     "${RUN_ID}/webhook-regression:main_1111111111111111111111111111111111111111" \
-    "${RUN_ID}/webhook-regression:main_ffffffffffffffffffffffffffffffffffffffff"; do
+    "${RUN_ID}/webhook-regression:main_ffffffffffffffffffffffffffffffffffffffff" \
+    "${RUN_ID}/force-latest:1.0.0" "${RUN_ID}/force-latest:1.0.1" "${RUN_ID}/force-latest:1.0.2" \
+    "${RUN_ID}/force-nodowngrade:1.0.0" "${RUN_ID}/force-nodowngrade:1.0.1" \
+    "${RUN_ID}/force-prerelease:3.0.0" "${RUN_ID}/force-prerelease:5.0.0" "${RUN_ID}/force-prerelease:7.9.1-1-ubi8"; do
     ctr images tag "${FIXTURE_IMAGE}" "${REGISTRY_ADDRESS}/${destination}"
     ctr images push --plain-http "${REGISTRY_ADDRESS}/${destination}"
   done
