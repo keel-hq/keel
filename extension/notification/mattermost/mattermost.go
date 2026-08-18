@@ -51,11 +51,13 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		s.name = httpConfig.Name // setting default name
 	}
 	if _, err := url.ParseRequestURI(httpConfig.Endpoint); err != nil {
+		// Never log the raw endpoint (it may carry a secret) and never the
+		// parse error either, since url.ParseRequestURI echoes the input in
+		// its message.
 		log.WithFields(log.Fields{
-			"endpoint": httpConfig.Endpoint,
-			"error":    err,
-		}).Error("extension.notification.mattermost: endpoint invalid")
-		return false, fmt.Errorf("could not parse endpoint URL: %s", err)
+			"endpoint": notification.SafeURL(httpConfig.Endpoint),
+		}).Error("extension.notification.mattermost: endpoint invalid, not a valid absolute URL")
+		return false, fmt.Errorf("could not parse endpoint URL: not a valid absolute URL")
 	}
 	s.endpoint = httpConfig.Endpoint
 
@@ -66,10 +68,18 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		CheckRedirect: rejectRedirect,
 	}
 
+	// The endpoint URL may embed the webhook signing secret in its path or
+	// query string, so only a redacted form is ever logged.
 	log.WithFields(log.Fields{
 		"name":     "mattermost",
-		"endpoint": s.endpoint,
+		"endpoint": notification.SafeURL(s.endpoint),
 	}).Info("extension.notification.mattermost: sender configured")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"name":     "mattermost",
+			"endpoint": notification.DebugURL(s.endpoint),
+		}).Debug("extension.notification.mattermost: sender endpoint (secrets redacted)")
+	}
 
 	return true, nil
 }
