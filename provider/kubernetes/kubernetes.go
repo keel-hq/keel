@@ -70,6 +70,12 @@ type UpdatePlan struct {
 	CurrentVersion string
 	// New version that's already in the deployment
 	NewVersion string
+	// Current digest of the image being replaced, known when observable
+	// (running pods or keel.sh/digest annotation), empty otherwise
+	CurrentDigest string
+	// New digest taken from the event repository, empty when the trigger
+	// did not provide one
+	NewDigest string
 }
 
 func (p *UpdatePlan) String() string {
@@ -77,6 +83,33 @@ func (p *UpdatePlan) String() string {
 		return fmt.Sprintf("%s %s->%s", p.Resource.Identifier, p.CurrentVersion, p.NewVersion)
 	}
 	return "empty plan"
+}
+
+// formatVersionWithDigest renders a version for notification messages,
+// appending the image digest when known. It makes tag updates that keep the
+// same tag (e.g. latest -> latest) identifiable by the image hash they move.
+func formatVersionWithDigest(version, digest string) string {
+	if digest == "" {
+		return version
+	}
+	return fmt.Sprintf("%s (%s)", version, digest)
+}
+
+// updateMetadata builds notification metadata for a resource update,
+// carrying the image digests alongside the identity fields when known.
+func updateMetadata(resource *k8s.GenericResource, plan *UpdatePlan, providerName string) map[string]string {
+	metadata := map[string]string{
+		"provider":  providerName,
+		"namespace": resource.GetNamespace(),
+		"name":      resource.GetName(),
+	}
+	if plan.CurrentDigest != "" {
+		metadata["previousDigest"] = plan.CurrentDigest
+	}
+	if plan.NewDigest != "" {
+		metadata["newDigest"] = plan.NewDigest
+	}
+	return metadata
 }
 
 // Provider - kubernetes provider for auto update
@@ -401,26 +434,33 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 			images = append(images, resource.GetImageVolumeReferences(GetMonitorVolumesFromMeta(labels, annotations))...)
 		}
 
+		currentVersion := formatVersionWithDigest(plan.CurrentVersion, plan.CurrentDigest)
+		newVersion := formatVersionWithDigest(plan.NewVersion, plan.NewDigest)
+
 		p.sender.Send(types.EventNotification{
 			ResourceKind: resource.Kind(),
 			Identifier:   resource.Identifier,
 			Name:         "preparing to update resource",
-			Message:      fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(images, ", ")),
+			Message:      fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, strings.Join(images, ", ")),
 			CreatedAt:    time.Now(),
 			Type:         types.NotificationPreDeploymentUpdate,
 			Level:        types.LevelDebug,
 			Channels:     notificationChannels,
-			Metadata: map[string]string{
-				"provider":  p.GetName(),
-				"namespace": resource.GetNamespace(),
-				"name":      resource.GetName(),
-			},
+			Metadata:     updateMetadata(resource, plan, p.GetName()),
 		})
 
 		var err error
 
 		timestamp := time.Now().Format(time.RFC3339)
-		annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s [%s]", plan.CurrentVersion, plan.NewVersion, timestamp)
+		annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s [%s]", currentVersion, newVersion, timestamp)
+
+		// record the digest keel is deploying so the next update can report
+		// the previous image hash too (e.g. latest (x) -> latest (y))
+		if plan.NewDigest != "" {
+			annotations[types.KeelDigestAnnotation] = plan.NewDigest
+		} else {
+			delete(annotations, types.KeelDigestAnnotation)
+		}
 
 		resource.SetAnnotations(annotations)
 
@@ -432,23 +472,19 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 				"namespace":  resource.Namespace,
 				"deployment": resource.Name,
 				"kind":       resource.Kind(),
-				"update":     fmt.Sprintf("%s->%s", plan.CurrentVersion, plan.NewVersion),
+				"update":     fmt.Sprintf("%s->%s", currentVersion, newVersion),
 			}).Error("provider.kubernetes: got error while updating resource")
 
 			p.sender.Send(types.EventNotification{
 				Name:         "update resource",
 				ResourceKind: resource.Kind(),
 				Identifier:   resource.Identifier,
-				Message:      fmt.Sprintf("%s %s/%s update %s->%s failed, error: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, err),
+				Message:      fmt.Sprintf("%s %s/%s update %s->%s failed, error: %s", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, err),
 				CreatedAt:    time.Now(),
 				Type:         types.NotificationDeploymentUpdate,
 				Level:        types.LevelError,
 				Channels:     notificationChannels,
-				Metadata: map[string]string{
-					"provider":  p.GetName(),
-					"namespace": resource.GetNamespace(),
-					"name":      resource.GetName(),
-				},
+				Metadata:     updateMetadata(resource, plan, p.GetName()),
 			})
 
 			continue
@@ -467,9 +503,9 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		var msg string
 		releaseNotes := types.ParseReleaseNotesURL(resource.GetAnnotations())
 		if releaseNotes != "" {
-			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s). Release notes: %s", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(images, ", "), releaseNotes)
+			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s). Release notes: %s", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, strings.Join(images, ", "), releaseNotes)
 		} else {
-			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, plan.CurrentVersion, plan.NewVersion, strings.Join(images, ", "))
+			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, strings.Join(images, ", "))
 		}
 
 		err = p.sender.Send(types.EventNotification{
@@ -481,11 +517,7 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 			Type:         types.NotificationDeploymentUpdate,
 			Level:        types.LevelSuccess,
 			Channels:     notificationChannels,
-			Metadata: map[string]string{
-				"provider":  p.GetName(),
-				"namespace": resource.GetNamespace(),
-				"name":      resource.GetName(),
-			},
+			Metadata:     updateMetadata(resource, plan, p.GetName()),
 		})
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -499,11 +531,13 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		}
 
 		log.WithFields(log.Fields{
-			"name":      resource.Name,
-			"kind":      resource.Kind(),
-			"previous":  plan.CurrentVersion,
-			"new":       plan.NewVersion,
-			"namespace": resource.Namespace,
+			"name":           resource.Name,
+			"kind":           resource.Kind(),
+			"previous":       plan.CurrentVersion,
+			"new":            plan.NewVersion,
+			"previousDigest": plan.CurrentDigest,
+			"newDigest":      plan.NewDigest,
+			"namespace":      resource.Namespace,
 		}).Info("provider.kubernetes: resource updated")
 		updated = append(updated, resource)
 	}
@@ -573,6 +607,7 @@ func (p *Provider) createUpdatePlansForTrigger(repo *types.Repository, triggerNa
 		}
 
 		if shouldUpdateDeployment {
+			updated.CurrentDigest = p.currentDigest(resource, repo, updated)
 			if repo.PlatformVerified {
 				platforms, resolutionErr := p.platforms.Resolve(resource)
 				if resolutionErr != types.PlatformErrorNone || !types.PlatformsSupportAll(repo.Platforms, platforms) {
@@ -592,6 +627,44 @@ func (p *Provider) createUpdatePlansForTrigger(repo *types.Repository, triggerNa
 	}
 
 	return impacted, nil
+}
+
+// currentDigest determines the image digest the resource is currently
+// running for the image being replaced. It prefers the digest reported by
+// the running pods (per image reference, accurate for multi-container
+// resources) and falls back to the keel.sh/digest annotation, which records
+// the digest keel deployed last time. Empty string when neither is known.
+func (p *Provider) currentDigest(resource *k8s.GenericResource, repo *types.Repository, plan *UpdatePlan) string {
+	if digest := p.runningDigest(resource, repo, plan); digest != "" {
+		return digest
+	}
+	return resource.GetAnnotations()[types.KeelDigestAnnotation]
+}
+
+// runningDigest resolves the digest a workload is actually running for the
+// image being replaced (same repository, current tag).
+func (p *Provider) runningDigest(resource *k8s.GenericResource, repo *types.Repository, plan *UpdatePlan) string {
+	if p.runningDigests == nil || plan.CurrentVersion == "" {
+		return ""
+	}
+	running := p.runningDigests.Resolve(resource)
+	if len(running) == 0 {
+		return ""
+	}
+	repoRef, err := image.Parse(repo.String())
+	if err != nil {
+		return ""
+	}
+	for img, digests := range running {
+		ref, err := image.Parse(img)
+		if err != nil {
+			continue
+		}
+		if ref.Repository() == repoRef.Repository() && ref.Tag() == plan.CurrentVersion && len(digests) > 0 {
+			return digests[0]
+		}
+	}
+	return ""
 }
 
 func (p *Provider) namespaces() (*v1.NamespaceList, error) {
