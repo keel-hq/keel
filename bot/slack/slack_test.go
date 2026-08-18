@@ -1,10 +1,13 @@
 package slack
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/slack-go/slack"
@@ -359,5 +362,63 @@ func TestIsApproval(t *testing.T) {
 
 	if !isApproval {
 		t.Errorf("event expected to be an approval")
+	}
+}
+
+// parseSlackErrorPayload decodes a raw Slack API error payload the same way the
+// slack-go client does when a call fails.
+func parseSlackErrorPayload(t *testing.T, payload string) error {
+	t.Helper()
+
+	var resp slack.SlackResponse
+	if err := json.Unmarshal([]byte(payload), &resp); err != nil {
+		t.Fatalf("failed to parse slack error payload: %v", err)
+	}
+	err := resp.Err()
+	if err == nil {
+		t.Fatalf("expected slack payload %s to decode into an error", payload)
+	}
+	return err
+}
+
+func TestAugmentSlackAuthErrorMissingScope(t *testing.T) {
+	// representative Slack error payload returned when the token is missing the
+	// scopes required by the called method (see https://api.slack.com/errors)
+	err := parseSlackErrorPayload(t, `{"ok":false,"error":"missing_scope","needed":"users:read","provided":""}`)
+
+	enhanced := augmentSlackAuthError(err, "users.list", []string{"users:read"})
+	for _, want := range []string{
+		"missing_scope",
+		"users.list",
+		"users:read",
+		"SLACK_BOT_TOKEN",
+		strings.Join(requiredBotScopes, ", "),
+		strings.Join(requiredAppScopes, ", "),
+		slackDocsURL,
+	} {
+		if !strings.Contains(enhanced.Error(), want) {
+			t.Errorf("expected error to contain %q, got: %v", want, enhanced)
+		}
+	}
+}
+
+func TestAugmentSlackAuthErrorInvalidAuth(t *testing.T) {
+	err := parseSlackErrorPayload(t, `{"ok":false,"error":"invalid_auth"}`)
+
+	enhanced := augmentSlackAuthError(err, "users.list", []string{"users:read"})
+	for _, want := range []string{"invalid_auth", "users.list", "xoxb-", "xapp-", slackDocsURL} {
+		if !strings.Contains(enhanced.Error(), want) {
+			t.Errorf("expected error to contain %q, got: %v", want, enhanced)
+		}
+	}
+}
+
+func TestAugmentSlackAuthErrorPassthrough(t *testing.T) {
+	original := errors.New("dial tcp 127.0.0.1:443: connect: connection refused")
+	if enhanced := augmentSlackAuthError(original, "users.list", []string{"users:read"}); !errors.Is(enhanced, original) {
+		t.Errorf("expected the error to be returned unchanged, got: %v", enhanced)
+	}
+	if enhanced := augmentSlackAuthError(nil, "users.list", []string{"users:read"}); enhanced != nil {
+		t.Errorf("expected a nil error to be returned unchanged, got: %v", enhanced)
 	}
 }
