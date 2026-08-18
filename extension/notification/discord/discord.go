@@ -100,8 +100,8 @@ func (s *sender) Send(event types.EventNotification) error {
 		return fmt.Errorf("discord webhook returned no response")
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("got status %d, expected 200/204", resp.StatusCode)
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("got status %d, expected 2xx", resp.StatusCode)
 	}
 
 	return nil

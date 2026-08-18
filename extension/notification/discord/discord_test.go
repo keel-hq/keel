@@ -49,7 +49,7 @@ func TestDiscordWebhookStatusHandling(t *testing.T) {
 	for _, tc := range []struct {
 		status  int
 		wantErr bool
-	}{{http.StatusOK, false}, {http.StatusNoContent, false}, {http.StatusAccepted, true}, {http.StatusBadRequest, true}} {
+	}{{http.StatusOK, false}, {http.StatusCreated, false}, {http.StatusAccepted, false}, {http.StatusNoContent, false}, {http.StatusMultipleChoices, true}, {http.StatusBadRequest, true}, {http.StatusInternalServerError, true}} {
 		t.Run(http.StatusText(tc.status), func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tc.status)
@@ -58,6 +58,9 @@ func TestDiscordWebhookStatusHandling(t *testing.T) {
 			err := (&sender{endpoint: server.URL, client: server.Client()}).Send(types.EventNotification{Message: "message"})
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("Send() error = %v, wantErr %v", err, tc.wantErr)
+			}
+			if tc.wantErr && !strings.Contains(err.Error(), "expected 2xx") {
+				t.Errorf("Send() error = %q, want expected status diagnostic", err)
 			}
 		})
 	}
