@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+
 	"github.com/keel-hq/keel/internal/k8s"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -13,6 +14,7 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/util/retry"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
@@ -125,41 +127,49 @@ func (i *KubernetesImplementer) Deployments(namespace string) (*apps_v1.Deployme
 	return l, err
 }
 
-// Update converts generic resource into specific kubernetes type and updates it
+// Update converts generic resource into specific kubernetes type and updates it.
+// Updates are retried on conflict (HTTP 409) using exponential backoff, re-fetching
+// the latest object before each attempt so the retried write carries a fresh
+// resourceVersion.
 func (i *KubernetesImplementer) Update(obj *k8s.GenericResource) error {
-	// retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-	// 	// Retrieve the latest version of Deployment before attempting update
-	// 	// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
-	// 	_, updateErr := i.client.Extensions().Deployments(deployment.Namespace).Update(deployment)
-	// 	return updateErr
-	// })
-	// return retryErr
-
-	switch resource := obj.GetResource().(type) {
-	case *apps_v1.Deployment:
-		_, err := i.client.AppsV1().Deployments(resource.Namespace).Update(context.TODO(), resource, meta_v1.UpdateOptions{})
-		if err != nil {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		switch resource := obj.GetResource().(type) {
+		case *apps_v1.Deployment:
+			latest, err := i.client.AppsV1().Deployments(resource.Namespace).Get(context.TODO(), resource.Name, meta_v1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			resource.ResourceVersion = latest.ResourceVersion
+			_, err = i.client.AppsV1().Deployments(resource.Namespace).Update(context.TODO(), resource, meta_v1.UpdateOptions{})
 			return err
-		}
-	case *apps_v1.StatefulSet:
-		_, err := i.client.AppsV1().StatefulSets(resource.Namespace).Update(context.TODO(), resource, meta_v1.UpdateOptions{})
-		if err != nil {
+		case *apps_v1.StatefulSet:
+			latest, err := i.client.AppsV1().StatefulSets(resource.Namespace).Get(context.TODO(), resource.Name, meta_v1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			resource.ResourceVersion = latest.ResourceVersion
+			_, err = i.client.AppsV1().StatefulSets(resource.Namespace).Update(context.TODO(), resource, meta_v1.UpdateOptions{})
 			return err
-		}
-	case *apps_v1.DaemonSet:
-		_, err := i.client.AppsV1().DaemonSets(resource.Namespace).Update(context.TODO(), resource, meta_v1.UpdateOptions{})
-		if err != nil {
+		case *apps_v1.DaemonSet:
+			latest, err := i.client.AppsV1().DaemonSets(resource.Namespace).Get(context.TODO(), resource.Name, meta_v1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			resource.ResourceVersion = latest.ResourceVersion
+			_, err = i.client.AppsV1().DaemonSets(resource.Namespace).Update(context.TODO(), resource, meta_v1.UpdateOptions{})
 			return err
-		}
-	case *batch_v1.CronJob:
-		_, err := i.client.BatchV1().CronJobs(resource.Namespace).Update(context.TODO(), resource, meta_v1.UpdateOptions{})
-		if err != nil {
+		case *batch_v1.CronJob:
+			latest, err := i.client.BatchV1().CronJobs(resource.Namespace).Get(context.TODO(), resource.Name, meta_v1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			resource.ResourceVersion = latest.ResourceVersion
+			_, err = i.client.BatchV1().CronJobs(resource.Namespace).Update(context.TODO(), resource, meta_v1.UpdateOptions{})
 			return err
+		default:
+			return fmt.Errorf("unsupported object type")
 		}
-	default:
-		return fmt.Errorf("unsupported object type")
-	}
-	return nil
+	})
 }
 
 // Secret - get secret
