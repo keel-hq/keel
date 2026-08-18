@@ -82,6 +82,47 @@ func (s *E2ESuite) TestPollingRejectsIneligibleImage() {
 	s.Require().NoError(ensureDeploymentImageUnchanged(ctx, s.client, s.testNamespace, "negative", current))
 }
 
+// https://github.com/keel-hq/keel/issues/823: with the force policy, the poll
+// trigger must converge on the newest available tag instead of picking the
+// first tag in the registry tag list.
+func (s *E2ESuite) TestPollingForcePolicyUpdatesToNewestTag() {
+	s.requireRegistryTags("force-latest", "1.0.0", "1.0.1", "1.0.2")
+	repository := s.cfg.repositoryPrefix + "/force-latest"
+	s.createWorkload("force-latest", repository+":1.0.0", "force", true)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
+	s.Require().NoError(waitForDeploymentImage(ctx, s.client, s.testNamespace, "force-latest", repository+":1.0.2"))
+}
+
+// https://github.com/keel-hq/keel/issues/823 (8.1.0 -> 8.0.0 report): the
+// force policy must never update a workload to an older semantic version.
+func (s *E2ESuite) TestPollingForcePolicyDoesNotDowngrade() {
+	s.requireRegistryTags("force-nodowngrade", "1.0.0", "1.0.1")
+	repository := s.cfg.repositoryPrefix + "/force-nodowngrade"
+	current := repository + ":1.0.1"
+	s.createWorkload("force-nodowngrade", current, "force", true)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	defer cancel()
+	s.Require().NoError(ensureDeploymentImageUnchanged(ctx, s.client, s.testNamespace, "force-nodowngrade", current))
+}
+
+// https://github.com/keel-hq/keel/issues/823 (original report): a workload on
+// cp-kafka:7.9.1-1-ubi8 was "updated" to cp-kafka:3.0.0 because the oldest
+// tag in the registry list won. With no newer tag available the image must
+// remain untouched.
+func (s *E2ESuite) TestPollingForcePolicyIgnoresOlderTagsForPrereleaseCurrent() {
+	s.requireRegistryTags("force-prerelease", "3.0.0", "5.0.0", "7.9.1-1-ubi8")
+	repository := s.cfg.repositoryPrefix + "/force-prerelease"
+	current := repository + ":7.9.1-1-ubi8"
+	s.createWorkload("force-prerelease", current, "force", true)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	defer cancel()
+	s.Require().NoError(ensureDeploymentImageUnchanged(ctx, s.client, s.testNamespace, "force-prerelease", current))
+}
+
 func (s *E2ESuite) TestWebhookStatefulSetInitContainerRemainsIsolatedFromPolling() {
 	const (
 		initialTag = "main_0000000000000000000000000000000000000000"
