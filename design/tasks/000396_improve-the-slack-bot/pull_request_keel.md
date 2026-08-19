@@ -17,6 +17,7 @@ error=slack api error "missing_scope" from "users.list": the token is missing th
 ```
 
 ## Testing
+- All checks re-run 2026-08-19 on the branch after rebasing onto the current master (`5e64f9f6`); the single fix commit is now `781d22fd` (previously `785d0a2a`).
 - `gofmt` clean on all touched files (`bot/slack/*`); pre-existing unformatted files elsewhere were left untouched.
-- `CGO_ENABLED=1 go test ./...`: full suite passes (all 32 test packages, exit 0), including the three new `TestAugmentSlackAuthError*` tests in `bot/slack` (missing_scope payload → concrete scopes in the message, invalid_auth payload → token hint, non-auth/nil errors pass through unchanged).
-- `make release-validate` (k3s v1.35.6 harness with Keel 0.22.1-785d0a2ae741 packaged from this branch): Keel deployment rolls out, packaged chart install/upgrade/rollback and cleanup succeed, and the full testify e2e suite passes (all 8 scenarios, 424s, under the 15m timeout).
+- `CGO_ENABLED=1 go test ./...`: full suite passes (all 32 test packages, exit 0; the `tests` e2e package self-skips outside `make e2e`), including the three new `TestAugmentSlackAuthError*` tests in `bot/slack` (missing_scope payload → concrete scopes in the message, invalid_auth payload → token hint, non-auth/nil errors pass through unchanged).
+- `make release-validate` (k3s v1.35.6 harness with Keel 0.22.1 packaged from this branch): Keel deployment rolls out, packaged chart install/upgrade/rollback and cleanup succeed, and the full testify e2e suite passes (all 8 scenarios, ~381s, under the 15m timeout).
