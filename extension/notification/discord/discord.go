@@ -40,8 +40,8 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		return false, nil
 	}
 	if _, err := url.ParseRequestURI(httpConfig.Endpoint); err != nil {
-		// The parse error is not returned: url.ParseRequestURI echoes the
-		// input in its message and the endpoint may carry a secret.
+		// The raw parse error is not logged/returned: url.ParseRequestURI
+		// echoes the input in its message and the endpoint may carry a secret.
 		return false, fmt.Errorf("could not parse endpoint URL: not a valid absolute URL")
 	}
 	s.endpoint = httpConfig.Endpoint

@@ -97,3 +97,32 @@ func TestConfigureDoesNotLogWebhookSecret(t *testing.T) {
 		})
 	}
 }
+
+// TestConfigureInvalidEndpointRejected proves that a malformed Discord
+// webhook URL is rejected with an error instead of silently accepted with an
+// unusable endpoint, and that the raw endpoint leaks neither into the
+// returned error nor into log output.
+func TestConfigureInvalidEndpointRejected(t *testing.T) {
+	bad := "discord.com/api/webhooks/1038689483310731242/9f8e7d6c5b4a39281706f5e4d3c2b1a0"
+
+	out := captureLogs(t, log.DebugLevel)
+
+	s := &sender{}
+	enabled, err := s.Configure(&notification.Config{
+		Notifications: config.NotificationConfig{
+			Discord: config.DiscordConfig{WebhookURL: bad},
+		},
+	})
+	if enabled {
+		t.Fatalf("Configure = enabled %v, want false", enabled)
+	}
+	if err == nil {
+		t.Fatal("Configure = nil error, want an error for an unparsable webhook URL")
+	}
+	if strings.Contains(err.Error(), bad) {
+		t.Errorf("returned error echoes the raw endpoint: %s", err)
+	}
+	if captured := out(); strings.Contains(captured, bad) {
+		t.Errorf("captured log output contains the raw endpoint:\n%s", captured)
+	}
+}
