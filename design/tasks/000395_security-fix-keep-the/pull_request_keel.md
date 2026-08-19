@@ -27,6 +27,7 @@ Audit scope: every log statement in the inbound webhook trigger handlers (`pkg/h
   - `pkg/http/webhook_log_redaction_test.go` — `TestWebhookHandlerNeverLogsCredentials`: sends real webhook requests to the `/v1/webhooks/native` endpoint (authenticated-webhooks mode) with a Basic auth password and a bearer token, and asserts neither secret appears in captured log output at info level **and** debug level. A mutation check confirmed the test fails when the original leak is re-introduced.
   - Sender tests (`webhook`, `teams`, `discord`, `mattermost`) — configure each sender with an endpoint embedding a signing secret and assert the captured log output never contains the secret at info or debug level, while the host is still logged for operability.
   - `mattermost` — invalid-endpoint error path: the raw endpoint is never logged.
+  - `discord` — `TestConfigureInvalidEndpointRejected`: a malformed webhook URL (no scheme) makes `Configure` return `(false, err)`, and the raw endpoint leaks neither into the error message nor into captured log output at debug level.
   - `extension/notification/sanitize_test.go` — table tests for `SafeURL`/`DebugURL` across Teams, Discord, Mattermost, query-token and user:info URL shapes.
 - `gofmt`: clean on all changed files.
 - `go test ./...`: passes (exit 0, all packages).
