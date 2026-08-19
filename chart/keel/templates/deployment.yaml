@@ -97,6 +97,11 @@ spec:
             - name: POLL_DEFAULTSCHEDULE
               value: "{{ .Values.polling.defaultSchedule }}"
 {{- end }}
+{{- if .Values.eventBufferSize }}
+            # Set the per-provider event buffer size (update event queue capacity)
+            - name: EVENT_BUFFER_SIZE
+              value: "{{ .Values.eventBufferSize }}"
+{{- end }}
 {{- if .Values.helmProvider.enabled }}
             # Enable/disable Helm provider
             - name: HELM3_PROVIDER

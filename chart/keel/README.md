@@ -80,6 +80,7 @@ The following table lists has the main configurable parameters (polling, trigger
 | Parameter                                   | Description                            | Default                                                   |
 | ------------------------------------------- | -------------------------------------- | --------------------------------------------------------- |
 | `polling.enabled`                           | Docker registries polling              | `true`                                                    |
+| `eventBufferSize`                           | Per-provider event buffer size (empty uses the built-in default `512`) | ``                          |
 | `helmProvider.enabled`                      | Enable/disable Helm provider           | `true`                                                    |
 | `helmProvider.helmDriver`                   | Set driver for Helm3                   | ``                                                        |
 | `helmProvider.helmDriverSqlConnectionString`| Set SQL connection string for Helm3    | ``                                                        |

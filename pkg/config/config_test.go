@@ -22,7 +22,7 @@ func TestLoadDefaults(t *testing.T) {
 	cfg, err := Load()
 	require.NoError(t, err)
 	require.Equal(t, Config{
-		Trigger: TriggerConfig{Poll: true}, Storage: StorageConfig{DataDir: "/data"}, UI: UIConfig{Dir: "www"},
+		Trigger: TriggerConfig{Poll: true}, Storage: StorageConfig{DataDir: "/data"}, Providers: ProviderConfig{EventBufferSize: DefaultEventBufferSize}, UI: UIConfig{Dir: "www"},
 		Notifications: NotificationConfig{
 			Level: "info", Slack: SlackNotificationConfig{BotName: "keel"}, Hipchat: HipchatNotificationConfig{BotName: "keel"},
 			Mattermost: MattermostConfig{Username: "keel"}, Shoutrrr: ShoutrrrConfig{Timeout: "10s"}, Mail: MailConfig{SMTPPort: 25},
@@ -33,7 +33,7 @@ func TestLoadDefaults(t *testing.T) {
 
 func TestLoadTreatsExplicitlyEmptyValuesAsUnset(t *testing.T) {
 	clearConfigurationEnvironment(t)
-	for _, name := range []string{"POLL", "PUBSUB", "DEBUG", "HELM3_PROVIDER", "AUTHENTICATED_WEBHOOKS", "MAIL_SMTP_PORT", "HIPCHAT_CONNECTION_ATTEMPTS"} {
+	for _, name := range []string{"POLL", "PUBSUB", "DEBUG", "HELM3_PROVIDER", "EVENT_BUFFER_SIZE", "AUTHENTICATED_WEBHOOKS", "MAIL_SMTP_PORT", "HIPCHAT_CONNECTION_ATTEMPTS"} {
 		t.Setenv(name, "")
 	}
 
@@ -43,11 +43,12 @@ func TestLoadTreatsExplicitlyEmptyValuesAsUnset(t *testing.T) {
 	require.False(t, cfg.Trigger.PubSub)
 	require.False(t, cfg.Debug)
 	require.False(t, cfg.Providers.Helm3)
+	require.Equal(t, DefaultEventBufferSize, cfg.Providers.EventBufferSize)
 	require.False(t, cfg.Auth.AuthenticatedWebhooks)
 	require.Equal(t, 25, cfg.Notifications.Mail.SMTPPort)
 	require.Equal(t, 5, cfg.Bots.Hipchat.ConnectionAttempts)
 
-	for _, name := range []string{"POLL", "PUBSUB", "DEBUG", "HELM3_PROVIDER", "AUTHENTICATED_WEBHOOKS", "MAIL_SMTP_PORT", "HIPCHAT_CONNECTION_ATTEMPTS"} {
+	for _, name := range []string{"POLL", "PUBSUB", "DEBUG", "HELM3_PROVIDER", "EVENT_BUFFER_SIZE", "AUTHENTICATED_WEBHOOKS", "MAIL_SMTP_PORT", "HIPCHAT_CONNECTION_ATTEMPTS"} {
 		value, ok := os.LookupEnv(name)
 		require.True(t, ok, "%s should remain set", name)
 		require.Empty(t, value, "%s should remain empty", name)
@@ -108,7 +109,7 @@ func TestLoadMapsEveryTypedPath(t *testing.T) {
 	cfg, err := Load()
 	require.NoError(t, err)
 	require.Equal(t, Config{
-		Debug: true, Trigger: TriggerConfig{PubSub: true, ProjectID: "project", ClusterName: "cluster"}, Storage: StorageConfig{DataDir: "/var/lib/keel"}, Providers: ProviderConfig{Helm3: true}, UI: UIConfig{Dir: "/ui"},
+		Debug: true, Trigger: TriggerConfig{PubSub: true, ProjectID: "project", ClusterName: "cluster"}, Storage: StorageConfig{DataDir: "/var/lib/keel"}, Providers: ProviderConfig{Helm3: true, EventBufferSize: DefaultEventBufferSize}, UI: UIConfig{Dir: "/ui"},
 		Notifications: NotificationConfig{Level: "warn", Webhook: WebhookConfig{Endpoint: "https://webhook"}, Slack: SlackNotificationConfig{BotToken: "xoxb-typed", BotName: "typed-bot", Channels: "one,two"}, Hipchat: HipchatNotificationConfig{Server: "https://hipchat", Token: "hip-token", BotName: "hip-notifier", Channels: "ops,dev"}, Mattermost: MattermostConfig{Endpoint: "https://mattermost", Username: "matter-bot"}, Teams: TeamsConfig{WebhookURL: "https://teams"}, Discord: DiscordConfig{WebhookURL: "https://discord"}, Shoutrrr: ShoutrrrConfig{URLs: "discord://token@id", Timeout: "3s"}, Mail: MailConfig{To: "to@example.com", From: "from@example.com", SMTPServer: "smtp.example.com", SMTPPort: 2525, SMTPUser: "smtp-user", SMTPPass: "smtp-pass"}},
 		Bots:          BotConfig{Slack: SlackBotConfig{BotToken: "xoxb-typed", AppToken: "xapp-typed", BotName: "typed-bot", ApprovalsChannel: "approvals"}, Hipchat: HipchatBotConfig{ApprovalsChannel: "hip-approvals", ApprovalsUserName: "hip-user", ApprovalsBotName: "hip-bot", ApprovalsPassword: "hip-pass", ConnectionAttempts: 4}},
 		Auth:          AuthConfig{BasicUser: "admin", BasicPassword: "secret", AuthenticatedWebhooks: true, TokenSecret: "token-secret", Mode: "proxy", ProxyUserHeader: "X-User", ProxyLogoutURL: "https://logout"}, Kubernetes: KubernetesConfig{RestrictedNamespace: "production"},
@@ -116,7 +117,7 @@ func TestLoadMapsEveryTypedPath(t *testing.T) {
 }
 
 func TestLoadRejectsInvalidTypedValues(t *testing.T) {
-	for _, tt := range []struct{ name, key, value string }{{"boolean", "POLL", "sometimes"}, {"integer", "MAIL_SMTP_PORT", "smtp"}, {"nested integer", "HIPCHAT_CONNECTION_ATTEMPTS", "many"}} {
+	for _, tt := range []struct{ name, key, value string }{{"boolean", "POLL", "sometimes"}, {"integer", "MAIL_SMTP_PORT", "smtp"}, {"nested integer", "HIPCHAT_CONNECTION_ATTEMPTS", "many"}, {"event buffer size", "EVENT_BUFFER_SIZE", "large"}} {
 		t.Run(tt.name, func(t *testing.T) {
 			clearConfigurationEnvironment(t)
 			t.Setenv(tt.key, tt.value)
@@ -133,4 +134,27 @@ func TestLoadReportsDocumentedVariableName(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "POLL")
 	require.NotContains(t, err.Error(), "TRIGGER_POLL")
+}
+
+func TestLoadEventBufferSize(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		clearConfigurationEnvironment(t)
+		cfg, err := Load()
+		require.NoError(t, err)
+		require.Equal(t, DefaultEventBufferSize, cfg.Providers.EventBufferSize)
+	})
+	t.Run("override", func(t *testing.T) {
+		clearConfigurationEnvironment(t)
+		t.Setenv("EVENT_BUFFER_SIZE", "2048")
+		cfg, err := Load()
+		require.NoError(t, err)
+		require.Equal(t, 2048, cfg.Providers.EventBufferSize)
+	})
+	t.Run("explicitly empty falls back to default", func(t *testing.T) {
+		clearConfigurationEnvironment(t)
+		t.Setenv("EVENT_BUFFER_SIZE", "")
+		cfg, err := Load()
+		require.NoError(t, err)
+		require.Equal(t, DefaultEventBufferSize, cfg.Providers.EventBufferSize)
+	})
 }
