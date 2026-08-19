@@ -55,11 +55,13 @@ func (s *TriggerServer) requireAdminAuthorization(next http.HandlerFunc) http.Ha
 			})
 
 			if err != nil {
+				// Never log the password (or the full authorization
+				// header): a failed webhook request must not leak its
+				// credentials into log output.
 				log.WithFields(log.Fields{
 					"error": err,
 					"user":  username,
-					"pas":   password,
-				}).Error("failed uath")
+				}).Error("authentication failed")
 				// rw.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 				http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return
@@ -81,7 +83,8 @@ func (s *TriggerServer) requireAdminAuthorization(next http.HandlerFunc) http.Ha
 		if err != nil {
 			// rw.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
-			log.Warnf("authentication by token failed, token: %s, err: %s", extractToken(r), err)
+			// Never log the token itself: it is the caller's credential.
+			log.WithField("error", err).Warn("authentication by token failed")
 			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
