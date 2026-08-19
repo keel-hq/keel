@@ -40,7 +40,9 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		return false, nil
 	}
 	if _, err := url.ParseRequestURI(httpConfig.Endpoint); err != nil {
-		return false, fmt.Errorf("could not parse endpoint URL: %s", err)
+		// The raw parse error is not logged/returned: url.ParseRequestURI
+		// echoes the input in its message and the endpoint may carry a secret.
+		return false, fmt.Errorf("could not parse endpoint URL: not a valid absolute URL")
 	}
 	s.endpoint = httpConfig.Endpoint
 
@@ -50,10 +52,18 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		Timeout:   timeout,
 	}
 
+	// The endpoint URL may embed the webhook signing secret in its path or
+	// query string, so only a redacted form is ever logged.
 	log.WithFields(log.Fields{
 		"name":     "discord",
-		"endpoint": s.endpoint,
+		"endpoint": notification.SafeURL(s.endpoint),
 	}).Info("extension.notification.discord: sender configured")
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"name":     "discord",
+			"endpoint": notification.DebugURL(s.endpoint),
+		}).Debug("extension.notification.discord: sender endpoint (secrets redacted)")
+	}
 	return true, nil
 }
 
