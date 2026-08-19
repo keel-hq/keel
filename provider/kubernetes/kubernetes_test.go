@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/keel-hq/keel/approvals"
@@ -42,6 +43,8 @@ func (p *fakeProvider) GetName() string {
 }
 
 type fakeImplementer struct {
+	mu sync.Mutex
+
 	namespaces     *v1.NamespaceList
 	nodeList       *v1.NodeList
 	deployment     *apps_v1.Deployment
@@ -73,6 +76,8 @@ func (i *fakeImplementer) Deployments(namespace string) (*apps_v1.DeploymentList
 }
 
 func (i *fakeImplementer) Update(obj *k8s.GenericResource) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
 	i.updated = obj
 	return nil
 }
@@ -86,6 +91,8 @@ func (i *fakeImplementer) Pods(namespace, labelSelector string) (*v1.PodList, er
 }
 
 func (i *fakeImplementer) DeletePod(namespace, name string, opts *meta_v1.DeleteOptions) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
 	i.deletedPods = append(i.deletedPods, &v1.Pod{
 		meta_v1.TypeMeta{},
 		meta_v1.ObjectMeta{
@@ -103,6 +110,7 @@ func (i *fakeImplementer) ConfigMaps(namespace string) core_v1.ConfigMapInterfac
 }
 
 type fakeSender struct {
+	mu        sync.Mutex
 	sentEvent types.EventNotification
 }
 
@@ -111,6 +119,8 @@ func (s *fakeSender) Configure(cfg *notification.Config) (bool, error) {
 }
 
 func (s *fakeSender) Send(event types.EventNotification) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.sentEvent = event
 	return nil
 }
