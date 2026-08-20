@@ -52,6 +52,11 @@ type watchDetails struct {
 	latest       string // latest tag
 	schedule     string
 	mu           sync.RWMutex
+	// forceUpdateConsumed tracks whether the current keel.sh/force-update
+	// request has already been acted on, so an explicit request triggers a
+	// rolling restart at most once until it is cleared (and re-armed) by the
+	// provider.
+	forceUpdateConsumed bool
 }
 
 // RepositoryWatcher - repository watcher cron
@@ -215,6 +220,11 @@ func (w *RepositoryWatcher) watch(image *types.TrackedImage, runningDigests [][]
 
 	details.mu.Lock()
 	details.trackedImage = image
+	// reset the force-update latch once the keel.sh/force-update annotation has
+	// been cleared, so a fresh request is picked up again
+	if !image.ForceUpdate {
+		details.forceUpdateConsumed = false
+	}
 	// setting main latest version to the lowest from the tracked
 	details.latest = version.Lowest(details.trackedImage.Tags)
 	details.mu.Unlock()

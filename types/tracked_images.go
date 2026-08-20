@@ -29,6 +29,10 @@ type TrackedImage struct {
 	// combined semver tags
 	Tags   []string `json:"tags"`
 	Policy Policy   `json:"policy"`
+	// ForceUpdate is set when the resource carries the keel.sh/force-update
+	// annotation, requesting a rolling restart even when the tag/digest is
+	// unchanged (see KeelForceUpdateAnnotation).
+	ForceUpdate bool `json:"-"`
 }
 
 // Platform identifies the operating system and CPU architecture required by a

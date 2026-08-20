@@ -937,3 +937,146 @@ func TestUnwatchAfterNotTrackedAnymore(t *testing.T) {
 		t.Errorf("expected to find watching 3 entries, found: %d", len(watcher.watched))
 	}
 }
+
+// TestWatchTagJobForceUpdateSameTag verifies the keel.sh/force-update escape
+// hatch: a poll that sees an unchanged tag/digest must still trigger a single
+// rollout when a force update has been requested, and must not keep re-firing
+// on every poll (which would cause a continuous rolling restart).
+func TestWatchTagJobForceUpdateSameTag(t *testing.T) {
+	fp := &fakeProvider{}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{Store: store})
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	const digest = "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb"
+	reference, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.1")
+	// the registry serves the exact same digest the watcher already has, so a
+	// normal poll would be a no-op
+	frc := &fakeRegistryClient{digestToReturn: digest}
+
+	details := &watchDetails{
+		trackedImage: &types.TrackedImage{
+			Image:       reference,
+			Trigger:     types.TriggerTypePoll,
+			Policy:      policy.NewForcePolicy(true),
+			ForceUpdate: true,
+		},
+		digest: digest,
+	}
+
+	job := NewWatchTagJob(providers, frc, details)
+
+	// same digest, but a force update was requested -> one rollout event
+	job.Run()
+	if len(fp.submitted) != 1 {
+		t.Fatalf("expected 1 event for a forced same-tag update, got %d", len(fp.submitted))
+	}
+	if got := fp.submitted[0].Repository.Tag; got != "1.1.1" {
+		t.Errorf("unexpected tag: got %s, want 1.1.1", got)
+	}
+
+	// a second poll with the same digest and still-pending request must not
+	// re-submit, so a force update is one-shot until it is cleared
+	job.Run()
+	if len(fp.submitted) != 1 {
+		t.Fatalf("force update must be one-shot, got %d events", len(fp.submitted))
+	}
+}
+
+// TestWatchTagJobNoChangeNoOp makes sure the normal poll path stays a no-op
+// when neither the digest nor the tag have changed and no force update is
+// requested (this is what guards against continuous restarts).
+func TestWatchTagJobNoChangeNoOp(t *testing.T) {
+	fp := &fakeProvider{}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{Store: store})
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	const digest = "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb"
+	reference, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.1")
+	frc := &fakeRegistryClient{digestToReturn: digest}
+
+	details := &watchDetails{
+		trackedImage: &types.TrackedImage{
+			Image:   reference,
+			Trigger: types.TriggerTypePoll,
+			Policy:  policy.NewForcePolicy(true),
+		},
+		digest: digest, // unchanged and no force-update requested
+	}
+
+	job := NewWatchTagJob(providers, frc, details)
+
+	for i := 0; i < 3; i++ {
+		job.Run()
+	}
+	if len(fp.submitted) != 0 {
+		t.Fatalf("expected no event for an unchanged digest, got %d", len(fp.submitted))
+	}
+}
+
+// TestWatchTagJobForceUpdateRearm verifies that once a force-update request is
+// consumed, clearing the annotation (via the provider) re-arms the watcher so a
+// subsequent request fires again, even when the digest never changed.
+func TestWatchTagJobForceUpdateRearm(t *testing.T) {
+	fp := &fakeProvider{}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{Store: store})
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	const digest = "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb"
+	reference, _ := image.Parse("gcr.io/v2-namespace/hello-world:1.1.1")
+	frc := &fakeRegistryClient{digestToReturn: digest}
+
+	watcher := NewRepositoryWatcher(providers, frc)
+
+	armed := &types.TrackedImage{
+		Image:        reference,
+		Trigger:      types.TriggerTypePoll,
+		PollSchedule: types.KeelPollDefaultSchedule,
+		Policy:       policy.NewForcePolicy(true),
+		ForceUpdate:  true,
+	}
+	notForced := &types.TrackedImage{
+		Image:        reference,
+		Trigger:      types.TriggerTypePoll,
+		PollSchedule: types.KeelPollDefaultSchedule,
+		Policy:       policy.NewForcePolicy(true),
+	}
+
+	// the annotation is present at scan time: the job is created and run once,
+	// so the force update fires immediately
+	if err := watcher.Watch(armed); err != nil {
+		t.Fatal(err)
+	}
+	if len(fp.submitted) != 1 {
+		t.Fatalf("expected 1 event on first force update, got %d", len(fp.submitted))
+	}
+
+	// the provider cleared the annotation; the next scan sees ForceUpdate=false
+	// and resets the consumed flag (Watch does not run the job itself)
+	if err := watcher.Watch(notForced); err != nil {
+		t.Fatal(err)
+	}
+	if len(fp.submitted) != 1 {
+		t.Fatalf("expected no event on a non-forced scan, got %d", len(fp.submitted))
+	}
+
+	// the user sets the annotation again; the watcher is re-armed
+	if err := watcher.Watch(armed); err != nil {
+		t.Fatal(err)
+	}
+
+	details := watcher.watched["gcr.io/v2-namespace/hello-world:1.1.1"]
+	if details == nil {
+		t.Fatal("expected watcher entry to exist")
+	}
+	NewWatchTagJob(providers, frc, details).Run()
+
+	if len(fp.submitted) != 2 {
+		t.Fatalf("expected 2 events after re-arm, got %d", len(fp.submitted))
+	}
+}

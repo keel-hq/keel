@@ -124,8 +124,14 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 			if update == false {
 				continue
 			}
-			// When using tags watcher we rely completely on tag names to deal with updates.
-			if trackedImage.Image.Tag() == tag {
+			// When using tags watcher we rely completely on tag names to deal
+			// with updates. A same tag is normally skipped (it would otherwise
+			// re-trigger a rollout on every poll, and for force policy without
+			// match-tag it would otherwise skip the current tag entirely). An
+			// explicit force update (keel.sh/force-update) is the exception: it
+			// must still trigger a rollout even when the tag/digest are unchanged
+			// (https://github.com/keel-hq/keel/issues/846).
+			if trackedImage.Image.Tag() == tag && !trackedImage.ForceUpdate {
 				break
 			}
 

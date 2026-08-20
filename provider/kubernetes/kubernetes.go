@@ -232,6 +232,28 @@ func getMonitorContainersFromMeta(labels map[string]string, annotations map[stri
 	return regexp.MustCompile(".*") // Match all to preserve previous behavior
 }
 
+// getForceUpdateFromMeta reports whether the resource has been explicitly
+// asked to be redeployed even when the tracked tag/digest is unchanged. It
+// honours both the canonical annotation and the legacy label form, mirroring
+// the other meta-based checks.
+func getForceUpdateFromMeta(labels map[string]string, annotations map[string]string) bool {
+	searchKey := strings.ToLower(types.KeelForceUpdateAnnotation)
+
+	for k, v := range labels {
+		if strings.ToLower(k) == searchKey && v == "true" {
+			return true
+		}
+	}
+
+	for k, v := range annotations {
+		if strings.ToLower(k) == searchKey && v == "true" {
+			return true
+		}
+	}
+
+	return false
+}
+
 func getInitContainerTrackingFromMeta(labels map[string]string, annotations map[string]string) bool {
 
 	searchKey := strings.ToLower(types.KeelInitContainerAnnotation)
@@ -334,6 +356,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		}
 		platforms, platformErr := p.platforms.Resolve(gr)
 		runningDigests := p.runningDigests.Resolve(gr)
+		forceUpdate := getForceUpdateFromMeta(labels, annotations)
 
 		for _, img := range images {
 			ref, err := image.Parse(img)
@@ -368,6 +391,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				Platforms:      platforms,
 				PlatformErr:    platformErr,
 				Policy:         plc,
+				ForceUpdate:    forceUpdate,
 			})
 		}
 	}
@@ -461,6 +485,11 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 		} else {
 			delete(annotations, types.KeelDigestAnnotation)
 		}
+
+		// a force update is a one-shot request: clear the annotation/label so the
+		// same-tag rollout is not re-applied on the next poll cycle
+		delete(annotations, types.KeelForceUpdateAnnotation)
+		resource.SetLabels(labels)
 
 		resource.SetAnnotations(annotations)
 

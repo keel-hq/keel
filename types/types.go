@@ -72,6 +72,11 @@ const KeelMinimumApprovalsLabel = "keel.sh/approvals"
 // KeelUpdateTimeAnnotation - update time
 const KeelUpdateTimeAnnotation = "keel.sh/update-time"
 
+// KeelForceUpdateAnnotation - annotation that forces a rollout of a resource
+// even when the tracked image tag and digest have not changed. It is consumed
+// (cleared) once an update has been applied, so it acts as a one-shot trigger.
+const KeelForceUpdateAnnotation = "keel.sh/force-update"
+
 // KeelApprovalDeadlineLabel - approval deadline
 const KeelApprovalDeadlineLabel = "keel.sh/approvalDeadline"
 
