@@ -333,7 +333,6 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 			"error": err,
 		}).Fatal("main.setupProviders: failed to create kubernetes provider")
 	}
-	k8sProvider.SetEventBufferSize(opts.appConfig.Providers.EventBufferSize)
 	go func() {
 		err := k8sProvider.Start()
 		if err != nil {
@@ -347,7 +346,7 @@ func setupProviders(opts *ProviderOpts) (providers provider.Providers) {
 
 	if opts.appConfig.Providers.Helm3 {
 		helm3Implementer := helm3.NewHelm3Implementer()
-		helm3Provider := helm3.NewProvider(helm3Implementer, opts.sender, opts.approvalsManager, helm3.WithWorkloadPlatforms(platformResolver, opts.grc), helm3.WithRunningDigests(runningDigestResolver), helm3.WithEventBufferSize(opts.appConfig.Providers.EventBufferSize))
+		helm3Provider := helm3.NewProvider(helm3Implementer, opts.sender, opts.approvalsManager, helm3.WithWorkloadPlatforms(platformResolver, opts.grc), helm3.WithRunningDigests(runningDigestResolver))
 
 		go func() {
 			err := helm3Provider.Start()

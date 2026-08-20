@@ -27,11 +27,6 @@ polling:
   enabled: true
   defaultSchedule: "@every 1m"
 
-# Capacity of the per-provider event buffer that queues update events
-# between the triggers (poll, webhook, pubsub, approvals) and the deployment
-# sync. Leave empty to use the built-in default (512).
-# eventBufferSize: "512"
-
 # Extra Containers to run alongside Keel
 # extraContainers:
 #   - name: busybox

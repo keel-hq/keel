@@ -205,21 +205,6 @@ func WithRunningDigests(runningDigests *k8s.RunningDigestResolver) ProviderOptio
 	}
 }
 
-// WithEventBufferSize sets the capacity of the provider event buffer. It
-// must be applied before Start. Non-positive values fall back to
-// config.DefaultEventBufferSize.
-func WithEventBufferSize(size int) ProviderOption {
-	return func(provider *Provider) {
-		if size <= 0 {
-			size = config.DefaultEventBufferSize
-		}
-		if size == cap(provider.events) {
-			return
-		}
-		provider.events = make(chan *types.Event, size)
-	}
-}
-
 // NewProvider - create new Helm provider
 func NewProvider(implementer Implementer, sender notification.Sender, approvalManager approvals.Manager, options ...ProviderOption) *Provider {
 	provider := &Provider{

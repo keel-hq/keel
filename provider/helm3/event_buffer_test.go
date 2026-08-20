@@ -68,24 +68,13 @@ func TestEventBufferDefaultSize(t *testing.T) {
 	require.Equal(t, config.DefaultEventBufferSize, cap(p.events))
 }
 
-func TestWithEventBufferSize(t *testing.T) {
-	p := NewProvider(&fakeImplementer{}, &fakeSender{}, nil, WithEventBufferSize(2048))
-	require.Equal(t, 2048, cap(p.events))
-
-	// Non-positive values fall back to the default.
-	p = NewProvider(&fakeImplementer{}, &fakeSender{}, nil, WithEventBufferSize(0))
-	require.Equal(t, config.DefaultEventBufferSize, cap(p.events))
-
-	p = NewProvider(&fakeImplementer{}, &fakeSender{}, nil, WithEventBufferSize(-4))
-	require.Equal(t, config.DefaultEventBufferSize, cap(p.events))
-}
-
 // TestSubmitBackpressureBlocksInsteadOfDropping pins the fix for
 // keel-hq/keel#443: when the event buffer is saturated Submit applies
 // backpressure (it blocks until a slot frees) instead of silently dropping
 // the event.
 func TestSubmitBackpressureBlocksInsteadOfDropping(t *testing.T) {
-	p := NewProvider(&fakeImplementer{}, &fakeSender{}, nil, WithEventBufferSize(2))
+	p := NewProvider(&fakeImplementer{}, &fakeSender{}, nil)
+	p.events = make(chan *types.Event, 2)
 
 	event := func(tag string) types.Event {
 		return types.Event{Repository: types.Repository{Name: "gcr.io/ns/img", Tag: tag}}
@@ -127,7 +116,8 @@ func TestSubmitAfterStopFailsFast(t *testing.T) {
 // concurrent trigger submissions against a small buffer and a live consumer:
 // every event must be accepted (no drops) and the buffer must fully drain.
 func TestSubmitUnderConcurrentLoadDrainsAllEvents(t *testing.T) {
-	p := NewProvider(&fakeImplementer{}, &threadSafeSender{}, nil, WithEventBufferSize(2))
+	p := NewProvider(&fakeImplementer{}, &threadSafeSender{}, nil)
+	p.events = make(chan *types.Event, 2)
 	go p.Start()
 	defer p.Stop()
 

@@ -177,19 +177,6 @@ func NewProvider(implementer Implementer, sender notification.Sender, approvalMa
 	}, nil
 }
 
-// SetEventBufferSize sets the capacity of the provider event buffer. It must
-// be called before Start. Non-positive values fall back to
-// config.DefaultEventBufferSize.
-func (p *Provider) SetEventBufferSize(size int) {
-	if size <= 0 {
-		size = config.DefaultEventBufferSize
-	}
-	if size == cap(p.events) {
-		return
-	}
-	p.events = make(chan *types.Event, size)
-}
-
 // Submit - submit event to provider. Submit never drops an event: when the
 // buffer is full it applies backpressure (the call blocks) and logs the
 // saturation so a stalled pipeline is visible instead of silently delaying

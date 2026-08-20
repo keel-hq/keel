@@ -71,22 +71,6 @@ func TestEventBufferDefaultSize(t *testing.T) {
 	require.Equal(t, config.DefaultEventBufferSize, cap(p.events))
 }
 
-func TestEventBufferSizeOverride(t *testing.T) {
-	p, err := NewProvider(&fakeImplementer{}, &fakeSender{}, nil, &k8s.GenericResourceCache{})
-	require.NoError(t, err)
-
-	p.SetEventBufferSize(2048)
-	require.Equal(t, 2048, cap(p.events))
-
-	// Non-positive values fall back to the default instead of shrinking to
-	// an unusable buffer.
-	p.SetEventBufferSize(0)
-	require.Equal(t, config.DefaultEventBufferSize, cap(p.events))
-
-	p.SetEventBufferSize(-1)
-	require.Equal(t, config.DefaultEventBufferSize, cap(p.events))
-}
-
 // TestSubmitBackpressureBlocksInsteadOfDropping pins the fix for
 // keel-hq/keel#443: when the event buffer is saturated Submit applies
 // backpressure (it blocks until a slot frees) instead of silently dropping
@@ -94,7 +78,7 @@ func TestEventBufferSizeOverride(t *testing.T) {
 func TestSubmitBackpressureBlocksInsteadOfDropping(t *testing.T) {
 	p, err := NewProvider(&fakeImplementer{}, &fakeSender{}, nil, &k8s.GenericResourceCache{})
 	require.NoError(t, err)
-	p.SetEventBufferSize(2)
+	p.events = make(chan *types.Event, 2)
 
 	event := func(tag string) types.Event {
 		return types.Event{Repository: types.Repository{Name: "gcr.io/ns/img", Tag: tag}}
@@ -141,7 +125,7 @@ func TestSubmitUnderConcurrentLoadDrainsAllEvents(t *testing.T) {
 	grc := &k8s.GenericResourceCache{}
 	p, err := NewProvider(&fakeImplementer{}, &threadSafeSender{}, nil, grc)
 	require.NoError(t, err)
-	p.SetEventBufferSize(2)
+	p.events = make(chan *types.Event, 2)
 
 	go p.Start()
 	defer p.Stop()
