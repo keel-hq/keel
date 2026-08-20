@@ -16,6 +16,18 @@ require() { command -v "$1" >/dev/null || fail "required command not found: $1";
 for command in awk curl docker jq sha256sum tar; do require "${command}"; done
 mkdir -p "${ARTIFACT_DIR}"
 
+# Verifies that a registry image tag resolves to a linux/amd64+linux/arm64 manifest list.
+check_multiarch_image() {
+  local registry_image="${1}"
+  log "checking ${registry_image} is a linux/amd64+linux/arm64 image index"
+  docker buildx imagetools inspect "${registry_image}" --raw >"${ARTIFACT_DIR}/$(basename "${registry_image}:").manifest.json"
+  jq -e '
+    any(.manifests[]; .platform.os == "linux" and .platform.architecture == "amd64") and
+    any(.manifests[]; .platform.os == "linux" and .platform.architecture == "arm64")
+  ' "${ARTIFACT_DIR}/$(basename "${registry_image}:").manifest.json" >/dev/null \
+    || fail "${registry_image} is missing a linux/amd64 or linux/arm64 manifest"
+}
+
 log "checking GitHub application release ${APP_VERSION}"
 curl --fail --location --show-error --silent \
   "https://api.github.com/repos/keel-hq/keel/releases/tags/${APP_VERSION}" \
@@ -31,6 +43,10 @@ if [[ "${KEEL_PUBLISHED_SKIP_CHART:-false}" == "true" ]]; then
     any(.manifests[]; .platform.os == "linux" and .platform.architecture == "arm64")
   ' "${ARTIFACT_DIR}/app-manifest.json" >/dev/null || fail "${GHCR_IMAGE} is not a linux/amd64+linux/arm64 image index"
   log "published application release and multi-architecture image are aligned"
+  if [[ "${KEEL_PUBLISHED_CHECK_DOCKERHUB:-false}" == "true" ]]; then
+    check_multiarch_image "keelhq/keel:${APP_VERSION}"
+    log "Docker Hub keelhq/keel:${APP_VERSION} is a linux/amd64+linux/arm64 image index"
+  fi
   exit 0
 fi
 
@@ -79,6 +95,11 @@ jq -e '
 ' "${ARTIFACT_DIR}/app-manifest.json" >/dev/null || fail "${GHCR_IMAGE} is not a linux/amd64+linux/arm64 image index"
 docker buildx imagetools inspect "${GHCR_IMAGE}" >"${ARTIFACT_DIR}/app-image.txt"
 
+if [[ "${KEEL_PUBLISHED_CHECK_DOCKERHUB:-false}" == "true" ]]; then
+  check_multiarch_image "keelhq/keel:${APP_VERSION}"
+  log "Docker Hub keelhq/keel:${APP_VERSION} is a linux/amd64+linux/arm64 image index"
+fi
+
 chart_repository="$(awk '$1 == "repository:" {print $2; exit}' "${ARTIFACT_DIR}/values.yaml")"
 [[ -n "${chart_repository}" ]] || fail "published chart has no default image repository"
 chart_image="${chart_repository}:${chart_app_version}"
@@ -89,6 +110,7 @@ docker buildx imagetools inspect "${chart_image}" >"${ARTIFACT_DIR}/chart-image.
 cat >"${ARTIFACT_DIR}/summary.txt" <<EOF
 application_release=${APP_VERSION}
 application_image=${GHCR_IMAGE}
+dockerhub_image=${KEEL_PUBLISHED_CHECK_DOCKERHUB:-false}
 chart_version=${CHART_VERSION}
 chart_app_version=${chart_app_version}
 chart_app_release=${chart_app_version}
@@ -96,4 +118,4 @@ chart_image=${chart_image}
 chart_sha256=${chart_digest}
 chart_url=${chart_url}
 EOF
-log "published metadata is aligned; details are in ${ARTIFACT_DIR}/summary.txt"
+log "published release metadata is aligned; details are in ${ARTIFACT_DIR}/summary.txt"

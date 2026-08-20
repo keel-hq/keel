@@ -239,11 +239,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: hub.docker.com
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: |
+            ghcr.io/${{ github.repository }}
+            keelhq/keel
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -268,10 +277,30 @@ jobs:
             --header "Authorization: Bearer $token" \
             --header 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json' \
             "https://ghcr.io/v2/keel-hq/keel/manifests/$IMAGE_TAG")
+           case "$status" in
+             404) ;;
+             200) echo "Refusing to overwrite published image tag ghcr.io/keel-hq/keel:$IMAGE_TAG" >&2; exit 1 ;;
+             *) echo "Could not establish whether image tag $IMAGE_TAG exists (HTTP $status)" >&2; exit 1 ;;
+           esac
+
+      - name: Refuse to overwrite a Docker Hub release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          IMAGE_TAG: ${{ github.ref_name }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          token=$(curl --fail --show-error --location --silent \
+            "https://auth.docker.io/token?scope=repository:keelhq/keel:pull&service=registry.docker.io" \
+            --user "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" | jq -er .token)
+          status=$(curl --location --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --header "Authorization: Bearer $token" \
+            --header 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
+            "https://registry-1.docker.io/v2/keelhq/keel/manifests/$IMAGE_TAG")
           case "$status" in
             404) ;;
-            200) echo "Refusing to overwrite published image tag ghcr.io/keel-hq/keel:$IMAGE_TAG" >&2; exit 1 ;;
-            *) echo "Could not establish whether image tag $IMAGE_TAG exists (HTTP $status)" >&2; exit 1 ;;
+            200) echo "Refusing to overwrite published image tag keelhq/keel:$IMAGE_TAG" >&2; exit 1 ;;
+            *) echo "Could not establish whether Docker Hub image tag $IMAGE_TAG exists (HTTP $status)" >&2; exit 1 ;;
           esac
 
       - name: Build and push
@@ -286,6 +315,20 @@ jobs:
             BUILD_DATE=${{ steps.version.outputs.build_date }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=keel-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=keel-${{ matrix.arch }}
+
+      - name: Push to Docker Hub by digest
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.app_version }}
+            REVISION=${{ github.sha }}
+            BUILD_DATE=${{ steps.version.outputs.build_date }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=keelhq/keel,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=keel-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=keel-${{ matrix.arch }}
 
@@ -327,11 +370,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: hub.docker.com
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: |
+            ghcr.io/${{ github.repository }}
+            keelhq/keel
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -345,7 +397,6 @@ jobs:
 
       - name: Create multi-architecture manifest
         env:
-          IMAGE_NAME: ghcr.io/${{ github.repository }}
           METADATA_JSON: ${{ steps.meta.outputs.json }}
         run: |
           mapfile -t digest_files < <(find /tmp/digests -mindepth 2 -maxdepth 2 -type f | sort)
@@ -358,45 +409,58 @@ jobs:
             exit 1
           fi
 
-          sources=()
-          for digest in "${digests[@]}"; do
-            if [[ ! "$digest" =~ ^[0-9a-f]{64}$ ]]; then
-              echo "Unexpected digest artifact name: $digest" >&2
-              exit 1
-            fi
-            sources+=("$IMAGE_NAME@sha256:$digest")
-          done
-
-          tag_args=()
-          while IFS= read -r tag; do
-            tag_args+=(--tag "$tag")
-          done < <(jq -r '.tags[]' <<< "$METADATA_JSON")
-          if [[ "${#tag_args[@]}" -eq 0 ]]; then
-            echo "Docker metadata produced no tags" >&2
+          image_count=$(jq 'length' <<< "$METADATA_JSON")
+          if [[ "${image_count}" -ne 2 ]]; then
+            echo "Expected exactly two registry image entries, found ${image_count}" >&2
             exit 1
           fi
 
-          docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
+          for ((i = 0; i < image_count; i++)); do
+            image=$(jq -r ".[$i].image" <<< "$METADATA_JSON")
+
+            tag_args=()
+            while IFS= read -r tag; do
+              tag_args+=(--tag "$tag")
+            done < <(jq -r ".[$i].tags[]" <<< "$METADATA_JSON")
+            if [[ "${#tag_args[@]}" -eq 0 ]]; then
+              echo "Docker metadata produced no tags for ${image}" >&2
+              exit 1
+            fi
+
+            sources=()
+            for digest in "${digests[@]}"; do
+              if [[ ! "$digest" =~ ^[0-9a-f]{64}$ ]]; then
+                echo "Unexpected digest artifact name: $digest" >&2
+                exit 1
+              fi
+              sources+=("$image@sha256:$digest")
+            done
+
+            docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
+          done
 
       - name: Verify published manifest
         env:
           METADATA_JSON: ${{ steps.meta.outputs.json }}
         run: |
-          mapfile -t tags < <(jq -r '.tags[]' <<< "$METADATA_JSON")
-          expected_hash=""
-          for tag in "${tags[@]}"; do
-            manifest=$(docker buildx imagetools inspect "$tag" --raw)
-            jq -e '
-              any(.manifests[]; .platform.os == "linux" and .platform.architecture == "amd64") and
-              any(.manifests[]; .platform.os == "linux" and .platform.architecture == "arm64")
-            ' <<< "$manifest" >/dev/null
+          image_count=$(jq 'length' <<< "$METADATA_JSON")
+          for ((i = 0; i < image_count; i++)); do
+            image=$(jq -r ".[$i].image" <<< "$METADATA_JSON")
+            expected_hash=""
+            while IFS= read -r tag; do
+              manifest=$(docker buildx imagetools inspect "$tag" --raw)
+              jq -e '
+                any(.manifests[]; .platform.os == "linux" and .platform.architecture == "amd64") and
+                any(.manifests[]; .platform.os == "linux" and .platform.architecture == "arm64")
+              ' <<< "$manifest" >/dev/null
 
-            manifest_hash=$(sha256sum <<< "$manifest" | cut -d " " -f 1)
-            if [[ -n "$expected_hash" && "$manifest_hash" != "$expected_hash" ]]; then
-              echo "Published tags do not point to identical manifests" >&2
-              exit 1
-            fi
-            expected_hash="$manifest_hash"
+              manifest_hash=$(sha256sum <<< "$manifest" | cut -d " " -f 1)
+              if [[ -n "$expected_hash" && "$manifest_hash" != "$expected_hash" ]]; then
+                echo "Published tags do not point to identical manifests for ${image}" >&2
+                exit 1
+              fi
+              expected_hash="$manifest_hash"
+            done < <(jq -r ".[$i].tags[]" <<< "$METADATA_JSON")
           done
 
   github-release:

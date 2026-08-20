@@ -41,8 +41,22 @@ Release application images before publishing the GitHub Release, then release an
 
 4. Monitor the tag's `CI` workflow. Require unit, UI, package, k3s release, behavioral, amd64, arm64, manifest, and GitHub Release jobs to succeed.
 5. Verify `ghcr.io/keel-hq/keel:<app-version>` is an amd64/arm64 index and the GitHub Release exists only after it.
+6. Verify `keelhq/keel:<app-version>` is an amd64/arm64 index on Docker Hub (the CI `docker-manifest` job publishes both registries; historically Docker Hub publishes are stale or missing — do not consider the release complete until Docker Hub has the versioned multi-arch manifest):
+
+   ```bash
+   KEEL_PUBLISHED_CHECK_DOCKERHUB=true \
+   KEEL_PUBLISHED_APP_VERSION=<app-version> \
+   KEEL_PUBLISHED_SKIP_CHART=true \
+   make published-release-check
+   ```
 
 Do not manually create the GitHub Release before the image. The `github-release` CI job owns that step.
+
+### Tag correspondence
+
+- Application Git tag `<app-version>` is plain SemVer, e.g. `0.22.1` (not `keel-v0.22.1`). It drives both Docker tags `ghcr.io/keel-hq/keel:<app-version>` / `keelhq/keel:<app-version>` and `latest`.
+- `keel-v<version>` is a chart release tag, created from the `chart-v<version>` Git tag by `releasecharts.yaml`; it is a GitHub release containing the Helm chart archive, not an application image tag.
+- Never publish an application image under a `keel-v*` tag, and never create `keel-v*` from an application Git tag.
 
 ## Publish a chart
 
