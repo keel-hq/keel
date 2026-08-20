@@ -508,7 +508,9 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, strings.Join(images, ", "))
 		}
 
-		err = p.sender.Send(types.EventNotification{
+		// the notification error is kept local so a failing webhook can't
+		// abort the loop or surface as the event result (see issue #822).
+		if sendErr := p.sender.Send(types.EventNotification{
 			ResourceKind: resource.Kind(),
 			Identifier:   resource.Identifier,
 			Name:         "update resource",
@@ -518,10 +520,9 @@ func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.Generi
 			Level:        types.LevelSuccess,
 			Channels:     notificationChannels,
 			Metadata:     updateMetadata(resource, plan, p.GetName()),
-		})
-		if err != nil {
+		}); sendErr != nil {
 			log.WithFields(log.Fields{
-				"error":     err,
+				"error":     sendErr,
 				"name":      resource.Name,
 				"kind":      resource.Kind(),
 				"previous":  plan.CurrentVersion,
