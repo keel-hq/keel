@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: keel
+  namespace: keel
+  labels:
+    app: keel
+spec:
+  # PLACEHOLDER: change the service type to suit your cluster.
+  #   ClusterIP  — internal only (default in the Helm chart)
+  #   NodePort   — exposed on a node port
+  #   LoadBalancer — exposed via a load balancer (default example here)
+  type: LoadBalancer
+  ports:
+    - port: 9300
+      targetPort: 9300
+      protocol: TCP
+      name: keel
+  selector:
+    app: keel
+  sessionAffinity: None

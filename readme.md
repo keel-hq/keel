@@ -117,6 +117,28 @@ resource "helm_release" "keel" {
 
 That's it, see [Configuration](https://github.com/keel-hq/keel#configuration) section now.
 
+The [Helm chart](chart/keel) is the recommended and maintained install method —
+it supports upgrades and configuration via `values.yaml`.
+
+### Static Manifest (alternative)
+
+If you can't use Helm, or want a quick self-hosted install, use the ready-to-run
+Kubernetes manifests in [docs/manifests/keel](docs/manifests/keel/). These
+include the Deployment, Service, RBAC, and a basic-auth Secret with clearly
+marked placeholders:
+
+```bash
+# 1. Set your basic-auth credentials in docs/manifests/keel/secret.yaml
+#    (or leave basic auth disabled)
+# 2. Apply everything:
+kubectl apply -R -f docs/manifests/keel/
+```
+
+See [docs/manifests/keel/README.md](docs/manifests/keel/README.md) for the
+placeholders, image/version notes, and the full walkthrough. The Helm chart
+remains preferred because it keeps your deployment up to date with future
+releases.
+
 ### Nightly pre-release images
 
 To try out changes on `master` before they are part of a tagged release, use the

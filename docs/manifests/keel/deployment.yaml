@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keel
+  namespace: keel
+  labels:
+    app: keel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keel
+  template:
+    metadata:
+      labels:
+        app: keel
+    spec:
+      serviceAccountName: keel
+      containers:
+        - name: keel
+          # PLACEHOLDER: set the container image and tag you want to run.
+          # Latest releases: keelhq/keel (Docker Hub) or ghcr.io/keel-hq/keel (GHCR).
+          # A nightly build from master is published under the "nightly" tag.
+          image: "ghcr.io/keel-hq/keel:nightly"
+          imagePullPolicy: Always
+          command: ["/bin/keel"]
+          # PLACEHOLDER: set BASIC_AUTH_PASSWORD in the keel Secret to enable
+          # basic auth on the Admin UI and API. Leave basicauth.enabled false
+          # and remove the envFrom block to disable basic auth.
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: AUTH_MODE
+              value: "legacy"
+            - name: POLL
+              value: "true"
+            - name: POLL_DEFAULTSCHEDULE
+              value: "@every 1m"
+            - name: HELM3_PROVIDER
+              value: "true"
+            - name: NOTIFICATION_LEVEL
+              value: "info"
+          # PLACEHOLDER: remove this block if you are not using basic auth.
+          envFrom:
+            - secretRef:
+                name: keel
+          ports:
+            - containerPort: 9300
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 9300
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9300
+            initialDelaySeconds: 5
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 9300
+            initialDelaySeconds: 5
+            timeoutSeconds: 10
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi

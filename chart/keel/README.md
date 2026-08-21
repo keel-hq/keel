@@ -30,6 +30,12 @@ Docker image _polling_, _Kubernetes provider_ and _Helm provider_ support are se
 $ helm upgrade --install keel --namespace keel keel/keel
 ```
 
+This Helm chart is the recommended and maintained install method — it supports
+upgrades and configuration via `values.yaml`. If you can't use Helm, the
+ready-to-run Kubernetes manifests (Deployment, Service, RBAC, and a basic-auth
+Secret) are provided as a self-hosted alternative in
+[docs/manifests/keel](../../docs/manifests/keel/).
+
 ### Setting up Helm release to be automatically updated by Keel
 
 Add the following to your app's `values.yaml` file and do `helm upgrade ...`:
