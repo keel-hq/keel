@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -56,6 +57,7 @@ type postedMessage struct {
 }
 
 type fakeXmppImplementer struct {
+	mu             sync.Mutex
 	postedMessages []postedMessage
 	messages       chan *h.Message
 }
@@ -69,10 +71,39 @@ func (i *fakeXmppImplementer) messageFromChat(message string) {
 }
 
 func (i *fakeXmppImplementer) Say(roomID, name, body string) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
 	i.postedMessages = append(i.postedMessages, postedMessage{
 		text:    body,
 		channel: roomID,
 	})
+}
+
+// snapshot returns a copy of the posted messages under lock, so tests can read
+// them concurrently with the bot's async message handling goroutines.
+func (i *fakeXmppImplementer) snapshot() []postedMessage {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	out := make([]postedMessage, len(i.postedMessages))
+	copy(out, i.postedMessages)
+	return out
+}
+
+// waitFor polls the condition until it holds or the deadline elapses, so async
+// bot responses (posted via goroutines) are awaited deterministically instead
+// of via fixed sleeps. On timeout it fails the test without panicking.
+func waitFor(t *testing.T, timeout time.Duration, cond func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for {
+		if cond() {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out after %s waiting for condition", timeout)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 }
 func (i *fakeXmppImplementer) Status(s string) {
 }
@@ -140,23 +171,27 @@ func TestHelpCommand(t *testing.T) {
 	NewBot(f8s, am, fi)
 	defer b.Stop()
 
-	time.Sleep(1 * time.Second)
-
-	if len(fi.postedMessages) != 1 {
-		t.Errorf("expected to find 1 message, but got: %d", len(fi.postedMessages))
+	waitFor(t, 5*time.Second, func() bool {
+		msgs := fi.snapshot()
+		return len(msgs) == 1 && strings.HasPrefix(msgs[0].text, "Keel bot was started")
+	})
+	msgs := fi.snapshot()
+	if len(msgs) < 1 {
+		t.Fatalf("expected 1 message, got %d", len(msgs))
 	}
-	if !strings.HasPrefix(fi.postedMessages[0].text, "Keel bot was started") {
-		t.Errorf("expected to find greeting message, but got: %s", fi.postedMessages[0].text)
+	if !strings.HasPrefix(msgs[0].text, "Keel bot was started") {
+		t.Errorf("expected to find greeting message, but got: %s", msgs[0].text)
 	}
 
 	fi.messageFromChat("help")
-	time.Sleep(1 * time.Second)
+	waitFor(t, 5*time.Second, func() bool { return len(fi.snapshot()) == 2 })
 
-	if len(fi.postedMessages) != 2 {
-		t.Errorf("expected to find 2 messages, but got: %d", len(fi.postedMessages))
+	msgs = fi.snapshot()
+	if len(msgs) < 2 {
+		t.Fatalf("expected 2 messages, got %d", len(msgs))
 	}
-	if !strings.HasPrefix(fi.postedMessages[1].text, "/code Here's a list of supported commands") {
-		t.Errorf("expected to find help message, but got: %s", fi.postedMessages[1].text)
+	if !strings.HasPrefix(msgs[1].text, "/code Here's a list of supported commands") {
+		t.Errorf("expected to find help message, but got: %s", msgs[1].text)
 	}
 }
 
@@ -173,7 +208,11 @@ func TestBotAproval(t *testing.T) {
 	NewBot(f8s, am, fi)
 	defer b.Stop()
 
-	time.Sleep(1 * time.Second)
+	// wait for the "Keel bot was started" greeting instead of a fixed sleep
+	waitFor(t, 5*time.Second, func() bool {
+		return len(fi.snapshot()) == 1 &&
+			strings.HasPrefix(fi.snapshot()[0].text, "Keel bot was started")
+	})
 
 	err := am.Create(&types.Approval{
 		Identifier:     "k8s/project/repo:1.2.3",
@@ -192,33 +231,38 @@ func TestBotAproval(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
-	time.Sleep(1 * time.Second)
-
-	if len(fi.postedMessages) != 2 {
-		t.Errorf("expected to find 2 message, but got: %d", len(fi.postedMessages))
-	}
-	if !strings.HasPrefix(fi.postedMessages[1].text, "/code Approval required!") {
-		t.Errorf("expected to find help message, but got: %s", fi.postedMessages[1].text)
+	// wait for the "Approval required!" message (goroutine-delivered)
+	waitFor(t, 5*time.Second, func() bool {
+		msgs := fi.snapshot()
+		return len(msgs) == 2 && strings.HasPrefix(msgs[1].text, "/code Approval required!")
+	})
+	msgs := fi.snapshot()
+	if !strings.HasPrefix(msgs[1].text, "/code Approval required!") {
+		t.Errorf("expected to find help message, but got: %s", msgs[1].text)
 	}
 
 	// approve
 	fi.messageFromChat("approve k8s/project/repo:1.2.3")
-	time.Sleep(1 * time.Second)
 
-	if len(fi.postedMessages) != 3 {
-		t.Errorf("expected to find 3 message, but got: %d", len(fi.postedMessages))
-	}
-	if !strings.HasPrefix(fi.postedMessages[2].text, "/code Update approved!") {
-		t.Errorf("expected to find message, but got: %s", fi.postedMessages[2].text)
+	// wait for the "Update approved!" message (goroutine-delivered)
+	waitFor(t, 5*time.Second, func() bool {
+		msgs := fi.snapshot()
+		return len(msgs) == 3 && strings.HasPrefix(msgs[2].text, "/code Update approved!")
+	})
+	msgs = fi.snapshot()
+	if !strings.HasPrefix(msgs[2].text, "/code Update approved!") {
+		t.Errorf("expected to find message, but got: %s", msgs[2].text)
 	}
 
 	// get approvals
 	fi.messageFromChat("get approvals")
-	time.Sleep(1 * time.Second)
-	if len(fi.postedMessages) != 4 {
-		t.Errorf("expected to find 4 message, but got: %d", len(fi.postedMessages))
+	waitFor(t, 5*time.Second, func() bool { return len(fi.snapshot()) == 4 })
+
+	msgs = fi.snapshot()
+	if len(msgs) < 4 {
+		t.Fatalf("expected 4 messages, got %d", len(msgs))
 	}
-	resp := trimSpaces(fi.postedMessages[3].text)
+	resp := trimSpaces(msgs[3].text)
 
 	if !strings.Contains(resp, "k8s/project/repo:1.2.3 2.3.4 -> 3.4.5 1/1 false") {
 		t.Errorf("expected to find message, but got: %s", resp)
@@ -238,7 +282,10 @@ func TestBotReject(t *testing.T) {
 	NewBot(f8s, am, fi)
 	defer b.Stop()
 
-	time.Sleep(1 * time.Second)
+	waitFor(t, 5*time.Second, func() bool {
+		msgs := fi.snapshot()
+		return len(msgs) == 1 && strings.HasPrefix(msgs[0].text, "Keel bot was started")
+	})
 
 	err := am.Create(&types.Approval{
 		Identifier:     "k8s/project/repo:1.2.3",
@@ -257,33 +304,38 @@ func TestBotReject(t *testing.T) {
 		t.Fatalf("unexpected error while creating : %s", err)
 	}
 
-	time.Sleep(1 * time.Second)
-
-	if len(fi.postedMessages) != 2 {
-		t.Errorf("expected to find 2 message, but got: %d", len(fi.postedMessages))
-	}
-	if !strings.HasPrefix(fi.postedMessages[1].text, "/code Approval required!") {
-		t.Errorf("expected to find help message, but got: %s", fi.postedMessages[1].text)
+	// wait for the "Approval required!" message (goroutine-delivered)
+	waitFor(t, 5*time.Second, func() bool {
+		msgs := fi.snapshot()
+		return len(msgs) == 2 && strings.HasPrefix(msgs[1].text, "/code Approval required!")
+	})
+	msgs := fi.snapshot()
+	if !strings.HasPrefix(msgs[1].text, "/code Approval required!") {
+		t.Errorf("expected to find help message, but got: %s", msgs[1].text)
 	}
 
 	// reject
 	fi.messageFromChat("reject k8s/project/repo:1.2.3")
-	time.Sleep(1 * time.Second)
 
-	if len(fi.postedMessages) != 3 {
-		t.Errorf("expected to find 3 message, but got: %d", len(fi.postedMessages))
-	}
-	if !strings.HasPrefix(fi.postedMessages[2].text, "/code Change rejected") {
-		t.Errorf("expected to find message, but got: %s", fi.postedMessages[2].text)
+	// wait for the "Change rejected" message (goroutine-delivered)
+	waitFor(t, 5*time.Second, func() bool {
+		msgs := fi.snapshot()
+		return len(msgs) == 3 && strings.HasPrefix(msgs[2].text, "/code Change rejected")
+	})
+	msgs = fi.snapshot()
+	if !strings.HasPrefix(msgs[2].text, "/code Change rejected") {
+		t.Errorf("expected to find message, but got: %s", msgs[2].text)
 	}
 
 	// get approvals
 	fi.messageFromChat("get approvals")
-	time.Sleep(1 * time.Second)
-	if len(fi.postedMessages) != 4 {
-		t.Errorf("expected to find 4 message, but got: %d", len(fi.postedMessages))
+	waitFor(t, 5*time.Second, func() bool { return len(fi.snapshot()) == 4 })
+
+	msgs = fi.snapshot()
+	if len(msgs) < 4 {
+		t.Fatalf("expected 4 messages, got %d", len(msgs))
 	}
-	resp := trimSpaces(fi.postedMessages[3].text)
+	resp := trimSpaces(msgs[3].text)
 
 	if !strings.Contains(resp, "k8s/project/repo:1.2.3 2.3.4 -> 3.4.5 0/1 true") {
 		t.Errorf("expected to find message, but got: %s", resp)
