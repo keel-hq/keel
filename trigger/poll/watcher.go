@@ -124,12 +124,19 @@ func (w *RepositoryWatcher) Watch(images ...*types.TrackedImage) error {
 		if image.Trigger != types.TriggerTypePoll || len(image.RunningDigests) == 0 {
 			continue
 		}
+		if image.Image.IsNil() {
+			continue
+		}
 		key := getImageIdentifier(image.Image, image.Policy.KeepTag())
 		running[key] = append(running[key], image.RunningDigests)
 	}
 
 	for _, image := range images {
 		if image.Trigger != types.TriggerTypePoll {
+			continue
+		}
+		if image.Image.IsNil() {
+			errs = append(errs, fmt.Sprintf("skipping image with nil or unparsable reference: %v", image))
 			continue
 		}
 		identifier, err := w.watch(image, running[getImageIdentifier(image.Image, image.Policy.KeepTag())])
@@ -169,6 +176,10 @@ func (w *RepositoryWatcher) unwatch(tracked map[string]bool) {
 }
 
 func (w *RepositoryWatcher) watch(image *types.TrackedImage, runningDigests [][]string) (string, error) {
+
+	if image.Image.IsNil() {
+		return "", fmt.Errorf("cannot watch image with nil or unparsable reference: %v", image)
+	}
 
 	if image.PollSchedule == "" {
 		return "", fmt.Errorf("cron schedule cannot be empty")
@@ -274,6 +285,10 @@ func matchesAny(digests []string, known map[string]bool) bool {
 
 func (w *RepositoryWatcher) addJob(ti *types.TrackedImage, schedule string, runningDigests [][]string) error {
 	// getting initial digest
+	if ti.Image.IsNil() {
+		return fmt.Errorf("cannot add watched job for image with nil or unparsable reference: %v", ti)
+	}
+
 	reg := ti.Image.Scheme() + "://" + ti.Image.Registry()
 
 	registryOpts := registry.Opts{
