@@ -1,9 +1,12 @@
 package kubernetes
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -15,8 +18,10 @@ import (
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/extension/notification"
+	"github.com/keel-hq/keel/internal/concurrent"
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/policy"
+	"github.com/keel-hq/keel/pkg/config"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
 	"github.com/keel-hq/keel/util/policies"
@@ -40,9 +45,35 @@ var kubernetesUnversionedUpdatesCounter = prometheus.NewCounterVec(
 	[]string{"kubernetes"},
 )
 
+var eventBufferBackpressureCounter = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: "kubernetes_provider_event_buffer_backpressure_total",
+		Help: "How many times an event submit had to wait because the kubernetes provider event buffer was full.",
+	},
+)
+
+// concurrentPlanWorkers bounds how many deployments of a single event are
+// updated in parallel. Events stay processed one at a time, but within an
+// event each deployment update runs independently, so one slow deployment
+// cannot hold up the others (keel-hq/keel#443).
+const concurrentPlanWorkers = 10
+
+// backpressureLogInterval limits how often a saturated buffer is logged.
+const backpressureLogInterval = 5 * time.Second
+
+// lastBackpressureLogNS is the last time a saturated-buffer warning was
+// logged (unix nanos).
+var lastBackpressureLogNS atomic.Int64
+
+// ErrProviderStopped is returned by Submit when the provider has already
+// stopped, so callers fail fast instead of blocking on a channel nobody
+// drains.
+var ErrProviderStopped = errors.New("provider is stopped")
+
 func init() {
 	prometheus.MustRegister(kubernetesVersionedUpdatesCounter)
 	prometheus.MustRegister(kubernetesUnversionedUpdatesCounter)
+	prometheus.MustRegister(eventBufferBackpressureCounter)
 }
 
 // ProviderName - provider name
@@ -140,16 +171,62 @@ func NewProvider(implementer Implementer, sender notification.Sender, approvalMa
 		runningDigests:  k8s.NewRunningDigestResolver(implementer),
 		cache:           cache,
 		approvalManager: approvalManager,
-		events:          make(chan *types.Event, 100),
+		events:          make(chan *types.Event, config.DefaultEventBufferSize),
 		stop:            make(chan struct{}),
 		sender:          sender,
 	}, nil
 }
 
-// Submit - submit event to provider
+// Submit - submit event to provider. Submit never drops an event: when the
+// buffer is full it applies backpressure (the call blocks) and logs the
+// saturation so a stalled pipeline is visible instead of silently delaying
+// or losing updates.
 func (p *Provider) Submit(event types.Event) error {
-	p.events <- &event
-	return nil
+	select {
+	case <-p.stop:
+		return ErrProviderStopped
+	default:
+	}
+	select {
+	case p.events <- &event:
+		return nil
+	case <-p.stop:
+		return ErrProviderStopped
+	default:
+	}
+
+	// The buffer is full. Retain the event and apply backpressure: wait for
+	// the consumer to drain a slot instead of dropping or delaying the
+	// trigger in silence.
+	eventBufferBackpressureCounter.Inc()
+	logBackpressure(&event, p)
+
+	select {
+	case p.events <- &event:
+		return nil
+	case <-p.stop:
+		return ErrProviderStopped
+	}
+}
+
+func logBackpressure(event *types.Event, p *Provider) {
+	now := time.Now().UnixNano()
+	for {
+		last := lastBackpressureLogNS.Load()
+		if last != 0 && now-last < int64(backpressureLogInterval) {
+			return
+		}
+		if lastBackpressureLogNS.CompareAndSwap(last, now) {
+			log.WithFields(log.Fields{
+				"context":           "provider.kubernetes",
+				"image":             event.Repository.Name,
+				"tag":               event.Repository.Tag,
+				"trigger":           event.TriggerName,
+				"event_buffer_size": cap(p.events),
+			}).Warn("event buffer saturated; applying backpressure (event retained, not dropped)")
+			return
+		}
+	}
 }
 
 // GetName - get provider name
@@ -376,6 +453,11 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 }
 
 func (p *Provider) startInternal() error {
+	log.WithFields(log.Fields{
+		"context":           "provider.kubernetes",
+		"event_buffer_size": cap(p.events),
+	}).Info("provider.kubernetes: starting event loop")
+
 	for {
 		select {
 		case event := <-p.events:
@@ -413,136 +495,153 @@ func (p *Provider) processEvent(event *types.Event) (updated []*k8s.GenericResou
 	return p.updateDeployments(approvedPlans)
 }
 
+// updateDeployments applies every update plan of a single event. Each plan
+// targets a distinct resource, so the plans are handed to a bounded worker
+// pool instead of being applied one after another: a slow deployment update
+// no longer delays the rest of the event (keel-hq/keel#443). Events
+// themselves are still processed one at a time, so ordering is preserved.
 func (p *Provider) updateDeployments(plans []*UpdatePlan) (updated []*k8s.GenericResource, err error) {
-	for _, plan := range plans {
-
-		resource := plan.Resource
-
-		annotations := resource.GetAnnotations()
-		labels := resource.GetLabels()
-
-		notificationChannels := types.ParseEventNotificationChannels(annotations)
-		containerFilterFunction := GetMonitorContainersFromMeta(labels, annotations)
-		trackInitContainers := getInitContainerTrackingFromMeta(labels, annotations)
-		trackImageVolumes := getImageVolumeTrackingFromMeta(labels, annotations)
-
-		images := resource.GetImages(containerFilterFunction)
-		if trackInitContainers {
-			images = append(images, resource.GetInitImages(containerFilterFunction)...)
-		}
-		if trackImageVolumes {
-			images = append(images, resource.GetImageVolumeReferences(GetMonitorVolumesFromMeta(labels, annotations))...)
-		}
-
-		currentVersion := formatVersionWithDigest(plan.CurrentVersion, plan.CurrentDigest)
-		newVersion := formatVersionWithDigest(plan.NewVersion, plan.NewDigest)
-
-		p.sender.Send(types.EventNotification{
-			ResourceKind: resource.Kind(),
-			Identifier:   resource.Identifier,
-			Name:         "preparing to update resource",
-			Message:      fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, strings.Join(images, ", ")),
-			CreatedAt:    time.Now(),
-			Type:         types.NotificationPreDeploymentUpdate,
-			Level:        types.LevelDebug,
-			Channels:     notificationChannels,
-			Metadata:     updateMetadata(resource, plan, p.GetName()),
-		})
-
-		var err error
-
-		timestamp := time.Now().Format(time.RFC3339)
-		annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s [%s]", currentVersion, newVersion, timestamp)
-
-		// record the digest keel is deploying so the next update can report
-		// the previous image hash too (e.g. latest (x) -> latest (y))
-		if plan.NewDigest != "" {
-			annotations[types.KeelDigestAnnotation] = plan.NewDigest
-		} else {
-			delete(annotations, types.KeelDigestAnnotation)
-		}
-
-		resource.SetAnnotations(annotations)
-
-		err = p.implementer.Update(resource)
-		kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"kubernetes": fmt.Sprintf("%s/%s", resource.Namespace, resource.Name)}).Inc()
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":      err,
-				"namespace":  resource.Namespace,
-				"deployment": resource.Name,
-				"kind":       resource.Kind(),
-				"update":     fmt.Sprintf("%s->%s", currentVersion, newVersion),
-			}).Error("provider.kubernetes: got error while updating resource")
-
-			p.sender.Send(types.EventNotification{
-				Name:         "update resource",
-				ResourceKind: resource.Kind(),
-				Identifier:   resource.Identifier,
-				Message:      fmt.Sprintf("%s %s/%s update %s->%s failed, error: %s", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, err),
-				CreatedAt:    time.Now(),
-				Type:         types.NotificationDeploymentUpdate,
-				Level:        types.LevelError,
-				Channels:     notificationChannels,
-				Metadata:     updateMetadata(resource, plan, p.GetName()),
-			})
-
-			continue
-		}
-
-		err = p.updateComplete(plan)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":     err,
-				"name":      resource.Name,
-				"kind":      resource.Kind(),
-				"namespace": resource.Namespace,
-			}).Warn("provider.kubernetes: got error while archiving approvals counter after successful update")
-		}
-
-		var msg string
-		releaseNotes := types.ParseReleaseNotesURL(resource.GetAnnotations())
-		if releaseNotes != "" {
-			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s). Release notes: %s", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, strings.Join(images, ", "), releaseNotes)
-		} else {
-			msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, strings.Join(images, ", "))
-		}
-
-		err = p.sender.Send(types.EventNotification{
-			ResourceKind: resource.Kind(),
-			Identifier:   resource.Identifier,
-			Name:         "update resource",
-			Message:      msg,
-			CreatedAt:    time.Now(),
-			Type:         types.NotificationDeploymentUpdate,
-			Level:        types.LevelSuccess,
-			Channels:     notificationChannels,
-			Metadata:     updateMetadata(resource, plan, p.GetName()),
-		})
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":     err,
-				"name":      resource.Name,
-				"kind":      resource.Kind(),
-				"previous":  plan.CurrentVersion,
-				"new":       plan.NewVersion,
-				"namespace": resource.Namespace,
-			}).Error("provider.kubernetes: got error while sending notification")
-		}
-
-		log.WithFields(log.Fields{
-			"name":           resource.Name,
-			"kind":           resource.Kind(),
-			"previous":       plan.CurrentVersion,
-			"new":            plan.NewVersion,
-			"previousDigest": plan.CurrentDigest,
-			"newDigest":      plan.NewDigest,
-			"namespace":      resource.Namespace,
-		}).Info("provider.kubernetes: resource updated")
-		updated = append(updated, resource)
+	updated = make([]*k8s.GenericResource, 0, len(plans))
+	if len(plans) == 0 {
+		return updated, nil
 	}
 
-	return
+	var mu sync.Mutex
+	concurrent.Run(concurrentPlanWorkers, len(plans), func(i int) {
+		if r := p.applyPlan(plans[i]); r != nil {
+			mu.Lock()
+			updated = append(updated, r)
+			mu.Unlock()
+		}
+	})
+
+	return updated, nil
+}
+
+// applyPlan applies a single update plan to its resource and sends the
+// surrounding notifications. It returns the updated resource, or nil when
+// the update failed.
+func (p *Provider) applyPlan(plan *UpdatePlan) *k8s.GenericResource {
+	resource := plan.Resource
+
+	annotations := resource.GetAnnotations()
+	labels := resource.GetLabels()
+
+	notificationChannels := types.ParseEventNotificationChannels(annotations)
+	containerFilterFunction := GetMonitorContainersFromMeta(labels, annotations)
+	trackInitContainers := getInitContainerTrackingFromMeta(labels, annotations)
+	trackImageVolumes := getImageVolumeTrackingFromMeta(labels, annotations)
+
+	images := resource.GetImages(containerFilterFunction)
+	if trackInitContainers {
+		images = append(images, resource.GetInitImages(containerFilterFunction)...)
+	}
+	if trackImageVolumes {
+		images = append(images, resource.GetImageVolumeReferences(GetMonitorVolumesFromMeta(labels, annotations))...)
+	}
+
+	currentVersion := formatVersionWithDigest(plan.CurrentVersion, plan.CurrentDigest)
+	newVersion := formatVersionWithDigest(plan.NewVersion, plan.NewDigest)
+
+	p.sender.Send(types.EventNotification{
+		ResourceKind: resource.Kind(),
+		Identifier:   resource.Identifier,
+		Name:         "preparing to update resource",
+		Message:      fmt.Sprintf("Preparing to update %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, strings.Join(images, ", ")),
+		CreatedAt:    time.Now(),
+		Type:         types.NotificationPreDeploymentUpdate,
+		Level:        types.LevelDebug,
+		Channels:     notificationChannels,
+		Metadata:     updateMetadata(resource, plan, p.GetName()),
+	})
+
+	timestamp := time.Now().Format(time.RFC3339)
+	annotations["kubernetes.io/change-cause"] = fmt.Sprintf("keel automated update, version %s -> %s [%s]", currentVersion, newVersion, timestamp)
+
+	// record the digest keel is deploying so the next update can report
+	// the previous image hash too (e.g. latest (x) -> latest (y))
+	if plan.NewDigest != "" {
+		annotations[types.KeelDigestAnnotation] = plan.NewDigest
+	} else {
+		delete(annotations, types.KeelDigestAnnotation)
+	}
+
+	resource.SetAnnotations(annotations)
+
+	err := p.implementer.Update(resource)
+	kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"kubernetes": fmt.Sprintf("%s/%s", resource.Namespace, resource.Name)}).Inc()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":      err,
+			"namespace":  resource.Namespace,
+			"deployment": resource.Name,
+			"kind":       resource.Kind(),
+			"update":     fmt.Sprintf("%s->%s", currentVersion, newVersion),
+		}).Error("provider.kubernetes: got error while updating resource")
+
+		p.sender.Send(types.EventNotification{
+			Name:         "update resource",
+			ResourceKind: resource.Kind(),
+			Identifier:   resource.Identifier,
+			Message:      fmt.Sprintf("%s %s/%s update %s->%s failed, error: %s", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, err),
+			CreatedAt:    time.Now(),
+			Type:         types.NotificationDeploymentUpdate,
+			Level:        types.LevelError,
+			Channels:     notificationChannels,
+			Metadata:     updateMetadata(resource, plan, p.GetName()),
+		})
+
+		return nil
+	}
+
+	if err := p.updateComplete(plan); err != nil {
+		log.WithFields(log.Fields{
+			"error":     err,
+			"name":      resource.Name,
+			"kind":      resource.Kind(),
+			"namespace": resource.Namespace,
+		}).Warn("provider.kubernetes: got error while archiving approvals counter after successful update")
+	}
+
+	var msg string
+	releaseNotes := types.ParseReleaseNotesURL(resource.GetAnnotations())
+	if releaseNotes != "" {
+		msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s). Release notes: %s", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, strings.Join(images, ", "), releaseNotes)
+	} else {
+		msg = fmt.Sprintf("Successfully updated %s %s/%s %s->%s (%s)", resource.Kind(), resource.Namespace, resource.Name, currentVersion, newVersion, strings.Join(images, ", "))
+	}
+
+	if err := p.sender.Send(types.EventNotification{
+		ResourceKind: resource.Kind(),
+		Identifier:   resource.Identifier,
+		Name:         "update resource",
+		Message:      msg,
+		CreatedAt:    time.Now(),
+		Type:         types.NotificationDeploymentUpdate,
+		Level:        types.LevelSuccess,
+		Channels:     notificationChannels,
+		Metadata:     updateMetadata(resource, plan, p.GetName()),
+	}); err != nil {
+		log.WithFields(log.Fields{
+			"error":     err,
+			"name":      resource.Name,
+			"kind":      resource.Kind(),
+			"previous":  plan.CurrentVersion,
+			"new":       plan.NewVersion,
+			"namespace": resource.Namespace,
+		}).Error("provider.kubernetes: got error while sending notification")
+	}
+
+	log.WithFields(log.Fields{
+		"name":           resource.Name,
+		"kind":           resource.Kind(),
+		"previous":       plan.CurrentVersion,
+		"new":            plan.NewVersion,
+		"previousDigest": plan.CurrentDigest,
+		"newDigest":      plan.NewDigest,
+		"namespace":      resource.Namespace,
+	}).Info("provider.kubernetes: resource updated")
+	return resource
 }
 
 func getDesiredImage(delta map[string]string, currentImage string) (string, error) {

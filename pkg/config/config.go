@@ -47,6 +47,11 @@ type StorageConfig struct {
 	DataDir string `envconfig:"XDG_DATA_HOME" default:"/data"`
 }
 
+// DefaultEventBufferSize is the default capacity of the per-provider event
+// buffer that queues update events between the triggers (poll, webhook,
+// pubsub, approvals) and the deployment sync workers.
+const DefaultEventBufferSize = 512
+
 // ProviderConfig controls which workload update providers Keel enables.
 type ProviderConfig struct {
 	Helm3 bool `envconfig:"HELM3_PROVIDER" default:"false"`
