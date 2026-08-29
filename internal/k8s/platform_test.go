@@ -2,9 +2,11 @@ package k8s
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/keel-hq/keel/types"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	apps_v1 "k8s.io/api/apps/v1"
 	batch_v1 "k8s.io/api/batch/v1"
 	core_v1 "k8s.io/api/core/v1"
@@ -172,6 +174,37 @@ func TestPlatformResolverFailsClosed(t *testing.T) {
 				t.Fatalf("got %v (%s), want no platforms and %s", platforms, resolutionErr, test.want)
 			}
 		})
+	}
+}
+
+func TestPlatformResolverExplainsNodeAPIFailure(t *testing.T) {
+	resource, err := NewGenericResource(&apps_v1.Deployment{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	logger, hook := logrustest.NewNullLogger()
+	resolver := NewPlatformResolver(&fakePlatformSource{err: fmt.Errorf("nodes is forbidden")})
+	resolver.log = logger
+
+	for range 2 {
+		if _, resolutionErr := resolver.Resolve(resource); resolutionErr != types.PlatformErrorNodeMetadata {
+			t.Fatalf("got %s, want %s", resolutionErr, types.PlatformErrorNodeMetadata)
+		}
+	}
+
+	entries := hook.AllEntries()
+	if len(entries) != 1 {
+		t.Fatalf("got %d diagnostic entries, want one throttled entry", len(entries))
+	}
+	entry := entries[0]
+	if !strings.Contains(entry.Message, "workload updates are blocked") {
+		t.Fatalf("diagnostic message is not actionable: %q", entry.Message)
+	}
+	if got := entry.Data["remediation"]; got != nodeRBACRemediation {
+		t.Fatalf("got remediation %q, want %q", got, nodeRBACRemediation)
+	}
+	if got := fmt.Sprint(entry.Data["error"]); got != "nodes is forbidden" {
+		t.Fatalf("got underlying error %q", got)
 	}
 }
 
