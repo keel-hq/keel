@@ -8,10 +8,15 @@ import (
 	"time"
 
 	"github.com/keel-hq/keel/types"
+	"github.com/sirupsen/logrus"
 	core_v1 "k8s.io/api/core/v1"
 )
 
-const nodeCacheTTL = 30 * time.Second
+const (
+	nodeCacheTTL         = 30 * time.Second
+	nodeErrorLogThrottle = 30 * time.Second
+	nodeRBACRemediation  = "grant Keel's service account get, list, and watch access to the core/v1 nodes resource"
+)
 
 // NodeLister supplies Kubernetes node scheduling and platform metadata.
 type NodeLister interface {
@@ -25,15 +30,18 @@ type podLister interface {
 // PlatformResolver derives a conservative eligible platform set for workloads.
 type PlatformResolver struct {
 	nodes NodeLister
+	log   logrus.FieldLogger
 
-	mu        sync.Mutex
-	cached    []core_v1.Node
-	expiresAt time.Time
+	mu                      sync.Mutex
+	cached                  []core_v1.Node
+	expiresAt               time.Time
+	lastNodeListError       string
+	lastNodeListErrorLogged time.Time
 }
 
 // NewPlatformResolver creates a resolver backed by Kubernetes Node metadata.
 func NewPlatformResolver(nodes NodeLister) *PlatformResolver {
-	return &PlatformResolver{nodes: nodes}
+	return &PlatformResolver{nodes: nodes, log: logrus.StandardLogger()}
 }
 
 // Resolve returns every platform on which the workload may be scheduled.
@@ -107,14 +115,35 @@ func (r *PlatformResolver) listNodes() ([]core_v1.Node, error) {
 	}
 	list, err := r.nodes.Nodes()
 	if err != nil {
+		r.logNodeListFailure(err)
 		return nil, err
 	}
+	r.lastNodeListError = ""
+	r.lastNodeListErrorLogged = time.Time{}
 	if list == nil {
 		return nil, fmt.Errorf("node list is nil")
 	}
 	r.cached = append(r.cached[:0], list.Items...)
 	r.expiresAt = time.Now().Add(nodeCacheTTL)
 	return append([]core_v1.Node(nil), r.cached...), nil
+}
+
+// logNodeListFailure emits the Kubernetes API error with an actionable RBAC
+// hint. Node resolution runs once per workload, so identical errors are
+// throttled to avoid flooding the logs when a cluster contains many workloads.
+// r.mu must be held by the caller.
+func (r *PlatformResolver) logNodeListFailure(err error) {
+	message := err.Error()
+	now := time.Now()
+	if message == r.lastNodeListError && now.Sub(r.lastNodeListErrorLogged) < nodeErrorLogThrottle {
+		return
+	}
+	r.lastNodeListError = message
+	r.lastNodeListErrorLogged = now
+	r.log.WithFields(logrus.Fields{
+		"error":       err,
+		"remediation": nodeRBACRemediation,
+	}).Warn("platform resolver: failed to list Kubernetes nodes; workload updates are blocked because platform compatibility cannot be verified")
 }
 
 func nodePlatform(node *core_v1.Node) (types.Platform, bool) {

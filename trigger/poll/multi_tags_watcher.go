@@ -102,10 +102,14 @@ func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, er
 			if reason == types.PlatformErrorNone {
 				reason = types.PlatformErrorWorkloadMetadata
 			}
-			log.WithFields(log.Fields{
+			fields := log.Fields{
 				"image":  trackedImage.Image.Repository(),
 				"reason": reason,
-			}).Warn("trigger.poll.WatchRepositoryTagsJob: skipping workload because its eligible platforms could not be established")
+			}
+			if reason == types.PlatformErrorNodeMetadata {
+				fields["remediation"] = "verify Keel's service account can list core/v1 nodes and that each node reports status.nodeInfo.operatingSystem and architecture"
+			}
+			log.WithFields(fields).Warn("trigger.poll.WatchRepositoryTagsJob: skipping workload because its eligible platforms could not be established")
 			continue
 		}
 

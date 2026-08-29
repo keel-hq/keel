@@ -3,6 +3,7 @@ package poll
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -656,6 +657,14 @@ func TestCandidateSelectionFailsClosedForUnresolvedWorkload(t *testing.T) {
 		t.Fatalf("unresolved workload evaluated a candidate: events=%#v calls=%v", events, registryClient.platformCalls)
 	}
 	assertLogMessage(t, hook, "skipping workload because its eligible platforms could not be established")
+	for _, entry := range hook.AllEntries() {
+		if strings.Contains(entry.Message, "skipping workload because its eligible platforms could not be established") {
+			if !strings.Contains(fmt.Sprint(entry.Data["remediation"]), "service account can list core/v1 nodes") {
+				t.Fatalf("missing actionable node remediation in log fields: %#v", entry.Data)
+			}
+			return
+		}
+	}
 }
 
 func assertLogMessage(t *testing.T, hook *logrustest.Hook, message string) {
