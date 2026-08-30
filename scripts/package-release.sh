@@ -8,6 +8,7 @@ ARTIFACT_DIR="${KEEL_RELEASE_ARTIFACT_DIR:-${REPO_ROOT}/.test/release-artifacts}
 HELM_BIN="${HELM_BIN:-${ARTIFACT_DIR}/bin/helm}"
 CHART_DIR="${REPO_ROOT}/chart/keel"
 APP_VERSION="$("${REPO_ROOT}/scripts/resolve-application-version.sh")"
+SOURCE_APP_VERSION="$(awk '$1 == "appVersion:" {print $2; exit}' "${CHART_DIR}/Chart.yaml")"
 CHART_VERSION="${KEEL_CHART_VERSION:-$(awk '$1 == "version:" {print $2; exit}' "${CHART_DIR}/Chart.yaml")}"
 PACKAGED_CHART_VERSION="v${CHART_VERSION#v}"
 REVISION="${KEEL_BUILD_REVISION:-$(git -C "${REPO_ROOT}" rev-parse --short=12 HEAD)}"
@@ -34,25 +35,28 @@ if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
   if [[ "${tag}" == chart-* ]]; then
     [[ "${tag}" == "chart-v${CHART_VERSION#v}" ]] || \
       fail "chart tag ${tag} must equal chart-v${CHART_VERSION#v} from Chart.yaml"
-    if [[ "${KEEL_ENFORCE_UNPUBLISHED:-false}" == "true" ]]; then
-      release_tag="keel-v${CHART_VERSION#v}"
-      status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
-        "https://api.github.com/repos/keel-hq/keel/releases/tags/${release_tag}")"
-      case "${status}" in
-        404) ;;
-        200) fail "GitHub chart release ${release_tag} already exists; refusing to overwrite it" ;;
-        *) fail "could not establish whether GitHub chart release ${release_tag} exists (HTTP ${status})" ;;
-      esac
-      curl --fail --location --show-error --silent --output "${ARTIFACT_DIR}/public-index.yaml" \
-        https://keel-hq.github.io/keel/index.yaml || fail "could not read the public Helm index"
-      if awk -v wanted="${CHART_VERSION}" '$1 == "version:" {gsub(/\"/, "", $2); if ($2 == wanted || $2 == "v" wanted) found=1} END {exit !found}' \
-        "${ARTIFACT_DIR}/public-index.yaml"; then
-        fail "chart ${CHART_VERSION} already exists in the public Helm index; refusing to overwrite it"
-      fi
-    fi
   else
     [[ "${tag}" == "${APP_VERSION}" ]] || \
       fail "application tag ${tag} must equal appVersion ${APP_VERSION} from Chart.yaml"
+    [[ "${SOURCE_APP_VERSION}" == "${APP_VERSION}" ]] || \
+      fail "Chart.yaml appVersion ${SOURCE_APP_VERSION} must equal application tag ${tag} so the matching chart can be published"
+  fi
+fi
+
+if [[ "${KEEL_ENFORCE_UNPUBLISHED:-false}" == "true" ]]; then
+  release_tag="keel-v${CHART_VERSION#v}"
+  status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+    "https://api.github.com/repos/keel-hq/keel/releases/tags/${release_tag}")"
+  case "${status}" in
+    404) ;;
+    200) fail "GitHub chart release ${release_tag} already exists; refusing to overwrite it" ;;
+    *) fail "could not establish whether GitHub chart release ${release_tag} exists (HTTP ${status})" ;;
+  esac
+  curl --fail --location --show-error --silent --output "${ARTIFACT_DIR}/public-index.yaml" \
+    https://keel-hq.github.io/keel/index.yaml || fail "could not read the public Helm index"
+  if awk -v wanted="${CHART_VERSION}" '$1 == "version:" {gsub(/\"/, "", $2); if ($2 == wanted || $2 == "v" wanted) found=1} END {exit !found}' \
+    "${ARTIFACT_DIR}/public-index.yaml"; then
+    fail "chart ${CHART_VERSION} already exists in the public Helm index; refusing to overwrite it"
   fi
 fi
 

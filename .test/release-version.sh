@@ -17,4 +17,10 @@ if GITHUB_REF=refs/tags/not-semver "${RESOLVER}" >/dev/null 2>&1; then
   exit 1
 fi
 
+if GITHUB_REF=refs/tags/9.8.7 KEEL_RELEASE_SKIP_IMAGE=true \
+  "${REPO_ROOT}/scripts/package-release.sh" >/dev/null 2>&1; then
+  printf '[release-version-test] ERROR: application tag without matching chart appVersion was accepted\n' >&2
+  exit 1
+fi
+
 printf '[release-version-test] application version resolution passed\n'
