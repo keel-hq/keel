@@ -2,6 +2,23 @@ apiVersion: v1
 entries:
   keel:
   - apiVersion: v1
+    appVersion: 0.22.2
+    created: "2026-08-30T19:06:00.430960397Z"
+    description: Open source tool for automating Kubernetes deployment updates.
+    digest: 710eac738a7e58e3624c7f449b5e9df3ca6498985bd463696b5652715f3d3b41
+    home: https://github.com/keel-hq/keel
+    icon: https://raw.githubusercontent.com/keel-hq/keel/master/static/keel-logo.png
+    keywords:
+    - kubernetes deployment
+    - helm release
+    - continuous deployment
+    name: keel
+    sources:
+    - https://github.com/keel-hq/keel
+    urls:
+    - https://github.com/keel-hq/keel/releases/download/keel-v1.2.1/keel-v1.2.1.tgz
+    version: v1.2.1
+  - apiVersion: v1
     appVersion: 0.22.1
     created: "2026-08-14T07:20:02.014669658Z"
     description: Open source tool for automating Kubernetes deployment updates.
@@ -1133,4 +1150,4 @@ entries:
     urls:
     - https://charts.keel.sh/keel-0.7.3.tgz
     version: 0.7.3
-generated: "2026-08-14T07:20:02.014992214Z"
+generated: "2026-08-30T19:06:00.431298661Z"
