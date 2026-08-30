@@ -56,7 +56,7 @@ jobs:
           KEEL_APP_VERSION="$app_version" ./scripts/resolve-application-version.sh >/dev/null
           echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
 
-          previous_sha=$(git rev-parse --verify --quiet refs/tags/nightly^{commit} || true)
+          previous_sha=$(git rev-parse --verify --quiet 'refs/tags/nightly^{commit}' || true)
           if [[ "$FORCE_BUILD" == "true" ]]; then
             echo "should_build=true" >> "$GITHUB_OUTPUT"
             echo "Forced nightly build of $head_sha" >> "$GITHUB_STEP_SUMMARY"
