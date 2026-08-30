@@ -5,8 +5,8 @@ set -Eeuo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 readonly REPO_ROOT
 ARTIFACT_DIR="${KEEL_PUBLISHED_ARTIFACT_DIR:-${REPO_ROOT}/.test/published-artifacts}"
-APP_VERSION="${KEEL_PUBLISHED_APP_VERSION:-0.21.1}"
-CHART_VERSION="${KEEL_PUBLISHED_CHART_VERSION:-v1.0.5}"
+APP_VERSION="${KEEL_PUBLISHED_APP_VERSION:-0.22.2}"
+CHART_VERSION="${KEEL_PUBLISHED_CHART_VERSION:-v1.2.1}"
 INDEX_URL="https://keel-hq.github.io/keel/index.yaml"
 GHCR_IMAGE="ghcr.io/keel-hq/keel:${APP_VERSION}"
 

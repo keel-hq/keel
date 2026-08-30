@@ -1,6 +1,6 @@
 # Release process and validation
 
-This document describes the release path as audited on 2026-08-14. Local release validation is read-only with respect to GitHub and public registries. It never creates tags, releases, images, or charts.
+This document describes the release path as audited on 2026-08-30. Local release validation is read-only with respect to GitHub and public registries. It never creates tags, releases, images, or charts.
 
 ## Release paths and version contract
 
@@ -98,9 +98,9 @@ kubectl --namespace <namespace> rollout status deployment/keel --timeout=3m
 
 The read-only check currently records:
 
-- GitHub application release `0.21.1`, GHCR `ghcr.io/keel-hq/keel:0.21.1`, and a Linux amd64/arm64 OCI index.
+- GitHub application release `0.22.2`, GHCR `ghcr.io/keel-hq/keel:0.22.2`, and a Linux amd64/arm64 OCI index (`sha256:ca363f90057e1e93d8f7b88b14e991c6e5f2b6ab56229fbf544f238145bff40d`).
 - Docker Hub is not a release publication target. Its `keelhq/keel` tags may be stale or missing; supported release images are published to GHCR.
-- Helm index/chart `v1.0.5`, archive digest `8826a68c962d2641232897997f4fb2b547b6f1d252bffa8e9860113361cfb938`, `appVersion: 0.20.0`, and its available Docker Hub image.
+- Helm index/chart `v1.2.1`, archive digest `710eac738a7e58e3624c7f449b5e9df3ca6498985bd463696b5652715f3d3b41`, `appVersion: 0.22.2`, and `ghcr.io/keel-hq/keel:0.22.2`.
 - The chart release asset and Helm index URL/checksum agree exactly.
 
 There are no release checksums attached separately to application GitHub releases, chart provenance (`.prov`), signatures, attestations, or SBOM artifacts in the audited process. GHCR's index currently includes attestations emitted by the image build, but their predicate and signer are not part of a documented verification contract. Adding keyless signing, verified provenance, and SBOM policy should be a separately scoped release-security change.
