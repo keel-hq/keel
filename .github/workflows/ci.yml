@@ -73,10 +73,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Require a chart version bump for chart changes
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/'))
+        env:
+          KEEL_CHART_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: ./scripts/check-chart-version-bump.sh
 
       - name: Build release-equivalent package
         env:
           KEEL_RELEASE_EXPORT_IMAGE: "true"
+          KEEL_ENFORCE_UNPUBLISHED: ${{ startsWith(github.ref, 'refs/tags/') && !startsWith(github.ref, 'refs/tags/chart-') }}
         run: make release-package
 
       - name: Share immutable release package
@@ -424,3 +433,12 @@ jobs:
             echo "Unexpected GitHub Release state: $release_state" >&2
             exit 1
           fi
+
+  chart-release:
+    name: Publish matching Helm chart
+    needs: github-release
+    if: startsWith(github.ref, 'refs/tags/') && !startsWith(github.ref, 'refs/tags/chart-') && needs.github-release.result == 'success'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/releasecharts.yaml
+    secrets: inherit
