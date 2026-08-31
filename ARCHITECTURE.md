@@ -209,6 +209,7 @@ Set via `keel.sh/approvals: "2"` annotation to require N approvals.
 | `UI_DIR` | Web UI static files | `www` |
 | `KUBERNETES_CONFIG` | Kubeconfig path | `~/.kube/config` |
 | `POLL_DEFAULTSCHEDULE` | Default poll interval | `@every 1m` |
+| `POLL_SCAN_INTERVAL` | Tracked workload discovery interval | `1m` |
 
 Empty environment values are treated as unset so manifests that render
 `value: ""` continue to receive the documented defaults. Boolean settings use

@@ -1,7 +1,9 @@
 package helm3
 
 import (
+	"errors"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/storage/driver"
 	// "helm.sh/helm/v3/pkg/cli"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -53,14 +56,75 @@ func NewHelm3Implementer() *Helm3Implementer {
 // ListReleases - list available releases
 func (i *Helm3Implementer) ListReleases() ([]*release.Release, error) {
 	actionConfig := i.generateConfig("")
-	client := action.NewList(actionConfig)
-	results, err := client.Run()
+	if err := actionConfig.KubeClient.IsReachable(); err != nil {
+		return nil, err
+	}
+	results, err := listCurrentReleases(actionConfig.Releases)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-		}).Fatal("helm3: failed to list release")
-		return []*release.Release{}, err
+		}).Error("helm3: failed to list releases")
+		return nil, err
 	}
+	return results, nil
+}
+
+type releaseQuerier interface {
+	Query(map[string]string) ([]*release.Release, error)
+}
+
+var currentReleaseStatuses = []release.Status{
+	release.StatusUnknown,
+	release.StatusDeployed,
+	release.StatusUninstalled,
+	release.StatusFailed,
+	release.StatusUninstalling,
+	release.StatusPendingInstall,
+	release.StatusPendingUpgrade,
+	release.StatusPendingRollback,
+}
+
+// listCurrentReleases uses Helm's storage labels to avoid retrieving and
+// decoding superseded revisions. It still considers every non-superseded
+// status when selecting the latest revision, matching action.List semantics
+// during installs, upgrades, rollbacks, and uninstalls.
+func listCurrentReleases(storage releaseQuerier) ([]*release.Release, error) {
+	latest := make(map[string]*release.Release)
+	for _, status := range currentReleaseStatuses {
+		releases, err := storage.Query(map[string]string{
+			"owner":  "helm",
+			"status": status.String(),
+		})
+		if errors.Is(err, driver.ErrReleaseNotFound) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		for _, candidate := range releases {
+			if candidate == nil {
+				continue
+			}
+			key := candidate.Namespace + "\x00" + candidate.Name
+			if existing := latest[key]; existing == nil || candidate.Version > existing.Version {
+				latest[key] = candidate
+			}
+		}
+	}
+
+	results := make([]*release.Release, 0, len(latest))
+	for _, candidate := range latest {
+		if candidate.Info == nil || (candidate.Info.Status != release.StatusDeployed && candidate.Info.Status != release.StatusFailed) {
+			continue
+		}
+		results = append(results, candidate)
+	}
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Name != results[j].Name {
+			return results[i].Name < results[j].Name
+		}
+		return results[i].Namespace < results[j].Namespace
+	})
 	return results, nil
 }
 
@@ -112,9 +176,12 @@ func (i *Helm3Implementer) generateConfig(namespace string) *action.Configuratio
 
 // convert map[string]string to map[string]interface
 // converts:
-//     map[string]string{"image.tag": "0.1.0"}
+//
+//	map[string]string{"image.tag": "0.1.0"}
+//
 // to:
-//     map[string]interface{"image": map[string]interface{"tag": "0.1.0"}}
+//
+//	map[string]interface{"image": map[string]interface{"tag": "0.1.0"}}
 func convertToInterface(values map[string]string) map[string]interface{} {
 	converted := make(map[string]interface{})
 	for key, value := range values {

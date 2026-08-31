@@ -2,13 +2,17 @@ package poll
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/keel-hq/keel/provider"
 
 	log "github.com/sirupsen/logrus"
 )
+
+// DefaultScanInterval controls how often providers are re-enumerated. Registry
+// checks keep their own per-image schedules; this interval only discovers
+// changes to the set of tracked workloads.
+const DefaultScanInterval = time.Minute
 
 // DefaultManager - default manager is responsible for scanning deployments and identifying
 // deployments that have market
@@ -18,22 +22,23 @@ type DefaultManager struct {
 	// repository watcher
 	watcher Watcher
 
-	mu *sync.Mutex
-
-	// scanTick - scan interval in seconds, defaults to 60 seconds
-	scanTick int
+	// scanInterval is the interval between provider re-enumerations.
+	scanInterval time.Duration
 
 	// root context
 	ctx context.Context
 }
 
 // NewPollManager - new default poller
-func NewPollManager(providers provider.Providers, watcher Watcher) *DefaultManager {
+func NewPollManager(providers provider.Providers, watcher Watcher, intervals ...time.Duration) *DefaultManager {
+	scanInterval := DefaultScanInterval
+	if len(intervals) > 0 && intervals[0] > 0 {
+		scanInterval = intervals[0]
+	}
 	return &DefaultManager{
-		providers: providers,
-		watcher:   watcher,
-		mu:        &sync.Mutex{},
-		scanTick:  3,
+		providers:    providers,
+		watcher:      watcher,
+		scanInterval: scanInterval,
 	}
 }
 
@@ -42,7 +47,7 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 	// setting root context
 	s.ctx = ctx
 
-	log.Info("trigger.poll.manager: polling trigger configured")
+	log.WithField("scan_interval", s.scanInterval).Info("trigger.poll.manager: polling trigger configured")
 
 	// initial scan
 	err := s.scan(ctx)
@@ -52,7 +57,7 @@ func (s *DefaultManager) Start(ctx context.Context) error {
 		}).Error("trigger.poll.manager: scan failed")
 	}
 
-	ticker := time.NewTicker(time.Duration(s.scanTick) * time.Second)
+	ticker := time.NewTicker(s.scanInterval)
 	defer ticker.Stop()
 
 	for {
