@@ -3,8 +3,8 @@ name: keel
 description: Open source tool for automating Kubernetes deployment updates.
 # Increase this version for every chart change. Application releases publish the
 # matching chart automatically; chart-v{version} is reserved for chart-only releases.
-version: 1.2.1
-appVersion: 0.22.2
+version: 1.2.2
+appVersion: 0.22.3
 keywords:
 - kubernetes deployment
 - helm release
