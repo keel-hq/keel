@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -12,7 +13,7 @@ import (
 var loadMutex sync.Mutex
 
 var environmentVariables = []string{
-	"DEBUG", "PUBSUB", "POLL", "PROJECT_ID", "CLUSTER_NAME", "XDG_DATA_HOME", "HELM3_PROVIDER", "UI_DIR",
+	"DEBUG", "PUBSUB", "POLL", "POLL_SCAN_INTERVAL", "PROJECT_ID", "CLUSTER_NAME", "XDG_DATA_HOME", "HELM3_PROVIDER", "UI_DIR",
 	"NOTIFICATION_LEVEL", "WEBHOOK_ENDPOINT", "SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "SLACK_BOT_NAME", "SLACK_CHANNELS", "SLACK_APPROVALS_CHANNEL",
 	"HIPCHAT_SERVER", "HIPCHAT_TOKEN", "HIPCHAT_BOT_NAME", "HIPCHAT_CHANNELS", "HIPCHAT_APPROVALS_CHANNEL", "HIPCHAT_APPROVALS_USER_NAME",
 	"HIPCHAT_APPROVALS_BOT_NAME", "HIPCHAT_APPROVALS_PASSWORT", "HIPCHAT_CONNECTION_ATTEMPTS", "MATTERMOST_ENDPOINT", "MATTERMOST_USERNAME",
@@ -36,10 +37,11 @@ type Config struct {
 
 // TriggerConfig controls the event sources that detect and initiate image updates.
 type TriggerConfig struct {
-	PubSub      bool   `ignored:"true"`
-	Poll        bool   `envconfig:"POLL" default:"true"`
-	ProjectID   string `envconfig:"PROJECT_ID"`
-	ClusterName string `envconfig:"CLUSTER_NAME"`
+	PubSub           bool          `ignored:"true"`
+	Poll             bool          `envconfig:"POLL" default:"true"`
+	PollScanInterval time.Duration `envconfig:"POLL_SCAN_INTERVAL" default:"1m"`
+	ProjectID        string        `envconfig:"PROJECT_ID"`
+	ClusterName      string        `envconfig:"CLUSTER_NAME"`
 }
 
 // StorageConfig controls where Keel stores its persistent application data.
@@ -213,6 +215,9 @@ func Load() (Config, error) {
 		if err := envconfig.Process("", section); err != nil {
 			return Config{}, err
 		}
+	}
+	if cfg.Trigger.PollScanInterval <= 0 {
+		return Config{}, fmt.Errorf("POLL_SCAN_INTERVAL must be greater than zero")
 	}
 
 	cfg.Debug = root.Debug

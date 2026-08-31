@@ -450,7 +450,7 @@ func setupTriggers(ctx context.Context, opts *TriggerOpts) (teardown func()) {
 
 		registryClient := registry.New()
 		watcher := poll.NewRepositoryWatcher(opts.providers, registryClient)
-		pollManager := poll.NewPollManager(opts.providers, watcher)
+		pollManager := poll.NewPollManager(opts.providers, watcher, opts.appConfig.Trigger.PollScanInterval)
 
 		// start poll manager, will finish with ctx
 		go watcher.Start(ctx)

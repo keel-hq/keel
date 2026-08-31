@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/keel-hq/keel/approvals"
 	"github.com/keel-hq/keel/pkg/store/sql"
@@ -21,6 +22,23 @@ import (
 
 	"testing"
 )
+
+func TestPollManagerScanInterval(t *testing.T) {
+	defaultManager := NewPollManager(nil, nil)
+	if defaultManager.scanInterval != time.Minute {
+		t.Fatalf("expected default scan interval %s, got %s", time.Minute, defaultManager.scanInterval)
+	}
+
+	customManager := NewPollManager(nil, nil, 15*time.Second)
+	if customManager.scanInterval != 15*time.Second {
+		t.Fatalf("expected custom scan interval %s, got %s", 15*time.Second, customManager.scanInterval)
+	}
+
+	invalidManager := NewPollManager(nil, nil, 0)
+	if invalidManager.scanInterval != time.Minute {
+		t.Fatalf("expected invalid interval to use default %s, got %s", time.Minute, invalidManager.scanInterval)
+	}
+}
 
 type FakeSecretsGetter struct {
 }
