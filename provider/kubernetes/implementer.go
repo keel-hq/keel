@@ -52,6 +52,14 @@ type Opts struct {
 	CurrentContext string
 	// Unused, possibly legacy
 	Master string
+
+	// QPS and Burst configure the client side rate limiter. Left at zero,
+	// client-go applies its own defaults (5 QPS, burst 10), which are sized
+	// for a CLI rather than for a controller that lists pods for every
+	// tracked workload on every poll. A negative QPS disables client side
+	// rate limiting entirely and leaves throttling to the API server.
+	QPS   float32
+	Burst int
 }
 
 // NewKubernetesImplementer - create new k8s implementer
@@ -83,6 +91,18 @@ func NewKubernetesImplementer(opts *Opts) (*KubernetesImplementer, error) {
 	} else {
 		return nil, fmt.Errorf("kubernetes config is missing")
 	}
+
+	if opts.QPS != 0 {
+		cfg.QPS = opts.QPS
+	}
+	if opts.Burst != 0 {
+		cfg.Burst = opts.Burst
+	}
+
+	log.WithFields(log.Fields{
+		"qps":   cfg.QPS,
+		"burst": cfg.Burst,
+	}).Info("provider.kubernetes: client rate limits configured")
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
