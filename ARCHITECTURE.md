@@ -210,6 +210,9 @@ Set via `keel.sh/approvals: "2"` annotation to require N approvals.
 | `KUBERNETES_CONFIG` | Kubeconfig path | `~/.kube/config` |
 | `POLL_DEFAULTSCHEDULE` | Default poll interval | `@every 1m` |
 | `POLL_SCAN_INTERVAL` | Tracked workload discovery interval | `1m` |
+| `KUBERNETES_CLIENT_QPS` | Client side API rate limit (negative disables it) | `20` |
+| `KUBERNETES_CLIENT_BURST` | Client side API burst | `40` |
+| `KUBERNETES_POD_CACHE_TTL` | Pod listing cache lifetime (`0` disables it) | `30s` |
 
 Empty environment values are treated as unset so manifests that render
 `value: ""` continue to receive the documented defaults. Boolean settings use

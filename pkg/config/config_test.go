@@ -28,13 +28,14 @@ func TestLoadDefaults(t *testing.T) {
 			Level: "info", Slack: SlackNotificationConfig{BotName: "keel"}, Hipchat: HipchatNotificationConfig{BotName: "keel"},
 			Mattermost: MattermostConfig{Username: "keel"}, Shoutrrr: ShoutrrrConfig{Timeout: "10s"}, Mail: MailConfig{SMTPPort: 25},
 		},
-		Bots: BotConfig{Slack: SlackBotConfig{BotName: "keel", ApprovalsChannel: "general"}, Hipchat: HipchatBotConfig{ApprovalsChannel: "general", ApprovalsBotName: "keel", ConnectionAttempts: 5}},
+		Bots:       BotConfig{Slack: SlackBotConfig{BotName: "keel", ApprovalsChannel: "general"}, Hipchat: HipchatBotConfig{ApprovalsChannel: "general", ApprovalsBotName: "keel", ConnectionAttempts: 5}},
+		Kubernetes: KubernetesConfig{ClientQPS: 20, ClientBurst: 40, PodCacheTTL: 30 * time.Second},
 	}, cfg)
 }
 
 func TestLoadTreatsExplicitlyEmptyValuesAsUnset(t *testing.T) {
 	clearConfigurationEnvironment(t)
-	for _, name := range []string{"POLL", "POLL_SCAN_INTERVAL", "PUBSUB", "DEBUG", "HELM3_PROVIDER", "AUTHENTICATED_WEBHOOKS", "MAIL_SMTP_PORT", "HIPCHAT_CONNECTION_ATTEMPTS"} {
+	for _, name := range []string{"POLL", "POLL_SCAN_INTERVAL", "PUBSUB", "DEBUG", "HELM3_PROVIDER", "AUTHENTICATED_WEBHOOKS", "MAIL_SMTP_PORT", "HIPCHAT_CONNECTION_ATTEMPTS", "KUBERNETES_CLIENT_QPS", "KUBERNETES_CLIENT_BURST", "KUBERNETES_POD_CACHE_TTL"} {
 		t.Setenv(name, "")
 	}
 
@@ -49,7 +50,7 @@ func TestLoadTreatsExplicitlyEmptyValuesAsUnset(t *testing.T) {
 	require.Equal(t, 25, cfg.Notifications.Mail.SMTPPort)
 	require.Equal(t, 5, cfg.Bots.Hipchat.ConnectionAttempts)
 
-	for _, name := range []string{"POLL", "POLL_SCAN_INTERVAL", "PUBSUB", "DEBUG", "HELM3_PROVIDER", "AUTHENTICATED_WEBHOOKS", "MAIL_SMTP_PORT", "HIPCHAT_CONNECTION_ATTEMPTS"} {
+	for _, name := range []string{"POLL", "POLL_SCAN_INTERVAL", "PUBSUB", "DEBUG", "HELM3_PROVIDER", "AUTHENTICATED_WEBHOOKS", "MAIL_SMTP_PORT", "HIPCHAT_CONNECTION_ATTEMPTS", "KUBERNETES_CLIENT_QPS", "KUBERNETES_CLIENT_BURST", "KUBERNETES_POD_CACHE_TTL"} {
 		value, ok := os.LookupEnv(name)
 		require.True(t, ok, "%s should remain set", name)
 		require.Empty(t, value, "%s should remain empty", name)
@@ -103,6 +104,7 @@ func TestLoadMapsEveryTypedPath(t *testing.T) {
 		"MATTERMOST_ENDPOINT": "https://mattermost", "MATTERMOST_USERNAME": "matter-bot", "TEAMS_WEBHOOK_URL": "https://teams", "DISCORD_WEBHOOK_URL": "https://discord", "SHOUTRRR_URLS": "discord://token@id", "SHOUTRRR_TIMEOUT": "3s",
 		"MAIL_TO": "to@example.com", "MAIL_FROM": "from@example.com", "MAIL_SMTP_SERVER": "smtp.example.com", "MAIL_SMTP_PORT": "2525", "MAIL_SMTP_USER": "smtp-user", "MAIL_SMTP_PASS": "smtp-pass",
 		"BASIC_AUTH_USER": "admin", "BASIC_AUTH_PASSWORD": "secret", "AUTHENTICATED_WEBHOOKS": "true", "TOKEN_SECRET": "token-secret", "AUTH_MODE": "proxy", "AUTH_PROXY_USER_HEADER": "X-User", "AUTH_PROXY_LOGOUT_URL": "https://logout", "RESTRICTED_NAMESPACE": "production",
+		"KUBERNETES_CLIENT_QPS": "35", "KUBERNETES_CLIENT_BURST": "70", "KUBERNETES_POD_CACHE_TTL": "15s",
 	}
 	for key, value := range values {
 		t.Setenv(key, value)
@@ -113,12 +115,12 @@ func TestLoadMapsEveryTypedPath(t *testing.T) {
 		Debug: true, Trigger: TriggerConfig{PubSub: true, PollScanInterval: 45 * time.Second, ProjectID: "project", ClusterName: "cluster"}, Storage: StorageConfig{DataDir: "/var/lib/keel"}, Providers: ProviderConfig{Helm3: true}, UI: UIConfig{Dir: "/ui"},
 		Notifications: NotificationConfig{Level: "warn", Webhook: WebhookConfig{Endpoint: "https://webhook"}, Slack: SlackNotificationConfig{BotToken: "xoxb-typed", BotName: "typed-bot", Channels: "one,two"}, Hipchat: HipchatNotificationConfig{Server: "https://hipchat", Token: "hip-token", BotName: "hip-notifier", Channels: "ops,dev"}, Mattermost: MattermostConfig{Endpoint: "https://mattermost", Username: "matter-bot"}, Teams: TeamsConfig{WebhookURL: "https://teams"}, Discord: DiscordConfig{WebhookURL: "https://discord"}, Shoutrrr: ShoutrrrConfig{URLs: "discord://token@id", Timeout: "3s"}, Mail: MailConfig{To: "to@example.com", From: "from@example.com", SMTPServer: "smtp.example.com", SMTPPort: 2525, SMTPUser: "smtp-user", SMTPPass: "smtp-pass"}},
 		Bots:          BotConfig{Slack: SlackBotConfig{BotToken: "xoxb-typed", AppToken: "xapp-typed", BotName: "typed-bot", ApprovalsChannel: "approvals"}, Hipchat: HipchatBotConfig{ApprovalsChannel: "hip-approvals", ApprovalsUserName: "hip-user", ApprovalsBotName: "hip-bot", ApprovalsPassword: "hip-pass", ConnectionAttempts: 4}},
-		Auth:          AuthConfig{BasicUser: "admin", BasicPassword: "secret", AuthenticatedWebhooks: true, TokenSecret: "token-secret", Mode: "proxy", ProxyUserHeader: "X-User", ProxyLogoutURL: "https://logout"}, Kubernetes: KubernetesConfig{RestrictedNamespace: "production"},
+		Auth:          AuthConfig{BasicUser: "admin", BasicPassword: "secret", AuthenticatedWebhooks: true, TokenSecret: "token-secret", Mode: "proxy", ProxyUserHeader: "X-User", ProxyLogoutURL: "https://logout"}, Kubernetes: KubernetesConfig{RestrictedNamespace: "production", ClientQPS: 35, ClientBurst: 70, PodCacheTTL: 15 * time.Second},
 	}, cfg)
 }
 
 func TestLoadRejectsInvalidTypedValues(t *testing.T) {
-	for _, tt := range []struct{ name, key, value string }{{"boolean", "POLL", "sometimes"}, {"duration", "POLL_SCAN_INTERVAL", "soon"}, {"non-positive duration", "POLL_SCAN_INTERVAL", "0s"}, {"integer", "MAIL_SMTP_PORT", "smtp"}, {"nested integer", "HIPCHAT_CONNECTION_ATTEMPTS", "many"}} {
+	for _, tt := range []struct{ name, key, value string }{{"boolean", "POLL", "sometimes"}, {"duration", "POLL_SCAN_INTERVAL", "soon"}, {"non-positive duration", "POLL_SCAN_INTERVAL", "0s"}, {"integer", "MAIL_SMTP_PORT", "smtp"}, {"nested integer", "HIPCHAT_CONNECTION_ATTEMPTS", "many"}, {"float", "KUBERNETES_CLIENT_QPS", "fast"}, {"zero qps", "KUBERNETES_CLIENT_QPS", "0"}, {"negative pod cache ttl", "KUBERNETES_POD_CACHE_TTL", "-5s"}} {
 		t.Run(tt.name, func(t *testing.T) {
 			clearConfigurationEnvironment(t)
 			t.Setenv(tt.key, tt.value)

@@ -97,6 +97,21 @@ spec:
             - name: POLL_DEFAULTSCHEDULE
               value: "{{ .Values.polling.defaultSchedule }}"
 {{- end }}
+{{- if .Values.kubernetesClient }}
+{{- if .Values.kubernetesClient.qps }}
+            # Kubernetes API client rate limits
+            - name: KUBERNETES_CLIENT_QPS
+              value: "{{ .Values.kubernetesClient.qps }}"
+{{- end }}
+{{- if .Values.kubernetesClient.burst }}
+            - name: KUBERNETES_CLIENT_BURST
+              value: "{{ .Values.kubernetesClient.burst }}"
+{{- end }}
+{{- if .Values.kubernetesClient.podCacheTTL }}
+            - name: KUBERNETES_POD_CACHE_TTL
+              value: "{{ .Values.kubernetesClient.podCacheTTL }}"
+{{- end }}
+{{- end }}
 {{- if .Values.helmProvider.enabled }}
             # Enable/disable Helm provider
             - name: HELM3_PROVIDER
