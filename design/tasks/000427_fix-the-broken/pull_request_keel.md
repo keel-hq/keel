@@ -4,7 +4,9 @@
 
 Keel's documented install path is unreachable, so new users cannot install Keel. This adds a self-hosted replacement inside the repository and re-anchors the install docs on targets that resolve.
 
-`sunstone.dev` times out on every request and `install.onecontainer.net` no longer resolves. Neither host appears anywhere in this repository: `git grep -i sunstone origin/master` and `git log --all -S` for both hosts return nothing, so there was no in-repo reference to delete. The fix is therefore to give users a maintained install path that lives in-tree — a static manifest set — and to make the Helm chart's role as the primary method explicit.
+`sunstone.dev` times out on every request and `install.onecontainer.net` no longer resolves. No reference to either host survives in the current trees (`git grep -i sunstone origin/master` is empty, and the live `keel.sh/docs/` and `keel.sh/examples/` pages are clean), because the dead links were already deleted earlier: from this repository's `readme.md` in `a6f6a9d9` (2023-03-05, "cleanup"), and from the documentation site's `docs/README.md` — including the exact `kubectl apply -f https://sunstone.dev/keel?...` line — in `e1ce099` (2026-08-06, "ci: automate site deploys and drop sunstone.dev references"). Issue #684 itself is still open with no linked pull request.
+
+So there was no stale link left to delete. What was still missing is a working install path a new user can follow today, which is what this change adds: a static manifest set that lives in-tree, plus an explicit statement that the Helm chart is the primary method and the manifests are the fallback.
 
 ## Changes
 
