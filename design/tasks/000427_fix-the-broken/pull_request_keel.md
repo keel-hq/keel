@@ -14,7 +14,7 @@ So there was no stale link left to delete. What was still missing is a working i
 - The ClusterRole grants the core API group on the workload rule (pods and replicationcontrollers live there; Keel lists and deletes pods in `provider/kubernetes/implementer.go`), annotates the `secrets`/`configmaps` rules as Helm-provider-only, and omits `pods/portforward`, which no code path in this version calls.
 - Filenames carry a numeric prefix (`00-namespace` … `40-service`) so a single `kubectl apply -f docs/manifests/keel/` orders dependencies correctly, matching the chart's existing `00-namespace.yaml` convention.
 - `readme.md`: state that the Helm chart is the recommended and maintained method, and add a "Static Manifest (alternative)" section for users who cannot use Helm.
-- `chart/keel/README.md`: cross-reference the static-manifest alternative from the chart's Installing section.
+- Nothing under `chart/keel/` is modified. An earlier revision added a cross-reference to `chart/keel/README.md`, which turned **Package Release Artifacts** red because `scripts/check-chart-version-bump.sh` fails any pull request touching the chart without increasing the `Chart.yaml` version (`chart files changed, but Chart.yaml version did not increase (1.2.2 -> 1.2.2)`). Bumping the version would publish a chart release whose only content is one cross-reference line, so the chart is left untouched; the chart's primacy is stated in `readme.md`, and `docs/manifests/keel/README.md` links back to `chart/keel`.
 - Image is pinned to `ghcr.io/keel-hq/keel:0.22.3` (the chart's `appVersion`, with `chart/keel/Chart.yaml` named as the source of truth) rather than `nightly`, which this repo already documents as unsupported for production.
 - No Go code, chart template, or CI changes.
 
@@ -24,7 +24,7 @@ So there was no stale link left to delete. What was still missing is a working i
 - **Apply ordering confirmed from kubectl's own behaviour.** `kubectl` visits a directory lexically; the error output lists the manifests in `00`→`40` order, which is why one `apply -f` is now safe on an empty cluster and why the earlier unsorted names were not.
 - All seven manifests parse as YAML (`yaml.safe_load_all`), every relative link target in the touched files resolves on disk, and the pinned `0.22.3` tag pulls successfully.
 - **Not run — live cluster.** Applying the set against a real API server could not be verified here: nested privileged containers are blocked on this host (`crun: mount sysfs to sys: Operation not permitted`), so neither k3s-in-Docker nor the k3d harness in `keel-dev-stack` can start, and there is no reachable cluster for `kubectl apply --dry-run=server`. The manifests are structurally derived from `chart/keel`, whose install path is covered by the packaged-chart k3s suite in CI.
-- `make release-validate` was not run: the change touches no chart template, application startup path, or Go code (`chart/keel/README.md` is documentation only).
+- **Chart guard reproduced and cleared locally.** `KEEL_CHART_BASE_REF=origin/master ./scripts/check-chart-version-bump.sh` exited 1 with the same message CI reported before the revert, and now exits 0 with `no Helm chart changes detected`. `make release-validate` was not run: no chart template, application startup path, or Go code is touched.
 
 ## Note
 
