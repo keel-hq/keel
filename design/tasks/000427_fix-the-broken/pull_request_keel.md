@@ -11,6 +11,7 @@ So there was no stale link left to delete. What was still missing is a working i
 ## Changes
 
 - Add `docs/manifests/keel/`: a ready-to-apply set (namespace, ServiceAccount, ClusterRole, ClusterRoleBinding, Secret, Deployment, Service) modelled on `chart/keel`, plus a README covering placeholders, the pinned image, and verification steps.
+- The ClusterRole grants the core API group on the workload rule (pods and replicationcontrollers live there; Keel lists and deletes pods in `provider/kubernetes/implementer.go`), annotates the `secrets`/`configmaps` rules as Helm-provider-only, and omits `pods/portforward`, which no code path in this version calls.
 - Filenames carry a numeric prefix (`00-namespace` … `40-service`) so a single `kubectl apply -f docs/manifests/keel/` orders dependencies correctly, matching the chart's existing `00-namespace.yaml` convention.
 - `readme.md`: state that the Helm chart is the recommended and maintained method, and add a "Static Manifest (alternative)" section for users who cannot use Helm.
 - `chart/keel/README.md`: cross-reference the static-manifest alternative from the chart's Installing section.
