@@ -43,6 +43,15 @@ func (r Reference) Scheme() string {
 	return r.scheme
 }
 
+// IsNil reports whether the reference is nil or was never parsed into a valid
+// named reference (e.g. a zero-valued *Reference). Safe to call on a nil pointer.
+func (r *Reference) IsNil() bool {
+	if r == nil {
+		return true
+	}
+	return r.named == nil
+}
+
 // Repository returns the image's repository. (ie: registry/name)
 func (r Reference) Repository() string {
 	return r.named.FullName()
