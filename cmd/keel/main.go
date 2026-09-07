@@ -179,6 +179,8 @@ func main() {
 	// getting k8s provider
 	k8sCfg := &kubernetes.Opts{
 		ConfigPath: *kubeconfig,
+		QPS:        cfg.Kubernetes.ClientQPS,
+		Burst:      cfg.Kubernetes.ClientBurst,
 	}
 
 	if os.Getenv(EnvKubernetesConfig) != "" {
@@ -195,12 +197,22 @@ func main() {
 
 	k8sCfg.InCluster = *inCluster
 
-	implementer, err := kubernetes.NewKubernetesImplementer(k8sCfg)
+	kubernetesImplementer, err := kubernetes.NewKubernetesImplementer(k8sCfg)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error":  err,
 			"config": k8sCfg,
 		}).Fatal("main: failed to create kubernetes implementer")
+	}
+
+	// pods are listed for every tracked workload on every poll scan and on
+	// every watcher tick, so a short lived cache keeps that traffic
+	// proportional to the number of workloads instead of to the number of
+	// workloads multiplied by the number of watched images
+	var implementer kubernetes.Implementer = kubernetesImplementer
+	if cfg.Kubernetes.PodCacheTTL > 0 {
+		implementer = kubernetes.NewCachingImplementer(kubernetesImplementer, cfg.Kubernetes.PodCacheTTL)
+		log.WithField("ttl", cfg.Kubernetes.PodCacheTTL).Info("main: pod listing cache enabled")
 	}
 
 	var g workgroup.Group
@@ -211,10 +223,10 @@ func main() {
 
 	buf := k8s.NewBuffer(&g, t, log.StandardLogger(), 128)
 	wl := log.WithField("context", "watch")
-	k8s.WatchDeployments(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
-	k8s.WatchStatefulSets(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
-	k8s.WatchDaemonSets(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
-	k8s.WatchCronJobs(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
+	k8s.WatchDeployments(&g, kubernetesImplementer.Client(), wl, cfg.Kubernetes, buf)
+	k8s.WatchStatefulSets(&g, kubernetesImplementer.Client(), wl, cfg.Kubernetes, buf)
+	k8s.WatchDaemonSets(&g, kubernetesImplementer.Client(), wl, cfg.Kubernetes, buf)
+	k8s.WatchCronJobs(&g, kubernetesImplementer.Client(), wl, cfg.Kubernetes, buf)
 
 	// approvalsCache := memory.NewMemoryCache()
 	approvalsManager := approvals.New(&approvals.Opts{
@@ -243,8 +255,8 @@ func main() {
 		approvalsManager: approvalsManager,
 		grc:              &t.GenericResourceCache,
 		store:            sqlStore,
-		k8sClient:        implementer.Client(),
-		config:           implementer.Config(),
+		k8sClient:        kubernetesImplementer.Client(),
+		config:           kubernetesImplementer.Config(),
 		appConfig:        cfg,
 	})
 

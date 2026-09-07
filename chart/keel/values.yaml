@@ -27,6 +27,16 @@ polling:
   enabled: true
   defaultSchedule: "@every 1m"
 
+# Kubernetes API client tuning. Keel lists the pods of every tracked workload
+# to resolve platforms and running digests, so clusters with many tracked
+# workloads or many watched images need more than the client-go defaults
+# (5 QPS / burst 10) to avoid client side throttling.
+kubernetesClient:
+  qps: 20
+  burst: 40
+  # how long a pod listing is reused, "0" disables the cache
+  podCacheTTL: 30s
+
 # Extra Containers to run alongside Keel
 # extraContainers:
 #   - name: busybox

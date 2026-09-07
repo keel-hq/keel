@@ -20,6 +20,7 @@ var environmentVariables = []string{
 	"TEAMS_WEBHOOK_URL", "DISCORD_WEBHOOK_URL", "SHOUTRRR_URLS", "SHOUTRRR_TIMEOUT", "MAIL_TO", "MAIL_FROM", "MAIL_SMTP_SERVER",
 	"MAIL_SMTP_PORT", "MAIL_SMTP_USER", "MAIL_SMTP_PASS", "BASIC_AUTH_USER", "BASIC_AUTH_PASSWORD", "AUTHENTICATED_WEBHOOKS",
 	"TOKEN_SECRET", "AUTH_MODE", "AUTH_PROXY_USER_HEADER", "AUTH_PROXY_LOGOUT_URL", "RESTRICTED_NAMESPACE",
+	"KUBERNETES_CLIENT_QPS", "KUBERNETES_CLIENT_BURST", "KUBERNETES_POD_CACHE_TTL",
 }
 
 // Config contains Keel's application configuration loaded from environment variables.
@@ -167,9 +168,21 @@ type AuthConfig struct {
 	ProxyLogoutURL        string `envconfig:"AUTH_PROXY_LOGOUT_URL"`
 }
 
-// KubernetesConfig controls the scope of Kubernetes resources watched by Keel.
+// KubernetesConfig controls the scope of Kubernetes resources watched by Keel
+// and how hard Keel is allowed to hit the API server.
 type KubernetesConfig struct {
 	RestrictedNamespace string `envconfig:"RESTRICTED_NAMESPACE"`
+
+	// ClientQPS and ClientBurst size the client-go rate limiter. The library
+	// defaults (5 QPS, burst 10) are a CLI setting and are quickly saturated
+	// by a cluster with many tracked workloads. A negative QPS disables
+	// client side rate limiting and leaves throttling to the API server.
+	ClientQPS   float32 `envconfig:"KUBERNETES_CLIENT_QPS" default:"20"`
+	ClientBurst int     `envconfig:"KUBERNETES_CLIENT_BURST" default:"40"`
+
+	// PodCacheTTL is how long a pod listing is reused across the platform and
+	// running digest resolvers. Zero disables the cache.
+	PodCacheTTL time.Duration `envconfig:"KUBERNETES_POD_CACHE_TTL" default:"30s"`
 }
 
 // Load reads configuration from environment variables.
@@ -218,6 +231,12 @@ func Load() (Config, error) {
 	}
 	if cfg.Trigger.PollScanInterval <= 0 {
 		return Config{}, fmt.Errorf("POLL_SCAN_INTERVAL must be greater than zero")
+	}
+	if cfg.Kubernetes.ClientQPS == 0 {
+		return Config{}, fmt.Errorf("KUBERNETES_CLIENT_QPS must not be zero, use a negative value to disable client side rate limiting")
+	}
+	if cfg.Kubernetes.PodCacheTTL < 0 {
+		return Config{}, fmt.Errorf("KUBERNETES_POD_CACHE_TTL must not be negative")
 	}
 
 	cfg.Debug = root.Debug
