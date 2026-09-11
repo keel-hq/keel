@@ -12,7 +12,7 @@ imagePullSecrets: []
 
 # Extra labels added to the Deployment's own metadata (not the pod template) -
 # e.g. for label selectors that key off the workload resource itself.
-DeploymentLabels: {}
+deploymentLabels: {}
 
 # Extra enviroment values
 extraEnv: []
