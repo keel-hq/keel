@@ -210,6 +210,7 @@ func (w *RepositoryWatcher) watch(image *types.TrackedImage, runningDigests [][]
 				"error": err,
 				"image": image.String(),
 			}).Error("trigger.poll.RepositoryWatcher.Watch: failed to update image watch job")
+			return "", err
 		}
 	}
 
