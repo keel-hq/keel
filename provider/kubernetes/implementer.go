@@ -38,6 +38,7 @@ type Implementer interface {
 type KubernetesImplementer struct {
 	cfg    *rest.Config
 	client kubernetes.Interface
+	pods   *k8s.PodCache
 }
 
 // Opts - implementer options, usually for k8s deployments
@@ -178,8 +179,17 @@ func (i *KubernetesImplementer) Secret(namespace, name string) (*v1.Secret, erro
 	return i.client.CoreV1().Secrets(namespace).Get(context.TODO(), name, meta_v1.GetOptions{})
 }
 
+// UsePodCache serves pod lookups from pods once it has synced, instead of
+// listing pods from the API server on every call.
+func (i *KubernetesImplementer) UsePodCache(pods *k8s.PodCache) {
+	i.pods = pods
+}
+
 // Pods - get pods
 func (i *KubernetesImplementer) Pods(namespace, labelSelector string) (*v1.PodList, error) {
+	if i.pods.Serves(namespace) {
+		return i.pods.Pods(namespace, labelSelector)
+	}
 	return i.client.CoreV1().Pods(namespace).List(context.TODO(), meta_v1.ListOptions{LabelSelector: labelSelector})
 }
 

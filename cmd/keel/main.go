@@ -215,6 +215,7 @@ func main() {
 	k8s.WatchStatefulSets(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
 	k8s.WatchDaemonSets(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
 	k8s.WatchCronJobs(&g, implementer.Client(), wl, cfg.Kubernetes, buf)
+	implementer.UsePodCache(k8s.WatchPods(&g, implementer.Client(), wl, cfg.Kubernetes))
 
 	// approvalsCache := memory.NewMemoryCache()
 	approvalsManager := approvals.New(&approvals.Opts{
