@@ -9,6 +9,13 @@ metadata:
     chart: {{ template "keel.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+{{- with .Values.deploymentLabels }}
+{{ toYaml . | indent 4 }}
+{{- end }}
+{{- with .Values.deploymentAnnotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
 spec:
   replicas: 1
   selector:
