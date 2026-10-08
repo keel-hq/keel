@@ -30,11 +30,16 @@ const (
 )
 
 type sender struct {
-	router *router.ServiceRouter
+	targets []target
 
 	// services holds a redacted identifier per configured URL, in the order they
 	// were accepted. Used for logging only - raw URLs must never be logged.
 	services []string
+}
+
+type target struct {
+	router *router.ServiceRouter
+	scheme string
 }
 
 func init() {
@@ -56,18 +61,16 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 	// which logs custom URLs verbatim). Those URLs embed bot tokens, API keys and SMTP
 	// passwords, so the logger is deliberately discarded and Keel emits its own
 	// redacted diagnostics instead.
-	r, err := router.NewWithOptions(
-		stdlog.New(io.Discard, "", 0),
-		shoutrrrtypes.SenderOptions{Timeout: timeout},
-	)
-	if err != nil {
-		return false, fmt.Errorf("could not create shoutrrr router: %s", err)
-	}
-
 	var accepted []string
+	var targets []target
 	for i, u := range urls {
-		// Errors from AddService can embed the raw URL, so they are never logged verbatim.
-		if err := r.AddService(u); err != nil {
+		// Each target has its own router so runtime parameters can match the
+		// service. Initialisation errors can embed URLs and must not be logged.
+		r, err := router.NewWithOptions(
+			stdlog.New(io.Discard, "", 0),
+			shoutrrrtypes.SenderOptions{Timeout: timeout}, u,
+		)
+		if err != nil {
 			log.WithFields(log.Fields{
 				"name":    senderName,
 				"service": redact(u),
@@ -77,6 +80,8 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 			continue
 		}
 
+		scheme, _, _ := r.ExtractServiceName(u)
+		targets = append(targets, target{router: r, scheme: scheme})
 		accepted = append(accepted, redact(u))
 	}
 
@@ -84,7 +89,7 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 		return false, fmt.Errorf("no usable service URLs in %s", "SHOUTRRR_URLS")
 	}
 
-	s.router = r
+	s.targets = targets
 	s.services = accepted
 
 	log.WithFields(log.Fields{
@@ -97,11 +102,23 @@ func (s *sender) Configure(config *notification.Config) (bool, error) {
 }
 
 func (s *sender) Send(event types.EventNotification) error {
-	params := shoutrrrtypes.Params{}
-	params.SetTitle(title(event))
-	params.SetLevel(messageLevel(event.Level))
-
-	results := s.router.Send(body(event), &params)
+	// Start every target before waiting to preserve concurrent delivery and
+	// the per-service timeout. Only template services accept arbitrary params;
+	// other services reject "level" as an unknown configuration key.
+	results := make([]error, 0, len(s.targets))
+	pending := make([]chan error, 0, len(s.targets))
+	message := body(event)
+	for _, target := range s.targets {
+		params := shoutrrrtypes.Params{}
+		params.SetTitle(title(event))
+		if target.scheme == "generic" || target.scheme == "logger" {
+			params.SetLevel(messageLevel(event.Level))
+		}
+		pending = append(pending, target.router.SendAsync(message, &params))
+	}
+	for _, result := range pending {
+		results = append(results, <-result)
+	}
 
 	var failures []error
 
