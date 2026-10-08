@@ -107,6 +107,8 @@ type UpdatePlan struct {
 	// New digest taken from the event repository, empty when the trigger
 	// did not provide one
 	NewDigest string
+	// Image identifies the repository and tag to which NewDigest belongs.
+	Image string
 }
 
 func (p *UpdatePlan) String() string {
@@ -567,6 +569,7 @@ func (p *Provider) applyPlan(plan *UpdatePlan) *k8s.GenericResource {
 	}
 
 	resource.SetAnnotations(annotations)
+	recordDeployedDigest(resource, plan)
 
 	err := p.implementer.Update(resource)
 	kubernetesVersionedUpdatesCounter.With(prometheus.Labels{"kubernetes": fmt.Sprintf("%s/%s", resource.Namespace, resource.Name)}).Inc()

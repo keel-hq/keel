@@ -88,6 +88,8 @@ definitions:
     type: object
   pkg_http.DockerHubPushData:
     properties:
+      digest:
+        type: string
       images:
         items: {}
         type: array

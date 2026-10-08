@@ -62,6 +62,9 @@ var KeelPollDefaultSchedule = "@every 1m"
 // KeelDigestAnnotation - digest annotation
 const KeelDigestAnnotation = "keel.sh/digest"
 
+// KeelDigestsAnnotation records deployed digests by normalized image reference.
+const KeelDigestsAnnotation = "keel.sh/digests"
+
 // KeelNotificationChanAnnotation - optional notification to override
 // default notification channel(-s) per deployment/chart
 const KeelNotificationChanAnnotation = "keel.sh/notify"
