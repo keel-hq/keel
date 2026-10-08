@@ -47,6 +47,9 @@ class PkgHttpDockerHubPushData {
         if (data) {
             obj = obj || new PkgHttpDockerHubPushData();
 
+            if (data.hasOwnProperty('digest')) {
+                obj['digest'] = ApiClient.convertToType(data['digest'], 'String');
+            }
             if (data.hasOwnProperty('images')) {
                 obj['images'] = ApiClient.convertToType(data['images'], [Object]);
             }
@@ -69,6 +72,10 @@ class PkgHttpDockerHubPushData {
      * @return {boolean} to indicate whether the JSON data is valid with respect to <code>PkgHttpDockerHubPushData</code>.
      */
     static validateJSON(data) {
+        // ensure the json data is a string
+        if (data['digest'] && !(typeof data['digest'] === 'string' || data['digest'] instanceof String)) {
+            throw new Error("Expected the field `digest` to be a primitive type in the JSON string but got " + data['digest']);
+        }
         // ensure the json data is an array
         if (!Array.isArray(data['images'])) {
             throw new Error("Expected the field `images` to be an array in the JSON data but got " + data['images']);
@@ -89,6 +96,11 @@ class PkgHttpDockerHubPushData {
 }
 
 
+
+/**
+ * @member {String} digest
+ */
+PkgHttpDockerHubPushData.prototype['digest'] = undefined;
 
 /**
  * @member {Array.<Object>} images

@@ -8,6 +8,7 @@ import (
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
+	"github.com/keel-hq/keel/util/image"
 	"github.com/keel-hq/keel/util/timeutil"
 
 	apps_v1 "k8s.io/api/apps/v1"
@@ -830,6 +831,11 @@ func TestProvider_checkForUpdate(t *testing.T) {
 			}
 
 			if gotShouldUpdateDeployment {
+				ref, err := image.Parse(tt.args.repo.String())
+				if err != nil {
+					t.Fatal(err)
+				}
+				tt.wantUpdatePlan.Image = ref.Remote()
 				ann := gotUpdatePlan.Resource.GetSpecAnnotations()
 
 				if ann[types.KeelUpdateTimeAnnotation] != "" {
@@ -1315,6 +1321,11 @@ func TestProvider_checkForUpdateSemver(t *testing.T) {
 			}
 
 			if gotShouldUpdateDeployment {
+				ref, err := image.Parse(tt.args.repo.String())
+				if err != nil {
+					t.Fatal(err)
+				}
+				tt.wantUpdatePlan.Image = ref.Remote()
 				ann := gotUpdatePlan.Resource.GetSpecAnnotations()
 				_, ok := ann[types.KeelUpdateTimeAnnotation]
 				if ok {

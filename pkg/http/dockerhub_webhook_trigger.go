@@ -65,6 +65,7 @@ type DockerHubPushData struct {
 	PushedAt int           `json:"pushed_at"`
 	Images   []interface{} `json:"images"`
 	Tag      string        `json:"tag"`
+	Digest   string        `json:"digest,omitempty"`
 	Pusher   string        `json:"pusher"`
 }
 
@@ -128,6 +129,7 @@ func (s *TriggerServer) dockerHubHandler(resp http.ResponseWriter, req *http.Req
 	event.TriggerName = "dockerhub"
 	event.Repository.Name = dw.Repository.RepoName
 	event.Repository.Tag = dw.PushData.Tag
+	event.Repository.Digest = dw.PushData.Digest
 
 	s.trigger(event)
 

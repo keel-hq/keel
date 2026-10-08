@@ -1,13 +1,16 @@
 package kubernetes
 
 import (
+	"encoding/json"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/keel-hq/keel/internal/k8s"
 	"github.com/keel-hq/keel/internal/policy"
 	"github.com/keel-hq/keel/types"
 	"github.com/keel-hq/keel/util/image"
+	v1 "k8s.io/api/core/v1"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,6 +22,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 	if err != nil {
 		return
 	}
+	alreadyDeployed := repo.Digest != "" && deployedDigests(resource)[eventRepoRef.Remote()] == repo.Digest
 
 	log.WithFields(log.Fields{
 		"name":      resource.Name,
@@ -80,7 +84,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 				continue
 			}
 
-			if !shouldUpdateVolume {
+			if !shouldUpdateVolume || (alreadyDeployed && volumeImageRef.Tag() == eventRepoRef.Tag()) {
 				continue
 			}
 
@@ -145,7 +149,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 				continue
 			}
 
-			if !shouldUpdateContainer {
+			if !shouldUpdateContainer || (alreadyDeployed && containerImageRef.Tag() == eventRepoRef.Tag()) {
 				continue
 			}
 
@@ -210,7 +214,7 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 			continue
 		}
 
-		if !shouldUpdateContainer {
+		if !shouldUpdateContainer || (alreadyDeployed && containerImageRef.Tag() == eventRepoRef.Tag()) {
 			continue
 		}
 
@@ -232,6 +236,9 @@ func checkForUpdate(plc policy.Policy, repo *types.Repository, resource *k8s.Gen
 		updatePlan.Resource = resource
 	}
 
+	if shouldUpdateDeployment {
+		updatePlan.Image = eventRepoRef.Remote()
+	}
 	return updatePlan, shouldUpdateDeployment, nil
 }
 
@@ -239,4 +246,46 @@ func setUpdateTime(resource *k8s.GenericResource) {
 	specAnnotations := resource.GetSpecAnnotations()
 	specAnnotations[types.KeelUpdateTimeAnnotation] = time.Now().String()
 	resource.SetSpecAnnotations(specAnnotations)
+}
+
+func deployedDigests(resource *k8s.GenericResource) map[string]string {
+	digests := make(map[string]string)
+	if err := json.Unmarshal([]byte(resource.GetAnnotations()[types.KeelDigestsAnnotation]), &digests); err != nil || digests == nil {
+		return make(map[string]string)
+	}
+	return digests
+}
+
+func recordDeployedDigest(resource *k8s.GenericResource, plan *UpdatePlan) {
+	if plan.Image == "" {
+		return
+	}
+	digests := deployedDigests(resource)
+	// Keep only references still present in the workload, so version changes
+	// do not leave an ever-growing history in its annotations.
+	images := resource.GetImages(func(v1.Container) bool { return true })
+	images = append(images, resource.GetInitImages(func(v1.Container) bool { return true })...)
+	images = append(images, resource.GetImageVolumeReferences(func(v1.Volume) bool { return true })...)
+	present := make(map[string]bool, len(images))
+	for _, img := range images {
+		if ref, err := image.Parse(img); err == nil {
+			present[ref.Remote()] = true
+		}
+	}
+	maps.DeleteFunc(digests, func(ref, _ string) bool { return !present[ref] })
+	if plan.NewDigest == "" {
+		// A digestless webhook requests a fresh rollout. Its old digest must
+		// not suppress the next digest-bearing event for the same image.
+		delete(digests, plan.Image)
+	} else {
+		digests[plan.Image] = plan.NewDigest
+	}
+	annotations := resource.GetAnnotations()
+	if len(digests) == 0 {
+		delete(annotations, types.KeelDigestsAnnotation)
+	} else {
+		encoded, _ := json.Marshal(digests)
+		annotations[types.KeelDigestsAnnotation] = string(encoded)
+	}
+	resource.SetAnnotations(annotations)
 }

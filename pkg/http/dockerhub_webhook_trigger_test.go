@@ -3,6 +3,7 @@ package http
 import (
 	"bytes"
 	"net/http"
+	"strings"
 
 	"net/http/httptest"
 	"testing"
@@ -66,5 +67,22 @@ func TestDockerhubWebhookHandler(t *testing.T) {
 
 	if fp.submitted[0].Repository.Tag != "0.1.7" {
 		t.Errorf("expected 0.1.7 but got %s", fp.submitted[0].Repository.Tag)
+	}
+}
+
+func TestDockerhubWebhookPreservesDigest(t *testing.T) {
+	fp := &fakeProvider{}
+	srv, teardown := NewTestingServer(fp)
+	defer teardown()
+	digest := "sha256:" + strings.Repeat("a", 64)
+	payload := strings.Replace(fakeRequest, `"tag": "0.1.7",`, `"tag": "0.1.7", "digest": "`+digest+`",`, 1)
+	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/dockerhub", strings.NewReader(payload))
+	rec := httptest.NewRecorder()
+	srv.router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || len(fp.submitted) != 1 {
+		t.Fatalf("status=%d, events=%d", rec.Code, len(fp.submitted))
+	}
+	if got := fp.submitted[0].Repository.Digest; got != digest {
+		t.Fatalf("got digest %q, want %q", got, digest)
 	}
 }
