@@ -274,6 +274,33 @@ See the official Kubernetes [feature-gate table](https://kubernetes.io/docs/refe
 and [image-volume documentation](https://kubernetes.io/docs/tasks/configure-pod-container/image-volumes/)
 for cluster configuration details.
 
+#### Polling repositories with very large tag lists
+
+Polling lists every tag of the repository, 100 tags per page. For a repository
+with a very large number of tags this can take thousands of requests per poll,
+and a registry may rate-limit the listing before it finishes. Workloads polling
+such a repository can opt in to listing only the tags pushed after the tag they
+run:
+
+```yaml
+metadata:
+  annotations:
+    keel.sh/policy: minor
+    keel.sh/trigger: poll
+    keel.sh/pollTagsAfterCurrent: "true"
+```
+
+This uses the registry's `last` pagination cursor. The distribution spec lists
+tags lexically, where a cursor would skip newer versions that sort lower
+(`v1.10.0` sorts before `v1.9.0`); some registries, `ghcr.io` among them, list
+tags in push order instead. Keel checks which order the registry uses on every
+poll and lists every tag, as it does without the annotation, unless the
+response shows push order. The setting applies only when every workload
+polling the same image opts in.
+
+Known limitation: a newer version pushed *before* the running tag, for example
+while running a backport release, is not seen.
+
 ### Documentation
 
 Documentation is viewable on the Keel Website:

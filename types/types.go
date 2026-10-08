@@ -43,6 +43,11 @@ const KeelPollScheduleAnnotation = "keel.sh/pollSchedule"
 // KeelInitContainerAnnotation - label or annotation to track init containers, defaults to false for backward compatibility
 const KeelInitContainerAnnotation = "keel.sh/initContainers"
 
+// KeelPollTagsAfterCurrentAnnotation - label or annotation that makes polling
+// list only the tags pushed after the running tag, for registries that list
+// tags in push order. Defaults to false.
+const KeelPollTagsAfterCurrentAnnotation = "keel.sh/pollTagsAfterCurrent"
+
 // KeelImageVolumeAnnotation - label or annotation to track OCI image volume
 // sources (spec.volumes[].image.reference), defaults to false for backward
 // compatibility. Requires Kubernetes 1.31+ and container-runtime image-volume

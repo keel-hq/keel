@@ -52,7 +52,7 @@ func (j *WatchRepositoryTagsJob) Run() {
 		registryOpts.Password = creds.Password
 	}
 
-	repository, err := j.registryClient.Get(registryOpts)
+	repository, err := j.getRepository(registryOpts)
 
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -80,6 +80,56 @@ func (j *WatchRepositoryTagsJob) Run() {
 		}).Error("trigger.poll.WatchRepositoryTagsJob: failed to process tags")
 		return
 	}
+}
+
+// getRepository lists the repository's tags. When every workload sharing this
+// watcher opted in to keel.sh/pollTagsAfterCurrent, it lists only the tags
+// pushed after each workload's current tag; otherwise it lists every tag.
+func (j *WatchRepositoryTagsJob) getRepository(opts registry.Opts) (*registry.Repository, error) {
+	afterTags := j.pollTagsAfter()
+	if len(afterTags) == 0 {
+		return j.registryClient.Get(opts)
+	}
+
+	repository := &registry.Repository{Name: opts.Name}
+	seen := make(map[string]bool)
+	for _, after := range afterTags {
+		opts.After = after
+		repo, err := j.registryClient.Get(opts)
+		if err != nil {
+			return nil, err
+		}
+		for _, tag := range repo.Tags {
+			if !seen[tag] {
+				seen[tag] = true
+				repository.Tags = append(repository.Tags, tag)
+			}
+		}
+	}
+	return repository, nil
+}
+
+// pollTagsAfter returns the distinct current tags of the related workloads,
+// or nil unless every one of them opted in to keel.sh/pollTagsAfterCurrent.
+func (j *WatchRepositoryTagsJob) pollTagsAfter() []string {
+	trackedImages, err := j.providers.TrackedImages()
+	if err != nil {
+		return nil
+	}
+
+	var afterTags []string
+	seen := make(map[string]bool)
+	for _, trackedImage := range getRelatedTrackedImages(j.details.trackedImage, trackedImages) {
+		if !trackedImage.PollTagsAfterCurrent {
+			return nil
+		}
+		tag := trackedImage.Image.Tag()
+		if !seen[tag] {
+			seen[tag] = true
+			afterTags = append(afterTags, tag)
+		}
+	}
+	return afterTags
 }
 
 func (j *WatchRepositoryTagsJob) computeEvents(tags []string) ([]types.Event, error) {

@@ -344,3 +344,90 @@ func TestWatchMultipleTagsWithCredentialsHelper(t *testing.T) {
 	})
 
 }
+
+func TestWatchTagsAfterCurrent(t *testing.T) {
+	type workload struct {
+		tag   string
+		optIn bool
+	}
+	tests := []struct {
+		name          string
+		workloads     []workload
+		tagsAfter     map[string][]string
+		wantAfters    []string
+		wantSubmitted []string
+	}{
+		{
+			name:          "opted-in workload lists only tags after its current tag",
+			workloads:     []workload{{"1.1.1", true}},
+			tagsAfter:     map[string][]string{"1.1.1": {"pr-9", "1.2.0"}},
+			wantAfters:    []string{"1.1.1"},
+			wantSubmitted: []string{"1.2.0"},
+		},
+		{
+			name:          "related workloads on different tags list after each tag",
+			workloads:     []workload{{"1.1.1", true}, {"1.2.0", true}},
+			tagsAfter:     map[string][]string{"1.1.1": {"1.2.0"}, "1.2.0": {"1.3.0"}},
+			wantAfters:    []string{"1.1.1", "1.2.0"},
+			wantSubmitted: []string{"1.3.0"},
+		},
+		{
+			name:          "related workloads on the same tag list once",
+			workloads:     []workload{{"1.1.1", true}, {"1.1.1", true}},
+			tagsAfter:     map[string][]string{"1.1.1": {"1.2.0"}},
+			wantAfters:    []string{"1.1.1"},
+			wantSubmitted: []string{"1.2.0"},
+		},
+		{
+			name:          "a related workload that did not opt in keeps the full listing",
+			workloads:     []workload{{"1.1.1", true}, {"1.1.1", false}},
+			tagsAfter:     map[string][]string{"1.1.1": {"1.2.0"}},
+			wantAfters:    []string{""},
+			wantSubmitted: []string{"9.9.9"},
+		},
+		{
+			name:          "workload that did not opt in keeps the full listing",
+			workloads:     []workload{{"1.1.1", false}},
+			wantAfters:    []string{""},
+			wantSubmitted: []string{"9.9.9"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var images []*types.TrackedImage
+			for _, w := range tt.workloads {
+				reference, _ := image.Parse("foo/bar:" + w.tag)
+				images = append(images, &types.TrackedImage{
+					Image:                reference,
+					Trigger:              types.TriggerTypePoll,
+					Policy:               policy.NewSemverPolicy(policy.SemverPolicyTypeAll, true),
+					PollTagsAfterCurrent: w.optIn,
+				})
+			}
+			fp := &fakeProvider{images: images}
+			store, teardown := newTestingUtils()
+			defer teardown()
+			providers := provider.New([]provider.Provider{fp}, approvals.New(&approvals.Opts{Store: store}))
+
+			frc := &fakeRegistryClient{
+				tagsToReturn:      []string{"9.9.9"},
+				tagsAfterToReturn: tt.tagsAfter,
+			}
+
+			NewWatchRepositoryTagsJob(providers, frc, &watchDetails{trackedImage: images[0]}).Run()
+
+			var afters []string
+			for _, opts := range frc.getOpts {
+				afters = append(afters, opts.After)
+			}
+			assert.Equal(t, tt.wantAfters, afters)
+
+			var submitted []string
+			for _, e := range fp.submitted {
+				submitted = append(submitted, e.Repository.Tag)
+			}
+			assert.Equal(t, tt.wantSubmitted, submitted)
+		})
+	}
+}
