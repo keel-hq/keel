@@ -29,6 +29,9 @@ type TrackedImage struct {
 	// combined semver tags
 	Tags   []string `json:"tags"`
 	Policy Policy   `json:"policy"`
+	// PollTagsAfterCurrent makes polling list only the tags pushed after
+	// the running tag instead of every tag of the repository.
+	PollTagsAfterCurrent bool `json:"pollTagsAfterCurrent"`
 }
 
 // Platform identifies the operating system and CPU architecture required by a

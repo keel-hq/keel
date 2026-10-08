@@ -48,6 +48,9 @@ type fakeRegistryClient struct {
 	tagDigestsCalls       int
 
 	tagsToReturn []string
+	// tags returned by Get(opts) when opts.After is set, keyed by opts.After
+	tagsAfterToReturn map[string][]string
+	getOpts           []registry.Opts
 
 	platformsToReturn map[string][]types.Platform
 	platformErrors    map[string]error
@@ -58,9 +61,14 @@ type fakeRegistryClient struct {
 func (c *fakeRegistryClient) Get(opts registry.Opts) (*registry.Repository, error) {
 	c.getCalls++
 	c.opts = opts
+	c.getOpts = append(c.getOpts, opts)
+	tags := c.tagsToReturn
+	if opts.After != "" && c.tagsAfterToReturn != nil {
+		tags = c.tagsAfterToReturn[opts.After]
+	}
 	return &registry.Repository{
 		Name: opts.Name,
-		Tags: c.tagsToReturn,
+		Tags: tags,
 	}, nil
 }
 

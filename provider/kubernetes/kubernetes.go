@@ -310,8 +310,16 @@ func getMonitorContainersFromMeta(labels map[string]string, annotations map[stri
 }
 
 func getInitContainerTrackingFromMeta(labels map[string]string, annotations map[string]string) bool {
+	return getBoolFromMeta(types.KeelInitContainerAnnotation, labels, annotations)
+}
 
-	searchKey := strings.ToLower(types.KeelInitContainerAnnotation)
+func getPollTagsAfterCurrentFromMeta(labels map[string]string, annotations map[string]string) bool {
+	return getBoolFromMeta(types.KeelPollTagsAfterCurrentAnnotation, labels, annotations)
+}
+
+func getBoolFromMeta(key string, labels map[string]string, annotations map[string]string) bool {
+
+	searchKey := strings.ToLower(key)
 
 	for k, v := range labels {
 		if strings.ToLower(k) == searchKey {
@@ -411,6 +419,7 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 		}
 		platforms, platformErr := p.platforms.Resolve(gr)
 		runningDigests := p.runningDigests.Resolve(gr)
+		pollTagsAfterCurrent := getPollTagsAfterCurrentFromMeta(labels, annotations)
 
 		for _, img := range images {
 			ref, err := image.Parse(img)
@@ -445,6 +454,8 @@ func (p *Provider) TrackedImages() ([]*types.TrackedImage, error) {
 				Platforms:      platforms,
 				PlatformErr:    platformErr,
 				Policy:         plc,
+
+				PollTagsAfterCurrent: pollTagsAfterCurrent,
 			})
 		}
 	}

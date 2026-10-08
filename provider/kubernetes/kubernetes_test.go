@@ -1914,3 +1914,81 @@ func TestTrackedInitImagesWithSecrets(t *testing.T) {
 		t.Errorf("expected very-secret, got: %s", imgs[0].Secrets[1])
 	}
 }
+
+func TestTrackedImagesPollTagsAfterCurrent(t *testing.T) {
+	tests := []struct {
+		name        string
+		labels      map[string]string
+		annotations map[string]string
+		want        bool
+	}{
+		{name: "annotation", annotations: map[string]string{types.KeelPollTagsAfterCurrentAnnotation: "true"}, want: true},
+		{name: "label", labels: map[string]string{types.KeelPollTagsAfterCurrentAnnotation: "true"}, want: true},
+		{name: "disabled", annotations: map[string]string{types.KeelPollTagsAfterCurrentAnnotation: "false"}, want: false},
+		{name: "absent", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fp := &fakeImplementer{}
+			fp.namespaces = &v1.NamespaceList{
+				Items: []v1.Namespace{
+					{
+						meta_v1.TypeMeta{},
+						meta_v1.ObjectMeta{Name: "xxxx"},
+						v1.NamespaceSpec{},
+						v1.NamespaceStatus{},
+					},
+				},
+			}
+			labels := map[string]string{types.KeelPolicyLabel: "all"}
+			for k, v := range tt.labels {
+				labels[k] = v
+			}
+			deps := []*apps_v1.Deployment{
+				{
+					meta_v1.TypeMeta{},
+					meta_v1.ObjectMeta{
+						Name:        "dep-1",
+						Namespace:   "xxxx",
+						Labels:      labels,
+						Annotations: tt.annotations,
+					},
+					apps_v1.DeploymentSpec{
+						Template: v1.PodTemplateSpec{
+							Spec: v1.PodSpec{
+								Containers: []v1.Container{
+									{
+										Image: "ghcr.io/v2-namespace/hello-world:1.1.1",
+									},
+								},
+							},
+						},
+					},
+					apps_v1.DeploymentStatus{},
+				},
+			}
+
+			grc := &k8s.GenericResourceCache{}
+			grc.Add(MustParseGRS(deps)...)
+
+			approver, teardown := approver()
+			defer teardown()
+			provider, err := NewProvider(fp, &fakeSender{}, approver, grc)
+			if err != nil {
+				t.Fatalf("failed to get provider: %s", err)
+			}
+
+			imgs, err := provider.TrackedImages()
+			if err != nil {
+				t.Fatalf("failed to get images: %s", err)
+			}
+			if len(imgs) != 1 {
+				t.Fatalf("expected to find 1 image, got: %d", len(imgs))
+			}
+			if imgs[0].PollTagsAfterCurrent != tt.want {
+				t.Errorf("expected PollTagsAfterCurrent=%t, got %t", tt.want, imgs[0].PollTagsAfterCurrent)
+			}
+		})
+	}
+}
