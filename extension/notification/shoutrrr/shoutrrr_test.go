@@ -100,6 +100,64 @@ func TestSendDeliversNotification(t *testing.T) {
 	}
 }
 
+func TestSendDeliversToNtfyAndGeneric(t *testing.T) {
+	for _, priority := range []string{"default", "high"} {
+		t.Run(priority, func(t *testing.T) {
+			ntfyMessages := make(chan string, 1)
+			genericMessages := make(chan map[string]string, 1)
+			ts := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+				if req.URL.Path == "/keel" {
+					message, err := io.ReadAll(req.Body)
+					if err != nil {
+						t.Error(err)
+					}
+					if req.Header.Get("Title") != title(testEvent()) {
+						t.Errorf("unexpected ntfy title: %q", req.Header.Get("Title"))
+					}
+					if !strings.EqualFold(req.Header.Get("Priority"), priority) {
+						t.Errorf("got priority %q, want %q", req.Header.Get("Priority"), priority)
+					}
+					ntfyMessages <- string(message)
+				} else {
+					var payload map[string]string
+					if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+						t.Error(err)
+					}
+					genericMessages <- payload
+				}
+				resp.Header().Set("Content-Type", "application/json")
+				io.WriteString(resp, `{}`)
+			}))
+			defer ts.Close()
+
+			urls := "ntfy://" + strings.TrimPrefix(ts.URL, "http://") + "/keel?disabletls=yes&priority=" + priority + " " + genericURL(ts.URL)
+			s := &sender{}
+			if _, err := s.Configure(&notification.Config{Notifications: appconfig.NotificationConfig{Shoutrrr: appconfig.ShoutrrrConfig{URLs: urls}}}); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.Send(testEvent()); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case message := <-ntfyMessages:
+				if !strings.Contains(message, "message here") || !strings.Contains(message, "success") {
+					t.Errorf("unexpected ntfy message: %q", message)
+				}
+			default:
+				t.Error("ntfy did not receive the notification")
+			}
+			select {
+			case payload := <-genericMessages:
+				if payload["level"] != shoutrrrtypes.Info.String() {
+					t.Errorf("unexpected generic level: %q", payload["level"])
+				}
+			default:
+				t.Error("generic did not receive the notification")
+			}
+		})
+	}
+}
+
 // TestSendPartialFailure covers the case where one target is down. Send must not
 // report an error, because Keel retries the whole sender and would re-deliver to
 // the target that already succeeded.
