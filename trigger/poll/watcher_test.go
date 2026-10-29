@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/keel-hq/keel/approvals"
 	// "github.com/keel-hq/keel/cache/memory"
@@ -952,5 +953,63 @@ func TestUnwatchAfterNotTrackedAnymore(t *testing.T) {
 
 	if len(watcher.watched) != 3 {
 		t.Errorf("expected to find watching 3 entries, found: %d", len(watcher.watched))
+	}
+}
+
+func TestWatchScheduleChangeIsAppliedOnce(t *testing.T) {
+	fp := &fakeProvider{}
+	store, teardown := newTestingUtils()
+	defer teardown()
+	am := approvals.New(&approvals.Opts{
+		Store: store,
+	})
+
+	providers := provider.New([]provider.Provider{fp}, am)
+
+	frc := &fakeRegistryClient{
+		digestToReturn: "sha256:0604af35299dd37ff23937d115d103532948b568a9dd8197d14c256a8ab8b0bb",
+	}
+
+	watcher := NewRepositoryWatcher(providers, frc)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	watcher.Start(ctx)
+
+	img := "gcr.io/v2-namespace/hello-world:1.1.1"
+	// no explicit policy, so the image is watched as a repository (all tags)
+	key := "gcr.io/v2-namespace/hello-world"
+
+	watcher.Watch(mustParse(img, "@every 20m"))
+	if got := watcher.watched[key].schedule; got != "@every 20m" {
+		t.Fatalf("expected schedule '@every 20m', got %q", got)
+	}
+
+	// schedule changed: it must be applied and remembered
+	watcher.Watch(mustParse(img, "@every 5m"))
+	if got := watcher.watched[key].schedule; got != "@every 5m" {
+		t.Fatalf("expected schedule '@every 5m' after update, got %q", got)
+	}
+
+	nextRun := func() time.Time {
+		for _, e := range watcher.cron.Entries() {
+			if e.Name == key {
+				return e.Next
+			}
+		}
+		t.Fatalf("cron entry %s not found", key)
+		return time.Time{}
+	}
+
+	next := nextRun()
+	if next.IsZero() {
+		t.Fatalf("expected next run to be set")
+	}
+
+	// a later scan with the same schedule must not reset the next run,
+	// otherwise the job is pushed back on every scan and never fires
+	time.Sleep(1100 * time.Millisecond)
+	watcher.Watch(mustParse(img, "@every 5m"))
+	if got := nextRun(); !got.Equal(next) {
+		t.Errorf("expected next run to stay at %s, got %s", next, got)
 	}
 }

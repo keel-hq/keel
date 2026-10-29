@@ -203,6 +203,7 @@ func (w *RepositoryWatcher) watch(image *types.TrackedImage, runningDigests [][]
 	// checking schedule
 	// todo: this is not right, we are using the last seen schedule, which might not be the most frequent
 	// the most frequent schedule should be used for the shared watcher
+	details.mu.Lock()
 	if details.schedule != image.PollSchedule {
 		err := w.cron.UpdateJob(key, image.PollSchedule)
 		if err != nil {
@@ -210,10 +211,19 @@ func (w *RepositoryWatcher) watch(image *types.TrackedImage, runningDigests [][]
 				"error": err,
 				"image": image.String(),
 			}).Error("trigger.poll.RepositoryWatcher.Watch: failed to update image watch job")
+		} else {
+			// remember the applied schedule: UpdateJob resets the entry's next
+			// run time, so calling it again on every scan would keep pushing
+			// the next poll into the future and the job would never fire
+			log.WithFields(log.Fields{
+				"image":        image.String(),
+				"old_schedule": details.schedule,
+				"new_schedule": image.PollSchedule,
+			}).Info("trigger.poll.RepositoryWatcher.Watch: poll schedule updated")
+			details.schedule = image.PollSchedule
 		}
 	}
 
-	details.mu.Lock()
 	details.trackedImage = image
 	// setting main latest version to the lowest from the tracked
 	details.latest = version.Lowest(details.trackedImage.Tags)
