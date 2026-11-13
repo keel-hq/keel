@@ -320,7 +320,7 @@ We use pull requests, so:
 
 ### Developing Keel
 
-If you wish to work on Keel itself, install Go 1.26.5 and use the module-based build from this repository checkout.
+If you wish to work on Keel itself, install Go 1.26.10 and use the module-based build from this repository checkout.
 
 To test Keel while developing:
 
@@ -337,7 +337,7 @@ The PR smoke suite builds the checked-out Keel Docker image and runs it inside a
 make e2e
 ```
 
-Prerequisites are Linux/amd64, Go 1.26.5, Make, Docker, `curl`, `sudo`, `setsid`, and iproute2 (`ip`/`ss`). Passwordless sudo is required for the task-owned k3s process. For safety, the command refuses to run when it detects an existing k3s installation, default kubeconfig, k3s network interface, or occupied test port. It never invokes the k3s installer or uninstaller.
+Prerequisites are Linux/amd64, Go 1.26.10, Make, Docker, `curl`, `sudo`, `setsid`, and iproute2 (`ip`/`ss`). Passwordless sudo is required for the task-owned k3s process. For safety, the command refuses to run when it detects an existing k3s installation, default kubeconfig, k3s network interface, or occupied test port. It never invokes the k3s installer or uninstaller.
 
 k3s is pinned to `v1.35.6+k3s1` and verified with its official checksum. Registry and workload fixtures are digest-pinned and isolated by run/test repository. The expected runtime is 6–8 minutes, with a hard 10-minute target. Diagnostics are retained under `.test/artifacts/` and exclude Secrets, tokens, environment dumps, and kubeconfig contents.
 

@@ -42,7 +42,7 @@ If the cluster already exists (`k3d cluster list` shows it), skip creation; re-p
 
 ### 2. Build/install the Keel backend
 
-Go toolchain auto-downloads (`go.mod` requires `go 1.26.5`; `GOTOOLCHAIN=auto` handles it):
+Go toolchain auto-downloads (`go.mod` requires `go 1.26.10`; `GOTOOLCHAIN=auto` handles it):
 
 ```bash
 go build ./cmd/keel   # or: go install github.com/keel-hq/keel/cmd/keel
