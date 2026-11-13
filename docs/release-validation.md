@@ -30,7 +30,7 @@ Run the complete non-publishing candidate validation from a clean Linux/amd64 ho
 make release-validate
 ```
 
-Prerequisites are Go 1.26.5, Docker with BuildKit, `curl`, `jq`, `sha256sum`, `tar`, iproute2, `setsid`, and passwordless `sudo`. The command downloads checksum-verified Helm v3.18.4 and k3s v1.35.6+k3s1, builds the release Dockerfile, lints/templates/packages the chart, starts the repository's isolated native-k3s harness, and cleans it automatically. It refuses to share an existing k3s installation or the test ports.
+Prerequisites are Go 1.26.10, Docker with BuildKit, `curl`, `jq`, `sha256sum`, `tar`, iproute2, `setsid`, and passwordless `sudo`. The command downloads checksum-verified Helm v3.18.4 and k3s v1.35.6+k3s1, builds the release Dockerfile, lints/templates/packages the chart, starts the repository's isolated native-k3s harness, and cleans it automatically. It refuses to share an existing k3s installation or the test ports.
 
 Faster, non-cluster checks are:
 
