@@ -1,4 +1,5 @@
 {{ include "keel.validateAuth" . }}
+{{ include "keel.validatePodLabels" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,12 +21,18 @@ spec:
       labels:
         app: {{ template "keel.name" . }}
         release: {{ .Release.Name }}
+{{- range $k, $v := .Values.podLabels | default dict }}
+        {{ $k }}: {{ $v | quote }}
+{{- end }}
 {{- with .Values.podAnnotations }}
       annotations:
 {{ toYaml . | indent 8 }}
 {{- end }}
     spec:
       serviceAccountName: {{ template "serviceAccount.name" . }}
+{{- with .Values.priorityClassName }}
+      priorityClassName: {{ . | quote }}
+{{- end }}
 {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
 {{- toYaml . | nindent 8 }}
