@@ -68,3 +68,11 @@ Create chart name and version as used by the chart label.
 {{- fail "oauth2Proxy.enabled=true requires auth.mode=external-proxy" -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "keel.validatePodLabels" -}}
+{{- range $key := list "app" "release" -}}
+{{- if hasKey ($.Values.podLabels | default dict) $key -}}
+{{- fail (printf "podLabels cannot set %q: it is used by the Deployment's selector" $key) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

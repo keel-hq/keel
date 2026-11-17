@@ -332,6 +332,12 @@ createNamespaceResource: false
 
 podAnnotations: {}
 
+# Extra labels for the Keel pods; app and release are reserved for the selector and rejected
+podLabels: {}
+
+# PriorityClass for the Keel pods
+priorityClassName: ""
+
 serviceAnnotations: {}
 # Useful for making the load balancer internal
 # serviceAnnotations:
