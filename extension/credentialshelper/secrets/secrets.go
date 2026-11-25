@@ -1,8 +1,8 @@
 package secrets
 
 import (
+	"github.com/keel-hq/keel/extension/credentialshelper"
 	"github.com/keel-hq/keel/secrets"
-
 	"github.com/keel-hq/keel/types"
 )
 
@@ -18,7 +18,14 @@ func (ch *CredentialsHelper) IsEnabled() bool { return true }
 
 // GetCredentials looks into kubernetes secrets to find registry credentials
 func (ch *CredentialsHelper) GetCredentials(image *types.TrackedImage) (*types.Credentials, error) {
-	return ch.secretsGetter.Get(image)
+	creds, err := ch.secretsGetter.Get(image)
+	if err != nil {
+		return nil, err
+	}
+	if creds == nil || (creds.Username == "" && creds.Password == "") {
+		return nil, credentialshelper.ErrCredentialsNotAvailable
+	}
+	return creds, nil
 }
 
 // New creates a new instance of secrets based credentials helper
